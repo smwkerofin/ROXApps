@@ -4,6 +4,10 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+04-Aug-2004 2.1.2
+~~~~~~~~~~~
+Added reference to GPL in libdir script.
+
 31-Jul-2004
 ~~~~~~~~~~~
 Replace some deprecated GTK+ functions.  
@@ -174,4 +178,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.10 2004/07/02 16:05:44 stephen Exp $
+$Id: Changes,v 1.11 2004/08/04 18:16:23 stephen Exp $
