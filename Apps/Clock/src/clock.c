@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.9 2001/05/18 09:37:27 stephen Exp $
+ * $Id: clock.c,v 1.10 2001/05/25 07:58:14 stephen Exp $
  */
 #include "config.h"
 
@@ -25,6 +25,10 @@
 #include <sys/stat.h>
 #endif
 
+#ifdef HAVE_LIBINTL_H
+#include <libintl.h>
+#endif
+
 #include <gtk/gtk.h>
 #include "infowin.h"
 
@@ -36,7 +40,7 @@
 #include "alarm.h"
 
 #define DEBUG              0
-#define SUPPORT_OLD_CONFIG 1
+#define SUPPORT_OLD_CONFIG 0
 #define APPLET_MENU        1
 
 static gboolean applet_mode=FALSE;
@@ -144,7 +148,6 @@ static gboolean load_alarms=TRUE;   /* Also controls if we show them */
 static gboolean save_alarms=TRUE;   
 
 #if EXTRA_FUN
-#define FADING 1
 #include "extra.h"
 static GdkPixbuf *sprite=NULL;
 static guint sprite_tag=0;
@@ -157,12 +160,11 @@ static enum {
 static int sprite_x, sprite_y;
 static int sprite_width, sprite_height;
 static void setup_sprite(void);
-#if FADING
+
 #define NFRAME 3
 #define CHANGE_FOR 500
 static GdkBitmap *masks[NFRAME];
 static int sprite_frame;
-#endif
 #endif
 
 static gboolean do_update(void);        /* Update clock face and text out */
@@ -194,16 +196,23 @@ int main(int argc, char *argv[])
   time_t now;
   char buf[80];
   int i;
+  gchar *app_dir;
+#ifdef HAVE_BINDTEXTDOMAIN
+  gchar *localedir;
+#endif
 
   /* First things first, set the locale information for time, so that
      strftime will give us a sensible date format... */
 #ifdef HAVE_SETLOCALE
   setlocale(LC_TIME, "");
   setlocale (LC_ALL, "");
-  /*
-  bindtextdomain (PACKAGE, LOCALEDIR);
-  textdomain (PACKAGE);
-  */
+#endif
+  app_dir=g_getenv("APP_DIR");
+#ifdef HAVE_BINDTEXTDOMAIN
+  localedir=g_strconcat(app_dir, "/Messages", NULL);
+  bindtextdomain(PROJECT, localedir);
+  textdomain(PROJECT);
+  g_free(localedir);
 #endif
   
   /* Initialise X/GDK/GTK */
@@ -220,7 +229,7 @@ int main(int argc, char *argv[])
   if(load_alarms)
     alarm_load();
 
-  /*dprintf("argc=%d\n", argc);*/
+  dprintf("argc=%d\n", argc);
   if(argc<2 || !atol(argv[1])) {
     /* No arguments, or the first argument was not a (non-zero) number.
        We are not an applet, so create a window */
@@ -243,10 +252,10 @@ int main(int argc, char *argv[])
     /* We are an applet, plug ourselves in */
     GtkWidget *plug;
 
-    /*dprintf("argv[1]=%s\n", argv[1]);*/
+    dprintf("argv[1]=%s\n", argv[1]);
     plug=gtk_plug_new(atol(argv[1]));
     if(!plug) {
-      fprintf(stderr, "%s: failed to plug into socket %s, not a XID?\n",
+      fprintf(stderr, _("%s: failed to plug into socket %s, not a XID?\n"),
 	      argv[0], argv[1]);
       exit(1);
     }
@@ -338,7 +347,8 @@ void dprintf(const char *fmt, ...)
 
   va_start(list, fmt);
 #if DEBUG
-  vfprintf(stderr, fmt, list);
+  /*vfprintf(stderr, fmt, list);*/
+  g_logv(PROJECT, G_LOG_LEVEL_DEBUG, fmt, list);
 #endif
   va_end(list);  
 }
@@ -346,14 +356,15 @@ void dprintf(const char *fmt, ...)
 /* Called when the display mode changes */
 static void set_mode(Mode *nmode)
 {
-  /*dprintf("mode now %s\n", nmode->name);*/
+  dprintf("mode now %s, %d, %#x\n", nmode->format->name, nmode->interval,
+	  nmode->flags);
 
   /* Do we need to change the update rate? */
   if(update_tag && mode.interval!=nmode->interval) {
     gtk_timeout_remove(update_tag);
     update_tag=gtk_timeout_add(nmode->interval,
 			       (GtkFunction) do_update, digital_out);
-    /*dprintf("tag now %u (%d)\n", update_tag, nmode->interval);*/
+    dprintf("tag now %u (%d)\n", update_tag, nmode->interval);
   }
 
   /* Change visibility of text line? */
@@ -487,7 +498,7 @@ static gboolean do_update(void)
   if(sprite) {
     GdkGC *lgc;
 
-    /*dprintf("state=%d\n", sprite_state);*/
+    dprintf("state=%d\n", sprite_state);
     switch(sprite_state) {
     case T_SHOW:
       gdk_pixbuf_render_to_drawable_alpha(sprite, pixmap,
@@ -500,7 +511,6 @@ static gboolean do_update(void)
 					  0, 0);
       break;
 
-#if FADING
     case T_APPEAR: case T_GO:
       dprintf("state=%d, frame=%d\n", sprite_state, sprite_frame);
       if(sprite_frame>=0 && sprite_frame<NFRAME && masks[sprite_frame]) {
@@ -516,7 +526,6 @@ static gboolean do_update(void)
 	gdk_gc_unref(lgc);
       }
       break;
-#endif
     }
   }
 #endif
@@ -579,8 +588,11 @@ static gboolean do_update(void)
 		  0, 0,
 		  w, h);
 
-  if(load_alarms)
-    alarm_check();
+  if(load_alarms) {
+    if(alarm_check())
+      if(save_alarms)
+	alarm_save();
+  }
 
   return TRUE;
 }
@@ -627,7 +639,7 @@ static void write_config(void)
   gchar *fname;
 
   fname=choices_find_path_save("options", PROJECT, TRUE);
-  /*dprintf("save to %s\n", fname? fname: "NULL");*/
+  dprintf("save to %s\n", fname? fname: "NULL");
 
   if(fname) {
     FILE *out;
@@ -844,10 +856,8 @@ static void set_config(GtkWidget *widget, gpointer data)
   udef=gtk_entry_get_text(GTK_ENTRY(user_fmt));
   strncpy(user_defined, udef, sizeof(user_defined));
 
-  /*
   dprintf("format=%s, %s\n", nmode.format->name, nmode.format->fmt);
   dprintf("flags=%d, interval=%d\n", nmode.flags, nmode.interval);
-  */
   
   set_mode(&nmode);
   
@@ -1095,6 +1105,14 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
     gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 				bev->button, bev->time);
     return TRUE;
+  } else if(bev->button==1 && applet_mode) {
+      gchar *cmd;
+
+      cmd=g_strdup_printf("%s/AppRun &", getenv("APP_DIR"));
+      system(cmd);
+      g_free(cmd);
+
+      return TRUE;
   }
 
   return FALSE;
@@ -1104,7 +1122,6 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 
 static gboolean start_show_sprite(void);
 
-#if FADING
 static gboolean fade_out_sprite(void)
 {
   do_update();
@@ -1118,25 +1135,17 @@ static gboolean fade_out_sprite(void)
   }
   return TRUE;
 }
-#endif
 
 static gboolean end_show_sprite(void)
 {
-#if FADING
   sprite_state=T_GO;
   sprite_frame=NFRAME-1;
   sprite_tag=gtk_timeout_add(CHANGE_FOR/NFRAME, (GtkFunction) fade_out_sprite,
 			     NULL);
-#else
-  sprite_state=T_GONE;
-  sprite_tag=gtk_timeout_add(NEXT_SHOW(), (GtkFunction) start_show_sprite,
-			       NULL);
-#endif
   
   return FALSE;
 }
 
-#if FADING
 static gboolean fade_in_sprite(void)
 {
   do_update();
@@ -1150,7 +1159,6 @@ static gboolean fade_in_sprite(void)
   }
   return TRUE;
 }
-#endif
 
 static gboolean start_show_sprite(void)
 {
@@ -1161,20 +1169,14 @@ static gboolean start_show_sprite(void)
   if(w<sprite_width*2 || h<sprite_height*2)
     return TRUE;
 
-  sprite_x=(rand()>>9)%(w-sprite_width);
-  sprite_y=(rand()>>9)%(h-sprite_height);
+  sprite_x=(rand()>>3)%(w-sprite_width);
+  sprite_y=(rand()>>4)%(h-sprite_height);
   dprintf("%dx%d (%dx%d) -> %d,%d\n", w, h, sprite_width, sprite_height,
 	 sprite_x, sprite_y);
-#if FADING
   sprite_state=T_APPEAR;
   sprite_frame=0;
   sprite_tag=gtk_timeout_add(CHANGE_FOR/NFRAME, (GtkFunction) fade_in_sprite,
 			     NULL);
-#else
-  sprite_state=T_SHOW;
-  sprite_tag=gtk_timeout_add(SHOW_FOR, (GtkFunction) end_show_sprite,
-			       NULL);
-#endif
   
   return FALSE;
 }
@@ -1183,7 +1185,6 @@ static void setup_sprite(void)
 {
   GdkPixmap *pmap;
   time_t now;
-#if FADING
   int i;
   int x, y;
   static struct pattern {
@@ -1194,7 +1195,6 @@ static void setup_sprite(void)
     {0x5a5a5a5a, 2},
     {0x12481248, 4},
   };
-#endif
   
   sprite=gdk_pixbuf_new_from_xpm_data((const char **) tardis_xpm);
   if(!sprite)
@@ -1205,7 +1205,6 @@ static void setup_sprite(void)
   sprite_height=gdk_pixbuf_get_height(sprite);
   dprintf("%dx%d\n", sprite_width, sprite_height);
 
-#if FADING
   for(i=0; i<NFRAME; i++) {
     gdk_pixbuf_render_pixmap_and_mask(sprite, &pmap, masks+i, 127);
     dprintf("%d %p %p\n", i, pmap, masks[i]);
@@ -1230,7 +1229,6 @@ static void setup_sprite(void)
       gdk_gc_unref(bgc);
     }
   }
-#endif
   
   dprintf("set up callback\n");
   time(&now);
@@ -1240,7 +1238,7 @@ static void setup_sprite(void)
 			     
 }
 
-#endif
+#endif /* EXTRA_FUN */
 
 #if SUPPORT_OLD_CONFIG
 /* Read in the config */
@@ -1341,6 +1339,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.10  2001/05/25 07:58:14  stephen
+ * Can set initial size of applet.
+ *
  * Revision 1.9  2001/05/18 09:37:27  stephen
  * Fixed bug in update (needed to return TRUE!), display tweaks
  *
