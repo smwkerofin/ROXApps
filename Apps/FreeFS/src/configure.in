@@ -30,12 +30,12 @@ AC_SUBST(LIBGTOP_INCS)
 dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
-AC_CHECK_HEADERS(unistd.h)
+AC_CHECK_HEADERS(unistd.h libintl.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(realpath)
+AC_CHECK_FUNCS(realpath bindtextdomain gettext)
 
 dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(version information)

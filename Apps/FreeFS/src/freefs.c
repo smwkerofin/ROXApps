@@ -5,8 +5,9 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.4 2001/05/25 07:53:44 stephen Exp $
+ * $Id: freefs.c,v 1.5 2001/05/30 09:04:53 stephen Exp $
  */
+#include "config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +21,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef HAVE_LIBINTL_H
+#include <libintl.h>
+#endif
+
 #include <fcntl.h>
 #include <sys/statvfs.h>
 #include <sys/stat.h>
@@ -31,7 +36,6 @@
 #include <glibtop/mountlist.h>
 #include <glibtop/fsusage.h>
 
-#include "config.h"
 #include "choices.h"
 
 /* The icon */
@@ -105,7 +109,20 @@ int main(int argc, char *argv[])
   guchar *fname;
   int c;
   guint xid=0;
+  gchar *app_dir;
+#ifdef HAVE_BINDTEXTDOMAIN
+  gchar *localedir;
+#endif
+  
 
+  app_dir=g_getenv("APP_DIR");
+#ifdef HAVE_BINDTEXTDOMAIN
+  localedir=g_strconcat(app_dir, "%s/Messages", NULL);
+  bindtextdomain(PROGRAM, localedir);
+  textdomain(PROGRAM);
+  g_free(localedir);
+#endif
+  
   /*fprintf(stderr, "%d %s -> %s\n", argc, argv[1], argv[argc-1]);*/
   gtk_init(&argc, &argv);
   /*fprintf(stderr, "%d %s -> %s\n", argc, argv[1], argv[argc-1]);*/
@@ -1109,6 +1126,9 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.5  2001/05/30 09:04:53  stephen
+ * include unistd.h, plus some bugfixes and prep for i18n.
+ *
  * Revision 1.4  2001/05/25 07:53:44  stephen
  * Expanded configuration, which meant moving it off the menu and into a
  * window.  Applet supports a menu.  Initial size of applet now
