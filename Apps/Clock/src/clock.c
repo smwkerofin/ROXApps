@@ -5,12 +5,13 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.20 2002/01/29 15:24:34 stephen Exp $
+ * $Id: clock.c,v 1.21 2002/02/25 09:48:38 stephen Exp $
  */
 #include "config.h"
 
 #define DEBUG              1
 #define INLINE_FONT_SEL    0
+#define TRY_SERVER         1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,13 +56,21 @@
 #define USE_XML 0
 #endif
 
-#include "choices.h"
-#include "rox_debug.h"
-#include "infowin.h"
-#include "applet.h"
-#include "alarm.h"
+#if USE_XML && TRY_SERVER
+#define USE_SERVER 1
+#else
+#define USE_SERVER 0
+#endif
 
-static gboolean applet_mode=FALSE;
+#include "rox.h"
+#include "rox_debug.h"
+#include "applet.h"
+#if USE_SERVER
+#include "rox_soap.h"
+#include "rox_soap_server.h"
+#endif
+
+#include "alarm.h"
 
 typedef struct time_format {
   const char *name;   /* User visible name for this format */
@@ -97,17 +106,12 @@ typedef struct mode {
   const char *font_name;   /* Font for drawing clock numbers */
 } Mode;
 
-static Mode mode={
+static Mode default_mode={
   formats, MODE_SECONDS, 500, 64, NULL
 };
 
-
-static GtkWidget *digital_out = NULL; /* Text below clock face */
 static GtkWidget *menu=NULL;          /* Popup menu */
 static GtkWidget *infowin=NULL;       /* Information window */
-static GtkWidget *canvas = NULL;      /* Displays clock face */
-static GdkPixmap *pixmap = NULL;      /* Draw face here, copy to canvas */
-static GdkGC *gc=NULL;
 static GdkColormap *cmap = NULL;
 static GdkColor colours[]={
   /* If you change these, change the enums below */
@@ -144,37 +148,38 @@ static GtkWidget *font_window;
 static GtkWidget *font_name;
 #endif
 
-static guint update_tag;            /* Handle for the timeout */
 static time_t config_time=0;        /* Time our config file was last changed */
 static gboolean load_alarms=TRUE;   /* Also controls if we show them */
-static gboolean save_alarms=TRUE;   
+static gboolean save_alarms=TRUE;
 
-#if EXTRA_FUN
-#include "extra.h"
-static GdkPixbuf *sprite=NULL;
-static guint sprite_tag=0;
-static enum {
-  T_GONE, T_APPEAR, T_SHOW, T_GO
-} sprite_state=T_GONE;
-#define SHOW_FOR 10000
-#define HIDE_FOR 180
-#define HIDE_FOR_PLUS 120
-#define NEXT_SHOW() ((HIDE_FOR+(rand()>>7)%HIDE_FOR_PLUS)*1000)
-/*#define NEXT_SHOW() ((0+(rand()>>7)%30)*1000)*/
-static int sprite_x, sprite_y;
-static int sprite_width, sprite_height;
-static void setup_sprite(void);
+typedef struct clock_window {
+  GtkWidget *win;
+  gboolean applet_mode;
+  GtkWidget *digital_out; /* Text below clock face */
+  GtkWidget *canvas;      /* Displays clock face */
+  GdkPixmap *pixmap;      /* Draw face here, copy to canvas */
+  guint update_tag;            /* Handle for the timeout */
+  Mode mode;
+  GdkGC *gc;
+} ClockWindow;
 
-#define NFRAME 3
-#define CHANGE_FOR 500
-static GdkBitmap *masks[NFRAME];
-static int sprite_frame;
+static GList *windows=NULL;
+
+static ClockWindow *current_window=NULL;
+
+#if USE_SERVER
+static ROXSOAPServer *server=NULL;
+#define CLOCK_NAMESPACE_URL WEBSITE PROJECT
 #endif
 
-static gboolean do_update(void);        /* Update clock face and text out */
-static gint configure_event(GtkWidget *widget, GdkEventConfigure *event);
+static ClockWindow *make_window(guint32 socket);
+static void remove_window(ClockWindow *win);
+static gboolean do_update(ClockWindow *win);/* Update clock face and text */
+static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
+			    gpointer data);
                                     /* Window resized */
-static gint expose_event(GtkWidget *widget, GdkEventExpose *event);
+static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
+			    gpointer data);
                                     /* Window needs redrawing */
 static void menu_create_menu(GtkWidget *window);
                                     /* create the pop-up menu */
@@ -182,21 +187,35 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win); /* button press on canvas */
 static void show_info_win(void);
 static void show_conf_win(void);
+static gboolean check_alarms(gpointer data);
+#if USE_SERVER
+static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata);
+static gboolean open_remote(guint32 xid);
+#endif
 
 static void read_config(void);
-static void write_config(void);
+static void write_config(const Mode *);
 #if USE_XML
 static gboolean read_config_xml(void);
-static void write_config_xml(void);
+static void write_config_xml(const Mode *);
 #endif
 static void check_config(void);
 
 static void usage(const char *argv0)
 {
+#if USE_SERVER
+  printf("Usage: %s [X-options] [gtk-options] [-nrvh] [XID]\n", argv0);
+#else
   printf("Usage: %s [X-options] [gtk-options] [-vh] [XID]\n", argv0);
+#endif
   printf("where:\n\n");
   printf("  X-options\tstandard Xlib options\n");
   printf("  gtk-options\tstandard GTK+ options\n");
+#if USE_SERVER
+  printf("  -n\tdon't attempt to contact existing server\n");
+  printf("  -r\treplace existing server\n");
+#endif
   printf("  -h\tprint this help message\n");
   printf("  -v\tdisplay version information\n");
   printf("  XID\tthe X id of the window to use for applet mode\n");
@@ -226,25 +245,34 @@ static void do_version(void)
     else
     printf("libxml version %d)\n", LIBXML_VERSION);
   }
-#if EXTRA_FUN
-  printf("  Time and relative dimensions... in space\n");
-  printf("  Show for %d ms, %d frames of %d ms\n",
-	 SHOW_FOR, NFRAME, CHANGE_FOR);
-  printf("  Hide for %d to %d s\n", HIDE_FOR, HIDE_FOR+HIDE_FOR_PLUS);
-#endif
+  printf("  Using SOAP server... ");
+  if(USE_SERVER)
+    printf("yes\n");
+  else {
+    printf("no");
+    if(!TRY_SERVER)
+      printf(", disabled");
+    if(!USE_XML)
+      printf(", XML not available");
+    printf("\n");
+  }
 }
 
 int main(int argc, char *argv[])
 {
-  GtkWidget *win=NULL;
-  GtkWidget *vbox;
-  GtkStyle *style;
-  time_t now;
-  char buf[80];
+  ClockWindow *cwin;
   int i, c, do_exit, nerr;
   gchar *app_dir;
+  guint32 xid;
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
+#endif
+#if USE_SERVER
+  const char *options="vhnr";
+  gboolean new_run=FALSE;
+  gboolean replace_server=FALSE;
+#else
+  const char *options="vh";
 #endif
 
   /* First things first, set the locale information for time, so that
@@ -280,7 +308,7 @@ int main(int argc, char *argv[])
   /* Process remaining arguments */
   nerr=0;
   do_exit=FALSE;
-  while((c=getopt(argc, argv, "vh"))!=EOF)
+  while((c=getopt(argc, argv, options))!=EOF)
     switch(c) {
     case 'h':
       usage(argv[0]);
@@ -290,6 +318,14 @@ int main(int argc, char *argv[])
       do_version();
       do_exit=TRUE;
       break;
+#if USE_SERVER
+    case 'n':
+      new_run=TRUE;
+      break;
+    case 'r':
+      replace_server=TRUE;
+      break;
+#endif
     default:
       nerr++;
       break;
@@ -312,45 +348,118 @@ int main(int argc, char *argv[])
     alarm_load();
 
   dprintf(4, "argc=%d", argc);
-  if(!argv[optind] || !atol(argv[optind])) {
-    /* No arguments, or the first argument was not a (non-zero) number.
-       We are not an applet, so create a window */
-    win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_widget_set_name(win, "clock");
-    gtk_window_set_title(GTK_WINDOW(win), _("Clock"));
-    gtk_signal_connect(GTK_OBJECT(win), "destroy", 
-		       GTK_SIGNAL_FUNC(gtk_main_quit), 
-		       "WM destroy");
-    dprintf(3, "initial size=%d\n", mode.init_size);
-    gtk_widget_set_usize(win, mode.init_size, mode.init_size);
+  xid=(!argv[optind] || !atol(argv[optind]))? 0: atol(argv[optind]);
+  
+#if USE_SERVER
+  if(replace_server || !rox_soap_ping(PROJECT)) {
+    dprintf(1, "Making SOAP server");
+    server=rox_soap_server_new(PROJECT, CLOCK_NAMESPACE_URL);
+    rox_soap_server_add_action(server, "Open", NULL, "Parent", rpc_Open, NULL);
+  } else if(!new_run) {
+    if(open_remote(xid)) {
+      dprintf(1, "success in open_remote(%lu), exiting", xid);
+      return 0;
+    }
+  }
+#endif
+  cwin=make_window(xid);
 
-    /* We want to pop up a menu on a button press */
-    gtk_signal_connect(GTK_OBJECT(win), "button_press_event",
-		       GTK_SIGNAL_FUNC(button_press), win);
-    gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
-    gtk_widget_realize(win);
+  gtk_widget_show(cwin->win);
 
-  } else {
+  gtk_timeout_add(30*1000, check_alarms, NULL);
+  
+  dprintf(2, "into main.");
+  gtk_main();
+
+  if(save_alarms)
+    alarm_save();
+
+#if USE_SERVER
+  if(server)
+    rox_soap_server_delete(server);
+#endif
+
+  return 0;
+}
+
+static gboolean check_alarms(gpointer data)
+{
+  if(load_alarms) {
+    if(alarm_check())
+      if(save_alarms)
+	alarm_save();
+  }
+
+  return TRUE;
+}
+
+static void remove_window(ClockWindow *win)
+{
+  if(win==current_window)
+    current_window=NULL;
+  
+  windows=g_list_remove(windows, win);
+  /*gtk_widget_hide(win->win);*/
+
+  gtk_timeout_remove(win->update_tag);
+  if(win->mode.font_name)
+    g_free((void *) win->mode.font_name);
+  gdk_pixmap_unref(win->pixmap);
+  gdk_gc_unref(win->gc);
+  g_free(win);
+
+  dprintf(1, "windows=%p, number of active windows=%d", windows,
+	  g_list_length(windows));
+  if(g_list_length(windows)<1)
+    gtk_main_quit();
+}
+
+static void window_gone(GtkWidget *widget, gpointer data)
+{
+  ClockWindow *cw=(ClockWindow *) data;
+
+  dprintf(1, "Window gone: %p %p", widget, cw);
+
+  remove_window(cw);
+}
+
+static ClockWindow *make_window(guint32 socket)
+{
+  ClockWindow *cwin;
+  GtkWidget *vbox;
+  GtkStyle *style;
+  time_t now;
+  char buf[80];
+  int i;
+
+  cwin=g_new0(ClockWindow, 1);
+
+  cwin->mode=default_mode;
+  if(cwin->mode.font_name)
+    cwin->mode.font_name=g_strdup(cwin->mode.font_name);
+
+  cmap=gdk_rgb_get_cmap();
+  
+  if(socket) {
     /* We are an applet, plug ourselves in */
     GtkWidget *plug;
 
-    dprintf(3, "argv[%d]=%s", optind, argv[optind]);
-    plug=gtk_plug_new(atol(argv[optind]));
+    plug=gtk_plug_new(socket);
     if(!plug) {
-      fprintf(stderr, _("%s: failed to plug into socket %s, not a XID?\n"),
-	      argv[0], argv[optind]);
+      rox_error(_("%s: failed to plug into socket %ld, not a XID?\n"),
+	      "Clock", socket);
       exit(1);
     }
-    applet_mode=TRUE;
+    cwin->applet_mode=TRUE;
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
-		       GTK_SIGNAL_FUNC(gtk_main_quit), 
-		       "WM destroy");
-    dprintf(3, "initial size=%d", mode.init_size);
-    gtk_widget_set_usize(plug, mode.init_size, mode.init_size);
+		       GTK_SIGNAL_FUNC(window_gone), 
+		       cwin);
+    dprintf(3, "initial size=%d", cwin->mode.init_size);
+    gtk_widget_set_usize(plug, cwin->mode.init_size, cwin->mode.init_size);
 
     /* We want to pop up a menu on a button press */
     gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
-		       GTK_SIGNAL_FUNC(button_press), plug);
+		       GTK_SIGNAL_FUNC(button_press), cwin);
     gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
 
     
@@ -358,95 +467,131 @@ int main(int argc, char *argv[])
        plug specific code, its just a containing widget.  For the rest of the
        program we just pretend it was a window and it all works
     */
-    win=plug;
+    cwin->win=plug;
+  } else {
+    /*  We are not an applet, so create a window */
+    GtkStyle *style;
+    GdkPixmap *pixmap;
+    GdkBitmap *mask;
+    gchar *fname;
+    
+    cwin->applet_mode=FALSE;
+    cwin->win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_widget_set_name(cwin->win, "clock");
+    gtk_window_set_title(GTK_WINDOW(cwin->win), _("Clock"));
+    gtk_signal_connect(GTK_OBJECT(cwin->win), "destroy", 
+		       GTK_SIGNAL_FUNC(window_gone), 
+		       cwin);
+    dprintf(3, "initial size=%d", cwin->mode.init_size);
+    gtk_widget_set_usize(cwin->win, cwin->mode.init_size,
+			 cwin->mode.init_size);
+
+    /* We want to pop up a menu on a button press */
+    gtk_signal_connect(GTK_OBJECT(cwin->win), "button_press_event",
+		       GTK_SIGNAL_FUNC(button_press), cwin);
+    gtk_widget_add_events(cwin->win, GDK_BUTTON_PRESS_MASK);
+    gtk_widget_realize(cwin->win);
+
+    fname=rox_resources_find(PROJECT, "AppIcon.xpm", ROX_RESOURCES_NO_LANG);
+    if(fname) {
+      style = gtk_widget_get_style(cwin->win);
+      pixmap = gdk_pixmap_create_from_xpm(GTK_WIDGET(cwin->win)->window,
+					  &mask, 
+					  &style->bg[GTK_STATE_NORMAL],
+					  fname);
+      gdk_window_set_icon(GTK_WIDGET(cwin->win)->window, NULL, pixmap, mask);
+
+      g_free(fname);
+    }
+
   }
 
   vbox=gtk_vbox_new(FALSE, 1);
-  gtk_container_add(GTK_CONTAINER(win), vbox);
+  gtk_container_add(GTK_CONTAINER(cwin->win), vbox);
   gtk_widget_show(vbox);
 
   /* Get the right grey for the background */
   style=gtk_widget_get_style(vbox);
   colours[GREY]=style->bg[GTK_STATE_NORMAL];
 
-  cmap=gdk_rgb_get_cmap();
   for(i=0; i<NUM_COLOUR; i++)
     gdk_color_alloc(cmap, colours+i);
 
-  canvas=gtk_drawing_area_new();
-  gtk_drawing_area_size (GTK_DRAWING_AREA(canvas), 64, 48);
+  cwin->canvas=gtk_drawing_area_new();
+  gtk_drawing_area_size (GTK_DRAWING_AREA(cwin->canvas), 64, 48);
   /* next line causes trouble??  maybe just as an applet... */
-  gtk_widget_set_events (canvas, GDK_EXPOSURE_MASK);
-  gtk_box_pack_start (GTK_BOX (vbox), canvas, TRUE, TRUE, 0);
-  gtk_signal_connect (GTK_OBJECT (canvas), "expose_event",
-		      (GtkSignalFunc) expose_event, NULL);
-  gtk_signal_connect (GTK_OBJECT (canvas), "configure_event",
-		      (GtkSignalFunc) configure_event, NULL);
-  gtk_widget_realize(canvas);
-  gtk_widget_show (canvas);
-  gtk_widget_set_name(canvas, "clock face");
+  gtk_widget_set_events (cwin->canvas, GDK_EXPOSURE_MASK);
+  gtk_box_pack_start (GTK_BOX (vbox), cwin->canvas, TRUE, TRUE, 0);
+  gtk_signal_connect (GTK_OBJECT (cwin->canvas), "expose_event",
+		      (GtkSignalFunc) expose_event, cwin);
+  gtk_signal_connect (GTK_OBJECT (cwin->canvas), "configure_event",
+		      (GtkSignalFunc) configure_event, cwin);
+  gtk_widget_realize(cwin->canvas);
+  gtk_widget_show (cwin->canvas);
+  gtk_widget_set_name(cwin->canvas, "clock face");
   
-  gc=gdk_gc_new(canvas->window);
+  cwin->gc=gdk_gc_new(cwin->canvas->window);
 
   time(&now);
-  strftime(buf, 80, mode.format->fmt, localtime(&now));
+  strftime(buf, 80, cwin->mode.format->fmt, localtime(&now));
 
   /* This is the text below the clock face */
-  digital_out=gtk_label_new(buf);
-  gtk_box_pack_start(GTK_BOX(vbox), digital_out, FALSE, FALSE, 2);
-  if(!(mode.flags & MODE_NO_TEXT))
-    gtk_widget_show(digital_out);
+  cwin->digital_out=gtk_label_new(buf);
+  gtk_box_pack_start(GTK_BOX(vbox), cwin->digital_out, FALSE, FALSE, 2);
+  if(!(cwin->mode.flags & MODE_NO_TEXT))
+    gtk_widget_show(cwin->digital_out);
 
-  if(applet_mode);
-    applet_get_panel_location(win);
-  if(win)
-    gtk_widget_show(win);
+  if(cwin->applet_mode);
+    applet_get_panel_location(cwin->win);
+  if(cwin->win)
+    gtk_widget_show(cwin->win);
 
   /* Make sure we get called periodically */
-  update_tag=gtk_timeout_add(mode.interval,
-			 (GtkFunction) do_update, digital_out);
+  cwin->update_tag=gtk_timeout_add(cwin->mode.interval,
+			 (GtkFunction) do_update, cwin);
 
-#if EXTRA_FUN
-  setup_sprite();
-#endif
+  windows=g_list_append(windows, cwin);
+  current_window=cwin;
+  gtk_widget_ref(cwin->win);
 
-  dprintf(2, "into main.\n");
-  gtk_main();
-
-  if(save_alarms)
-    alarm_save();
-
-  return 0;
+  return cwin;
 }
 
 /* Called when the display mode changes */
-static void set_mode(Mode *nmode)
+static void set_mode(ClockWindow *cwin, Mode *nmode)
 {
+  Mode *mode;
+
+  if(cwin)
+    mode=&cwin->mode;
+  else
+    mode=&default_mode;
+      
   dprintf(3, "mode now %s, %d, %#x, font %s\n", nmode->format->name,
 	  nmode->interval, nmode->flags,
 	  nmode->font_name? nmode->font_name: "(default)");
 
   /* Do we need to change the update rate? */
-  if(update_tag && mode.interval!=nmode->interval) {
-    gtk_timeout_remove(update_tag);
-    update_tag=gtk_timeout_add(nmode->interval,
-			       (GtkFunction) do_update, digital_out);
-    dprintf(4, "tag now %u (%d)\n", update_tag, nmode->interval);
+  if(cwin && cwin->update_tag && mode->interval!=nmode->interval) {
+    gtk_timeout_remove(cwin->update_tag);
+    cwin->update_tag=gtk_timeout_add(nmode->interval,
+			       (GtkFunction) do_update, cwin);
+    dprintf(4, "tag now %u (%d)\n", cwin->update_tag, nmode->interval);
   }
 
   /* Change visibility of text line? */
-  if(digital_out &&
-     (nmode->flags & MODE_NO_TEXT)!=(mode.flags & MODE_NO_TEXT)) {
+  if(cwin && cwin->digital_out &&
+     (nmode->flags & MODE_NO_TEXT)!=(cwin->mode.flags & MODE_NO_TEXT)) {
     if(nmode->flags & MODE_NO_TEXT)
-      gtk_widget_hide(digital_out);
+      gtk_widget_hide(cwin->digital_out);
     else
-      gtk_widget_show(digital_out);
+      gtk_widget_show(cwin->digital_out);
   }
 
-  if(mode.font_name && mode.font_name!=nmode->font_name)
-    g_free((gpointer) mode.font_name);
+  if(mode->font_name && mode->font_name!=nmode->font_name)
+    g_free((gpointer) mode->font_name);
   
-  mode=*nmode;
+  *mode=*nmode;
 }
 
 enum draw_hours {
@@ -454,7 +599,7 @@ enum draw_hours {
 };
 
 /* Redraw clock face and update digital_out */
-static gboolean do_update(void)
+static gboolean do_update(ClockWindow *cwin)
 {
   time_t now;
   char buf[80];
@@ -480,33 +625,34 @@ static gboolean do_update(void)
   time(&now);
   tms=localtime(&now);
     
-  if(digital_out && !(mode.flags & MODE_NO_TEXT)) {
-    strftime(buf, 80, mode.format->fmt, tms);
+  if(cwin->digital_out && !(cwin->mode.flags & MODE_NO_TEXT)) {
+    strftime(buf, 80, cwin->mode.format->fmt, tms);
     
-    gtk_label_set_text(GTK_LABEL(digital_out), buf);
+    gtk_label_set_text(GTK_LABEL(cwin->digital_out), buf);
   }
 
-  if(!gc || !canvas || !pixmap)
+  if(!cwin->gc || !cwin->canvas || !cwin->pixmap)
     return TRUE;
   
-  h=canvas->allocation.height;
-  w=canvas->allocation.width;
+  h=cwin->canvas->allocation.height;
+  w=cwin->canvas->allocation.width;
 
   if(alarm_have_active())
     face_fg=CL_FACE_FG_ALRM;
 
-  style=gtk_widget_get_style(canvas);
+  style=gtk_widget_get_style(cwin->canvas);
   dprintf(3, "style=%p bg_gc[GTK_STATE_NORMAL]=%p", style,
 	  style->bg_gc[GTK_STATE_NORMAL]);
   if(style && style->bg_gc[GTK_STATE_NORMAL]) {
     /*gdk_draw_rectangle(pixmap, style->bg_gc[GTK_STATE_NORMAL], TRUE,
 		       0, 0, w, h);*/
-    gtk_style_apply_default_background(style, pixmap, TRUE, GTK_STATE_NORMAL,
+    gtk_style_apply_default_background(style, cwin->pixmap, TRUE,
+				       GTK_STATE_NORMAL,
 				       NULL, 0, 0, w, h);
   } else {
     /* Blank out to the background colour */
-    gdk_gc_set_foreground(gc, CL_BACKGROUND);
-    gdk_draw_rectangle(pixmap, gc, TRUE, 0, 0, w, h);
+    gdk_gc_set_foreground(cwin->gc, CL_BACKGROUND);
+    gdk_draw_rectangle(cwin->pixmap, cwin->gc, TRUE, 0, 0, w, h);
   }
 
   /* we want a diameter that can fit in our canvas */
@@ -533,22 +679,24 @@ static gboolean do_update(void)
   x0=w/2;
   y0=h/2;
 
-  if(!font && mode.font_name) {
-    font=gdk_font_load(mode.font_name);
+  if(!font && cwin->mode.font_name) {
+    font=gdk_font_load(cwin->mode.font_name);
   }
   if(!font) 
-    font=canvas->style->font;
+    font=cwin->canvas->style->font;
   gdk_font_ref(font);
   
   /* Draw the clock face, including the hours */
-  gdk_gc_set_foreground(gc, face_fg);
-  gdk_draw_arc(pixmap, gc, TRUE, x0-rad, y0-rad, sw, sh, 0, 360*64);
+  gdk_gc_set_foreground(cwin->gc, face_fg);
+  gdk_draw_arc(cwin->pixmap, cwin->gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
+	       360*64);
   sw-=4;
   sh-=4;
   rad=sw/2;
-  gdk_gc_set_foreground(gc, CL_FACE_BG);
-  gdk_draw_arc(pixmap, gc, TRUE, x0-rad, y0-rad, sw, sh, 0, 360*64);
-  if(mode.flags & MODE_HOURS) {
+  gdk_gc_set_foreground(cwin->gc, CL_FACE_BG);
+  gdk_draw_arc(cwin->pixmap, cwin->gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
+	       360*64);
+  if(cwin->mode.flags & MODE_HOURS) {
     int siz;
     
     twidth=gdk_text_width(font, "12", 2);
@@ -569,58 +717,22 @@ static gboolean do_update(void)
     double y2=y0-rad*cos(ang)*7/8;
     x1=x0+rad*sin(ang);
     y1=y0-rad*cos(ang);
-    gdk_gc_set_foreground(gc, face_fg);
-    gdk_draw_line(pixmap, gc, x2, y2, x1, y1);
+    gdk_gc_set_foreground(cwin->gc, face_fg);
+    gdk_draw_line(cwin->pixmap, cwin->gc, x2, y2, x1, y1);
 
     if(th!=DH_NO && (th==DH_ALL || tick%3==0)) {
       char buf[16];
       int l;
       int xt, yt;
       
-      gdk_gc_set_foreground(gc, CL_HOUR_TEXT);
+      gdk_gc_set_foreground(cwin->gc, CL_HOUR_TEXT);
       sprintf(buf, "%d", tick==0? 12: tick);
       l=strlen(buf);
       xt=x2-gdk_text_width(font, buf, l)/2;
       yt=y2+gdk_text_height(font, buf, l)/2;
-      gdk_draw_string(pixmap, font, gc, xt, yt, buf);
+      gdk_draw_string(cwin->pixmap, font, cwin->gc, xt, yt, buf);
     }
   }
-
-#if EXTRA_FUN
-  if(sprite) {
-    GdkGC *lgc;
-
-    dprintf(5, "state=%d\n", sprite_state);
-    switch(sprite_state) {
-    case T_SHOW:
-      gdk_pixbuf_render_to_drawable_alpha(sprite, pixmap,
-					  0, 0,
-					  sprite_x, sprite_y,
-					  sprite_width, sprite_height,
-					  GDK_PIXBUF_ALPHA_BILEVEL,
-					  127,
-					  GDK_RGB_DITHER_NORMAL,
-					  0, 0);
-      break;
-
-    case T_APPEAR: case T_GO:
-      dprintf(3, "state=%d, frame=%d\n", sprite_state, sprite_frame);
-      if(sprite_frame>=0 && sprite_frame<NFRAME && masks[sprite_frame]) {
-	lgc=gdk_gc_new(canvas->window);
-
-	gdk_gc_set_clip_mask(lgc, masks[sprite_frame]);
-	gdk_gc_set_clip_origin(lgc, sprite_x, sprite_y);
-	gdk_pixbuf_render_to_drawable(sprite, pixmap, lgc, 0, 0,
-				      sprite_x, sprite_y,
-				      sprite_width, sprite_height,
-				      GDK_RGB_DITHER_NORMAL,
-				      0, 0);
-	gdk_gc_unref(lgc);
-      }
-      break;
-    }
-  }
-#endif
 
   /* Draw the hands */
   if(rad>100) {
@@ -634,77 +746,77 @@ static gboolean do_update(void)
     points[2].y=(gint16)(y0-rad*cos(h_ang-M_PI)*0.02);
     points[3].x=(gint16)(x0+rad*sin(h_ang-M_PI/2)*0.02);
     points[3].y=(gint16)(y0-rad*cos(h_ang-M_PI/2)*0.02);
-    gdk_gc_set_foreground(gc, CL_HOUR_HAND);
-    gdk_draw_polygon(pixmap, gc, TRUE, points, 4);
+    gdk_gc_set_foreground(cwin->gc, CL_HOUR_HAND);
+    gdk_draw_polygon(cwin->pixmap, cwin->gc, TRUE, points, 4);
     
   } else {
     x1=x0+rad*sin(h_ang)*0.5;
     y1=y0-rad*cos(h_ang)*0.5;
-    gdk_gc_set_foreground(gc, CL_HOUR_HAND);
-    gdk_gc_set_line_attributes(gc, 2, GDK_LINE_SOLID, GDK_CAP_ROUND,
+    gdk_gc_set_foreground(cwin->gc, CL_HOUR_HAND);
+    gdk_gc_set_line_attributes(cwin->gc, 2, GDK_LINE_SOLID, GDK_CAP_ROUND,
 			       GDK_JOIN_MITER);
-    gdk_draw_line(pixmap, gc, x0, y0, x1, y1);
+    gdk_draw_line(cwin->pixmap, cwin->gc, x0, y0, x1, y1);
     
   }
   
   x1=x0+rad*sin(m_ang)*0.95;
   y1=y0-rad*cos(m_ang)*0.95;
-  gdk_gc_set_foreground(gc, CL_MINUTE_HAND);
-  gdk_gc_set_line_attributes(gc, 2, GDK_LINE_SOLID, GDK_CAP_ROUND,
+  gdk_gc_set_foreground(cwin->gc, CL_MINUTE_HAND);
+  gdk_gc_set_line_attributes(cwin->gc, 2, GDK_LINE_SOLID, GDK_CAP_ROUND,
 			     GDK_JOIN_MITER);
-  gdk_draw_line(pixmap, gc, x0, y0, x1, y1);
+  gdk_draw_line(cwin->pixmap, cwin->gc, x0, y0, x1, y1);
   
-  gdk_gc_set_line_attributes(gc, 0, GDK_LINE_SOLID, GDK_CAP_ROUND,
+  gdk_gc_set_line_attributes(cwin->gc, 0, GDK_LINE_SOLID, GDK_CAP_ROUND,
 			     GDK_JOIN_MITER);
-  if(mode.flags & MODE_SECONDS) {
+  if(cwin->mode.flags & MODE_SECONDS) {
     int x2, y2;
     
     x1=x0+rad*sin(s_ang)*0.95;
     y1=y0-rad*cos(s_ang)*0.95;
     x2=x0+rad*sin(s_ang+M_PI)*0.05;
     y2=y0-rad*cos(s_ang+M_PI)*0.05;
-    gdk_gc_set_foreground(gc, CL_SECOND_HAND);
-    gdk_draw_line(pixmap, gc, x2, y2, x1, y1);
+    gdk_gc_set_foreground(cwin->gc, CL_SECOND_HAND);
+    gdk_draw_line(cwin->pixmap, cwin->gc, x2, y2, x1, y1);
   }
-  gdk_gc_set_foreground(gc, CL_HOUR_HAND);
+  gdk_gc_set_foreground(cwin->gc, CL_HOUR_HAND);
   rad=sw/10;
   if(rad>8)
     rad=8;
-  gdk_draw_arc(pixmap, gc, TRUE, x0-rad/2, y0-rad/2, rad, rad, 0, 360*64);
+  gdk_draw_arc(cwin->pixmap, cwin->gc, TRUE, x0-rad/2, y0-rad/2, rad, rad,
+	       0, 360*64);
 
   /* Copy the pixmap to the display canvas */
-  gdk_draw_pixmap(canvas->window,
-		  canvas->style->fg_gc[GTK_WIDGET_STATE (canvas)],
-		  pixmap,
+  /*
+  gdk_draw_pixmap(cwin->canvas->window,
+		  cwin->canvas->style->fg_gc[GTK_WIDGET_STATE (cwin->canvas)],
+		  cwin->pixmap,
 		  0, 0,
 		  0, 0,
 		  w, h);
-
-  if(load_alarms) {
-    if(alarm_check())
-      if(save_alarms)
-	alarm_save();
-  }
+		  */
+  gtk_widget_queue_draw(cwin->canvas);
 
   gdk_font_unref(font);
 
   return TRUE;
 }
 
-static gint expose_event(GtkWidget *widget, GdkEventExpose *event)
+static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
+			 gpointer data)
 {
   int w, h;
+  ClockWindow *cwin=(ClockWindow *) data;
   
-  if(!gc || !canvas || !pixmap)
+  if(!cwin->gc || !cwin->canvas || !cwin->pixmap)
     return;
   
-  h=canvas->allocation.height;
-  w=canvas->allocation.width;
+  h=cwin->canvas->allocation.height;
+  w=cwin->canvas->allocation.width;
 
   /* Copy the pixmap to the display canvas */
-  gdk_draw_pixmap(canvas->window,
-		  canvas->style->fg_gc[GTK_WIDGET_STATE (canvas)],
-		  pixmap,
+  gdk_draw_pixmap(cwin->canvas->window,
+		  cwin->canvas->style->fg_gc[GTK_WIDGET_STATE (cwin->canvas)],
+		  cwin->pixmap,
 		  0, 0,
 		  0, 0,
 		  w, h);
@@ -713,22 +825,25 @@ static gint expose_event(GtkWidget *widget, GdkEventExpose *event)
 }
 
 /* Create a new backing pixmap of the appropriate size */
-static gint configure_event(GtkWidget *widget, GdkEventConfigure *event)
+static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
+			 gpointer data)
 {
-  if (pixmap)
-    gdk_pixmap_unref(pixmap);
+  ClockWindow *cwin=(ClockWindow *) data;
+  
+  if (cwin->pixmap)
+    gdk_pixmap_unref(cwin->pixmap);
 
-  pixmap = gdk_pixmap_new(widget->window,
+  cwin->pixmap = gdk_pixmap_new(widget->window,
 			  widget->allocation.width,
 			  widget->allocation.height,
 			  -1);
-  do_update();
+  do_update(cwin);
 
   return TRUE;
 }
 
 #if USE_XML
-static void write_config_xml(void)
+static void write_config_xml(const Mode *mode)
 {
   gchar *fname;
   gboolean ok;
@@ -747,18 +862,18 @@ static void write_config_xml(void)
     xmlSetProp(doc->children, "version", VERSION);
 
     tree=xmlNewChild(doc->children, NULL, "format", NULL);
-    xmlSetProp(tree, "name", mode.format->name);
+    xmlSetProp(tree, "name", mode->format->name);
     tree=xmlNewChild(doc->children, NULL, "flags", NULL);
-    sprintf(buf, "%u", (unsigned int) mode.flags);
+    sprintf(buf, "%u", (unsigned int) mode->flags);
     xmlSetProp(tree, "value", buf);
     tree=xmlNewChild(doc->children, NULL, "interval", NULL);
-    sprintf(buf, "%ld", (long) mode.interval);
+    sprintf(buf, "%ld", (long) mode->interval);
     xmlSetProp(tree, "value", buf);
     tree=xmlNewChild(doc->children, NULL, "user-format", user_defined);
-    if(mode.font_name)
-      tree=xmlNewChild(doc->children, NULL, "font", mode.font_name);
+    if(mode->font_name)
+      tree=xmlNewChild(doc->children, NULL, "font", mode->font_name);
     tree=xmlNewChild(doc->children, NULL, "applet", NULL);
-    sprintf(buf, "%d", (int) mode.init_size);
+    sprintf(buf, "%d", (int) mode->init_size);
     xmlSetProp(tree, "initial-size", buf);
   
     ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
@@ -772,7 +887,7 @@ static void write_config_xml(void)
 #endif
 
 /* Write the config to a file */
-static void write_config(void)
+static void write_config(const Mode *mode)
 {
 #if !USE_XML
   gchar *fname;
@@ -796,13 +911,13 @@ static void write_config(void)
       fprintf(out, _("#\n# Written %s\n\n"), buf);
 
       /* These aren't translated */
-      fprintf(out, "time_format=%s\n", mode.format->name);
-      fprintf(out, "flags=%d\n", (int) mode.flags);
-      fprintf(out, "interval=%ld\n", (long) mode.interval);
+      fprintf(out, "time_format=%s\n", mode->format->name);
+      fprintf(out, "flags=%d\n", (int) mode->flags);
+      fprintf(out, "interval=%ld\n", (long) mode->interval);
       fprintf(out, "user_format=%s\n", user_defined);
-      fprintf(out, "init_size=%d\n", (int) mode.init_size);
-      if(mode.font_name)
-	fprintf(out, "font_name=%s\n", mode.font_name);
+      fprintf(out, "init_size=%d\n", (int) mode->init_size);
+      if(mode->font_name)
+	fprintf(out, "font_name=%s\n", mode->font_name);
 
       fclose(out);
 
@@ -812,7 +927,7 @@ static void write_config(void)
     g_free(fname);
   }
 #else
-  write_config_xml();
+  write_config_xml(mode);
 #endif
 }
 
@@ -832,7 +947,7 @@ static gboolean read_config_xml(void)
     xmlNodePtr node, root;
     const xmlChar *string;
 
-    nmode=mode;
+    nmode=default_mode;
     
 #ifdef HAVE_STAT
     if(stat(fname, &statb)==0) {
@@ -921,7 +1036,7 @@ static gboolean read_config_xml(void)
     
     if(nmode.init_size<16)
       nmode.init_size=16;
-    set_mode(&nmode);
+    set_mode(NULL, &nmode);
     
     g_free(fname);
     xmlFreeDoc(doc);
@@ -965,7 +1080,7 @@ static void read_config(void)
       gchar *words;
       Mode nmode;
 
-      nmode=mode;
+      nmode=default_mode;
 
 #ifdef HAVE_FSTAT
       if(fstat(fileno(in), &statb)==0) {
@@ -1030,7 +1145,7 @@ static void read_config(void)
 
       if(nmode.init_size<16)
 	nmode.init_size=16;
-      set_mode(&nmode);
+      set_mode(NULL, &nmode);
     }
     
     g_free(fname);
@@ -1041,6 +1156,8 @@ static void read_config(void)
    has changed, call read_config() */
 static void check_config(void)
 {
+  /* We only need to do this if there are multiple copies of Clock running. */
+#if !USE_SERVER
   gchar *fname;
 
   if(config_time==0) {
@@ -1071,6 +1188,7 @@ static void check_config(void)
 
     g_free(fname);
   }
+#endif
 }
 
 /* Make a destroy-frame into a close */
@@ -1085,15 +1203,21 @@ static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
 /* User cancels a change of config */
 static void cancel_config(GtkWidget *widget, gpointer data)
 {
+  ClockWindow *cwin;
+  Mode *mode;
   int i;
+
+  cwin=(ClockWindow *) gtk_object_get_data(GTK_OBJECT(confwin), "ClockWindow");
+  mode=cwin? &cwin->mode: &default_mode;
+  
   /* Reset window contents */
   gtk_option_menu_set_history(GTK_OPTION_MENU(mode_sel),
-			      (int) (mode.format-formats));
+			      (int) (mode->format-formats));
   gtk_entry_set_text(GTK_ENTRY(user_fmt), user_defined);
   for(i=0; i<MODE_NFLAGS; i++)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mode_flags[i]),
-				 mode.flags & 1<<i);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(interval), mode.interval/1000.);
+				 mode->flags & 1<<i);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(interval), mode->interval/1000.);
 
   /* Hide window */
   gtk_widget_hide(confwin);
@@ -1108,6 +1232,9 @@ static void set_config(GtkWidget *widget, gpointer data)
   gfloat sec;
   int i;
   gchar *text;
+  ClockWindow *cwin;
+
+  cwin=(ClockWindow *) gtk_object_get_data(GTK_OBJECT(confwin), "ClockWindow");
 
   /* get data from window contents */
   menu=gtk_option_menu_get_menu(GTK_OPTION_MENU(mode_sel));
@@ -1137,11 +1264,11 @@ static void set_config(GtkWidget *widget, gpointer data)
   dprintf(2, "flags=%d, interval=%d", nmode.flags, nmode.interval);
   dprintf(2, "font=%s", nmode.font_name);
   
-  set_mode(&nmode);
+  set_mode(cwin, &nmode);
   
   if(GPOINTER_TO_INT(data))
-    write_config();
-  do_update();
+    write_config(&cwin->mode);
+  do_update(cwin);
   
   gtk_widget_hide(confwin);
 }
@@ -1247,7 +1374,7 @@ static void show_conf_win(void)
 
     for(i=0; formats[i].name; i++) {
       item=gtk_menu_item_new_with_label(_(formats[i].name));
-      if(mode.format==formats+i)
+      if(current_window->mode.format==formats+i)
 	set=i;
       gtk_object_set_data(GTK_OBJECT(item), "format", formats+i);
       gtk_widget_show(item);
@@ -1263,7 +1390,7 @@ static void show_conf_win(void)
     gtk_widget_set_usize(mode_sel, mw+50, mh+4);
     gtk_option_menu_set_history(GTK_OPTION_MENU(mode_sel), set);
     
-    sel_fmt=gtk_label_new(mode.format->fmt);
+    sel_fmt=gtk_label_new(current_window->mode.format->fmt);
     gtk_widget_show(sel_fmt);
     gtk_box_pack_start(GTK_BOX(hbox), sel_fmt, FALSE, FALSE, 2);
 
@@ -1288,8 +1415,8 @@ static void show_conf_win(void)
     gtk_widget_show(label);
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
 
-    adj=gtk_adjustment_new((gfloat) (mode.interval/1000.), 0.1, 60.,
-			   0.1, 5, 5);
+    adj=gtk_adjustment_new((gfloat) (current_window->mode.interval/1000.),
+			   0.1, 60., 0.1, 5, 5);
     interval=gtk_spin_button_new(GTK_ADJUSTMENT(adj), 1., 2);
     gtk_widget_show(interval);
     gtk_box_pack_start(GTK_BOX(hbox), interval, FALSE, FALSE, 2);
@@ -1323,7 +1450,8 @@ static void show_conf_win(void)
     gtk_widget_show(font_sel);
     gtk_box_pack_start(GTK_BOX(hbox), font_sel, FALSE, FALSE, 2);
 #else
-    font_name=gtk_label_new(mode.font_name? mode.font_name: "");
+    font_name=gtk_label_new(current_window->mode.font_name?
+			    current_window->mode.font_name: "");
     gtk_widget_show(font_name);
     gtk_box_pack_start(GTK_BOX(hbox), font_name, FALSE, FALSE, 2);
 
@@ -1350,7 +1478,7 @@ static void show_conf_win(void)
     gtk_widget_show(label);
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
 
-    adj=gtk_adjustment_new((gfloat) mode.init_size, 16, 128,
+    adj=gtk_adjustment_new((gfloat) current_window->mode.init_size, 16, 128,
 			   2, 16, 16);
     init_size=gtk_spin_button_new(GTK_ADJUSTMENT(adj), 1., 0);
     gtk_widget_show(init_size);
@@ -1388,27 +1516,41 @@ static void show_conf_win(void)
 
   /* Initialise values */
   gtk_option_menu_set_history(GTK_OPTION_MENU(mode_sel),
-			      (int) (mode.format-formats));
+			      (int) (current_window->mode.format-formats));
   gtk_entry_set_text(GTK_ENTRY(user_fmt), user_defined);
   for(i=0; i<MODE_NFLAGS; i++)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mode_flags[i]),
-				 mode.flags & 1<<i);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(interval), mode.interval/1000.);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(init_size), mode.init_size);
+				 current_window->mode.flags & 1<<i);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(interval),
+			    current_window->mode.interval/1000.);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(init_size),
+			    current_window->mode.init_size);
 
 #if INLINE_FONT_SEL
-  if(mode.font_name)
+  if(current_window->mode.font_name)
     gtk_font_selection_set_font_name(GTK_FONT_SELECTION(font_sel),
-				     mode.font_name);
+				     current_window->mode.font_name);
 #else
-  if(mode.font_name) {
+  if(current_window->mode.font_name) {
     gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(font_window),
-				     mode.font_name);
-    gtk_label_set_text(GTK_LABEL(font_name), mode.font_name);
+				     current_window->mode.font_name);
+    gtk_label_set_text(GTK_LABEL(font_name), current_window->mode.font_name);
   }
 #endif
+  gtk_object_set_data(GTK_OBJECT(confwin), "ClockWindow", current_window);
 
   gtk_widget_show(confwin);
+}
+
+static void close_window(void)
+{
+  ClockWindow *cw=current_window;
+
+  dprintf(1, "close_window %p %p", cw, cw->win);
+
+  gtk_widget_hide(cw->win);
+  gtk_widget_unref(cw->win);
+  gtk_widget_destroy(cw->win);
 }
 
 /* Pop-up menu */
@@ -1416,6 +1558,7 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),		NULL, show_info_win, 0, NULL },
   { N_("/Configure..."),       	NULL, show_conf_win, 0, NULL },
   { N_("/Alarms..."),		NULL, alarm_show_window, 0, NULL },
+  { N_("/Close"), 	        NULL, close_window, 0, NULL },
   { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
 };
 
@@ -1464,12 +1607,16 @@ static void menu_create_menu(GtkWidget *window)
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win)
 {
+  ClockWindow *cwin=(ClockWindow *) win;
+
+  current_window=cwin;
+  
   if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
     if(bev->state & GDK_CONTROL_MASK) /* ctrl-menu */
       return FALSE; /* Let it pass */
     /* Pop up the menu */
     if(!menu) 
-      menu_create_menu(GTK_WIDGET(win));
+      menu_create_menu(GTK_WIDGET(cwin->win));
 
     if(!save_alarms || !load_alarms) {
       GList *children=GTK_MENU_SHELL(menu)->children;
@@ -1478,18 +1625,16 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
       gtk_widget_set_sensitive(alarms, FALSE);
     }
 
-    if(applet_mode)
+    if(cwin->applet_mode)
       applet_show_menu(menu, bev);
     else
       gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		     bev->button, bev->time);
     return TRUE;
-  } else if(bev->button==1 && applet_mode) {
-      gchar *cmd;
+  } else if(bev->button==1 && cwin->applet_mode) {
+      ClockWindow *nwin=make_window(0);
 
-      cmd=g_strdup_printf("%s/AppRun &", getenv("APP_DIR"));
-      system(cmd);
-      g_free(cmd);
+      gtk_widget_show(nwin->win);
 
       return TRUE;
   }
@@ -1497,128 +1642,75 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   return FALSE;
 }
 
-#if EXTRA_FUN
-
-static gboolean start_show_sprite(void);
-
-static gboolean fade_out_sprite(void)
+#if USE_SERVER
+static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata)
 {
-  do_update();
+  xmlNodePtr parent;
+  guint32 xid=0;
 
-  sprite_frame--;
-  if(sprite_frame<0) {
-    sprite_state=T_GONE;
-    sprite_tag=gtk_timeout_add(NEXT_SHOW(), (GtkFunction) start_show_sprite,
-			       NULL);
-    return FALSE;
-  }
-  return TRUE;
-}
+  parent=args->data;
+  if(parent) {
+    gchar *str;
 
-static gboolean end_show_sprite(void)
-{
-  sprite_state=T_GO;
-  sprite_frame=NFRAME-1;
-  sprite_tag=gtk_timeout_add(CHANGE_FOR/NFRAME, (GtkFunction) fade_out_sprite,
-			     NULL);
-  
-  return FALSE;
-}
-
-static gboolean fade_in_sprite(void)
-{
-  do_update();
-
-  sprite_frame++;
-  if(sprite_frame>=NFRAME) {
-    sprite_state=T_SHOW;
-    sprite_tag=gtk_timeout_add(SHOW_FOR, (GtkFunction) end_show_sprite,
-			       NULL);
-    return FALSE;
-  }
-  return TRUE;
-}
-
-static gboolean start_show_sprite(void)
-{
-  int w, h;
-  
-  h=canvas->allocation.height;
-  w=canvas->allocation.width;
-  if(w<sprite_width*2 || h<sprite_height*2)
-    return TRUE;
-
-  sprite_x=(rand()>>3)%(w-sprite_width);
-  sprite_y=(rand()>>4)%(h-sprite_height);
-  dprintf(3, "%dx%d (%dx%d) -> %d,%d\n", w, h, sprite_width, sprite_height,
-	 sprite_x, sprite_y);
-  sprite_state=T_APPEAR;
-  sprite_frame=0;
-  sprite_tag=gtk_timeout_add(CHANGE_FOR/NFRAME, (GtkFunction) fade_in_sprite,
-			     NULL);
-  
-  return FALSE;
-}
-
-static void setup_sprite(void)
-{
-  GdkPixmap *pmap;
-  time_t now;
-  int i;
-  int x, y;
-  static struct pattern {
-    unsigned row;
-    int shift;
-  } patterns[NFRAME]={
-    {0xedb7edb7, 3},
-    {0x5a5a5a5a, 2},
-    {0x12481248, 4},
-  };
-  
-  sprite=gdk_pixbuf_new_from_xpm_data((const char **) tardis_xpm);
-  if(!sprite)
-    return;
-  
-  dprintf(4, "sprite=%p\n", sprite);
-  sprite_width=gdk_pixbuf_get_width(sprite);
-  sprite_height=gdk_pixbuf_get_height(sprite);
-  dprintf(4, "%dx%d\n", sprite_width, sprite_height);
-
-  for(i=0; i<NFRAME; i++) {
-    gdk_pixbuf_render_pixmap_and_mask(sprite, &pmap, masks+i, 127);
-    dprintf(5, "%d %p %p\n", i, pmap, masks[i]);
-    gdk_pixmap_unref(pmap);
-
-    if(masks[i]) {
-      GdkGC *bgc=gdk_gc_new(masks[i]);
-      
-      dprintf(5, "got mask %d, %p (gc=%p)\n", i, masks[i], bgc);
-      gdk_gc_set_foreground(gc, colours+BLACK);
-      for(y=0; y<sprite_height; y++) {
-	for(x=0; x<sprite_width; x++) {
-	  /*
-	   * Put holes in the mask based on patterns[i]
-	   */
-	  
-	  if(patterns[i].row & (1<<((x+patterns[i].shift*y)%16)))
-	    gdk_draw_point(masks[i], bgc, x, y);
-	  
-	}
-      }
-      gdk_gc_unref(bgc);
+    str=xmlNodeGetContent(parent);
+    if(str) {
+      xid=(guint32) atol(str);
+      g_free(str);
     }
   }
-  
-  dprintf(3, "set up callback\n");
-  time(&now);
-  srand((unsigned int) now);
-  sprite_tag=gtk_timeout_add(NEXT_SHOW(),
-			     (GtkFunction) start_show_sprite, NULL);
-			     
+
+  make_window(xid);
+
+  return NULL;
 }
 
-#endif /* EXTRA_FUN */
+static void open_callback(ROXSOAP *serv, gboolean status, 
+				  xmlDocPtr reply, gpointer udata)
+{
+  gboolean *s=udata;
+  
+  dprintf(3, "In open_callback(%p, %d, %p, %p)", clock, status, reply,
+	 udata);
+  *s=status;
+  gtk_main_quit();
+}
 
+static gboolean open_remote(guint32 xid)
+{
+  ROXSOAP *serv;
+  xmlDocPtr doc;
+  xmlNodePtr node;
+  gboolean sent, ok;
+  char buf[32];
+
+  serv=rox_soap_connect(PROJECT);
+  dprintf(3, "server for %s is %p", PROJECT, serv);
+  if(!serv)
+    return FALSE;
+
+  doc=rox_soap_build_xml("Open", CLOCK_NAMESPACE_URL, &node);
+  if(!doc) {
+    dprintf(3, "Failed to build XML doc");
+    rox_soap_close(serv);
+    return FALSE;
+  }
+
+  sprintf(buf, "%lu", xid);
+  xmlNewChild(node, NULL, "Parent", buf);
+
+  sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
+  dprintf(3, "sent %d", sent);
+
+  xmlFreeDoc(doc);
+  if(sent)
+    gtk_main();
+  rox_soap_close(serv);
+
+  return sent && ok;
+}
+
+#endif
 
 /* Show the info window */
 static void show_info_win(void)
@@ -1636,6 +1728,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.21  2002/02/25 09:48:38  stephen
+ * Fix compilation problems.
+ *
  * Revision 1.20  2002/01/29 15:24:34  stephen
  * Use new applet menu positioning code.  Added -h and -v options.
  *

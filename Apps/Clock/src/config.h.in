@@ -19,11 +19,9 @@
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
 
-#undef USE_GDK_PIXBUF
 #undef HAVE_XML
 #undef HAVE_ALTZONE
-
-#define EXTRA_FUN USE_GDK_PIXBUF
+#define ROX_CLIB_VERSION ""
 
 #if defined(HAVE_GETTEXT)
 #define _(String) gettext(String)

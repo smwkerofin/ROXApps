@@ -26,28 +26,27 @@ AC_PATH_X
 AC_HEADER_STDC
 AC_CHECK_HEADERS(unistd.h locale.h sys/stat.h libintl.h)
 
-dnl Do we have gdk-pixbuf?  Provide an extra if we do.
-AC_MSG_CHECKING(for gdk-pixbuf library)
-if test -z "$GDK_PIXBUF_CONFIG"; then
-  GDK_PIXBUF_CONFIG=gdk-pixbuf-config
-fi
-GDK_PIXBUF_LIBS=`$GDK_PIXBUF_CONFIG --libs`
-changequote(,)dnl
-if [ -n "$GDK_PIXBUF_LIBS" ]; then
-  AC_MSG_RESULT(yes - use '$GDK_PIXBUF_CONFIG')
-  USE_GDK_PIXBUF=1
-else
-  AC_MSG_RESULT(no - dont bother)
-  USE_GDK_PIXBUF=0
-fi
-changequote([,])dnl
-AC_SUBST(GDK_PIXBUF_CONFIG)
-AC_DEFINE(USE_GDK_PIXBUF)
-
 dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(setlocale fstat stat bindtextdomain gettext)
+
+dnl Check for ROX-CLib and version
+AC_MSG_CHECKING(ROX-CLib)
+if $ROX_RUN ROX-CLib ; then
+  verstr=`$ROX_RUN ROX-CLib -v`
+  ver=`echo $verstr | cut -d " " -f 2`
+  changequote(,)dnl
+  ROX_CLIB_VERSION=`echo $ver | sed -e "s/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)/10000*\1+100*\2+\3/" | bc`
+  changequote([,])dnl
+  AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ROX_CLIB_VERSION)
+  AC_MSG_RESULT(version $ver)
+  if test $ROX_CLIB_VERSION -lt 201 ; then
+    AC_MSG_ERROR(ROX-CLib is too old.  Need 0.2.1 or later not $verstr)
+  fi
+else
+  AC_MSG_ERROR(can't run ROX-CLib)
+fi
 
 dnl Is altzone defined in <time.h> ?
 AC_MSG_CHECKING(for altzone)
