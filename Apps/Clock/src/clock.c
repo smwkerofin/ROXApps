@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.14 2001/08/20 15:18:13 stephen Exp $
+ * $Id: clock.c,v 1.15 2001/11/06 12:23:05 stephen Exp $
  */
 #include "config.h"
 
@@ -78,11 +78,12 @@ typedef struct mode {
   TimeFormat *format;  /* Format of text below clock */
   int flags;          /* Bit mask of flags defined above */
   guint32 interval;   /* Interval between updates (in ms) */
-  guint init_size;
+  guint init_size;    /* Initial size of applet */
+  const char *font_name;   /* Font for drawing clock numbers */
 } Mode;
 
 static Mode mode={
-  formats, MODE_SECONDS, 500, 64
+  formats, MODE_SECONDS, 500, 64, NULL
 };
 
 
@@ -121,6 +122,7 @@ static GtkWidget *user_fmt=NULL;    /* Entering the user-defined format */
 static GtkWidget *mode_flags[MODE_NFLAGS];
 static GtkWidget *interval=NULL;
 static GtkWidget *init_size=NULL;
+static GtkWidget *font_sel=NULL;
 
 static guint update_tag;            /* Handle for the timeout */
 static time_t config_time=0;        /* Time our config file was last changed */
@@ -282,6 +284,7 @@ int main(int argc, char *argv[])
 		      (GtkSignalFunc) configure_event, NULL);
   gtk_widget_realize(canvas);
   gtk_widget_show (canvas);
+  gtk_widget_set_name(canvas, "clock face");
   
   gc=gdk_gc_new(canvas->window);
 
@@ -317,8 +320,9 @@ int main(int argc, char *argv[])
 /* Called when the display mode changes */
 static void set_mode(Mode *nmode)
 {
-  dprintf(3, "mode now %s, %d, %#x\n", nmode->format->name, nmode->interval,
-	  nmode->flags);
+  dprintf(3, "mode now %s, %d, %#x, font %s\n", nmode->format->name,
+	  nmode->interval, nmode->flags,
+	  nmode->font_name? nmode->font_name: "(default)");
 
   /* Do we need to change the update rate? */
   if(update_tag && mode.interval!=nmode->interval) {
@@ -336,9 +340,16 @@ static void set_mode(Mode *nmode)
     else
       gtk_widget_show(digital_out);
   }
+
+  if(mode.font_name && mode.font_name!=nmode->font_name)
+    g_free((gpointer) mode.font_name);
   
   mode=*nmode;
 }
+
+enum draw_hours {
+  DH_NO, DH_QUARTER, DH_ALL
+};
 
 /* Redraw clock face and update digital_out */
 static gboolean do_update(void)
@@ -352,9 +363,11 @@ static gboolean do_update(void)
   double h_ang, m_ang, s_ang;
   int hour, min, sec;
   int x0, y0, x1, y1;
-  int tick, twidth, th;
-  GdkFont *font;
+  int tick, twidth;
+  enum draw_hours th;
   GdkColor *face_fg=CL_FACE_FG;
+  GdkFont *font=NULL;
+  GtkStyle *style;
 
   /*
    * Has the config changed?  Another instance may have saved its config,
@@ -380,9 +393,19 @@ static gboolean do_update(void)
   if(alarm_have_active())
     face_fg=CL_FACE_FG_ALRM;
 
-  /* Blank out to the background colour */
-  gdk_gc_set_foreground(gc, CL_BACKGROUND);
-  gdk_draw_rectangle(pixmap, gc, TRUE, 0, 0, w, h);
+  style=gtk_widget_get_style(canvas);
+  dprintf(3, "style=%p bg_gc[GTK_STATE_NORMAL]=%p", style,
+	  style->bg_gc[GTK_STATE_NORMAL]);
+  if(style && style->bg_gc[GTK_STATE_NORMAL]) {
+    /*gdk_draw_rectangle(pixmap, style->bg_gc[GTK_STATE_NORMAL], TRUE,
+		       0, 0, w, h);*/
+    gtk_style_apply_default_background(style, pixmap, TRUE, GTK_STATE_NORMAL,
+				       NULL, 0, 0, w, h);
+  } else {
+    /* Blank out to the background colour */
+    gdk_gc_set_foreground(gc, CL_BACKGROUND);
+    gdk_draw_rectangle(pixmap, gc, TRUE, 0, 0, w, h);
+  }
 
   /* we want a diameter that can fit in our canvas */
   if(h<w)
@@ -408,6 +431,13 @@ static gboolean do_update(void)
   x0=w/2;
   y0=h/2;
 
+  if(!font && mode.font_name) {
+    font=gdk_font_load(mode.font_name);
+  }
+  if(!font) 
+    font=canvas->style->font;
+  gdk_font_ref(font);
+  
   /* Draw the clock face, including the hours */
   gdk_gc_set_foreground(gc, face_fg);
   gdk_draw_arc(pixmap, gc, TRUE, x0-rad, y0-rad, sw, sh, 0, 360*64);
@@ -416,7 +446,6 @@ static gboolean do_update(void)
   rad=sw/2;
   gdk_gc_set_foreground(gc, CL_FACE_BG);
   gdk_draw_arc(pixmap, gc, TRUE, x0-rad, y0-rad, sw, sh, 0, 360*64);
-  font=canvas->style->font;
   if(mode.flags & MODE_HOURS) {
     int siz;
     
@@ -424,11 +453,11 @@ static gboolean do_update(void)
     siz=sw/twidth;
 
     if(siz<4)
-      th=0;
+      th=DH_NO;
     else if(siz<10)
-      th=1;
+      th=DH_QUARTER;
     else
-      th=2;
+      th=DH_ALL;
   } else {
     th=0;
   }
@@ -441,7 +470,7 @@ static gboolean do_update(void)
     gdk_gc_set_foreground(gc, face_fg);
     gdk_draw_line(pixmap, gc, x2, y2, x1, y1);
 
-    if(th && (th==2 || tick%3==0)) {
+    if(th!=DH_NO && (th==DH_ALL || tick%3==0)) {
       char buf[16];
       int l;
       int xt, yt;
@@ -555,6 +584,8 @@ static gboolean do_update(void)
 	alarm_save();
   }
 
+  gdk_font_unref(font);
+
   return TRUE;
 }
 
@@ -618,9 +649,11 @@ static void write_config_xml(void)
     sprintf(buf, "%u", (unsigned int) mode.flags);
     xmlSetProp(tree, "value", buf);
     tree=xmlNewChild(doc->children, NULL, "interval", NULL);
-    sprintf(buf, "%ld", (long) mode.flags);
+    sprintf(buf, "%ld", (long) mode.interval);
     xmlSetProp(tree, "value", buf);
     tree=xmlNewChild(doc->children, NULL, "user-format", user_defined);
+    if(mode.font_name)
+      tree=xmlNewChild(doc->children, NULL, "font", mode.font_name);
     tree=xmlNewChild(doc->children, NULL, "applet", NULL);
     sprintf(buf, "%d", (int) mode.init_size);
     xmlSetProp(tree, "initial-size", buf);
@@ -733,7 +766,7 @@ static gboolean read_config_xml(void)
     }
 
     for(node=root->xmlChildrenNode; node; node=node->next) {
-      const xmlChar *string;
+      xmlChar *str;
       
       if(node->type!=XML_ELEMENT_NODE)
 	continue;
@@ -741,44 +774,51 @@ static gboolean read_config_xml(void)
       if(strcmp(node->name, "format")==0) {
 	int i;
 	
-	string=xmlGetProp(node, "name");
-	if(!string)
+	str=xmlGetProp(node, "name");
+	if(!str)
 	  continue;
 
 	for(i=0; formats[i].name; i++)
-	  if(strcmp(string, formats[i].name)==0)
+	  if(strcmp(str, formats[i].name)==0)
 	    break;
 	if(formats[i].name)
 	  nmode.format=formats+i;
-	free(string);
+	free(str);
 	
       } else if(strcmp(node->name, "flags")==0) {
- 	string=xmlGetProp(node, "value");
-	if(!string)
+ 	str=xmlGetProp(node, "value");
+	if(!str)
 	  continue;
-	nmode.flags=atoi(string);
-	free(string);
+	nmode.flags=atoi(str);
+	free(str);
 
       } else if(strcmp(node->name, "interval")==0) {
- 	string=xmlGetProp(node, "value");
-	if(!string)
+ 	str=xmlGetProp(node, "value");
+	if(!str)
 	  continue;
-	nmode.interval=atol(string);
-	free(string);
+	nmode.interval=atol(str);
+	free(str);
 
       } else if(strcmp(node->name, "user-format")==0) {
-	string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
-	if(!string)
+	str=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+	if(!str)
 	  continue;
-	strncpy(user_defined, string, sizeof(user_defined));
-	free(string);
+	strncpy(user_defined, str, sizeof(user_defined));
+	free(str);
+
+      } else if(strcmp(node->name, "font")==0) {
+	str=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+	if(!str)
+	  continue;
+	nmode.font_name=g_strdup(str);
+	free(str);
 
       } else if(strcmp(node->name, "applet")==0) {
- 	string=xmlGetProp(node, "initial-size");
-	if(!string)
+ 	str=xmlGetProp(node, "initial-size");
+	if(!str)
 	  continue;
-	nmode.init_size=atoi(string);
-	free(string);
+	nmode.init_size=atoi(str);
+	free(str);
 
       }
     }
@@ -977,8 +1017,12 @@ static void set_config(GtkWidget *widget, gpointer data)
   udef=gtk_entry_get_text(GTK_ENTRY(user_fmt));
   strncpy(user_defined, udef, sizeof(user_defined));
 
-  dprintf(2, "format=%s, %s\n", nmode.format->name, nmode.format->fmt);
-  dprintf(2, "flags=%d, interval=%d\n", nmode.flags, nmode.interval);
+  nmode.font_name=
+    gtk_font_selection_get_font_name(GTK_FONT_SELECTION(font_sel));
+
+  dprintf(2, "format=%s, %s", nmode.format->name, nmode.format->fmt);
+  dprintf(2, "flags=%d, interval=%d", nmode.flags, nmode.interval);
+  dprintf(2, "font=%s", nmode.font_name);
   
   set_mode(&nmode);
   
@@ -1123,6 +1167,20 @@ static void show_conf_win(void)
     gtk_widget_show(hbox);
     gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
 
+    label=gtk_label_new(_("Display font"));
+    gtk_widget_show(label);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+
+    font_sel=gtk_font_selection_new();
+    gtk_font_selection_set_preview_text(GTK_FONT_SELECTION(font_sel),
+					"1 2 3 4 5 6 7 8 9 10 11 12");
+    gtk_widget_show(font_sel);
+    gtk_box_pack_start(GTK_BOX(hbox), font_sel, FALSE, FALSE, 2);
+
+    hbox=gtk_hbox_new(FALSE, 0);
+    gtk_widget_show(hbox);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+
     label=gtk_label_new(_("Initial size"));
     gtk_widget_show(label);
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
@@ -1172,6 +1230,10 @@ static void show_conf_win(void)
 				 mode.flags & 1<<i);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(interval), mode.interval/1000.);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(init_size), mode.init_size);
+
+  if(mode.font_name)
+    gtk_font_selection_set_font_name(GTK_FONT_SELECTION(font_sel),
+				     mode.font_name);
 
   gtk_widget_show(confwin);
 }
@@ -1398,6 +1460,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.15  2001/11/06 12:23:05  stephen
+ * Use XML for alarms and config file
+ *
  * Revision 1.14  2001/08/20 15:18:13  stephen
  * Switch to using ROX-CLib.
  *
