@@ -13,6 +13,9 @@ Bugs
 The swap space display is broken under Solaris, apparently a bug in libgtop.
 This is disabled until a fixed libgtop is available.
 
+Sometimes the values aren't available.  This shows as the guages droppping
+to zero momentarily.
+
 Updates
 -------
 

@@ -25,23 +25,29 @@ case $1 in
 	    exit 1
 	fi
 	echo "Compiling $APP_DIR... please wait..." >&2
+	if [ ! -x "$APP_DIR/src/configure" ]; then
+	    echo "No 'configure' script! Trying to run autoconf..."
+	    (cd $APP_DIR/src; autoconf)
+	fi
 	rm -f $APP_DIR/src/config.cache
 	cd $APP_DIR/src && ./configure --bindir=$APP_DIR/$PLATFORM \
 			&& make clean && make BINDIR=$APP_DIR/$PLATFORM \
 			&& echo Done >&2 && exit 0
 	echo Compile failed >&2
+	echo Press Return... >&2
+	read WAIT
 	exit 1
 esac
 
 BIN=$APP_DIR/$PLATFORM/$PROG
 
 if [ -x $BIN ] ; then
-    exec $BIN -a "$@" $HOME
+    exec $BIN -a "$@"
 else
     echo "ERROR from $0:" >&2
     echo "I cannot find an executable file for your host type ($PLATFORM)." >&2
     #echo "Try using the --compile option." >&2
-    exit 1
+    #exit 1
     echo "Trying to compile..." >&2
     if [ -n "$DISPLAY" ]; then
 	xterm -e $0 --compile
