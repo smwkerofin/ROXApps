@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.5 2001/11/12 14:45:27 stephen Exp $
+ * $Id: mem.c,v 1.6 2001/11/30 11:55:31 stephen Exp $
  */
 #include "config.h"
 
@@ -142,6 +142,48 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 static gboolean update_swap(gpointer);
 #endif
 
+static void usage(const char *argv0)
+{
+  printf("Usage: %s [X-options] [gtk-options] [-vh] [-a XID]\n", argv0);
+  printf("where:\n\n");
+  printf("  X-options\tstandard Xlib options\n");
+  printf("  gtk-options\tstandard GTK+ options\n");
+  printf("  -h\tprint this help message\n");
+  printf("  -v\tdisplay version information\n");
+  printf("  -a XID\tX window to create applet in\n");
+}
+
+static void do_version(void)
+{
+  printf("%s %s\n", PROJECT, VERSION);
+  printf("%s\n", PURPOSE);
+  printf("%s\n", WEBSITE);
+  printf("Copyright 2002 %s\n", AUTHOR);
+  printf("Distributed under the terms of the GNU General Public License.\n");
+  printf("(See the file COPYING in the Help directory).\n");
+  printf("%s last compiled %s\n", __FILE__, __DATE__);
+
+  printf("\nCompile time options:\n");
+  printf("  Debug output... %s\n", DEBUG? "yes": "no");
+  printf("  Using XML... ");
+  if(USE_XML)
+    printf("yes (libxml version %d)\n", LIBXML_VERSION);
+  else {
+    printf("no (");
+    if(HAVE_XML)
+      printf("libxml not found)\n");
+    else
+    printf("libxml version %d)\n", LIBXML_VERSION);
+  }
+  printf("  Use libgtop for swap... %s\n",
+	 SWAP_SUPPORTED_LIBGTOP? "yes": "no");
+  if(!SWAP_SUPPORTED_LIBGTOP) {
+    printf("    libgtop version %d\n", LIBGTOP_VERSION_CODE);
+    printf("    Broken on Solaris up to version %d\n",
+	   SOLARIS_SWAP_BROKEN_UP_TO);
+  }
+}
+
 int main(int argc, char *argv[])
 {
   GtkWidget *vbox, *hbox, *vbox2, *frame;
@@ -155,13 +197,13 @@ int main(int argc, char *argv[])
   GtkTooltips *ttips;
   char tbuf[1024], *home;
   guchar *fname;
-  int c;
   guint xid=0;
   gchar *app_dir;
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
 #endif
   char hname[1024];
+  int c, do_exit, nerr;
 
   app_dir=g_getenv("APP_DIR");
 #ifdef HAVE_BINDTEXTDOMAIN
@@ -173,10 +215,44 @@ int main(int argc, char *argv[])
 
   rox_debug_init(PROJECT);
   
+  /* Check for this argument by itself */
+  if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
+    do_version();
+    exit(0);
+  }
+  
   dprintf(5, "%d %s -> %s", argc, argv[1], argv[argc-1]);
   gtk_init(&argc, &argv);
   dprintf(5, "%d %s -> %s", argc, argv[1], argv[argc-1]);
   ttips=gtk_tooltips_new();
+
+  /* Process remaining arguments */
+  nerr=0;
+  do_exit=FALSE;
+  while((c=getopt(argc, argv, "vha:"))!=EOF)
+    switch(c) {
+    case 'h':
+      usage(argv[0]);
+      do_exit=TRUE;
+      break;
+    case 'v':
+      do_version();
+      do_exit=TRUE;
+      break;
+    case 'a':
+      xid=atol(optarg);
+      break;
+    default:
+      nerr++;
+      break;
+    }
+  if(nerr) {
+    fprintf(stderr, "%s: invalid options\n", argv[0]);
+    usage(argv[0]);
+    exit(10);
+  }
+  if(do_exit)
+    exit(0);
 
   read_choices();
 
@@ -185,15 +261,6 @@ int main(int argc, char *argv[])
   if(fname) {
     gtk_rc_parse(fname);
     g_free(fname);
-  }
-
-  while((c=getopt(argc, argv, "a:"))!=EOF) {
-    dprintf(5, " %2d -%c %s", c, c, optarg? optarg: "NULL");
-    switch(c) {
-    case 'a':
-      xid=atol(optarg);
-      break;
-    }
   }
 
   if(!xid) {
@@ -383,6 +450,7 @@ int main(int argc, char *argv[])
     gtk_tooltips_set_tip(ttips, plug,
 			 "Mem shows the memory and swap usage",
 			 TIP_PRIVATE);
+    applet_get_panel_location(plug);
 
     dprintf(4, "vbox new");
     vbox=gtk_vbox_new(FALSE, 1);
@@ -1306,8 +1374,11 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
       if(!menu)
 	menu_create_menu(window);
 
-      gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-		     bev->button, bev->time);
+      if(are_applet)
+	applet_show_menu(menu, bev);
+      else
+	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
+		       bev->button, bev->time);
       return TRUE;
     } else if(bev->button==1 && are_applet) {
       gchar *cmd;
@@ -1434,6 +1505,9 @@ static gboolean update_swap(gpointer unused)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.6  2001/11/30 11:55:31  stephen
+ * Use smaller window on start up
+ *
  * Revision 1.5  2001/11/12 14:45:27  stephen
  * Use XML for config file, if XML version >=2.4
  *
