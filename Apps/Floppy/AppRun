@@ -1,0 +1,33 @@
+#!/bin/sh
+
+# This acts as a toggle
+
+drive=0
+action=view
+
+path=/floppy/floppy$drive
+
+case $1 in 
+    --view) action=view;;
+    --mount) action=mount;;
+    --dismount) action=dismount;;
+esac
+
+if [ $action = view -a ! -d $path ] ; then
+    action=mount
+fi
+
+if [ $action = dismount ]; then
+    eject floppy$drive
+    rox -x $path
+elif [ $action = mount ]; then
+    volcheck
+    if [ -d $path ] ; then
+	rox $path
+        rox -x $path
+    else
+	xsay -t Floppy "Drive $drive not ready"
+    fi
+else
+    rox $path
+fi

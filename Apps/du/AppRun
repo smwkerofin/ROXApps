@@ -1,0 +1,40 @@
+#!/usr/bin/env perl
+
+sub du;
+sub xdie;
+
+unless (@ARGV == 1) {
+  xdie "Drop a single directory onto me and I'll count its disc usage.";
+}
+
+$path = $ARGV[0];
+
+# Convert relative paths to absolute (we may chdir() later).
+unless ($path =~ /^\//) {
+	my $pwd = `pwd`;
+	chop $pwd;
+	$path = "$pwd/$path";
+}
+
+xdie "'$path' does not exist" unless -e $path;
+
+du($path);
+
+exit 0;
+
+sub du {
+  my $path = shift;
+
+  chdir $path;
+  system "du -k . | xsay -t $path";
+}
+
+# Display the error message and quit.  From Archive by Thomas Leonard,
+# <tal197@users.sourceforge.net>
+sub xdie {
+	my $message = "du error:\n\n" . shift;
+
+	exec "xmessage", ("-center", "-timeout", "10", $message);
+	die "$message\n";
+}
+

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ x"$@" = x ] ; then
+  exec xterm -e elm
+fi
+
+appdir=`dirname $0`
+mime_type=`rox -m "$@"`
+exec $appdir/doSendFile "$@" $mime_type

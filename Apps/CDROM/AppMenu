@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<AppMenu>
+  <Item label="View CDROM contents" option="--view"/>
+  <Item label="Mount CDROM" option="--mount"/>
+  <Item label="Dismount and eject CDROM" option="--dismount"/>
+</AppMenu>
