@@ -1,11 +1,17 @@
 /*
  * rox_path.c - utilities for path handling, support for drag & drop
  *
- * $Id: rox_path.c,v 1.1 2001/07/17 14:44:50 stephen Exp $
+ * $Id: rox_path.c,v 1.2 2001/08/20 15:27:46 stephen Exp $
  */
+#include "rox-clib.h"
 
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef HAVE_GETHOSTNAME
+#include <netinet/in.h>
+#include <netdb.h>
+#endif
 
 #include <glib.h>
 
@@ -19,6 +25,9 @@ char *rox_path_get_local(const char *uri)
   char *end;
   char hostn[256];
   const char *orig=uri;
+#ifdef HAVE_GETHOSTNAME
+  struct hostent *hp;
+#endif
   
   if(strncmp(uri, "file:", 5)==0)
     uri+=5;
@@ -38,11 +47,28 @@ char *rox_path_get_local(const char *uri)
       return g_strdup(end);
     }
 
-    if(gethostname(hostn, sizeof(hostn))==0 && strcmp(host, hostn)==0) {
+    if(gethostname(hostn, sizeof(hostn))!=0) {
+      rox_debug_printf(2, "rox_path_get_local(%s) couldn't get hostname!",
+		       orig);
+      g_free(host);
+      return NULL;
+    }
+
+    if(strcmp(host, hostn)==0) {
       g_free(host);
       return g_strdup(end);
     }
 
+#ifdef HAVE_GETHOSTNAME
+    hp=gethostbyname(host);
+    if(hp) {
+      if(strcmp(hp->h_name, hostn)==0) {
+	g_free(host);
+	return g_strdup(end);
+      }
+    }
+#endif
+    
     rox_debug_printf(1, "rox_path_get_local(%s) is %s local? (%s)",
 		     orig, host, hostn);
 
@@ -98,6 +124,9 @@ char *rox_path_get_path(const char *uri)
 
 /*
  * $Log: rox_path.c,v $
+ * Revision 1.2  2001/08/20 15:27:46  stephen
+ * Improved matching of hostname
+ *
  * Revision 1.1  2001/07/17 14:44:50  stephen
  * Added DnD stuff (plus path utils and debug util)
  *
