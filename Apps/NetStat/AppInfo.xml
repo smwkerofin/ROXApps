@@ -2,10 +2,21 @@
 <AppInfo>
   <About>
     <Purpose>Monitor network activity</Purpose>
-	<Version>0.0.8 (28 April 2003)</Version>
+	<Version>0.0.9 (2 August 2003)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
   </About>
-  <Summary>Applet for monitoring net status</Summary>
+   <About xml:lang="it">
+    <Purpose label="Scopo">monitorare l'attività di rete</Purpose>
+    <Version label="Versione"/>
+    <Authors label="Autore">Stephen Watson</Authors>
+    <License label="Licenza"/>
+    <Homepage label="Sito web">http://www.kerofin.demon.co.uk/rox/</Homepage>
+  </About>
+ <Summary>Applet for monitoring net status</Summary>
+  <Summary xml:lang="it">Applet per monitorare la rete</Summary>
+  <Dependencies>
+    <AppDir><Name>ROX-Lib2</Name></AppDir>
+  </Dependencies>
 </AppInfo>

@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<options>
+  <section title='Monitoring'>
+    <numentry name='update_rate' label='Update rate (ms)' min='250' max='10000'
+	      width='5'>How often to check the system</numentry>
+  </section>
+  <section title='Display'>
+    <section title='Main'>
+      <toggle name='show_host' label='Show hostname'>If this is on the
+name of the host Mem is running on is shown</toggle>
+      <numentry name='gauge_width' label='Gauge size' min='32' max='512'
+	      width='3'>Size gauge bars</numentry>
+    </section>
+    <section title='Applet'>
+      <numentry name='applet_size' label='Window size' min='32' max='64'
+	      width='3'>Size of applet window</numentry>
+
+      <menu name='mem_disp' label='Memory display'>
+        <item label='Total' value='0'/>
+        <item label='Used' value='1'/>
+        <item label='Free' value='2'/>
+        <item label='Percentage used' value='3'/>
+      </menu>
+      <menu name='swap_disp' label='Swap display'>
+        <item label='Total' value='0'/>
+        <item label='Used' value='1'/>
+        <item label='Free' value='2'/>
+        <item label='Percentage used' value='3'/>
+      </menu>
+    </section>
+  </section>
+</options>

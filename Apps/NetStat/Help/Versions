@@ -1,10 +1,14 @@
 NetStat
 =======
 
+0.0.9
+-----
+Italian translation of AppInfo provided by Yuri Bongiorno.
+
 0.0.8
 -----
 Added window size option.  Work on apparent memory leak.
-Menu options to view active/all.
+Menu options to view active/all sockets.
 
 0.0.7
 -----
