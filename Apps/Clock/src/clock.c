@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id$
+ * $Id: clock.c,v 1.4 2001/04/24 07:51:47 stephen Exp $
  */
 #include "config.h"
 
@@ -305,7 +305,9 @@ void dprintf(const char *fmt, ...)
   va_list list;
 
   va_start(list, fmt);
+#if DEBUG
   vfprintf(stderr, fmt, list);
+#endif
   va_end(list);  
 }
 
@@ -1226,5 +1228,8 @@ static void show_info_win(void)
 
 
 /*
- * $Log$
+ * $Log: clock.c,v $
+ * Revision 1.4  2001/04/24 07:51:47  stephen
+ * Better config system.  Many display improvements
+ *
  */

@@ -1316,6 +1316,15 @@ fi
 done
 
 
+echo $ac_n "checking extracting version information""... $ac_c" 1>&6
+echo "configure:1321: checking extracting version information" >&5
+VERSION=`sed -n 's/^.*<Version>\([.0-9]*\).*<\/Version>.*$/\1/p' ../AppInfo.xml`
+cat >> confdefs.h <<EOF
+#define VERSION "$VERSION"
+EOF
+
+echo "$ac_t""version $VERSION" 1>&6
+
 trap '' 1 2 15
 cat > confcache <<\EOF
 # This file is a shell script that caches the results of configure

@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+0.1.7
+-----
+Support new AppInfo.xml data, debug output off by default.
+
 0.1.6
 -----
 Re-organised the configuration of the app.  Some tweaks to the display.
