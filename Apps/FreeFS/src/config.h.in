@@ -3,7 +3,7 @@
 #define PROJECT "FreeFS"
 #define PROGRAM PROJECT
 #define PURPOSE "Display free space on filing system"
-#define VERSION "0.1.4"
+#define VERSION ""
 #define AUTHOR  "Stephen Watson"
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 

@@ -6,9 +6,21 @@ dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
 
+if test -z "$GTK_CONFIG"; then
+  GTK_CONFIG=gtk-config
+fi
+AC_SUBST(GTK_CONFIG)
+
+if test -z "$ROX_RUN"; then
+  AC_CHECK_PROG(ROX_RUN, rox_run, rox_run)
+fi
+AC_SUBST(ROX_RUN)
+
 dnl Make sure we have libgtop
 changequote(,)dnl
 LIBGTOP_LIBS=`echo \`libgtop-config --libs --extra-libs\``
+LIBGTOP_EXTRA_LIBS=`libgtop-config --extra-libs`
+
 AC_MSG_CHECKING(for libgtop library)
 if [ -n "$LIBGTOP_LIBS" ]; then
   AC_MSG_RESULT(yes - and with new style config)
@@ -24,6 +36,7 @@ else
   source "$GTOP_CONFIG"
 fi
 changequote([,])dnl
+AC_SUBST(LIBGTOP_EXTRA_LIBS)
 AC_SUBST(LIBGTOP_LIBS)
 AC_SUBST(LIBGTOP_INCS)
 

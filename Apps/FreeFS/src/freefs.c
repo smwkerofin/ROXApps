@@ -5,9 +5,15 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.6 2001/05/30 10:32:55 stephen Exp $
+ * $Id: freefs.c,v 1.7 2001/07/06 08:30:49 stephen Exp $
  */
 #include "config.h"
+
+/* Select compilation options */
+#define TRY_DND            1     /* Enable the drag and drop stuff */
+#define APPLET_MENU        1     /* Use a menu for the applet version */
+#define APPLET_DND         0     /* Support drag & drop to the applet */
+#define DEBUG              1     /* Set to 1 for debug messages */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,22 +36,20 @@
 #include <sys/stat.h>
 
 #include <gtk/gtk.h>
-#include "infowin.h"
 
 #include <glibtop.h>
 #include <glibtop/mountlist.h>
 #include <glibtop/fsusage.h>
 
 #include "choices.h"
+#include "infowin.h"
+#include "rox_debug.h"
+#if TRY_DND
+#include "rox_dnd.h"
+#endif
 
 /* The icon */
 #include "../pixmaps/freefs.xpm"
-
-/* Select compilation options */
-#define TRY_DND            1     /* Enable the drag and drop stuff */
-#define APPLET_MENU        1     /* Use a menu for the applet version */
-#define APPLET_DND         0     /* Support drag & drop to the applet */
-#define DEBUG              1     /* Set to 1 for debug messages */
 
 #define TIP_PRIVATE "For more information see the help file"
 
@@ -83,48 +87,8 @@ static void write_choices(void);
 static void menu_create_menu(GtkWidget *);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
-
-#if TRY_DND
-static void make_drop_target(GtkWidget *widget);
-static void dnd_init(void);
-
-enum {
-	TARGET_RAW,
-	TARGET_URI_LIST,
-	TARGET_XDS,
-	TARGET_STRING,
-};
-
-#define MAXURILEN 4096
-#endif
-
-/*
- * Debug output.  Controlled by the environment variable FREEFS_DEBUG_LEVEL
- * which should be in the range 0-5, 0 for no debug output, 5 for most.
- * If unset, defaults to 0
- */
-static void dprintf(int level, const char *fmt, ...)
-{
-#if DEBUG
-  va_list list;
-  static int dlevel=-1;
-
-  if(dlevel==-1) {
-    gchar *val=g_getenv("FREEFS_DEBUG_LEVEL");
-    if(val)
-      dlevel=atoi(val);
-    if(dlevel<0)
-      dlevel=0;
-  }
-
-  if(level>dlevel)
-    return;
-
-  va_start(list, fmt);
-  g_logv(PROJECT, G_LOG_LEVEL_DEBUG, fmt, list);
-  va_end(list);
-#endif
-}
+static gboolean handle_uris(GtkWidget *widget, GSList *uris, gpointer data,
+			   gpointer udata);
 
 int main(int argc, char *argv[])
 {
@@ -145,7 +109,6 @@ int main(int argc, char *argv[])
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
 #endif
-  
 
   app_dir=g_getenv("APP_DIR");
 #ifdef HAVE_BINDTEXTDOMAIN
@@ -194,7 +157,7 @@ int main(int argc, char *argv[])
   if(!xid) {
     /* Full window mode */
 #if TRY_DND
-    dnd_init();
+    rox_dnd_init();
 #endif
 
     /* Construct our window and bits */
@@ -209,7 +172,7 @@ int main(int argc, char *argv[])
     gtk_widget_realize(win);
     gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
 #if TRY_DND
-    make_drop_target(win);
+    rox_dnd_register_uris(win, 0, handle_uris, NULL);
 #endif
     /* Set the icon */
     style = gtk_widget_get_style(win);
@@ -295,6 +258,8 @@ int main(int argc, char *argv[])
     gtk_tooltips_set_tip(ttips, fs_free,
 			 "This is the space available on the file system",
 			 TIP_PRIVATE);
+
+    menu_create_menu(win);
   } else {
     /* We are an applet, plug ourselves in */
     GtkWidget *plug;
@@ -318,7 +283,7 @@ int main(int argc, char *argv[])
 
 #if TRY_DND && APPLET_DND
     dprintf(3, "make drop target for plug\n");
-    make_drop_target(plug);
+    rox_dnd_register_uris(plug, 0, handle_uris, NULL);
 #endif
 
     dprintf(4, "vbox new\n");
@@ -354,6 +319,10 @@ int main(int argc, char *argv[])
     gtk_tooltips_set_tip(ttips, fs_per,
 			 "This shows the relative usage of the file system",
 			 TIP_PRIVATE);
+
+#if APPLET_MENU
+    menu_create_menu(plug);
+#endif
 
     dprintf(5, "show plug\n");
     gtk_widget_show(plug);
@@ -887,330 +856,31 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 
 #if TRY_DND
 
-/* Implement drag & drop to change directory monitored.
-   "Borrowed" from ROX-Filer.
-*/
-
-static gboolean drag_drop(GtkWidget *widget, GdkDragContext *context,
-			  gint x, gint y, guint time, gpointer data);
-static void drag_data_received(GtkWidget *widget, GdkDragContext *context,
-			       gint x, gint y,
-			       GtkSelectionData *selection_data,
-			       guint info, guint32 time, gpointer user_data);
-
-static GdkAtom XdndDirectSave0;
-static GdkAtom xa_text_plain;
-static GdkAtom text_uri_list;
-static GdkAtom application_octet_stream;
-
-static void dnd_init(void)
+static gboolean handle_uris(GtkWidget *widget, GSList *uris,
+			    gpointer data, gpointer udata)
 {
-	XdndDirectSave0 = gdk_atom_intern("XdndDirectSave0", FALSE);
-	xa_text_plain = gdk_atom_intern("text/plain", FALSE);
-	text_uri_list = gdk_atom_intern("text/uri-list", FALSE);
-	application_octet_stream = gdk_atom_intern("application/octet-stream",
-			FALSE);
-}
+  GSList *local;
 
-static void make_drop_target(GtkWidget *widget)
-{
-  static GtkTargetEntry target_table[]={
-    {"text/uri-list", 0, TARGET_URI_LIST},
-    {"XdndDirectSave0", 0, TARGET_XDS},
-  };
-  static const int ntarget=sizeof(target_table)/sizeof(target_table[0]);
-  
-  gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_ALL, target_table, ntarget,
-		    GDK_ACTION_COPY|GDK_ACTION_PRIVATE);
+  local=rox_dnd_filter_local(uris);
 
-  gtk_signal_connect(GTK_OBJECT(widget), "drag_drop",
-		     GTK_SIGNAL_FUNC(drag_drop), NULL);
-  gtk_signal_connect(GTK_OBJECT(widget), "drag_data_received",
-		     GTK_SIGNAL_FUNC(drag_data_received), NULL);
-
-  dprintf(4, "made %p a drop target\n", widget);
-}
-
-static void print_context(GQuark key_id, gpointer data, gpointer user_data)
-{
-  dprintf(1, "%p (%s) = %p (%s)\n", key_id, g_quark_to_string(key_id),
-	 data, data? data: "NULL");
-}
-
-/* Is the sender willing to supply this target type? */
-gboolean provides(GdkDragContext *context, GdkAtom target)
-{
-  GList	    *targets = context->targets;
-
-  while (targets && ((GdkAtom) targets->data != target))
-    targets = targets->next;
-  
-  return targets != NULL;
-}
-
-static char *get_xds_prop(GdkDragContext *context)
-{
-  guchar	*prop_text;
-  gint	length;
-
-  if (gdk_property_get(context->source_window,
-		       XdndDirectSave0,
-		       xa_text_plain,
-		       0, MAXURILEN,
-		       FALSE,
-		       NULL, NULL,
-		       &length, &prop_text) && prop_text) {
-    /* Terminate the string */
-    prop_text = g_realloc(prop_text, length + 1);
-    prop_text[length] = '\0';
-    return prop_text;
-  }
-
-  return NULL;
-}
-
-/* Convert a list of URIs into a list of strings.
- * Lines beginning with # are skipped.
- * The text block passed in is zero terminated (after the final CRLF)
- */
-GSList *uri_list_to_gslist(char *uri_list)
-{
-  GSList   *list = NULL;
-
-  while (*uri_list) {
-    char	*linebreak;
-    char	*uri;
-    int	length;
-
-    linebreak = strchr(uri_list, 13);
-
-    if (!linebreak || linebreak[1] != 10) {
-      fprintf(stderr, _("uri_list_to_gslist: Incorrect or missing line "
-		      "break in text/uri-list data\n"));
-      return list;
-    }
+  if(local) {
+    GSList *tmp;
     
-    length = linebreak - uri_list;
+    set_target((const char *) local->data);
 
-    if (length && uri_list[0] != '#') {
-	uri = g_malloc(sizeof(char) * (length + 1));
-	strncpy(uri, uri_list, length);
-	uri[length] = 0;
-	list = g_slist_append(list, uri);
-      }
-
-    uri_list = linebreak + 2;
+    rox_dnd_local_free(local);
   }
 
-  return list;
+  return FALSE;
 }
-
-/* User has tried to drop some data on us. Decide what format we would
- * like the data in.
- */
-static gboolean drag_drop(GtkWidget 	  *widget,
-			  GdkDragContext  *context,
-			  gint            x,
-			  gint            y,
-			  guint           time,
-			  gpointer	  data)
-{
-  char *leafname=NULL;
-  char *path=NULL;
-  GdkAtom target = GDK_NONE;
-
-  /*
-  printf("in drag_drop(%p, %p, %d, %d, %u, %p)\n", widget, context, x, y,
-	 time, data);
-  */
-  
-  /*g_dataset_foreach(context, print_context, NULL);*/
-
-  if(provides(context, XdndDirectSave0)) {
-    leafname = get_xds_prop(context);
-    if (leafname) {
-      dprintf(4, "leaf is %s\n", leafname);
-      target = XdndDirectSave0;
-      g_dataset_set_data_full(context, "leafname", leafname, g_free);
-    }
-  } else if(provides(context, text_uri_list))
-    target = text_uri_list;
-
-  gtk_drag_get_data(widget, context, target, time);
-
-  return TRUE;
-}
-
-char *get_local_path(const char *uri)
-{
-  char *host;
-  char *end;
-  
-  if(strncmp(uri, "file:", 5)==0)
-    uri+=5;
-  
-  if(uri[0]=='/') {
-    if(uri[1]!='/')
-      return g_strdup(uri);
-    if(uri[2]=='/')
-      return g_strdup(uri+2);
-
-    host=(char *) uri+2;
-    end=strchr(host, '/');
-    host=g_strndup(host, end-host);
-
-    if(strcmp(host, "localhost")==0) {
-      g_free(host);
-      return g_strdup(end);
-    }
-
-    g_free(host);
-  }
-
-  return NULL;
-}
-
-char *get_server(const char *uri)
-{
-  char *host, *end;
-  
-  if(strncmp(uri, "file:", 5)==0)
-    uri+=5;
-  
-  if(uri[0]=='/') {
-    if(uri[1]!='/')
-      return g_strdup("localhost");
-    
-    host=(char *) uri+2;
-    end=strchr(host, '/');
-    return g_strndup(host, end-host);
-  }
-
-  return g_strdup("localhost");
-}
-
-char *get_path(const char *uri)
-{
-  char *host;
-  char *end;
-  
-  if(strncmp(uri, "file:", 5)==0)
-    uri+=5;
-  
-  if(uri[0]=='/') {
-    if(uri[1]!='/')
-      return g_strdup(uri);
-    if(uri[2]=='/')
-      return g_strdup(uri+2);
-
-    host=(char *) uri+2;
-    end=strchr(host, '/');
-    
-    return g_strdup(end);
-  }
-
-  return NULL;
-}
-
-/* We've got a list of URIs from somewhere (probably a filer window).
- * If the files are on the local machine then use the name,
- * otherwise, try /net/server/path.
- */
-static void got_uri_list(GtkWidget 		*widget,
-			 GdkDragContext 	*context,
-			 GtkSelectionData 	*selection_data,
-			 guint32             	time)
-{
-  GSList		*uri_list;
-  char		*error = NULL;
-  GSList		*next_uri;
-  gboolean	send_reply = TRUE;
-  char		*path=NULL, *server=NULL;
-  const char		*uri;
-
-  uri_list = uri_list_to_gslist(selection_data->data);
-
-  if (!uri_list)
-    error = _("No URIs in the text/uri-list (nothing to do!)");
-  else {
-    /*
-    for(next_uri=uri_list; next_uri; next_uri=next_uri->next)
-      dprintf(3, "%s\n", next_uri->data);
-      */
-
-    uri=uri_list->data;
-
-    path=get_local_path(uri);
-    if(!path) {
-      char *tpath=get_path(uri);
-      server=get_server(uri);
-      path=g_strconcat("/net/", server, tpath, NULL);
-      g_free(server);
-      g_free(tpath);
-    }
-      
-  }
-
-  if (error) {
-    gtk_drag_finish(context, FALSE, FALSE, time);	/* Failure */
-    fprintf(stderr, "%s: %s\n", "got_uri_list", error);
-  } else {
-    gtk_drag_finish(context, TRUE, FALSE, time);    /* Success! */
-
-    dprintf(3, "new target is %s\n", path);
-    set_target(path);
-  }
-  
-  next_uri = uri_list;
-  while (next_uri) {
-      g_free(next_uri->data);
-      next_uri = next_uri->next;
-  }
-  g_slist_free(uri_list);
-
-  if(path)
-    g_free(path);
-}
-
-/* Called when some data arrives from the remote app (which we asked for
- * in drag_drop).
- */
-static void drag_data_received(GtkWidget      	*widget,
-			       GdkDragContext  	*context,
-			       gint            	x,
-			       gint            	y,
-			       GtkSelectionData *selection_data,
-			       guint            info,
-			       guint32          time,
-			       gpointer		user_data)
-{
-  dprintf(5, "%p in drag_data_received\n", widget);
-  
-  if (!selection_data->data) {
-    /* Timeout? */
-    gtk_drag_finish(context, FALSE, FALSE, time);	/* Failure */
-    return;
-  }
-
-  switch(info) {
-  case TARGET_XDS:
-    dprintf(4, "TARGET_XDS\n");
-    break;
-  case TARGET_URI_LIST:
-    dprintf(4, "URI list\n");
-    got_uri_list(widget, context, selection_data, time);
-    break;
-  default:
-    fprintf(stderr, _("drag_data_received: unknown target\n"));
-    gtk_drag_finish(context, FALSE, FALSE, time);
-    break;
-  }
-}
-
 #endif
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.7  2001/07/06 08:30:49  stephen
+ * Improved applet appearance for top and bottom panels.  Support menu
+ * accelerators.  Add tooltip help.
+ *
  * Revision 1.6  2001/05/30 10:32:55  stephen
  * Initial support for i18n
  *

@@ -1,3 +1,5 @@
+GTK_CONFIG = @GTK_CONFIG@
+ROX_CLIB = @ROX_RUN@ ROX-CLib
 SHELL = @SHELL@
 srcdir = @srcdir@
 PLATFORM_DIR = @bindir@
@@ -5,17 +7,17 @@ PLATFORM_DIR = @bindir@
 .SUFFIXES: .c .o
 
 CC = @CC@
-CFLAGS = @CFLAGS@ @LIBGTOP_INCS@ `gtk-config --cflags` -I.
-LDFLAGS = @LDFLAGS@ @LIBGTOP_LIBS@ `gtk-config --libs`
+CFLAGS = @CFLAGS@ @LIBGTOP_INCS@ `${GTK_CONFIG} --cflags` -I. `${ROX_CLIB} --cflags`
+LDFLAGS = @LDFLAGS@ @LIBGTOP_LIBS@ @LIBGTOP_EXTRA_LIBS@ `${GTK_CONFIG} --libs` `${ROX_CLIB} --libs`
 EXEC = ${PLATFORM_DIR}/${PROG}
 
 ############ Things to change for different programs
 
 PROG = freefs
 
-SRCS = freefs.c choices.c infowin.c
+SRCS = freefs.c 
 
-OBJECTS = freefs.o choices.o infowin.o
+OBJECTS = freefs.o 
 
 ############ Things to keep the same
 
