@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id: options.py,v 1.3 2004/01/11 13:21:47 stephen Exp $
+# $Id: options.py,v 1.4 2004/05/08 18:38:59 stephen Exp $
 
 import os
 
@@ -20,7 +20,10 @@ rox.app_options.notify()
 
 def install_button_handler(*args):
     import rox.mime_handler
-    rox.mime_handler.install_from_appinfo()
+    try:
+        rox.mime_handler.install_from_appinfo()
+    except:
+        rox.report_exception()
 
 def build_install_button(box, node, label):
     #print box, node, label
