@@ -2,8 +2,21 @@
 
 #define PROJECT "Clock"
 #define PURPOSE "Tell the time"
-#define VERSION "0.1.5"
+#define VERSION "0.1.6"
 #define AUTHOR  "Stephen Watson"
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 
 #include <sys/types.h>
+
+#undef STDC_HEADERS
+#undef HAVE_LOCALE_H
+#undef HAVE_SYS_STAT_H
+#undef HAVE_SETLOCALE
+#undef HAVE_FSTAT
+#undef HAVE_STAT
+#undef USE_GDK_PIXBUF
+
+#define EXTRA_FUN USE_GDK_PIXBUF
+
+#define _(String) (String)
+#define N_(String) (String)
