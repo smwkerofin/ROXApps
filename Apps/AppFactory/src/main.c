@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.4 2001/11/08 15:16:53 stephen Exp $
+ * $Id: main.c,v 1.5 2001/11/12 14:39:25 stephen Exp $
  */
 #include "config.h"
 
@@ -78,6 +78,22 @@ static GtkWidget *prompt_args;
 
 static GtkWidget *save=NULL;
 
+/* Configuration */
+typedef struct options {
+  gchar *author;
+  gchar *homepage;
+} Options;
+
+static Options options={
+  "", ""
+};
+
+typedef struct option_widgets {
+  GtkWidget *window;
+  GtkWidget *author;
+  GtkWidget *homepage;
+} OptionWidgets;
+
 /* Main.  Here we set up the gui and enter the main loop */
 int main(int argc, char *argv[])
 {
@@ -111,6 +127,9 @@ int main(int argc, char *argv[])
   textdomain(PROJECT);
   g_free(localedir);
 #endif
+
+  options.author=g_get_real_name();
+  options.homepage=g_strdup("");
   
   /* Initialise X/GDK/GTK */
   gtk_init(&argc, &argv);
@@ -228,9 +247,6 @@ int main(int argc, char *argv[])
 
   /* Main processing loop */
   gtk_main();
-
-  /* We are done, save out config in case it changed */
-  write_config();
 
   return 0;
 }
@@ -368,7 +384,12 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   gchar *fname;
   gchar *src;
   gboolean prompt;
-
+#if USE_XML
+    xmlDocPtr doc;
+    xmlNodePtr tree, subtree;
+    char buf[1024];
+#endif
+  
   prompt=gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(prompt_args));
   mleaf=g_basename(pathname);
 
@@ -422,6 +443,31 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
 
   dprintf(2, "Making AppInfo.xml");
   fname=g_strconcat(pathname, "/AppInfo.xml", NULL);
+    
+#if USE_XML
+  doc = xmlNewDoc("1.0");
+  doc->children=xmlNewDocNode(doc, NULL, "AppInfo", NULL);
+    
+  tree=xmlNewChild(doc->children, NULL, "About", NULL);
+  sprintf(buf, "Wrapper for %s", mleaf);
+  subtree=xmlNewChild(tree, NULL, "Purpose", buf);
+  sprintf(buf, "0.1.0 by %s %s", PROJECT, VERSION);
+  subtree=xmlNewChild(tree, NULL, "Version", buf);
+  if(options.author && options.author[0])
+    sprintf(buf, "AppFactory by %s, wrapper by %s", AUTHOR, options.author);
+  else
+    sprintf(buf, "AppFactory by %s", AUTHOR);
+  subtree=xmlNewChild(tree, NULL, "Authors", buf);
+  subtree=xmlNewChild(tree, NULL, "License", "GNU General Public License");
+  if(options.homepage && options.homepage[0])
+    subtree=xmlNewChild(tree, NULL, "Homepage", options.homepage);
+    
+  sprintf(buf, "ROX wrapper for %s", mleaf);
+  tree=xmlNewChild(doc->children, NULL, "Summary", buf);
+  
+  xmlSaveFormatFileEnc(fname, doc, NULL, 1);
+  xmlFreeDoc(doc);
+#else
   out=fopen(fname, "w");
   if(!out) {
     rox_error("Failed to make %s\n%s", fname, strerror(errno));
@@ -429,14 +475,22 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
     fprintf(out, "<?xml version=\"1.0\"?>\n<AppInfo>\n  <About>\n");
     fprintf(out, "    <Purpose>Wrapper for %s</Purpose>\n", mleaf);
     fprintf(out, "    <Version>0.1.0 by AppFactory %s</Version>\n", VERSION);
-    fprintf(out, "    <Authors>AppFactory by %s</Authors>\n", AUTHOR);
+    if(options.author && options.author[0]) 
+      fprintf(out,
+	      "    <Authors>AppFactory by %s, wrapper by %s</Authors>\n",
+	      AUTHOR, options.author);
+    else
+      fprintf(out, "    <Authors>AppFactory by %s</Authors>\n", AUTHOR);
     fprintf(out, "    <License>GNU General Public License</License>\n");
+    if(options.homepage && options.homepage[0])
+      fprintf(out, "    <Homepage>%s</Homepage>\n", options.homepage);
     fprintf(out, "  </About>\n");
     fprintf(out, "  <Summary>ROX wrapper for %s</Summary>\n", mleaf);
     fprintf(out, "</AppInfo>\n");
     
     fclose(out);
   }
+#endif
   g_free(fname);
 
   src=gtk_editable_get_chars(GTK_EDITABLE(prog_help), 0, -1);
@@ -550,6 +604,8 @@ static void write_config_xml(void)
     xmlSetProp(doc->children, "version", VERSION);
 
     /* Insert data here */
+    tree=xmlNewChild(doc->children, NULL, "Author", options.author);    
+    tree=xmlNewChild(doc->children, NULL, "Homepage", options.homepage);    
   
     ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
 
@@ -559,7 +615,7 @@ static void write_config_xml(void)
 }
 #endif
 
-/* Write the config to a file. We have no config to save, but you might...  */
+/* Write the config to a file.  */
 static void write_config(void)
 {
 #if !USE_XML
@@ -585,6 +641,9 @@ static void write_config(void)
       fprintf(out, _("#\n# Written %s\n\n"), buf);
 
       /* Write config here... */
+      fprintf(out, "author=%s\n", options.author);
+      fprintf(out, "homepage=%s\n", options.homepage);
+      
       fclose(out);
     }
 
@@ -627,12 +686,29 @@ static gboolean read_config_xml(void)
     }
 
     for(node=root->xmlChildrenNode; node; node=node->next) {
-      const xmlChar *string;
+      xmlChar *string;
       
       if(node->type!=XML_ELEMENT_NODE)
 	continue;
 
       /* Process data here */
+      if(strcmp(node->name, "Author")==0) {
+	string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+	if(string) {
+	  if(options.author)
+	    g_free(options.author);
+	  options.author=g_strdup(string);
+	  free(string);
+	}
+      } else if(strcmp(node->name, "Homepage")==0) {
+	string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+	if(string) {
+	  if(options.homepage)
+	    g_free(options.homepage);
+	  options.homepage=g_strdup(string);
+	  free(string);
+	}
+      }
     }
     
     xmlFreeDoc(doc);
@@ -644,7 +720,7 @@ static gboolean read_config_xml(void)
 }
 #endif
 
-/* Read in the config.  Again, nothing defined for this demo  */
+/* Read in the config. */
 static void read_config(void)
 {
   guchar *fname;
@@ -676,6 +752,28 @@ static void read_config(void)
 	  *end=0;
 
 	/* Process the line here... */
+	if(*line) {
+	  char *sep;
+
+	  dprintf(4, "line=%s", line);
+	  sep=strchr(line, '=');
+	  if(sep) {
+	    const char *var=line;
+	    const char *val=sep+1;
+
+	    *sep=0;
+	    dprintf(3, "%s = %s", var, val);
+	    if(strcmp(var, "author")==0) {
+	      if(options.author)
+		g_free(options.author);
+	      options.author=g_strdup(val);
+	    } else if(strcmp(var, "homepage")==0) {
+	      if(options.homepage)
+		g_free(options.homepage);
+	      options.homepage=g_strdup(val);
+	    }
+	  }
+	}
 	
       } while(!feof(in));
 
@@ -686,13 +784,123 @@ static void read_config(void)
   }
 }
 
+static void hide_window(GtkWidget *widget, gpointer data)
+{
+  gtk_widget_hide(GTK_WIDGET(data));
+}
+
+static void cancel_config(GtkWidget *widget, gpointer data)
+{
+  GtkWidget *confwin=GTK_WIDGET(data);
+  
+  gtk_widget_hide(confwin);
+}
+
+static void set_config(GtkWidget *widget, gpointer data)
+{
+  OptionWidgets *ow=(OptionWidgets *) data;
+
+  if(options.author)
+    g_free(options.author);
+  options.author=g_strdup(gtk_entry_get_text(GTK_ENTRY(ow->author)));
+  
+  if(options.homepage)
+    g_free(options.homepage);
+  options.homepage=g_strdup(gtk_entry_get_text(GTK_ENTRY(ow->homepage)));
+ 
+  gtk_widget_hide(ow->window);
+}
+
+static void save_config(GtkWidget *widget, gpointer data)
+{
+  set_config(widget, data);
+  write_config();
+}
+
+static void show_config_win(void)
+{
+  static GtkWidget *confwin=NULL;
+  static OptionWidgets ow;
+
+  if(!confwin) {
+    GtkWidget *vbox;
+    GtkWidget *hbox;
+    GtkWidget *but;
+    GtkWidget *label;
+    GtkWidget *entry;
+
+    confwin=gtk_dialog_new();
+    gtk_signal_connect(GTK_OBJECT(confwin), "delete_event", 
+		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
+		     confwin);
+    gtk_window_set_title(GTK_WINDOW(confwin), "Configuration");
+    gtk_window_set_position(GTK_WINDOW(confwin), GTK_WIN_POS_MOUSE);
+    ow.window=confwin;
+
+    vbox=GTK_DIALOG(confwin)->vbox;
+
+    hbox=gtk_hbox_new(FALSE, 0);
+    gtk_widget_show(hbox);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 4);
+
+    label=gtk_label_new(_("Author"));
+    gtk_widget_show(label);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
+
+    entry=gtk_entry_new();
+    gtk_widget_set_name(entry, "author");
+    gtk_widget_show(entry);
+    gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 4);
+    ow.author=entry;
+
+    hbox=gtk_hbox_new(FALSE, 0);
+    gtk_widget_show(hbox);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 4);
+
+    label=gtk_label_new(_("Home page"));
+    gtk_widget_show(label);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
+
+    entry=gtk_entry_new();
+    gtk_widget_set_name(entry, "homepage");
+    gtk_widget_show(entry);
+    gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 4);
+    ow.homepage=entry;
+
+    hbox=GTK_DIALOG(confwin)->action_area;
+
+    but=gtk_button_new_with_label(_("Save"));
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked",
+		       GTK_SIGNAL_FUNC(save_config), &ow);
+
+    but=gtk_button_new_with_label(_("Set"));
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
+		       &ow);
+
+    but=gtk_button_new_with_label(_("Cancel"));
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked",
+		       GTK_SIGNAL_FUNC(cancel_config), confwin);
+
+  } 
+
+  gtk_entry_set_text(GTK_ENTRY(ow.author), options.author);
+  gtk_entry_set_text(GTK_ENTRY(ow.homepage), options.homepage);
+  
+  gtk_widget_show(confwin);  
+}
+
 /*
  * Pop-up menu
- * Just two entries, one shows our information window, the other quits the
- * applet
  */
 static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),		NULL, show_info_win, 0, NULL },
+  { N_("/Configure..."),	NULL, show_config_win, 0, NULL},
   { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
 };
 

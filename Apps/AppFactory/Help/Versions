@@ -1,6 +1,10 @@
 AppFactory
 ==========
 
+0.1.7
+-----
+Added configure option to store Author and Homepage data.
+
 0.1.6
 -----
 Change to XML handling: requires 2.4 or later.  Use old style config otherwise.
