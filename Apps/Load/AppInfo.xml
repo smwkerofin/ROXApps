@@ -18,7 +18,7 @@
   </About>
   <Dependencies>
     <AppDir><Name>ROX-CLib</Name><NeedsVersion>2.1.0</NeedsVersion></AppDir>
-    <Library><Name>libgtop</Name><NeedsVersion>2.0.1</NeedsVersion></Library>
+    <Library><Name>gtop-2.0</Name><NeedsVersion>2.0</NeedsVersion></Library>
   </Dependencies>
   <AppMenu>
     <Item option='-o'>
