@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.28 2004/11/21 13:19:34 stephen Exp $
+ * $Id: freefs.c,v 1.29 2004/12/11 11:48:25 stephen Exp $
  */
 #include "config.h"
 
@@ -127,6 +127,7 @@ static gboolean options_remote(void);
 static xmlNodePtr rpc_Change(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
 /*static gboolean change_remote(const char *id, const char *path);*/
+static int soap_from_file(FILE *in);
 
 static void get_mount_points(void);
 
@@ -152,6 +153,7 @@ static void usage(const char *argv0)
   printf("  -m XID\tX id of window to use in minimal applet mode\n");
   printf("  -n\tdon't attempt to contact existing server\n");
   printf("  -r\treplace existing server\n");
+  printf("  -R\tread SOAP message on standard input and send to server\n");
   printf("  dir\tdirectory on file sustem to monitor\n");
 }
 
@@ -189,11 +191,12 @@ int main(int argc, char *argv[])
   gchar *localedir;
 #endif
   int c, do_exit, nerr;
-  const char *options="vha:nrom:";
+  const char *options="vha:nrom:R";
   gboolean minimal=FALSE;
   gboolean new_run=FALSE;
   gboolean replace_server=FALSE;
   gboolean show_options=FALSE;
+  gboolean soap_message=FALSE;
 
   /* Check for this argument by itself */
   if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
@@ -240,6 +243,9 @@ int main(int argc, char *argv[])
       minimal=TRUE;
       xid=atol(optarg);
       break;
+    case 'R':
+      soap_message=TRUE;
+      break;
     default:
       nerr++;
       break;
@@ -280,6 +286,9 @@ int main(int argc, char *argv[])
     dprintf(1, "Making SOAP server");
     server=rox_soap_server_new(PROJECT, FREEFS_NAMESPACE_URL);
     rox_soap_server_add_actions(server, actions);
+
+  } else if(soap_message) {
+    return soap_from_file(stdin);
     
   } else if(!new_run) {
     if(show_options) {
@@ -1219,6 +1228,8 @@ static xmlNodePtr rpc_Change(ROXSOAPServer *server, const char *action_name,
 
   g_free(ids);
   g_free(dir);
+
+  return NULL;
 }
 
 static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
@@ -1314,6 +1325,67 @@ static gboolean options_remote(void)
   return sent && ok;
 }
 
+static int soap_from_file(FILE *in)
+{
+  ROXSOAP *serv;
+  xmlDocPtr doc;
+  gboolean sent, ok;
+  gchar *buffer;
+  int len, size;
+
+  buffer=NULL;
+  len=0;
+  size=0;
+  do {
+    int n;
+
+    if(size-len<BUFSIZ) {
+      size+=BUFSIZ;
+      buffer=g_realloc(buffer, size);
+    }
+    n=fread(buffer+len, 1, BUFSIZ, in);
+    if(n>0) {
+      len+=n;
+    } else {
+      if(ferror(in)) {
+	g_free(buffer);
+	dprintf(3, "Failed to read XML doc");
+	return 6;
+      } else
+	break;
+    }
+  } while(!feof(in));
+  buffer[len]=0;
+  dprintf(3, "%d doc=%s", len, buffer);
+
+  doc=xmlParseMemory(buffer, len);
+  g_free(buffer);
+  if(!doc) {
+    dprintf(3, "Failed to parse XML doc");
+    return 2;
+  }
+
+  serv=rox_soap_connect(PROJECT);
+  dprintf(3, "server for %s is %p", PROJECT, serv);
+  if(!serv)
+    return 1;
+  
+  sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
+  dprintf(3, "sent %d", sent);
+
+  xmlFreeDoc(doc);
+  if(sent)
+    gtk_main();
+  rox_soap_close(serv);
+
+  if(!sent)
+    return 3;
+  if(!ok)
+    return 4;
+
+  return 0;
+}
+
 static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 			    gpointer data, gpointer udata)
 {
@@ -1338,6 +1410,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.29  2004/12/11 11:48:25  stephen
+ * More work on the SOAP messages
+ *
  * Revision 1.28  2004/11/21 13:19:34  stephen
  * Use new ROX-CLib features.  Added (untested) minimalist applet mode.
  *

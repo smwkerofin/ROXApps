@@ -1,6 +1,14 @@
 Changes to FreeFS
 =================
 
+01-Jan-2004
+~~~~~~~~~~~
+Can now pass SOAP message via -R.
+
+11-Dec-2004
+~~~~~~~~~~~
+Work on remote mode.
+
 16-Nov-2004
 ~~~~~~~~~~~
 Use new ROX-CLib features.  Added (untested) minimalist applet mode.
