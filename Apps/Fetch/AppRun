@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.1.1.1 2004/05/31 11:51:42 stephen Exp $
+# $Id: AppRun,v 1.2 2004/06/03 17:53:23 stephen Exp $
 
 import os, sys
 
@@ -49,6 +49,7 @@ class FetchWindow(rox.Window):
         vbox.pack_start(l, padding=4)
 
         self.msg1=rox.g.Label('')
+        self.msg1.set_line_wrap(True)
         vbox.pack_start(self.msg1, padding=4)
 
         self.prog=rox.g.ProgressBar()
