@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.13 2002/08/24 16:39:51 stephen Exp $
+ * $Id: alarm.c,v 1.14 2003/03/05 15:30:39 stephen Exp $
  */
 #include "config.h"
 
@@ -631,7 +631,7 @@ static void show_message(const Alarm *alarm)
 
   hbox=GTK_DIALOG(win)->action_area;
 
-  but=gtk_button_new_with_label(_("Dismiss"));
+  but=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
   gtk_widget_show(but);
   gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
   gtk_signal_connect(GTK_OBJECT(but), "clicked",
@@ -1031,6 +1031,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.14  2003/03/05 15:30:39  stephen
+ * First pass at conversion to GTK 2.
+ *
  * Revision 1.13  2002/08/24 16:39:51  stephen
  * Fix compilation problem with libxml2.
  *

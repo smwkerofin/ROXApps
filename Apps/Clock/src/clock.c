@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.25 2003/03/05 15:30:39 stephen Exp $
+ * $Id: clock.c,v 1.26 2003/03/25 14:32:28 stephen Exp $
  */
 #include "config.h"
 
@@ -68,17 +68,18 @@
 #include "rox_soap.h"
 #include "rox_soap_server.h"
 #endif
+#include "options.h"
 
 #include "alarm.h"
 
 typedef struct time_format {
-  const char *name;   /* User visible name for this format */
+  const char *name;   /* User visible name for this format (unused?) */
   const char *fmt;    /* Format to pass to strftime(3c) */
-  guint32 interval;   /* Suitable interval rate */
+  guint32 interval;   /* Suitable interval rate (unused?) */
 } TimeFormat;
-  
-static char user_defined[256]="%X%n%x"; /* Buffer to hold the user format */
 
+static char user_defined[256]="%X%n%x"; /* Buffer to hold the user format */
+  
 static TimeFormat formats[]={
   {N_("24 hour"), "%k:%M.%S", 500},
   {N_("24 hour, no seconds"), "%k:%M", 30000},
@@ -91,6 +92,9 @@ static TimeFormat formats[]={
   {NULL, NULL, 0}
 };
 
+#define NUM_FORMAT 7
+#define USER_FORMAT 6
+
 /* Flags for display mode */
 #define MODE_SECONDS 1  /* Plot the second hand */
 #define MODE_NO_TEXT 2  /* Don't show the text below the clock face */
@@ -98,15 +102,16 @@ static TimeFormat formats[]={
 #define MODE_NFLAGS 3
 
 typedef struct mode {
-  TimeFormat *format;  /* Format of text below clock */
-  int flags;          /* Bit mask of flags defined above */
+  int format;  /* Format of text below clock */
+  int seconds, show_text, hours;
+  /*int flags;  */        /* Bit mask of flags defined above */
   guint32 interval;   /* Interval between updates (in ms) */
   guint init_size;    /* Initial size of applet */
   const char *font_name;   /* Font for drawing clock numbers */
 } Mode;
 
 static Mode default_mode={
-  formats, MODE_SECONDS, 500, 64, NULL
+  0, 1, 1, 0, 500, 32, "Serif 12"
 };
 
 static GtkWidget *menu=NULL;          /* Popup menu */
@@ -147,7 +152,16 @@ static GtkWidget *font_window;
 static GtkWidget *font_name;
 #endif
 
-static time_t config_time=0;        /* Time our config file was last changed */
+static Option o_format;
+static Option o_user_format;
+static Option o_seconds;
+static Option o_show_text;
+static Option o_hours;
+static Option o_interval;
+static Option o_size;
+static Option o_font;
+static Option o_no_face;
+
 static gboolean load_alarms=TRUE;   /* Also controls if we show them */
 static gboolean save_alarms=TRUE;
 
@@ -158,7 +172,6 @@ typedef struct clock_window {
   GtkWidget *canvas;      /* Displays clock face */
   /*GdkPixmap *pixmap;      /* Draw face here, copy to canvas */
   guint update_tag;            /* Handle for the timeout */
-  Mode mode;
   GdkGC *gc;
 } ClockWindow;
 
@@ -173,6 +186,7 @@ static ROXSOAPServer *server=NULL;
 
 static ClockWindow *make_window(guint32 socket);
 static void remove_window(ClockWindow *win);
+static const char *get_format(void);
 static gboolean do_update(ClockWindow *win);/* Update clock face and text */
 static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 			    gpointer data);
@@ -193,13 +207,12 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 static gboolean open_remote(guint32 xid);
 #endif
 
+static void setup_options(void);
 static void read_config(void);
-static void write_config(const Mode *);
 #if USE_XML
 static gboolean read_config_xml(void);
-static void write_config_xml(const Mode *);
 #endif
-static void check_config(void);
+static void setup_config(void);
 
 static void usage(const char *argv0)
 {
@@ -293,6 +306,10 @@ int main(int argc, char *argv[])
     exit(0);
   }
   
+  dprintf(2, "Initialise Choices");
+  choices_init();
+  options_init("Clock");
+  
   /* Initialise X/GDK/GTK */
   dprintf(2, "Initialise X/GDK/GTK");
   gtk_init(&argc, &argv);
@@ -333,12 +350,7 @@ int main(int argc, char *argv[])
   if(do_exit)
     exit(0);
 
-  /* Init choices and read them in */
-  dprintf(2, "Initialise Choices");
-  choices_init();
-  dprintf(2, "Read config");
-  read_config();
-  dprintf(2, "Read alarms");
+  setup_options();
   if(load_alarms)
     alarm_load();
 
@@ -397,8 +409,6 @@ static void remove_window(ClockWindow *win)
   /*gtk_widget_hide(win->win);*/
 
   gtk_timeout_remove(win->update_tag);
-  if(win->mode.font_name)
-    g_free((void *) win->mode.font_name);
   /*gdk_pixmap_unref(win->pixmap);*/
   gdk_gc_unref(win->gc);
   g_free(win);
@@ -429,10 +439,6 @@ static ClockWindow *make_window(guint32 socket)
 
   cwin=g_new0(ClockWindow, 1);
 
-  cwin->mode=default_mode;
-  if(cwin->mode.font_name)
-    cwin->mode.font_name=g_strdup(cwin->mode.font_name);
-
   cmap=gdk_rgb_get_cmap();
   
   if(socket) {
@@ -449,8 +455,8 @@ static ClockWindow *make_window(guint32 socket)
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(window_gone), 
 		       cwin);
-    dprintf(3, "initial size=%d", cwin->mode.init_size);
-    gtk_widget_set_usize(plug, cwin->mode.init_size, cwin->mode.init_size);
+    dprintf(3, "initial size=%d", o_size.value);
+    gtk_widget_set_usize(plug, o_size.int_value, o_size.int_value);
 
     /* We want to pop up a menu on a button press */
     gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
@@ -477,9 +483,9 @@ static ClockWindow *make_window(guint32 socket)
     gtk_signal_connect(GTK_OBJECT(cwin->win), "destroy", 
 		       GTK_SIGNAL_FUNC(window_gone), 
 		       cwin);
-    dprintf(3, "initial size=%d", cwin->mode.init_size);
-    gtk_widget_set_usize(cwin->win, cwin->mode.init_size,
-			 cwin->mode.init_size);
+    dprintf(3, "initial size=%d", o_size.value);
+    gtk_widget_set_usize(cwin->win, o_size.int_value,
+			 o_size.int_value);
 
     /* We want to pop up a menu on a button press */
     gtk_signal_connect(GTK_OBJECT(cwin->win), "button_press_event",
@@ -522,25 +528,26 @@ static ClockWindow *make_window(guint32 socket)
   gtk_signal_connect (GTK_OBJECT (cwin->canvas), "configure_event",
 		      (GtkSignalFunc) configure_event, cwin);
   gtk_widget_realize(cwin->canvas);
-  gtk_widget_show (cwin->canvas);
+  if(!o_no_face.int_value)
+    gtk_widget_show (cwin->canvas);
   gtk_widget_set_name(cwin->canvas, "clock face");
   
   cwin->gc=gdk_gc_new(cwin->canvas->window);
 
   time(&now);
-  strftime(buf, 80, cwin->mode.format->fmt, localtime(&now));
+  strftime(buf, 80, get_format(), localtime(&now));
 
   /* This is the text below the clock face */
   cwin->digital_out=gtk_label_new(buf);
   gtk_box_pack_start(GTK_BOX(vbox), cwin->digital_out, FALSE, FALSE, 2);
-  if(!(cwin->mode.flags & MODE_NO_TEXT))
+  if(o_show_text.int_value)
     gtk_widget_show(cwin->digital_out);
 
   if(cwin->win)
     gtk_widget_show(cwin->win);
 
   /* Make sure we get called periodically */
-  cwin->update_tag=gtk_timeout_add(cwin->mode.interval,
+  cwin->update_tag=gtk_timeout_add(o_interval.int_value,
 			 (GtkFunction) do_update, cwin);
 
   windows=g_list_append(windows, cwin);
@@ -550,42 +557,67 @@ static ClockWindow *make_window(guint32 socket)
   return cwin;
 }
 
-/* Called when the display mode changes */
-static void set_mode(ClockWindow *cwin, Mode *nmode)
+static const char *get_format(void)
 {
-  Mode *mode;
+  int i=o_format.int_value;
 
-  if(cwin)
-    mode=&cwin->mode;
-  else
-    mode=&default_mode;
-      
-  dprintf(3, "mode now %s, %d, %#x, font %s\n", nmode->format->name,
-	  nmode->interval, nmode->flags,
-	  nmode->font_name? nmode->font_name: "(default)");
+  if(i<0 || i>=NUM_FORMAT)
+    i=0;
 
-  /* Do we need to change the update rate? */
-  if(cwin && cwin->update_tag && mode->interval!=nmode->interval) {
-    gtk_timeout_remove(cwin->update_tag);
-    cwin->update_tag=gtk_timeout_add(nmode->interval,
-			       (GtkFunction) do_update, cwin);
-    dprintf(4, "tag now %u (%d)\n", cwin->update_tag, nmode->interval);
-  }
+  if(i==USER_FORMAT)
+    return o_user_format.value;
 
-  /* Change visibility of text line? */
-  if(cwin && cwin->digital_out &&
-     (nmode->flags & MODE_NO_TEXT)!=(cwin->mode.flags & MODE_NO_TEXT)) {
-    if(nmode->flags & MODE_NO_TEXT)
-      gtk_widget_hide(cwin->digital_out);
-    else
-      gtk_widget_show(cwin->digital_out);
-  }
-
-  if(mode->font_name && mode->font_name!=nmode->font_name)
-    g_free((gpointer) mode->font_name);
-  
-  *mode=*nmode;
+  return formats[i].fmt;
 }
+
+static void opts_changed(void)
+{
+  if(o_show_text.has_changed && current_window)
+    if(o_show_text.int_value) {
+      gtk_widget_show(current_window->digital_out);
+    } else {
+      gtk_widget_hide(current_window->digital_out);
+    }   
+   
+  if(o_size.has_changed && current_window) {
+    gtk_widget_set_usize(current_window->win,
+			 o_size.int_value, o_size.int_value);
+  }
+
+  if(o_interval.has_changed) {
+    if(current_window) {
+      gtk_timeout_remove(current_window->update_tag);
+      current_window->update_tag=gtk_timeout_add(o_interval.int_value,
+			       (GtkFunction) do_update, current_window);
+    }
+  }
+
+  if(o_no_face.has_changed && current_window) {
+    if(!o_no_face.int_value) {
+      gtk_widget_show(current_window->canvas);
+    } else {
+      gtk_widget_hide(current_window->canvas);
+    }   
+  }
+}
+
+static void setup_options(void)
+{
+  read_config();
+  
+  option_add_int(&o_format, "format", default_mode.format);
+  option_add_string(&o_user_format, "user_format", user_defined);
+  option_add_int(&o_seconds, "seconds", default_mode.seconds);
+  option_add_int(&o_show_text, "text", default_mode.show_text);
+  option_add_int(&o_hours, "hours", default_mode.hours);
+  option_add_int(&o_interval, "interval", default_mode.interval);
+  option_add_int(&o_size, "size", default_mode.init_size);
+  option_add_string(&o_font, "font", default_mode.font_name);
+  option_add_int(&o_no_face, "no_face", 0);
+
+  option_add_notify(opts_changed);
+}
+
 
 enum draw_hours {
   DH_NO, DH_QUARTER, DH_ALL
@@ -608,21 +640,20 @@ static gboolean do_update(ClockWindow *cwin)
   GdkColor *face_fg=CL_FACE_FG;
   GdkFont *font=NULL;
   GtkStyle *style;
-
-  /*
-   * Has the config changed?  Another instance may have saved its config,
-   * we should read it in and use that.
-   */
-  check_config();
+  PangoLayout *layout;
+  PangoFontDescription *pfd;
 
   time(&now);
   tms=localtime(&now);
     
-  if(cwin->digital_out && !(cwin->mode.flags & MODE_NO_TEXT)) {
-    strftime(buf, 80, cwin->mode.format->fmt, tms);
+  if(cwin->digital_out && o_show_text.int_value) {
+    strftime(buf, 80, get_format(), tms);
     
     gtk_label_set_text(GTK_LABEL(cwin->digital_out), buf);
   }
+
+  if(o_no_face.int_value)
+    return;
 
   if(!cwin->gc || !cwin->canvas)
     return TRUE;
@@ -672,15 +703,11 @@ static gboolean do_update(ClockWindow *cwin)
   x0=w/2;
   y0=h/2;
 
-  if(!font && cwin->mode.font_name) {
-    font=gdk_font_load(cwin->mode.font_name);
-  }
-  if(!font) {
-    GtkStyle *style=gtk_widget_get_style(cwin->canvas);
-    if(style)
-      font=gtk_style_get_font(style);
-  }
-  gdk_font_ref(font);
+  layout=gtk_widget_create_pango_layout(cwin->canvas, "");
+  dprintf(3, "font is %s", o_font.value? o_font.value: "");
+  pfd=pango_font_description_from_string(o_font.value);
+  pango_layout_set_font_description(layout, pfd);
+  pango_font_description_free(pfd);
   
   /* Draw the clock face, including the hours */
   gdk_gc_set_foreground(cwin->gc, face_fg);
@@ -692,10 +719,11 @@ static gboolean do_update(ClockWindow *cwin)
   gdk_gc_set_foreground(cwin->gc, CL_FACE_BG);
   gdk_draw_arc(cwin->canvas->window, cwin->gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
 	       360*64);
-  if(cwin->mode.flags & MODE_HOURS) {
+  if(o_hours.int_value) {
     int siz;
     
-    twidth=gdk_text_width(font, "12", 2);
+    pango_layout_set_text(layout, "12", -1);
+    pango_layout_get_pixel_size(layout, &twidth, NULL);
     siz=sw/twidth;
 
     if(siz<4)
@@ -724,9 +752,11 @@ static gboolean do_update(ClockWindow *cwin)
       gdk_gc_set_foreground(cwin->gc, CL_HOUR_TEXT);
       sprintf(buf, "%d", tick==0? 12: tick);
       l=strlen(buf);
-      xt=x2-gdk_text_width(font, buf, l)/2;
-      yt=y2+gdk_text_height(font, buf, l)/2;
-      gdk_draw_string(cwin->canvas->window, font, cwin->gc, xt, yt, buf);
+      pango_layout_set_text(layout, buf, -1);
+      pango_layout_get_pixel_size(layout, &xt, &yt);
+      xt=x2-xt/2;
+      yt=y2-yt/2;
+      gdk_draw_layout(cwin->canvas->window, cwin->gc, xt, yt, layout);
     }
   }
 
@@ -764,7 +794,7 @@ static gboolean do_update(ClockWindow *cwin)
   
   gdk_gc_set_line_attributes(cwin->gc, 0, GDK_LINE_SOLID, GDK_CAP_ROUND,
 			     GDK_JOIN_MITER);
-  if(cwin->mode.flags & MODE_SECONDS) {
+  if(o_seconds.int_value) {
     int x2, y2;
     
     x1=x0+rad*sin(s_ang)*0.95;
@@ -792,7 +822,7 @@ static gboolean do_update(ClockWindow *cwin)
 		  */
   /*gtk_widget_queue_draw(cwin->canvas);*/
 
-  gdk_font_unref(font);
+  g_object_unref(G_OBJECT(layout));
 
   return TRUE;
 }
@@ -821,95 +851,6 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 }
 
 #if USE_XML
-static void write_config_xml(const Mode *mode)
-{
-  gchar *fname;
-  gboolean ok;
-
-  fname=choices_find_path_save("options.xml", PROJECT, TRUE);
-  dprintf(2, "save to %s", fname? fname: "NULL");
-
-  if(fname) {
-    xmlDocPtr doc;
-    xmlNodePtr tree;
-    FILE *out;
-    char buf[80];
-
-    doc = xmlNewDoc("1.0");
-    doc->children=xmlNewDocNode(doc, NULL, "Clock", NULL);
-    xmlSetProp(doc->children, "version", VERSION);
-
-    tree=xmlNewChild(doc->children, NULL, "format", NULL);
-    xmlSetProp(tree, "name", mode->format->name);
-    tree=xmlNewChild(doc->children, NULL, "flags", NULL);
-    sprintf(buf, "%u", (unsigned int) mode->flags);
-    xmlSetProp(tree, "value", buf);
-    tree=xmlNewChild(doc->children, NULL, "interval", NULL);
-    sprintf(buf, "%ld", (long) mode->interval);
-    xmlSetProp(tree, "value", buf);
-    tree=xmlNewChild(doc->children, NULL, "user-format", user_defined);
-    if(mode->font_name)
-      tree=xmlNewChild(doc->children, NULL, "font", mode->font_name);
-    tree=xmlNewChild(doc->children, NULL, "applet", NULL);
-    sprintf(buf, "%d", (int) mode->init_size);
-    xmlSetProp(tree, "initial-size", buf);
-  
-    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
-    if(ok) 
-      time(&config_time);
-
-    xmlFreeDoc(doc);
-    g_free(fname);
-  }
-}
-#endif
-
-/* Write the config to a file */
-static void write_config(const Mode *mode)
-{
-#if !USE_XML
-  gchar *fname;
-
-  fname=choices_find_path_save("options", PROJECT, TRUE);
-  dprintf(2, "save to %s", fname? fname: "NULL");
-
-  if(fname) {
-    FILE *out;
-
-    out=fopen(fname, "w");
-    if(out) {
-      time_t now;
-      char buf[80];
-      
-      fprintf(out, _("# Config file for %s %s (%s)\n"), PROJECT, VERSION,
-	      AUTHOR);
-      fprintf(out, _("# Latest version at %s\n"), WEBSITE);
-      time(&now);
-      strftime(buf, 80, "%c", localtime(&now));
-      fprintf(out, _("#\n# Written %s\n\n"), buf);
-
-      /* These aren't translated */
-      fprintf(out, "time_format=%s\n", mode->format->name);
-      fprintf(out, "flags=%d\n", (int) mode->flags);
-      fprintf(out, "interval=%ld\n", (long) mode->interval);
-      fprintf(out, "user_format=%s\n", user_defined);
-      fprintf(out, "init_size=%d\n", (int) mode->init_size);
-      if(mode->font_name)
-	fprintf(out, "font_name=%s\n", mode->font_name);
-
-      fclose(out);
-
-      config_time=now;
-    }
-
-    g_free(fname);
-  }
-#else
-  write_config_xml(mode);
-#endif
-}
-
-#if USE_XML
 static gboolean read_config_xml(void)
 {
   guchar *fname;
@@ -917,23 +858,9 @@ static gboolean read_config_xml(void)
   fname=choices_find_path_load("options.xml", PROJECT);
 
   if(fname) {
-#if defined(HAVE_SYS_STAT_H)
-    struct stat statb;
-#endif
-    Mode nmode;
     xmlDocPtr doc;
     xmlNodePtr node, root;
     const xmlChar *string;
-
-    nmode=default_mode;
-    
-#ifdef HAVE_STAT
-    if(stat(fname, &statb)==0) {
-      config_time=statb.st_mtime;
-    }
-#else
-    time(&config_time);
-#endif
 
     doc=xmlParseFile(fname);
     if(!doc) {
@@ -971,21 +898,26 @@ static gboolean read_config_xml(void)
 	  if(strcmp(str, formats[i].name)==0)
 	    break;
 	if(formats[i].name)
-	  nmode.format=formats+i;
+	  default_mode.format=i;
 	free(str);
 	
       } else if(strcmp(node->name, "flags")==0) {
+	int flags;
  	str=xmlGetProp(node, "value");
 	if(!str)
 	  continue;
-	nmode.flags=atoi(str);
+	flags=atoi(str);
 	free(str);
+
+	default_mode.seconds=!!(flags & MODE_SECONDS);
+	default_mode.show_text=!(flags & MODE_NO_TEXT);
+	default_mode.hours=!!(flags & MODE_HOURS);
 
       } else if(strcmp(node->name, "interval")==0) {
  	str=xmlGetProp(node, "value");
 	if(!str)
 	  continue;
-	nmode.interval=atol(str);
+	default_mode.interval=atol(str);
 	free(str);
 
       } else if(strcmp(node->name, "user-format")==0) {
@@ -999,22 +931,21 @@ static gboolean read_config_xml(void)
 	str=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 	if(!str)
 	  continue;
-	nmode.font_name=g_strdup(str);
+	default_mode.font_name=g_strdup(str);
 	free(str);
 
       } else if(strcmp(node->name, "applet")==0) {
  	str=xmlGetProp(node, "initial-size");
 	if(!str)
 	  continue;
-	nmode.init_size=atoi(str);
+	default_mode.init_size=atoi(str);
 	free(str);
 
       }
     }
     
-    if(nmode.init_size<16)
-      nmode.init_size=16;
-    set_mode(NULL, &nmode);
+    if(default_mode.init_size<16)
+      default_mode.init_size=16;
     
     g_free(fname);
     xmlFreeDoc(doc);
@@ -1038,34 +969,13 @@ static void read_config(void)
   fname=choices_find_path_load("options", PROJECT);
 
   if(fname) {
-#if defined(HAVE_SYS_STAT_H)
-    struct stat statb;
-#endif
     FILE *in;
-    
-#ifdef HAVE_STAT
-    if(stat(fname, &statb)==0) {
-      config_time=statb.st_mtime;
-    }
-#else
-    time(&config_time);
-#endif
 
     in=fopen(fname, "r");
     if(in) {
       char buf[1024], *line;
       char *end;
       gchar *words;
-      Mode nmode;
-
-      nmode=default_mode;
-
-#ifdef HAVE_FSTAT
-      if(fstat(fileno(in), &statb)==0) {
-	config_time=statb.st_mtime;
-      }
-#else
-#endif
 
       do {
 	line=fgets(buf, sizeof(buf), in);
@@ -1096,22 +1006,25 @@ static void read_config(void)
 		if(strcmp(val, formats[i].name)==0)
 		  break;
 	      if(formats[i].name)
-		nmode.format=formats+i;
+		default_mode.format=i;
 	      
 	    } else if(strcmp(var, "flags")==0) {
-	      nmode.flags=atoi(val);
+	      int flags=atoi(val);
+	      default_mode.seconds=!!(flags & MODE_SECONDS);
+	      default_mode.show_text=!(flags & MODE_NO_TEXT);
+	      default_mode.hours=!!(flags & MODE_HOURS);
 	      
 	    } else if(strcmp(var, "interval")==0) {
-	      nmode.interval=(guint32) atol(val);
+	      default_mode.interval=(guint32) atol(val);
 	      
 	    } else if(strcmp(var, "user_format")==0) {
 	      strncpy(user_defined, val, sizeof(user_defined));
 	      
 	    } else if(strcmp(var, "init_size")==0) {
-	      nmode.init_size=(guint) atoi(val);
+	      default_mode.init_size=(guint) atoi(val);
 	      
 	    } else if(strcmp(var, "font_name")==0) {
-	      nmode.font_name=g_strdup(val);
+	      default_mode.font_name=g_strdup(val);
 	      
 	    }
 	  }
@@ -1121,53 +1034,14 @@ static void read_config(void)
 
       fclose(in);
 
-      if(nmode.init_size<16)
-	nmode.init_size=16;
-      set_mode(NULL, &nmode);
+      if(default_mode.init_size<16)
+	default_mode.init_size=16;
     }
     
     g_free(fname);
   }
 }
 
-/* Check timestamp of config file against time we last read it, if file
-   has changed, call read_config() */
-static void check_config(void)
-{
-  /* We only need to do this if there are multiple copies of Clock running. */
-#if !USE_SERVER
-  gchar *fname;
-
-  if(config_time==0) {
-    read_config();
-    return;
-  }
-
-#if USE_XML
-  fname=choices_find_path_load("options.xml", PROJECT);
-  if(!fname)
-#endif
-    fname=choices_find_path_load("options", PROJECT);
-  dprintf(5, "%p: %s", fname, fname? fname: "NULL");
-
-  if(fname) {
-#ifdef HAVE_SYS_STAT_H
-    struct stat statb;
-#endif
-
-#ifdef HAVE_STAT
-    if(stat(fname, &statb)==0) {
-      if(statb.st_mtime>config_time)
-	read_config();
-    }
-#else
-    /* Don't read the config again. */
-#endif
-
-    g_free(fname);
-  }
-#endif
-}
 
 /* Make a destroy-frame into a close */
 static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
@@ -1178,346 +1052,10 @@ static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
   return TRUE;
 }
 
-/* User cancels a change of config */
-static void cancel_config(GtkWidget *widget, gpointer data)
-{
-  ClockWindow *cwin;
-  Mode *mode;
-  int i;
-
-  cwin=(ClockWindow *) gtk_object_get_data(GTK_OBJECT(confwin), "ClockWindow");
-  mode=cwin? &cwin->mode: &default_mode;
-  
-  /* Reset window contents */
-  gtk_option_menu_set_history(GTK_OPTION_MENU(mode_sel),
-			      (int) (mode->format-formats));
-  gtk_entry_set_text(GTK_ENTRY(user_fmt), user_defined);
-  for(i=0; i<MODE_NFLAGS; i++)
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mode_flags[i]),
-				 mode->flags & 1<<i);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(interval), mode->interval/1000.);
-
-  /* Hide window */
-  gtk_widget_hide(confwin);
-}
-
-static void set_config(GtkWidget *widget, gpointer data)
-{
-  GtkWidget *menu;
-  GtkWidget *item;
-  const gchar *udef;
-  Mode nmode;
-  gfloat sec;
-  int i;
-  gchar *text;
-  ClockWindow *cwin;
-
-  cwin=(ClockWindow *) gtk_object_get_data(GTK_OBJECT(confwin), "ClockWindow");
-
-  /* get data from window contents */
-  menu=gtk_option_menu_get_menu(GTK_OPTION_MENU(mode_sel));
-  item=gtk_menu_get_active(GTK_MENU(menu));
-  nmode.format=(TimeFormat *) gtk_object_get_data(GTK_OBJECT(item), "format");
-  nmode.flags=0;
-  for(i=0; i<MODE_NFLAGS; i++)
-    if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(mode_flags[i])))
-      nmode.flags|=1<<i;
-  sec=gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(interval));
-  nmode.interval=(guint32) (sec*1000.);
-  nmode.init_size=
-    (guint) gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(init_size));
-    
-  udef=gtk_entry_get_text(GTK_ENTRY(user_fmt));
-  strncpy(user_defined, udef, sizeof(user_defined));
-
-#if INLINE_FONT_SEL
-  nmode.font_name=
-    gtk_font_selection_get_font_name(GTK_FONT_SELECTION(font_sel));
-#else
-  gtk_label_get(GTK_LABEL(font_name), &text);
-  nmode.font_name=g_strdup(text);
-#endif
-
-  dprintf(2, "format=%s, %s", nmode.format->name, nmode.format->fmt);
-  dprintf(2, "flags=%d, interval=%d", nmode.flags, nmode.interval);
-  dprintf(2, "font=%s", nmode.font_name);
-  
-  set_mode(cwin, &nmode);
-  
-  if(GPOINTER_TO_INT(data))
-    write_config(&cwin->mode);
-  do_update(cwin);
-  
-  gtk_widget_hide(confwin);
-}
-
-#if !INLINE_FONT_SEL
-static void set_font(GtkWidget *widget, gpointer data)
-{
-  gchar *name;
-
-  name=gtk_font_selection_dialog_get_font_name(GTK_FONT_SELECTION_DIALOG(font_window));
-  if(name) {
-    gtk_label_set_text(GTK_LABEL(font_name), name);
-    g_free(name);
-    gtk_widget_hide(font_window);
-  }
-}
-
-static void show_font_window(GtkWidget *widget, gpointer data)
-{
-  gchar *name;
-
-  gtk_label_get(GTK_LABEL(font_name), &name);
-  gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(font_window),
-					  name);
-
-  gtk_widget_show(font_window);
-}
-
-static void hide_font_window(GtkWidget *widget, gpointer data)
-{
-  gtk_widget_hide(font_window);
-}
-
-#endif
-
-static void sel_format(GtkWidget *widget, gpointer data)
-{
-  GtkWidget *menu;
-  GtkWidget *item;
-  TimeFormat *fmt;
-  
-  /* get data from window contents */
-  menu=gtk_option_menu_get_menu(GTK_OPTION_MENU(mode_sel));
-  item=gtk_menu_get_active(GTK_MENU(menu));
-  fmt=(TimeFormat *) gtk_object_get_data(GTK_OBJECT(item), "format");
-  
-  if(fmt) {
-    if(fmt->fmt==user_defined) {
-      gtk_label_set_text(GTK_LABEL(sel_fmt),
-			 gtk_entry_get_text(GTK_ENTRY(user_fmt)));
-    } else
-      gtk_label_set_text(GTK_LABEL(sel_fmt), fmt->fmt);
-  }
-}
-
 /* Show the configure window */
 static void show_conf_win(void)
 {
-  int i;
-  
-  if(!confwin) {
-    /* Need to create it first */
-    GtkWidget *vbox;
-    GtkWidget *hbox;
-    GtkWidget *but;
-    GtkWidget *label;
-    GtkWidget *menu;
-    GtkWidget *item;
-    GtkRequisition req;
-    GtkObject *adj;
-    GtkStyle *style;
-    int mw=0, mh=0;
-    int set=0;
-
-    static const char *flags[]={
-      N_("Second hand"), N_("Hide text"), N_("Numbers on face"),
-      NULL
-    };
-
-    confwin=gtk_dialog_new();
-    gtk_signal_connect(GTK_OBJECT(confwin), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     confwin);
-    gtk_window_set_title(GTK_WINDOW(confwin), _("Configuration"));
-    gtk_window_set_position(GTK_WINDOW(confwin), GTK_WIN_POS_MOUSE);
-
-    vbox=GTK_DIALOG(confwin)->vbox;
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
-
-    label=gtk_label_new(_("Time format"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-
-    mode_sel=gtk_option_menu_new();
-    gtk_widget_show(mode_sel);
-    gtk_box_pack_start(GTK_BOX(hbox), mode_sel, TRUE, TRUE, 2);
-
-    menu=gtk_menu_new();
-    gtk_option_menu_set_menu(GTK_OPTION_MENU(mode_sel), menu);
-
-    for(i=0; formats[i].name; i++) {
-      item=gtk_menu_item_new_with_label(_(formats[i].name));
-      if(current_window->mode.format==formats+i)
-	set=i;
-      gtk_object_set_data(GTK_OBJECT(item), "format", formats+i);
-      gtk_widget_show(item);
-      gtk_widget_size_request(item, &req);
-      if(mw<req.width)
-	mw=req.width;
-      if(mh<req.height)
-	mh=req.height;
-      gtk_signal_connect(GTK_OBJECT(item), "activate",
-		       GTK_SIGNAL_FUNC(sel_format), mode_sel);
-      gtk_menu_append(GTK_MENU(menu), item);
-    }
-    gtk_widget_set_usize(mode_sel, mw+50, mh+4);
-    gtk_option_menu_set_history(GTK_OPTION_MENU(mode_sel), set);
-    
-    sel_fmt=gtk_label_new(current_window->mode.format->fmt);
-    gtk_widget_show(sel_fmt);
-    gtk_box_pack_start(GTK_BOX(hbox), sel_fmt, FALSE, FALSE, 2);
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
-
-    label=gtk_label_new(_("User defined format"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-
-    user_fmt=gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(user_fmt), user_defined);
-    gtk_widget_show(user_fmt);
-    gtk_box_pack_start(GTK_BOX(hbox), user_fmt, TRUE, TRUE, 2);    
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
-
-    label=gtk_label_new(_("Update rate (s)"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-
-    adj=gtk_adjustment_new((gfloat) (current_window->mode.interval/1000.),
-			   0.1, 60., 0.1, 5, 5);
-    interval=gtk_spin_button_new(GTK_ADJUSTMENT(adj), 1., 2);
-    gtk_widget_show(interval);
-    gtk_box_pack_start(GTK_BOX(hbox), interval, FALSE, FALSE, 2);
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
-
-    label=gtk_label_new(_("Options"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-
-    for(i=0; i<MODE_NFLAGS; i++) {
-      mode_flags[i]=gtk_check_button_new_with_label(_(flags[i]));
-      gtk_widget_show(mode_flags[i]);
-      gtk_box_pack_start(GTK_BOX(hbox), mode_flags[i], FALSE, FALSE, 2);
-    }
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
-
-    label=gtk_label_new(_("Display font"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-
-#if INLINE_FONT_SEL
-    font_sel=gtk_font_selection_new();
-    gtk_font_selection_set_preview_text(GTK_FONT_SELECTION(font_sel),
-					"1 2 3 4 5 6 7 8 9 10 11 12");
-    gtk_widget_show(font_sel);
-    gtk_box_pack_start(GTK_BOX(hbox), font_sel, FALSE, FALSE, 2);
-#else
-    font_name=gtk_label_new(current_window->mode.font_name?
-			    current_window->mode.font_name: "");
-    gtk_widget_show(font_name);
-    gtk_box_pack_start(GTK_BOX(hbox), font_name, FALSE, FALSE, 2);
-
-    font_window=gtk_font_selection_dialog_new("Choose display font");
-    gtk_font_selection_dialog_set_preview_text(GTK_FONT_SELECTION_DIALOG(font_window),
-					"1 2 3 4 5 6 7 8 9 10 11 12");
-    gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(font_window)->ok_button), 
-		       "clicked", GTK_SIGNAL_FUNC(set_font), NULL);
-    gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(font_window)->cancel_button), 
-		       "clicked", GTK_SIGNAL_FUNC(hide_font_window), NULL);
-
-    but=gtk_button_new_with_label("Change");
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(show_font_window), NULL);
-#endif
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
-
-    label=gtk_label_new(_("Initial size"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-
-    adj=gtk_adjustment_new((gfloat) current_window->mode.init_size, 16, 128,
-			   2, 16, 16);
-    init_size=gtk_spin_button_new(GTK_ADJUSTMENT(adj), 1., 0);
-    gtk_widget_show(init_size);
-    gtk_box_pack_start(GTK_BOX(hbox), init_size, FALSE, FALSE, 2);
-
-    label=gtk_label_new(_("(only used on start up)"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-
-    hbox=GTK_DIALOG(confwin)->action_area;
-
-    but=gtk_button_new_with_label(_("Set"));
-    /*GTK_WIDGET_SET_FLAGS(but, GTK_CAN_DEFAULT);
-      gtk_widget_grab_default(but);*/
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
-		       GINT_TO_POINTER(FALSE));
-
-    but=gtk_button_new_with_label(_("Save"));
-    GTK_WIDGET_SET_FLAGS(but, GTK_CAN_DEFAULT);
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
-		       GINT_TO_POINTER(TRUE));
-
-    but=gtk_button_new_with_label(_("Cancel"));
-    GTK_WIDGET_SET_FLAGS(but, GTK_CAN_DEFAULT);
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(cancel_config), confwin);
-
-  }
-
-  /* Initialise values */
-  gtk_option_menu_set_history(GTK_OPTION_MENU(mode_sel),
-			      (int) (current_window->mode.format-formats));
-  gtk_entry_set_text(GTK_ENTRY(user_fmt), user_defined);
-  for(i=0; i<MODE_NFLAGS; i++)
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mode_flags[i]),
-				 current_window->mode.flags & 1<<i);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(interval),
-			    current_window->mode.interval/1000.);
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(init_size),
-			    current_window->mode.init_size);
-
-#if INLINE_FONT_SEL
-  if(current_window->mode.font_name)
-    gtk_font_selection_set_font_name(GTK_FONT_SELECTION(font_sel),
-				     current_window->mode.font_name);
-#else
-  if(current_window->mode.font_name) {
-    gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(font_window),
-				     current_window->mode.font_name);
-    gtk_label_set_text(GTK_LABEL(font_name), current_window->mode.font_name);
-  }
-#endif
-  gtk_object_set_data(GTK_OBJECT(confwin), "ClockWindow", current_window);
-
-  gtk_widget_show(confwin);
+  options_show();
 }
 
 static void close_window(void)
@@ -1529,6 +1067,8 @@ static void close_window(void)
   gtk_widget_hide(cw->win);
   gtk_widget_unref(cw->win);
   gtk_widget_destroy(cw->win);
+
+  current_window=NULL;
 }
 
 /* Pop-up menu */
@@ -1708,6 +1248,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.26  2003/03/25 14:32:28  stephen
+ * Re-enabled SOAP server, to test new ROX-CLib code.
+ *
  * Revision 1.25  2003/03/05 15:30:39  stephen
  * First pass at conversion to GTK 2.
  *
