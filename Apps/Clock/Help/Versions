@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+0.1.15
+------
+Fixed bug in memory management.
+
 0.1.14
 ------
 Support menu accelerators.  Fix bugs in merging alarm files.
