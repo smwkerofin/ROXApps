@@ -5,12 +5,15 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.4 2001/05/25 07:56:25 stephen Exp $
+ * $Id: load.c,v 1.5 2001/07/06 08:19:55 stephen Exp $
  *
  * Log at end of file
  */
 
 #include "config.h"
+
+#define APPLET_MENU        1
+#define DEBUG              1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +23,7 @@
 #include <math.h>
 #include <errno.h>
 
+#include <unistd.h>
 #include <sys/stat.h>
 
 #include <gtk/gtk.h>
@@ -29,10 +33,9 @@
 #include <glibtop/cpu.h>
 #include <glibtop/loadavg.h>
 
+/*#include "rox-clib.h"*/
 #include "choices.h"
-
-#define APPLET_MENU        1
-#define DEBUG              1
+#include "rox_debug.h"
 
 static GtkWidget *menu=NULL;
 static GtkWidget *infowin=NULL;
@@ -62,11 +65,12 @@ typedef struct options {
   guint32 update_ms;
   gboolean show_max;
   gboolean show_vals;
+  gboolean show_host;
   guint init_size;
 } Options;
 
 static Options options={
-  2000, TRUE, FALSE, MIN_WIDTH
+  2000, TRUE, FALSE, FALSE, MIN_WIDTH
 };
 
 typedef struct option_widgets {
@@ -74,6 +78,7 @@ typedef struct option_widgets {
   GtkWidget *update_s;
   GtkWidget *show_max;
   GtkWidget *show_vals;
+  GtkWidget *show_host;
   GtkWidget *init_size;
 } OptionWidgets;
 
@@ -87,6 +92,9 @@ static double *history=NULL;
 static int nhistory=0;
 static int ihistory=0;
 static gboolean is_applet;
+#ifdef HAVE_GETHOSTNAME
+static char hostname[256];
+#endif
 
 static void do_update(void);
 static gint configure_event(GtkWidget *widget, GdkEventConfigure *event);
@@ -98,7 +106,6 @@ static void show_info_win(void);
 static void read_config(void);
 static void write_config(void);
 static void check_config(void);
-static void dprintf(int level, const char *fmt, ...);
 
 int main(int argc, char *argv[])
 {
@@ -107,6 +114,18 @@ int main(int argc, char *argv[])
   GtkStyle *style;
   int w=MIN_WIDTH, h=MIN_HEIGHT;
   int i;
+
+  rox_debug_init("Load");
+
+#ifdef HAVE_GETHOSTNAME
+  if(gethostname(hostname, sizeof(hostname))<0) {
+    hostname[0]=0;
+    dprintf(1, "couldn't get hostname: %s", strerror(errno));
+    errno=0;
+  } else {
+    dprintf(1, "Running on %s", hostname);
+  }
+#endif
 
   server=glibtop_init_r(&glibtop_global_server,
 			(1<<GLIBTOP_SYSDEPS_CPU)|(1<<GLIBTOP_SYSDEPS_LOADAVG),
@@ -121,7 +140,6 @@ int main(int argc, char *argv[])
   cmap=gdk_rgb_get_cmap();
   gtk_widget_push_colormap(cmap);
   
-
   choices_init();
   dprintf(1, "read config");
   read_config();
@@ -196,43 +214,6 @@ int main(int argc, char *argv[])
   gtk_main();
 
   return 0;
-}
-
-/*
- * Debug output.  Controlled by the environment variable LOAD_DEBUG_LEVEL
- * which should be in the range 0-5, 0 for no debug output, 5 for most.
- * If unset, defaults to 0
- */
-static void dprintf(int level, const char *fmt, ...)
-{
-#if DEBUG
-  va_list list;
-  static int dlevel=-1;
-
-  if(dlevel==-1) {
-    gchar *val=g_getenv("LOAD_DEBUG_LEVEL");
-    if(val)
-      dlevel=atoi(val);
-    if(dlevel<0)
-      dlevel=0;
-
-    if(dlevel) {
-      time_t now;
-      char buf[80];
-
-      time(&now);
-      strftime(buf, sizeof(buf), "%c", localtime(&now));
-      g_log(PROJECT, G_LOG_LEVEL_DEBUG, "%s", buf);
-    }
-  }
-
-  if(level>dlevel)
-    return;
-
-  va_start(list, fmt);
-  g_logv(PROJECT, G_LOG_LEVEL_DEBUG, fmt, list);
-  va_end(list);
-#endif
 }
 
 static void do_update(void)
@@ -372,12 +353,17 @@ static void do_update(void)
     host_x=2+gdk_string_width(font, buf)+4;
   }
 
-  if(server->server_host) {
-    x=w-gdk_string_width(font, server->server_host)-2;
+  if(options.show_host) {
+    const char *host=hostname;
+    
+    if(server->server_host)
+      host=server->server_host;
+    
+    x=w-gdk_string_width(font, host)-2;
     if(x<host_x)
       x=host_x;
     gdk_gc_set_foreground(gc, colours+COL_FG);
-    gdk_draw_string(pixmap, font, gc, x, tm, server->server_host);
+    gdk_draw_string(pixmap, font, gc, x, tm, host);
   }
   
     
@@ -474,6 +460,7 @@ static void write_config(void)
       fprintf(out, "update_ms=%d\n", options.update_ms);
       fprintf(out, "show_max=%d\n", options.show_max);
       fprintf(out, "show_vals=%d\n", options.show_vals);
+      fprintf(out, "show_host=%d\n", options.show_host);
       fprintf(out, "init_size=%d\n", (int) options.init_size);
 
       fclose(out);
@@ -539,6 +526,8 @@ static void read_config(void)
 	      options.show_max=atoi(val);
 	    } else if(strcmp(var, "show_vals")==0) {
 	      options.show_vals=atoi(val);
+	    } else if(strcmp(var, "show_host")==0) {
+	      options.show_host=atoi(val);
 	    } else if(strcmp(var, "init_size")==0) {
 	      options.init_size=(guint) atoi(val);
 	    }
@@ -609,6 +598,8 @@ static void set_config(GtkWidget *widget, gpointer data)
     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_max));
   options.show_vals=
     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_vals));
+  options.show_host=
+    gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_host));
   options.init_size=
     gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ow->init_size));
   
@@ -687,6 +678,13 @@ static void show_config_win(void)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check), options.show_vals);
     ow.show_vals=check;
 
+    check=gtk_check_button_new_with_label("Show hostname");
+    gtk_widget_set_name(check, "show_host");
+    gtk_widget_show(check);
+    gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 2);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check), options.show_host);
+    ow.show_host=check;
+
     hbox=gtk_hbox_new(FALSE, 0);
     gtk_widget_show(hbox);
     gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
@@ -730,6 +728,8 @@ static void show_config_win(void)
 				 options.show_max);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.show_vals),
 				 options.show_vals);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.show_host),
+				 options.show_host);
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.init_size),
 			      (gfloat) options.init_size);
   }
@@ -824,6 +824,11 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.5  2001/07/06 08:19:55  stephen
+ * Don't scale down if the history is still big.  Support menu accelerators.
+ * Run full screen version when applet clicked on.  Better debug output (uses
+ * g_logv).
+ *
  * Revision 1.4  2001/05/25 07:56:25  stephen
  * Added support for menu on applet, can configure initial applet size.
  *

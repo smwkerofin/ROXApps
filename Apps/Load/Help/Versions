@@ -1,6 +1,10 @@
 Load
 ====
 
+1.1.0
+-----
+Switch to using ROX-CLib.  Option to display hostname.
+
 1.0.0
 -----
 No changes.  This is the stable version.

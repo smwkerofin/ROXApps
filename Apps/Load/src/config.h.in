@@ -8,3 +8,5 @@
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 
 #include <sys/types.h>
+
+#define HAVE_GETHOSTNAME
