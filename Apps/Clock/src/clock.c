@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.27 2003/06/21 13:09:10 stephen Exp $
+ * $Id: clock.c,v 1.28 2004/03/26 15:25:38 stephen Exp $
  */
 #include "config.h"
 
@@ -177,19 +177,30 @@ static void show_conf_win(void);
 static gboolean check_alarms(gpointer data);
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
+static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata);
 static gboolean open_remote(guint32 xid);
+static gboolean options_remote(void);
 
 static void setup_options(void);
 static void read_config(void);
 static gboolean read_config_xml(void);
 static void setup_config(void);
 
+static ROXSOAPServerActions actions[]={
+  {"Open", NULL, "Parent", rpc_Open, NULL},
+  {"Options", NULL, NULL, rpc_Options, NULL},
+
+  {NULL}
+};
+
 static void usage(const char *argv0)
 {
-  printf("Usage: %s [X-options] [gtk-options] [-nrvh] [XID]\n", argv0);
+  printf("Usage: %s [X-options] [gtk-options] [-onrvh] [XID]\n", argv0);
   printf("where:\n\n");
   printf("  X-options\tstandard Xlib options\n");
   printf("  gtk-options\tstandard GTK+ options\n");
+  printf("  -o\tshow options dialog\n");
   printf("  -n\tdon't attempt to contact existing server\n");
   printf("  -r\treplace existing server\n");
   printf("  -h\tprint this help message\n");
@@ -223,9 +234,10 @@ int main(int argc, char *argv[])
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
 #endif
-  const char *options="vhnr";
+  const char *options="vhnro";
   gboolean new_run=FALSE;
   gboolean replace_server=FALSE;
+  gboolean show_options=FALSE;
 
   /* First things first, set the locale information for time, so that
      strftime will give us a sensible date format... */
@@ -275,6 +287,9 @@ int main(int argc, char *argv[])
     case 'r':
       replace_server=TRUE;
       break;
+    case 'o':
+      show_options=TRUE;
+      break;
     default:
       nerr++;
       break;
@@ -297,8 +312,13 @@ int main(int argc, char *argv[])
   if(replace_server || !rox_soap_ping(PROJECT)) {
     dprintf(1, "Making SOAP server");
     server=rox_soap_server_new(PROJECT, CLOCK_NAMESPACE_URL);
-    rox_soap_server_add_action(server, "Open", NULL, "Parent", rpc_Open, NULL);
+    rox_soap_server_add_actions(server, actions);
+
   } else if(!new_run) {
+    if(show_options && options_remote()) {
+      if(!xid)
+	return 0;
+    }
     if(open_remote(xid)) {
       dprintf(1, "success in open_remote(%lu), exiting", xid);
       return 0;
@@ -310,6 +330,9 @@ int main(int argc, char *argv[])
   gtk_widget_show(cwin->win);
 
   gtk_timeout_add(30*1000, check_alarms, NULL);
+
+  if(show_options)
+    show_conf_win();
   
   dprintf(2, "into main.");
   gtk_main();
@@ -405,10 +428,6 @@ static ClockWindow *make_window(guint32 socket)
     cwin->win=plug;
   } else {
     /*  We are not an applet, so create a window */
-    GtkStyle *style;
-    GdkPixmap *pixmap;
-    GdkBitmap *mask;
-    gchar *fname;
     
     cwin->applet_mode=FALSE;
     cwin->win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -428,18 +447,6 @@ static ClockWindow *make_window(guint32 socket)
 		       GTK_SIGNAL_FUNC(popup_menu), cwin);
     gtk_widget_add_events(cwin->win, GDK_BUTTON_PRESS_MASK);
     gtk_widget_realize(cwin->win);
-
-    fname=rox_resources_find(PROJECT, "AppIcon.xpm", ROX_RESOURCES_NO_LANG);
-    if(fname) {
-      style = gtk_widget_get_style(cwin->win);
-      pixmap = gdk_pixmap_create_from_xpm(GTK_WIDGET(cwin->win)->window,
-					  &mask, 
-					  &style->bg[GTK_STATE_NORMAL],
-					  fname);
-      gdk_window_set_icon(GTK_WIDGET(cwin->win)->window, NULL, pixmap, mask);
-
-      g_free(fname);
-    }
 
   }
 
@@ -1098,7 +1105,6 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   return FALSE;
 }
 
-/* Button press in canvas */
 static gboolean popup_menu(GtkWidget *window, gpointer udata)
 {
   ClockWindow *cwin=(ClockWindow *) udata;
@@ -1141,6 +1147,14 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   }
 
   make_window(xid);
+
+  return NULL;
+}
+
+static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata)
+{
+  show_conf_win();
 
   return NULL;
 }
@@ -1190,6 +1204,37 @@ static gboolean open_remote(guint32 xid)
   return sent && ok;
 }
 
+static gboolean options_remote(void)
+{
+  ROXSOAP *serv;
+  xmlDocPtr doc;
+  xmlNodePtr node;
+  gboolean sent, ok;
+  char buf[32];
+
+  serv=rox_soap_connect(PROJECT);
+  dprintf(3, "server for %s is %p", PROJECT, serv);
+  if(!serv)
+    return FALSE;
+
+  doc=rox_soap_build_xml("Options", CLOCK_NAMESPACE_URL, &node);
+  if(!doc) {
+    dprintf(3, "Failed to build XML doc");
+    rox_soap_close(serv);
+    return FALSE;
+  }
+
+  sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
+  dprintf(3, "sent %d", sent);
+
+  xmlFreeDoc(doc);
+  if(sent)
+    gtk_main();
+  rox_soap_close(serv);
+
+  return sent && ok;
+}
+
 /* Show the info window */
 static void show_info_win(void)
 {
@@ -1206,6 +1251,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.28  2004/03/26 15:25:38  stephen
+ * Use ROX-CLib 2.1.0
+ *
  * Revision 1.27  2003/06/21 13:09:10  stephen
  * Convert to new options system.  Use pango for fonts.
  * New option for no-face.
