@@ -1,14 +1,14 @@
-# $Id$
+# $Id: gui.py,v 1.1 2002/10/19 14:35:21 stephen Exp $
 
 import os
 import sys
+import string
 
 import findrox
 
-#from rox import g
-import gtk
-import GTK
-import GDK
+import rox.choices
+
+from rox import g
 
 import netstat
 
@@ -20,42 +20,65 @@ else:
 #def mainquit():
 
 stats=netstat.NetStat()
+
+# Defaults
 iface='ppp0'
 #iface='lo'
-font=None
+fontname=None
+levels=(500, 50, 1, 0)
+
+# Load config
+fname=rox.choices.load('NetStat', 'config')
+try:
+    inf=open(fname, 'r')
+
+    lines=inf.readlines()
+    for line in lines:
+        line=string.strip(line)
+        if len(line)<1 or line[0]=='#':
+            continue
+        eq=string.find(line, '=')
+        if eq<1:
+            continue
+        if line[:eq]=='interface':
+            iface=line[eq+1:]
+    inf.close()
+    
+except:
+    pass
 
 if xid is None:
-    win=gtk.GtkWindow()
+    win=g.Window()
 else:
-    win=gtk.GtkPlug(xid)
+    win=g.Plug(xid)
 
-win.connect('destroy', gtk.mainquit)
+win.connect('destroy', g.mainquit)
 
 # Choose a nice small size for our applet...
-win.set_usize(48, 48)
+win.set_size_request(48, 48)
 win.set_border_width(4)
 
 style=win.get_style()
-# print style
-font=style.font
+#print style
 #print dir(style)
+#font=style.get_font()
 #print style.base_gc, dir(style.base_gc)
 #print style.base_gc()
 
-vbox=gtk.GtkVBox()
+vbox=g.VBox()
 win.add(vbox)
 
 # Our drawing canvas
-can=gtk.GtkDrawingArea()
+can=g.DrawingArea()
 vbox.pack_start(can)
 
-ifdisp=gtk.GtkLabel(iface)
-vbox.pack_start(ifdisp, gtk.FALSE, gtk.FALSE)
+ifdisp=g.Label(iface)
+vbox.pack_start(ifdisp, g.FALSE, g.FALSE)
 
 # Menu
-menu=gtk.GtkMenu()
+menu=g.Menu()
 
-item=gtk.GtkMenuItem("Info")
+item=g.MenuItem("Info")
 import InfoWin
 iw=InfoWin.InfoWin('NetStat', 'Monitor network activity',
            '0.0.1 (4th Octobber 2002)',
@@ -68,8 +91,8 @@ item.connect("activate", show_infowin, iw)
 #print iw
 menu.append(item)
 
-item = gtk.GtkMenuItem("Quit")
-item.connect("activate", gtk.mainquit)
+item = g.MenuItem("Quit")
+item.connect("activate", g.mainquit)
 menu.append(item)
 
 menu.show_all()
@@ -84,20 +107,21 @@ def click(widget, event, data=None):
     return 0
 
 can.connect("button_press_event", click)
-can.add_events(GDK.BUTTON_PRESS_MASK)
+can.add_events(g.gdk.BUTTON_PRESS_MASK)
 can.realize()
 
-#cmap=can.colormap
-blue=gtk.colour_alloc(can, 0x0000ff)
-green=gtk.colour_alloc(can, 0x00bb00)
-red=gtk.colour_alloc(can, 0xff0000)
-high=gtk.colour_alloc(can, 0x00ff00)
+#print dir(can)
+cmap=can.get_colormap()
+#print dir(cmap)
+blue=cmap.alloc_color('#0000ff')
+green=cmap.alloc_color('#00bb00')
+red=cmap.alloc_color('#ff0000')
+high=cmap.alloc_color('#00ff00')
 medium=green
-low=gtk.colour_alloc(can, 0x007700)
-off=gtk.colour_alloc(can, 0)
+low=cmap.alloc_color('#007700')
+off=cmap.alloc_color('#000000')
 
 colours=(high, medium, low, off)
-levels=(500, 50, 1, 0)
 
 def draw_arrow(drawable, gc, pts, act):
     tmp=gc.foreground
@@ -112,13 +136,14 @@ def draw_arrow(drawable, gc, pts, act):
 
 def expose(widget, event):
     (x, y, width, height)=widget.get_allocation()
-    gc=widget.get_style().bg_gc[GTK.STATE_NORMAL]
-    widget.draw_rectangle(gc, 1, 0, 0, width, height)
+    gc=widget.get_style().bg_gc[g.STATE_NORMAL]
+    #print dir(widget.window)
+    widget.window.draw_rectangle(gc, 1, 0, 0, width, height)
     #gc=widget.get_style().black_gc
     #print gc, dir(gc), gc.foreground
     #widget.draw_string(font, gc, 4, 24, iface)
     act=stats.getCurrent(iface)
-    gc=widget.get_style().bg_gc[GTK.STATE_NORMAL]
+    gc=widget.get_style().bg_gc[g.STATE_NORMAL]
 
     top=2
     bot=height-2
@@ -130,14 +155,14 @@ def expose(widget, event):
         right=width/2-2
         pts=((cx-2,top), (cx-2,mid), (left,mid), (cx,bot), (right,mid),
              (cx+2,mid), (cx+2,top))
-        draw_arrow(widget, gc, pts, act[0])
+        draw_arrow(widget.window, gc, pts, act[0])
         # Transmit
         cx=3*width/4
         left=width/2+2
         right=width-2
         pts=((cx-2,bot), (cx-2,mid), (left,mid), (cx,top), (right,mid),
              (cx+2,mid), (cx+2,bot))
-        draw_arrow(widget, gc, pts, act[1])
+        draw_arrow(widget.window, gc, pts, act[1])
     
 can.connect('expose_event', expose)
 
@@ -146,7 +171,7 @@ def update():
     can.queue_draw()
     return 1
 
-tag=gtk.timeout_add(1000, update)
+tag=g.timeout_add(1000, update)
 
 win.show_all()
-gtk.mainloop()
+g.mainloop()
