@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+1.0.0
+-----
+No changes.  This is the stable version.
+
 0.1.15
 ------
 Fixed bug in memory management.
