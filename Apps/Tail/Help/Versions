@@ -1,6 +1,10 @@
 Tail
 ====
 
+0.1.4
+-----
+Fixed bug in memory management.
+
 0.1.3
 -----
 Use a pop-up menu.
