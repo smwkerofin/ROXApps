@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.12 2002/03/04 11:48:53 stephen Exp $
+ * $Id: load.c,v 1.13 2002/03/25 11:39:19 stephen Exp $
  *
  * Log at end of file
  */
@@ -107,14 +107,14 @@ static ColourInfo colour_info[]={
   {-1, {0}, NULL}
 };
 
-#define BAR_WIDTH     16
-#define BAR_GAP        4
-#define BOTTOM_MARGIN 12
-#define TOP_MARGIN    10
-#define MIN_WIDTH     36
+#define BAR_WIDTH     16          /* Width of bar */
+#define BAR_GAP        4          /* Gap between bars */
+#define BOTTOM_MARGIN 12          /* Margin at bottom of window */
+#define TOP_MARGIN    10          /* Margin at top of window */
+#define MIN_WIDTH     36          /* Minimum size of window */
 #define MIN_HEIGHT    MIN_WIDTH
-#define MAX_BAR_WIDTH 32
-#define CHART_RES     2
+#define MAX_BAR_WIDTH 32          /* Maximum size of bars */
+#define CHART_RES      2          /* Pixels per second for history */
 
 typedef struct options {
   guint32 update_ms;
@@ -156,7 +156,9 @@ typedef struct history_data {
 } History;
 
 static glibtop *server=NULL;
-static double max_load=1.0;
+static glibtop_loadavg load;
+static guint data_update_tag=0;
+static int max_load=1;
 static double red_line=1.0;
 static int reduce_delay=10;
 static History *history=NULL;
@@ -171,8 +173,11 @@ typedef struct load_window {
   GtkWidget *canvas;
   GdkPixmap *pixmap;
   GdkGC *gc;
+  
   guint update;
   gboolean is_applet;
+  int hsize; /* Requested history size */
+  
   Options options;
 } LoadWindow;
 
@@ -186,7 +191,8 @@ static LoadWindow *current_window=NULL;
 
 static LoadWindow *make_window(guint32 socket);
 static void remove_window(LoadWindow *win);
-static void do_update(LoadWindow *);
+static gboolean window_update(LoadWindow *win);
+static gboolean data_update(gpointer unused);
 static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 			    gpointer data);
 static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
@@ -327,12 +333,6 @@ int main(int argc, char *argv[])
   cmap=gdk_rgb_get_cmap();
   gtk_widget_push_colormap(cmap);
   
-  for(i=0; i<NUM_COLOUR; i++) {
-    gdk_color_alloc(cmap, colours+i);
-    dprintf(3, "colour %d: %4x, %4x, %4x: %ld", i, colours[i].red,
-	   colours[i].green, colours[i].blue, colours[i].pixel);
-  }
-
   /* Process remaining arguments */
   nerr=0;
   do_exit=FALSE;
@@ -370,6 +370,16 @@ int main(int argc, char *argv[])
   dprintf(1, "read config");
   read_config();
 
+  for(i=0; i<NUM_COLOUR; i++) {
+    gdk_color_alloc(cmap, colours+i);
+    dprintf(3, "colour %d: %4x, %4x, %4x: %ld", i, colours[i].red,
+	   colours[i].green, colours[i].blue, colours[i].pixel);
+  }
+
+  data_update_tag=gtk_timeout_add(default_options.update_ms,
+			       (GtkFunction) data_update, NULL);
+  data_update(NULL);
+  
   if(optind>=argc || !atol(argv[optind])) {
     xid=0;
   } else {
@@ -446,6 +456,7 @@ static LoadWindow *make_window(guint32 xid)
   lwin->options=default_options;
   if(lwin->options.font_name)
     lwin->options.font_name=g_strdup(lwin->options.font_name);
+  lwin->hsize=0;
 
   w=lwin->options.init_size;
   h=lwin->options.init_size;
@@ -469,6 +480,7 @@ static LoadWindow *make_window(guint32 xid)
   } else {
     GtkWidget *plug;
 
+    dprintf(2, "make plug");
     plug=gtk_plug_new(xid);
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(window_gone), 
@@ -527,7 +539,7 @@ static LoadWindow *make_window(guint32 xid)
   gtk_widget_show(lwin->win);
 
   lwin->update=gtk_timeout_add(lwin->options.update_ms,
-			       (GtkFunction) do_update, lwin);
+			       (GtkFunction) window_update, lwin);
   dprintf(3, "update tag is %u", lwin->update);
   
   windows=g_list_append(windows, lwin);
@@ -542,20 +554,20 @@ static LoadWindow *make_window(guint32 xid)
 */
 static History *get_history(int ind)
 {
-  dprintf(3, "request for history %d (%d, %d)", ind, ihistory, nhistory);
+  dprintf(4, "request for history %d (%d, %d)", ind, ihistory, nhistory);
   
   if(ind<0) {
     if(ind<-nhistory || ind <-ihistory)
       return NULL;
 
-    dprintf(3, "index %d", (ihistory+ind)%nhistory);
+    dprintf(4, "index %d", (ihistory+ind)%nhistory);
     return history+((ihistory+ind)%nhistory);
     
   } else {
     if(ind>=ihistory || ind<ihistory-nhistory)
       return NULL;
 
-    dprintf(3, "index %d", ind%nhistory);
+    dprintf(4, "index %d", ind%nhistory);
     return history+ind%nhistory;
   }
 
@@ -566,9 +578,11 @@ static void append_history(time_t when, const double loadavg[3])
 {
   int i, j;
 
-  dprintf(3, "append history for 0x%lx", when);
+  dprintf(4, "append history for 0x%lx", when);
 
   if(history && nhistory>0) {
+    if(history[ihistory%nhistory].when==when)
+      return;
     i=(ihistory++)%nhistory;
     for(j=0; j<3; j++)
       history[i].load[j]=loadavg[j];
@@ -576,7 +590,18 @@ static void append_history(time_t when, const double loadavg[3])
   }  
 }
 
-static void do_update(LoadWindow *lwin)
+static gboolean data_update(gpointer unused)
+{
+  time_t now;
+  
+  glibtop_get_loadavg_l(server, &load);
+  time(&now);
+  append_history(now, load.loadavg);
+
+  return TRUE;
+}
+
+static gboolean window_update(LoadWindow *lwin)
 {
   int w, h;
   int bw, mbh, bh, bm=BOTTOM_MARGIN, tm=TOP_MARGIN, l2=0;
@@ -584,7 +609,6 @@ static void do_update(LoadWindow *lwin)
   int cpu, other;
   double ld;
   GdkFont *font=NULL;
-  glibtop_loadavg load;
   int i, j;
   char buf[32];
   int reduce;
@@ -659,16 +683,14 @@ static void do_update(LoadWindow *lwin)
   dprintf(4, "w=%d bw=%d", w, bw);
   sbx=bx;
 
-  glibtop_get_loadavg_l(server, &load);
   time(&now);
-  append_history(now, load.loadavg);
-
+  
   reduce=TRUE;
   for(i=0; i<3; i++) {
-    if(load.loadavg[i]>max_load/2)
+    if(load.loadavg[i]>max_load-1)
       reduce=FALSE;
-    while(max_load<load.loadavg[i]) {
-      max_load*=2;
+    if(max_load<load.loadavg[i]) {
+      max_load=((int) load.loadavg[i])+1;
       reduce_delay=10;
     }
   }
@@ -681,28 +703,24 @@ static void do_update(LoadWindow *lwin)
 	if(hist->load[j]>max_load/2)
 	  reduce=FALSE;
     }
-  if(reduce && max_load>=2.0) {
+  if(reduce && max_load>1) {
     if(reduce_delay--<1)
-      max_load/=2;
+      max_load--;
   }
-  /* Correct for FP inaccuracy, if needed */
-  if(max_load<1.0)
-    max_load=1.0;
-
   for(i=0; i<3; i++) {
     ld=load.loadavg[i];
-    bh=mbh*ld/max_load;
+    bh=mbh*ld/(double) max_load;
     gdk_gc_set_foreground(lwin->gc, colours+COL_NORMAL(i));
     gdk_draw_rectangle(lwin->pixmap, lwin->gc, TRUE, bx, by-bh, bw, bh);
     
-    dprintf(4, "load=%f max_load=%f, mbh=%d, by=%d, bh=%d, by-bh=%d",
+    dprintf(4, "load=%f max_load=%d, mbh=%d, by=%d, bh=%d, by-bh=%d",
 	   ld, max_load, mbh, by, bh, by-bh);
     dprintf(5, "(%d, %d) by (%d, %d)", bx, by-bh, bw, bh);
     
     
     if(ld>red_line) {
-      int bhred=mbh*(ld-red_line)/max_load;
-      int byred=mbh*red_line/max_load;
+      int bhred=mbh*(ld-red_line)/(double) max_load;
+      int byred=mbh*red_line/(double) max_load;
       
       dprintf(5, "bhred=%d by-bhred=%d", bhred, by-bhred);
       dprintf(5, "(%d, %d) by (%d, %d)", bx, by-bh, bw, bhred);
@@ -745,25 +763,29 @@ static void do_update(LoadWindow *lwin)
 	break;
       prev=get_history(i-1);
       if(prev) {
+	dprintf(4, "tdiff %d, org=%d", (int)(now-prev->when), gorg);
 	bx=gorg-CHART_RES*(int)(now-prev->when);
 	gwidth=CHART_RES*(int)(hist->when-prev->when);
 
-	dprintf(3, " 0x%lx: 0x%lx, 0x%lx -> %d, %d", now, hist->when,
+	dprintf(4, " 0x%lx: 0x%lx, 0x%lx -> %d, %d", now, hist->when,
 		prev->when, bx, gwidth);
       } else {
 	bx=gorg-CHART_RES*(int)(now-hist->when-1)-CHART_RES;
 	gwidth=CHART_RES;
+	dprintf(3, "get_history(%d)==NULL", i-1);
       }
       if(bx<BAR_GAP) {
 	gwidth-=(BAR_GAP-bx);
 	bx=BAR_GAP;
       }
+      if(gwidth<1)
+	continue;
 
       for(j=lwin->options.multiple_chart? 2: 0; j>=0; j--) {
 	ld=hist->load[j];
-	bh=mbh*ld/max_load;
+	bh=mbh*ld/(double) max_load;
 	gdk_gc_set_foreground(lwin->gc, colours+COL_NORMAL(j));
-	dprintf(3, "(%d, %d) size (%d, %d)", bx, by-bh, gwidth, bh);
+	dprintf(4, "(%d, %d) size (%d, %d)", bx, by-bh, gwidth, bh);
 	gdk_draw_rectangle(lwin->pixmap, lwin->gc, TRUE, bx, by-bh,
 			   gwidth, bh);
 	if(ld>red_line) {
@@ -793,7 +815,7 @@ static void do_update(LoadWindow *lwin)
   }
 
   if(lwin->options.show_max) {
-    sprintf(buf, "Max %2d", (int) max_load);
+    sprintf(buf, "Max %2d", max_load);
     gdk_gc_set_foreground(lwin->gc, colours+COL_FG);
     gdk_draw_string(lwin->pixmap, font, lwin->gc, 2, tm, buf);
 
@@ -816,16 +838,23 @@ static void do_update(LoadWindow *lwin)
   gtk_widget_queue_draw(lwin->canvas);    
 
   gdk_font_unref(font);
+
+  return TRUE;
 }
 
-static void resize_history(int width)
+static void resize_history(LoadWindow *lwin, int width)
 {
   int nrec;
   History *tmp;
   int i;
 
-  nrec=(width-2-3*MAX_BAR_WIDTH-3*BAR_GAP-2-1)/CHART_RES;
+  dprintf(3, "width=%d CHART_RES=%d", width, CHART_RES);
+  nrec=(width-2-3*MAX_BAR_WIDTH-3*BAR_GAP-1)/CHART_RES;
+  if(nrec<0)
+    nrec=0;
+  lwin->hsize=nrec;
 
+  dprintf(3, "nrec=%d, nhistory=%d, ihistory=%d", nrec, nhistory, ihistory);
   if(nrec<=nhistory)
     return;
 
@@ -841,6 +870,8 @@ static void resize_history(int width)
     
     for(i=ihistory; i<nhistory; i++)
       history[i].when=(time_t) 0;
+
+    dprintf(3, "reset list");
     
     return;
   }
@@ -849,6 +880,7 @@ static void resize_history(int width)
     history=g_new(History, nrec);
     nhistory=nrec;
     ihistory=0;
+    dprintf(3, "made list");
     return;
   }
 
@@ -856,6 +888,8 @@ static void resize_history(int width)
   i=nhistory-(ihistory%nhistory);
   if(i==nhistory)
     i=0;
+  dprintf(3, "split list: %d,%d %d,%d", (ihistory%nhistory), i,
+	  0, nhistory-i);
   g_memmove(tmp, history+(ihistory%nhistory), i*sizeof(History));
   g_memmove(tmp+i, history, (nhistory-i)*sizeof(History));
 
@@ -893,6 +927,10 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 			    gpointer data)
 {
   LoadWindow *lwin=(LoadWindow *) data;
+
+  dprintf(3, "configure_event(%p, %p, %p)", widget, event, data);
+  dprintf(3, "pixmap=%p canvas=%p hsize=%d", lwin->pixmap, lwin->canvas,
+	  lwin->hsize);
   
   if (lwin->pixmap)
     gdk_pixmap_unref(lwin->pixmap);
@@ -901,8 +939,10 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 			  widget->allocation.width,
 			  widget->allocation.height,
 			  -1);
-  resize_history(widget->allocation.width);
-  do_update(lwin);
+  resize_history(lwin, widget->allocation.width);
+  dprintf(3, "pixmap=%p canvas=%p hsize=%d", lwin->pixmap, lwin->canvas,
+	  lwin->hsize);
+  window_update(lwin);
 
   return TRUE;
 }
@@ -1329,9 +1369,12 @@ static void set_config(GtkWidget *widget, gpointer data)
 
   if(lwin) {
     gtk_timeout_remove(lwin->update);
-    lwin->update=gtk_timeout_add(opts->update_ms, (GtkFunction) do_update,
+    lwin->update=gtk_timeout_add(opts->update_ms, (GtkFunction) window_update,
 				 lwin);
   }
+  gtk_timeout_remove(data_update_tag);
+  data_update_tag=gtk_timeout_add(opts->update_ms, (GtkFunction) data_update,
+				 NULL);
 
   if(opts->font_name)
     g_free(opts->font_name);
@@ -1852,18 +1895,21 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   LoadWindow *lwin=(LoadWindow *) win;
 
   current_window=lwin;
+
+  dprintf(2, "Button press on %p %p", window, lwin);
   
   if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
     if(!menu)
       menu_create_menu(GTK_WIDGET(win));
 
+    dprintf(3, "show menu for %s", lwin->is_applet? "applet": "window");
     if(lwin->is_applet)
       applet_show_menu(menu, bev);
     else
       gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		     bev->button, bev->time);
     return TRUE;
-  } else if(lwin->is_applet && bev->type==GDK_BUTTON_PRESS && bev->button==1) {
+  } else if(/*lwin->is_applet && */bev->type==GDK_BUTTON_PRESS && bev->button==1) {
     make_window(0);
       
     return TRUE;
@@ -1955,6 +2001,10 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.13  2002/03/25 11:39:19  stephen
+ * Use ROX-CLib's SOAP server code to have one instance run multiple windows.
+ * Added an icon.
+ *
  * Revision 1.12  2002/03/04 11:48:53  stephen
  * Stable release.
  *
