@@ -1,6 +1,11 @@
 Tail
 ====
 
+0.1.5
+-----
+Better debug output.  Save menu accelerators.  Scrolling to end of
+window back in, unless truncated.
+
 0.1.4
 -----
 Fixed bug in memory management.

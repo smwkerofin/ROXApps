@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.6 2001/05/18 09:41:09 stephen Exp $
+ * $Id: tail.c,v 1.7 2001/07/18 10:52:18 stephen Exp $
  */
 
 #include <stdio.h>
@@ -29,11 +29,11 @@
 
 #include "choices.h"
 
-#define DEBUG         0
+#define DEBUG         1
 #define USE_MENUBAR   0
 #define USE_FILE_OPEN 0
 
-void dprintf(const char *fmt, ...);
+void dprintf(int unused, const char *fmt, ...);
 
 static GtkWidget *win;
 static GtkWidget *text;
@@ -90,11 +90,24 @@ static GtkItemFactoryEntry menu_items[] = {
 };
 #endif
 
+static void save_menus(void)
+{
+  char	*menurc;
+	
+  menurc = choices_find_path_save("menus", PROJECT, TRUE);
+  if (menurc) {
+    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+    g_free(menurc);
+  }
+}
+
 static GtkWidget *get_main_menu(GtkWidget *window)
 {
   GtkItemFactory *item_factory;
   GtkAccelGroup *accel_group;
   gint nmenu_items = sizeof (menu_items) / sizeof (menu_items[0]);
+  gchar *menurc;
+  GtkWidget *menu;
 
   accel_group = gtk_accel_group_new ();
 
@@ -120,12 +133,22 @@ static GtkWidget *get_main_menu(GtkWidget *window)
   /* Attach the new accelerator group to the window. */
   gtk_accel_group_attach (accel_group, GTK_OBJECT (window));
 
-  return gtk_item_factory_get_widget (item_factory, "<main>");
+  menu=gtk_item_factory_get_widget (item_factory, "<main>");
+  
+  menurc=choices_find_path_load("menus", PROJECT);
+  if(menurc) {
+    gtk_item_factory_parse_rc(menurc);
+    g_free(menurc);
+  }
+
+  atexit(save_menus);
+
+  return menu;
 }
 
 static void detach(GtkWidget *widget, GtkMenu *menu)
 {
-  dprintf("detach\n");
+  dprintf(4, "detach");
 }
 
 int main(int argc, char *argv[])
@@ -195,26 +218,36 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-void dprintf(const char *fmt, ...)
+void dprintf(int level, const char *fmt, ...)
 {
+#if DEBUG
   va_list list;
+  static int dlevel=-1;
+
+  if(dlevel==-1) {
+    gchar *val=g_getenv("TAIL_DEBUG_LEVEL");
+    if(val)
+      dlevel=atoi(val);
+    if(dlevel<0)
+      dlevel=0;
+  }
+
+  if(level>dlevel)
+    return;
 
   va_start(list, fmt);
-#if DEBUG
   /*vfprintf(stderr, fmt, list);*/
   g_logv(PROJECT, G_LOG_LEVEL_DEBUG, fmt, list);
-#endif
   va_end(list);
+#endif
 }
 
-static void append_text_from_file(int fd)
+static void append_text_from_file(int fd, gboolean scroll)
 {
   char buf[BUFSIZ];
   size_t m=sizeof(buf)-1;
   ssize_t nr;
   gint pos;
-  GtkWidget *scr;
-  GtkAdjustment *adj;
   int ready;
 
   do {
@@ -222,27 +255,33 @@ static void append_text_from_file(int fd)
       break;
 
     m=sizeof(buf)-1;
-    dprintf("%d %d %d\n", fd, m, ready);
+    dprintf(5, "%d %d %d", fd, m, ready);
     if(ready<m)
       m=ready;
-    dprintf("%d %d %d\n", fd, m, ready);
+    dprintf(5, "%d %d %d", fd, m, ready);
 
     nr=read(fd, buf, m);
     if(nr<1)
       break;
     buf[nr]=0;
-    dprintf("%d, %s\n", nr, buf);
+    dprintf(4, "%d, %s", nr, buf);
 
     gtk_text_insert(GTK_TEXT(text), NULL, NULL, NULL, buf, nr);
   } while(TRUE);
 
   gtk_text_set_point(GTK_TEXT(text), gtk_text_get_length(GTK_TEXT(text)));
-  /*
-  scr=text->parent;
-  adj=gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scr));
-  if(adj)
-    gtk_adjustment_set_value(adj, adj->upper);
-    */
+
+  if(scroll) {
+    GtkWidget *scr;
+    GtkAdjustment *adj;
+    
+    scr=text->parent;
+    adj=gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scr));
+    dprintf(3, "scr=%p, adj=%p", scr, adj);
+    if(adj)
+      gtk_adjustment_set_value(adj, adj->upper);
+  }
+    
 }
 
 static gint check_file(gpointer unused)
@@ -252,19 +291,19 @@ static gint check_file(gpointer unused)
   if(fd<0)
     return TRUE;
 
-  dprintf("check %d\n", fd);
+  dprintf(3, "check %d", fd);
   if(fstat(fd, &statb)<0) {
     perror(fname);
     return TRUE;
   }
 
-  dprintf("size=%d (was %d)\n", statb.st_size, size);
+  dprintf(3, "size=%d (was %d)", statb.st_size, size);
   if(statb.st_size==size)
     return TRUE;
 
   if(statb.st_size>size) {
     gtk_text_freeze(GTK_TEXT(text));
-    append_text_from_file(fd);
+    append_text_from_file(fd, TRUE);
     gtk_text_thaw(GTK_TEXT(text));
     
     pos=lseek(fd, (off_t) 0, SEEK_END);
@@ -275,7 +314,7 @@ static gint check_file(gpointer unused)
       set_file(fname);
     else {
       /* stdin was truncated?? */
-      dprintf("file shorter and no file name set!\n");
+      dprintf(2, "file shorter and no file name set!");
       size=statb.st_size;
     }
   }
@@ -290,7 +329,7 @@ static void set_file(const char *name)
   int nfd;
   int npos;
 
-  dprintf("Set file to %s\n", name);
+  dprintf(1, "Set file to %s", name);
 
   nfd=open(name, O_RDONLY);
   if(nfd<0) {
@@ -303,19 +342,19 @@ static void set_file(const char *name)
     return;
   }
 
-  dprintf("file is on %d and %d long\n", nfd, statb.st_size);
+  dprintf(2, "file is on %d and %d long", nfd, statb.st_size);
   
   gtk_text_freeze(GTK_TEXT(text));
   gtk_editable_delete_text(GTK_EDITABLE(text), 0, -1);
 
-  append_text_from_file(nfd);
+  append_text_from_file(nfd, FALSE);
   npos=lseek(nfd, (off_t) 0, SEEK_END);
 
   gtk_text_thaw(GTK_TEXT(text));
 
   title=g_strconcat("Tail: ", name, NULL);
   gtk_window_set_title(GTK_WINDOW(win), title);
-  dprintf("set title %s\n", title);
+  dprintf(2, "set title %s", title);
   g_free(title);
 
   if(fd)
@@ -332,7 +371,7 @@ static void set_file(const char *name)
 
 static void set_fd(int nfd)
 {
-  append_text_from_file(nfd);
+  append_text_from_file(nfd, FALSE);
   
   gtk_window_set_title(GTK_WINDOW(win), "Tail: (stdin)");
   if(fd)
@@ -609,7 +648,7 @@ static void make_drop_target(GtkWidget *widget)
   gtk_signal_connect(GTK_OBJECT(widget), "drag_data_received",
 		     GTK_SIGNAL_FUNC(drag_data_received), NULL);
 
-  dprintf("made %p a drop target\n", widget);
+  dprintf(3, "made %p a drop target", widget);
 }
 
 /* Is the sender willing to supply this target type? */
@@ -693,18 +732,17 @@ static gboolean drag_drop(GtkWidget 	  *widget,
   char *leafname=NULL;
   char *path=NULL;
   GdkAtom target = GDK_NONE;
-
-  /*
-  dprintf("in drag_drop(%p, %p, %d, %d, %u, %p)\n", widget, context, x, y,
+  
+  dprintf(3, "in drag_drop(%p, %p, %d, %d, %u, %p)", widget, context, x, y,
 	 time, data);
-  */
+  
   
   /*g_dataset_foreach(context, print_context, NULL);*/
 
   if(provides(context, XdndDirectSave0)) {
     leafname = get_xds_prop(context);
     if (leafname) {
-      dprintf("leaf is %s\n", leafname);
+      dprintf(2, "leaf is %s", leafname);
       target = XdndDirectSave0;
       g_dataset_set_data_full(context, "leafname", leafname, g_free);
     }
@@ -859,7 +897,7 @@ static void drag_data_received(GtkWidget      	*widget,
 			       guint32          time,
 			       gpointer		user_data)
 {
-  /*dprintf("%p in drag_data_received\n", widget);*/
+  dprintf(4, "%p in drag_data_received", widget);
   
   if (!selection_data->data) {
     /* Timeout? */
@@ -869,11 +907,11 @@ static void drag_data_received(GtkWidget      	*widget,
 
   switch(info) {
   case TARGET_XDS:
-    dprintf("XDS\n");
+    dprintf(3, "XDS");
     gtk_drag_finish(context, FALSE, FALSE, time);
     break;
   case TARGET_URI_LIST:
-    dprintf("URI list\n");
+    dprintf(3, "URI list");
     got_uri_list(widget, context, selection_data, time);
     break;
   default:
@@ -886,6 +924,9 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.7  2001/07/18 10:52:18  stephen
+ * Better debug system, use show_error more
+ *
  * Revision 1.6  2001/05/18 09:41:09  stephen
  * Made it much more ROX-like: pop-up menu, save box, etc.
  *
