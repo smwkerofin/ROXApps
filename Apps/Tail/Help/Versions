@@ -1,6 +1,10 @@
 Tail
 ====
 
+1.0.0
+-----
+Stable version.  (No changes from 0.1.7).
+
 0.1.7
 -----
 Fix drag & drop code to avoid double drops.
