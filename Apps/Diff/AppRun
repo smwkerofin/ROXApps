@@ -13,9 +13,9 @@ esac
 PLATFORM=`uname -s`-$ARCH export PLATFORM
 
 if [ -z "$LD_LIBRARY_PATH" ]; then
-    LD_LIBRARY_PATH="`$APP_DIR/rox_run ROX-CLib --runtime`"
+    LD_LIBRARY_PATH=`"$APP_DIR/rox_run" ROX-CLib --runtime`
 else
-    LD_LIBRARY_PATH="`$APP_DIR/rox_run ROX-CLib --runtime`":$LD_LIBRARY_PATH
+    LD_LIBRARY_PATH=`"$APP_DIR/rox_run" ROX-CLib --runtime`:$LD_LIBRARY_PATH
 fi
 export LD_LIBRARY_PATH
 
