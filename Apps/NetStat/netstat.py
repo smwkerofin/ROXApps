@@ -1,4 +1,4 @@
-# $Id: netstat.py,v 1.2 2002/12/14 17:25:47 stephen Exp $
+# $Id: netstat.py,v 1.3 2002/12/16 11:36:01 stephen Exp $
 
 """Interface to network statistics, under Linux.  The function stat() returns
 the data."""
@@ -37,15 +37,15 @@ def linux_stat():
         if len(w2)>1:
             iname=w2[0]
             rbytes=w2[1]
-            rpkts=int(words[1])
-            tbytes=int(words[8])
-            tpkts=int(words[9])
+            rpkts=long(words[1])
+            tbytes=long(words[8])
+            tpkts=long(words[9])
         else:
             iname=words[0]
             rbytes=words[1]
-            rpkts=int(words[2])
-            tbytes=int(words[9])
-            tpkts=int(words[10])
+            rpkts=long(words[2])
+            tbytes=long(words[9])
+            tpkts=long(words[10])
         res[iname]=(rpkts, tpkts)
             
     handle.close()
@@ -65,8 +65,8 @@ def solaris_stat():
         words=string.split(line)
         if len(words)>6:
             iname=words[0]
-            rpkts=int(words[4])
-            tpkts=int(words[6])
+            rpkts=long(words[4])
+            tpkts=long(words[6])
             #print iname, rpkts, tpkts
 
             res[iname]=(rpkts, tpkts)
