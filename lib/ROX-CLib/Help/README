@@ -5,7 +5,7 @@ A library for ROX applications written in C.
 
 This is version 2.0, for use with GTK+ 2.x.
 
-Installation
+Installation - for users
 ------------
 
 Copy to a suitable place such as ~/lib or make sure it is on 
@@ -22,7 +22,7 @@ compiling, e.g.
 
 $ MAKE=gmake ROX-CLib/AppRun --compile
 
-Compiling and linking against the library
+Compiling and linking against the library - for programmers
 -----------------------------------------
 
 Compile the library first
