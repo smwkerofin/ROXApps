@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.5 2002/04/29 08:17:25 stephen Exp $
+ * $Id: rox_dnd.c,v 1.6 2003/03/05 15:31:23 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -62,6 +62,8 @@ static void drag_data_received(GtkWidget *widget, GdkDragContext *context,
 			       gint x, gint y,
 			       GtkSelectionData *selection_data,
 			       guint info, guint32 time, gpointer user_data);
+static gchar *unescape_uri(const char *uri);
+static gchar *encode_path_as_uri(const guchar *path);
 
 static GdkAtom XdndDirectSave0;
 static GdkAtom xa_text_plain;
@@ -204,13 +206,24 @@ static GSList *uri_list_to_gslist(char *uri_list)
 	uri = g_malloc(sizeof(char) * (length + 1));
 	strncpy(uri, uri_list, length);
 	uri[length] = 0;
-	list = g_slist_append(list, uri);
+	list = g_slist_append(list, unescape_uri(uri));
+	g_free(uri);
       }
 
     uri_list = linebreak + 2;
   }
 
   return list;
+}
+
+static const gchar *our_host_name(void)
+{
+  static char host[1025]={0};
+
+  if(!host[0])
+    gethostname(host, sizeof(host));
+
+  return host;
 }
 
 /* User has tried to drop some data on us. Decide what format we would
@@ -234,16 +247,16 @@ static gboolean drag_drop(GtkWidget 	  *widget,
     leafname = get_xds_prop(context);
     dprintf(3, "XDS %p", leafname);
     if (leafname) {
-      gchar *uri;
-      char host[1025];
+      gchar *path, *uri;
 
-      gethostname(host, sizeof(host));
-      uri=g_strconcat("file://", host, "/tmp/", leafname, NULL);
-      dprintf(3, "%s %s %s", leafname, host, uri);
+      path=g_strconcat("/tmp/", leafname, NULL);
+      uri=encode_path_as_uri(path);
+      g_free(path);
+      dprintf(3, "%s %s", leafname, uri);
       set_xds_prop(context, uri);
       if(rdata->uri)
 	g_free(rdata->uri);
-      rdata->uri;
+      rdata->uri=uri;
       
       target = XdndDirectSave0;
       g_dataset_set_data_full(context, "leafname", leafname, g_free);
@@ -420,8 +433,76 @@ static void drag_data_received(GtkWidget      	*widget,
     break;
   }
 }
+
+/* handle % escapes in DnD */
+/* Escape path for future use in URI */
+gchar *escape_uri_path(const char *path)
+{
+  const char *safe = "-_./"; /* Plus isalnum() */
+  const guchar *s;
+  gchar *ans;
+  GString *str;
+
+  str = g_string_sized_new(strlen(path));
+
+  for (s = path; *s; s++) {
+    if (!g_ascii_isalnum(*s) && !strchr(safe, *s))
+      g_string_append_printf(str, "%%%02x", *s);
+    else
+      str = g_string_append_c(str, *s);
+  }
+
+  ans = str->str;
+  g_string_free(str, FALSE);
+  
+  return ans;
+}
+
+gchar *encode_path_as_uri(const guchar *path)
+{
+  gchar *tpath = escape_uri_path(path);
+  gchar *uri;
+
+  uri = g_strconcat("file://", our_host_name(), tpath, NULL);
+  g_free(tpath);
+
+  return uri;
+}
+
+gchar *unescape_uri(const char *uri)
+{
+  const gchar *s;
+  gchar *d;
+  gchar *tmp;
+	
+  tmp = g_strdup(uri);
+  for (s = uri, d=tmp; *s; s++, d++) {
+    /*printf("%s\n", s);*/
+    if (*s=='%' && g_ascii_isxdigit(s[1]) &&
+	g_ascii_isxdigit(s[2])) {
+      int c;
+      char buf[3];
+      buf[0]=s[1];
+      buf[1]=s[2];
+      buf[2]=0;
+      c=(int) strtol(buf, NULL, 16);
+      *d=c;
+      s+=2;
+    } else {
+      *d=*s;
+    }
+  }
+  *d=0;
+
+  return tmp;
+}
+
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.6  2003/03/05 15:31:23  stephen
+ * First pass a conversion to GTK 2
+ * Known problems in SOAP code.
+ *
  * Revision 1.5  2002/04/29 08:17:25  stephen
  * Fixed applet menu positioning (didn't work if program was managing more than
  * one applet window)
