@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<AppInfo>
+  <About>
+    <Purpose>Floppy drive manager</Purpose>
+    <Authors>Stephen Watson</Authors>
+    <License>GNU General Public License</License>
+    <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
+  </About>
+<Summary>Manage the floppy drive on a Sun Solaris system.</Summary>
+<AppMenu>
+  <Item label="View floppy contents" option="--view"/>
+  <Item label="Mount floppy" option="--mount"/>
+  <Item label="Dismount floppy" option="--dismount"/>
+</AppMenu>
+</AppInfo>

@@ -19,7 +19,7 @@ fi
 
 if [ $action = dismount ]; then
     eject floppy$drive
-    rox -x $path
+    rox -D $path
 elif [ $action = mount ]; then
     volcheck
     if [ -d $path ] ; then
