@@ -1,6 +1,10 @@
 Album
 =====
 
+13-Mar-2005
+~~~~~~~~~~~
+Include ID3.py incase local system doesn't have it.
+
 30-Aug-2004
 ~~~~~~~~~~~
 Support MusicBox.
