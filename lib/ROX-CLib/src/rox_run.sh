@@ -18,6 +18,10 @@ if [ -z "$LIBDIRPATH" ]; then
     LIBDIRPATH=$HOME/lib:/usr/local/lib:/usr/lib export LIBDIRPATH
 fi
 
+if [ -z "$APPPATH" ]; then
+    APPPATH=$HOME/Apps:/usr/local/apps export APPPATH
+fi
+
 IFS=:
 for dir in $APPPATH $PATH $LIBDIRPATH; do
     if [ -d "$dir/$prog" -a -x "$dir/$prog/AppRun" ]; then
