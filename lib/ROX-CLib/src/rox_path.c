@@ -1,7 +1,7 @@
 /*
  * rox_path.c - utilities for path handling, support for drag & drop
  *
- * $Id$
+ * $Id: rox_path.c,v 1.1 2001/07/17 14:44:50 stephen Exp $
  */
 
 #include <stdlib.h>
@@ -10,11 +10,15 @@
 #include <glib.h>
 
 #include "rox_path.h"
+#define DEBUG 1
+#include "rox_debug.h"
 
 char *rox_path_get_local(const char *uri)
 {
   char *host;
   char *end;
+  char hostn[256];
+  const char *orig=uri;
   
   if(strncmp(uri, "file:", 5)==0)
     uri+=5;
@@ -33,6 +37,14 @@ char *rox_path_get_local(const char *uri)
       g_free(host);
       return g_strdup(end);
     }
+
+    if(gethostname(hostn, sizeof(hostn))==0 && strcmp(host, hostn)==0) {
+      g_free(host);
+      return g_strdup(end);
+    }
+
+    rox_debug_printf(1, "rox_path_get_local(%s) is %s local? (%s)",
+		     orig, host, hostn);
 
     g_free(host);
   }
@@ -85,5 +97,8 @@ char *rox_path_get_path(const char *uri)
 
 
 /*
- * $Log$
+ * $Log: rox_path.c,v $
+ * Revision 1.1  2001/07/17 14:44:50  stephen
+ * Added DnD stuff (plus path utils and debug util)
+ *
  */
