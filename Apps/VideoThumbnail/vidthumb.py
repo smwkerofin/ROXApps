@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.5 2004/03/26 15:30:17 stephen Exp $
+# $Id: vidthumb.py,v 1.6 2004/05/08 18:40:29 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -27,6 +27,7 @@ import options
 
 outname=None
 rsize=options.tsize.int_value
+take_first=options.take_first.int_value
 
 # Width of the film strip effect to put at each side
 bwidth=options.ssize.int_value
@@ -100,27 +101,35 @@ class VidThumb(thumb.Thumbnailler):
             """Return filename of a single frame from the source, taken 
             from pos seconds into the video"""
 
-            # Ask for 2 frames and take the second.  Seems to work better
+            # Ask for 2 frames.  Seems to work better
             cmd='mplayer -really-quiet -vo png -z 5 -ss %f -frames 2 -nosound "%s"' % (pos, fname)
             cmd+=' > /dev/null 2>&1'
 
             # If we have 2 frames ignore the first and return the second, else
             # if we have 1 return it.  Otherwise mplayer couldn't cope and we
             # return None
-            os.system(cmd)
-            ofile='%08d.png' % 2
-            try:
-                os.stat(ofile)
-            except:
-                self.report_exception()
-                ofile='%08d.png' % 1
-
+            def frame_ok(ofile):
                 try:
                     os.stat(ofile)
                 except:
-                    self.report_exception()
+                    return False
+                return True
+                
+            os.system(cmd)
+            if take_first:
+                id=1
+            else:
+                id=2
+            ofile='%08d.png' % id
+            if not frame_ok(ofile):
+                if not take_first:
+                    id=1
+                    ofile='%08d.png' % id
+                    if not frame_ok(ofile):
+                        ofile=None
+                else:
                     ofile=None
-        
+                
             return ofile
 
         try:

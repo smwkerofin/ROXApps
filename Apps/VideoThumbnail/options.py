@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id: options.py,v 1.4 2004/05/08 18:38:59 stephen Exp $
+# $Id: options.py,v 1.5 2004/06/19 15:40:30 stephen Exp $
 
 import os
 
@@ -15,6 +15,7 @@ sprocket=rox.options.Option('sprocket', 1)
 ssize=rox.options.Option('ssize', 8)
 time_label=rox.options.Option('time', 0)
 report=rox.options.Option('report', 0)
+take_first=rox.options.Option('take_first', False)
 
 rox.app_options.notify()
 
