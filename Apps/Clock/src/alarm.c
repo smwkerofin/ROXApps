@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.10 2001/11/12 14:40:39 stephen Exp $
+ * $Id: alarm.c,v 1.11 2001/11/29 16:16:14 stephen Exp $
  */
 #include "config.h"
 
@@ -37,8 +37,7 @@
 #define altzone (timezone+3600)
 #endif
 
-#include "choices.h"
-#include "rox_debug.h"
+#include "rox.h"
 #include "alarm.h"
 
 /* Note these are used as array indicies, so leave them starting at zero
@@ -123,10 +122,10 @@ int alarm_load_xml(const gchar *fname)
   }
 
   for(node=root->xmlChildrenNode; node; node=node->next) {
-    time_t when;
-    RepeatMode rep;
-    guint flags;
-    const char *message;
+    time_t when=0;
+    RepeatMode rep=REPEAT_NONE;
+    guint flags=0;
+    const char *message="";
     Alarm *nalarm;
     
     if(node->type!=XML_ELEMENT_NODE)
@@ -135,10 +134,44 @@ int alarm_load_xml(const gchar *fname)
       continue;
 
     string=xmlGetProp(node, "time");
-    if(!string)
-      continue;
-    when=atol(string);
-    free(string);
+    if(string) {
+      when=atol(string);
+      free(string);
+    } else {
+      string=xmlGetProp(node, "date");
+      if(string) {
+	gchar **words;
+
+	words=g_strsplit(string, " ", 5);
+	if(words) {
+	  if(words[0] && words[1] && words[2] && words[3] && words[4]) {
+	    struct tm tdate;
+	    tdate.tm_hour=atol(words[0]);
+	    tdate.tm_min=atol(words[1]);
+	    tdate.tm_sec=0;
+	    tdate.tm_mday=atol(words[2]);
+	    tdate.tm_mon=atol(words[3])-1;
+	    tdate.tm_year=atol(words[4])-1900;
+	    tdate.tm_isdst=-1;
+
+	    when=mktime(&tdate);
+	  } else {
+	    rox_error("%s is not a valid date for an alarm", string);
+	    continue;
+	  }
+	  g_strfreev(words);
+	  
+	} else {
+	  rox_error("%s is not a valid date for an alarm", string);
+	  continue;
+	}
+
+	free(string);
+      } else {
+	rox_error("time/date missing for an alarm");
+	continue;
+      }
+    }
     
     string=xmlGetProp(node, "repeat");
     if(!string) {
@@ -359,10 +392,10 @@ static time_t next_alarm_time(time_t when, RepeatMode mode, guint flags)
   if(old_dst!=tms->tm_isdst && (flags&ALARM_FOLLOW_TIMEZONE)) {
     if(tms->tm_isdst) {
       /* Switch to altzone */
-      tms->tm_sec+=(timezone-altzone);
+      tms->tm_sec-=(timezone-altzone);
     } else {
       /* Switch from altzone */
-      tms->tm_sec-=(timezone-altzone);
+      tms->tm_sec+=(timezone-altzone);
     }
     next=mktime(tms);
   }
@@ -459,8 +492,16 @@ void alarm_save_xml(void)
     for(rover=alarms; rover; rover=g_list_next(rover)) {
       Alarm *alarm=(Alarm *) rover->data;
       tree=xmlNewChild(doc->children, NULL, "alarm", alarm->message);
-      sprintf(buf, "%ld", alarm->when);
-      xmlSetProp(tree, "time", buf);
+      if(alarm->repeat==REPEAT_NONE) {
+	sprintf(buf, "%ld", alarm->when);
+	xmlSetProp(tree, "time", buf);
+      } else {
+	struct tm *tmp;
+	tmp=localtime(&alarm->when);
+	sprintf(buf, "%d %d %d %d %d", tmp->tm_hour, tmp->tm_min,
+	      tmp->tm_mday, tmp->tm_mon+1, tmp->tm_year+1900);
+	xmlSetProp(tree, "date", buf);
+      }
       xmlSetProp(tree, "repeat", repeat_text[alarm->repeat]);
       sprintf(buf, "%u", alarm->flags);
       xmlSetProp(tree, "flags", buf);
@@ -979,6 +1020,11 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.11  2001/11/29 16:16:14  stephen
+ * Use font selection dialog instead of widget.
+ * Added a monday-thursday repeat.
+ * Test for altzone in <time.h>
+ *
  * Revision 1.10  2001/11/12 14:40:39  stephen
  * Change to XML handling: requires 2.4 or later.  Use old style config otherwise.
  *
