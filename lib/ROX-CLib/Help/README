@@ -8,8 +8,9 @@ This is version 2.0, for use with GTK+ 2.x.
 Installation
 ------------
 
-Copy to a suitable place, such as ~/lib, and make sure it is on 
-your $LIBDIRPATH.
+Copy to a suitable place such as ~/lib or make sure it is on 
+your $LIBDIRPATH.  It must be called ROX-CLib, otherwise other 
+programs can't find it.
 
 Compile using ROX-CLib/AppRun --compile
 
