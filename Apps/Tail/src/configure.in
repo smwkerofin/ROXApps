@@ -32,7 +32,7 @@ dnl Checks for library functions.
 AC_CHECK_FUNCS(setlocale bindtextdomain gettext)
 
 dnl Check for ROX-CLib and version
-ROX_CLIB(2, 1, 0)
+ROX_CLIB(2, 1, 2)
 
 dnl Extract version info from AppInfo.xml
 ROX_SELF_VERSION

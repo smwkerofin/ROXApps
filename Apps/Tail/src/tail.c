@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.17 2004/02/14 13:59:19 stephen Exp $
+ * $Id: tail.c,v 1.18 2004/04/13 11:17:26 stephen Exp $
  */
 
 #include "config.h"
@@ -38,6 +38,8 @@
 #include <rox/rox.h>
 #include <rox/rox_dnd.h>
 #include <rox/gtksavebox.h>
+
+#define MAX_SIZE (256*1024)  /* Maximum size to load at start */
 
 static GtkWidget *win;
 static GtkWidget *text;
@@ -131,11 +133,6 @@ static GtkWidget *get_main_menu(GtkWidget *window, const gchar *name)
   atexit(save_menus);
 
   return menu;
-}
-
-static void detach(GtkWidget *widget, GtkMenu *menu)
-{
-  dprintf(4, "detach");
 }
 
 static void usage(const char *argv0)
@@ -288,7 +285,7 @@ int main(int argc, char *argv[])
   else
     set_fd(fileno(stdin));
   
-  update_tag=gtk_timeout_add(500, (GtkFunction) check_file, NULL);
+  update_tag=g_timeout_add(500, (GtkFunction) check_file, NULL);
 
   /* Create the pop-up menu now so the menu accelerators are loaded */
   menu=get_main_menu(GTK_WIDGET(win), MENU_NAME);
@@ -316,7 +313,7 @@ static void window_updated(time_t when)
   gtk_label_set_text(GTK_LABEL(changed), buf);
 }
 
-static void append_text_from_file(int fd, gboolean scroll)
+static void append_text_from_file(int fd, gboolean scroll, gboolean initial)
 {
   GtkTextBuffer *tbuf;
   char buf[BUFSIZ];
@@ -325,6 +322,25 @@ static void append_text_from_file(int fd, gboolean scroll)
   gint pos;
   int ready;
   GtkTextIter start, end;
+
+  tbuf=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text));
+  
+  if(initial) {
+    off_t npos;
+    npos=lseek(fd, -MAX_SIZE, SEEK_END);
+    if(npos>0) {
+      do {
+	if(ioctl(fd, FIONREAD, &ready)<0 || ready<1)
+	  break;
+	nr=read(fd, buf, 1);
+	npos++;
+      } while(buf[0]!='\n');
+
+      sprintf(buf, "-=- %d bytes omitted -=-\n", npos);
+      gtk_text_buffer_get_end_iter(tbuf, &end);
+      gtk_text_buffer_insert(tbuf, &end, buf, -1);
+    }
+  }
 
   tbuf=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text));
   do {
@@ -373,7 +389,7 @@ static gint check_file(gpointer unused)
     return TRUE;
 
   if(statb.st_size>size) {
-    append_text_from_file(fd, TRUE);
+    append_text_from_file(fd, TRUE, FALSE);
     
     pos=lseek(fd, (off_t) 0, SEEK_END);
     size=statb.st_size;
@@ -420,7 +436,7 @@ static void set_file(const char *name)
   gtk_text_buffer_get_end_iter(tbuf, &end);
   gtk_text_buffer_delete(tbuf, &start, &end);
 
-  append_text_from_file(nfd, FALSE);
+  append_text_from_file(nfd, FALSE, TRUE);
   npos=lseek(nfd, (off_t) 0, SEEK_END);
 
   window_updated(statb.st_mtime);
@@ -446,7 +462,7 @@ static void set_file(const char *name)
 
 static void set_fd(int nfd)
 {
-  append_text_from_file(nfd, FALSE);
+  append_text_from_file(nfd, FALSE, TRUE);
   
   if(!fixed_title)
     gtk_window_set_title(GTK_WINDOW(win), "Tail: (stdin)");
@@ -680,6 +696,9 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.18  2004/04/13 11:17:26  stephen
+ * Update for new ROX-CLib
+ *
  * Revision 1.17  2004/02/14 13:59:19  stephen
  * Load icon for windows
  *

@@ -1,6 +1,11 @@
 Tail
 ====
 
+2.1.1
+-----
+Updated compilation system to use libdir.
+Don't show more that 256KB when loading file (doesn't work via stdin).
+
 2.1.0
 -----
 Use ROX-CLib 2.1.0, including aclocal.m4.
