@@ -1,4 +1,4 @@
-# $Id$
+# $Id: solaris.py,v 1.1 2003/06/09 17:29:11 stephen Exp $
 
 """netstat implementation for Solaris 8"""
 
@@ -23,7 +23,7 @@ def stat():
             tpkts=long(words[6])
             #print iname, rpkts, tpkts
 
-            res[iname]=(rpkts, tpkts)
+            res[iname]=(rpkts, tpkts, -1, -1)
     netstat.close()
     if len(res.keys())<1:
         return None

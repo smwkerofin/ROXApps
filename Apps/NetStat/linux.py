@@ -1,4 +1,4 @@
-# $Id: linux.py,v 1.1 2003/06/09 17:29:11 stephen Exp $
+# $Id: linux.py,v 1.2 2003/08/02 17:14:29 stephen Exp $
 
 """netstat implementation for Linux"""
 
@@ -10,8 +10,8 @@ import socket
 
 def stat():
     """Returns a dict containing the data, indexed by the interface name.
-    Each entry is a tuple containg the received packet count and the
-    transmitted packet count"""
+    Each entry is a tuple containg the received packet count,
+    transmitted packet count, received bytes and transmitted bytes"""
     res={}
     try:
         handle=open('/proc/net/dev', 'r')
@@ -30,19 +30,21 @@ def stat():
             continue
         # print line
         w2=string.split(words[0], ':')
-        if len(w2)>1:
-            iname=w2[0]
-            rbytes=w2[1]
+        #print words[0], w2
+        iname=w2[0]
+        if len(w2)>1 and w2[1]:
+            #print w2
+            rbytes=long(w2[1])
             rpkts=long(words[1])
             tbytes=long(words[8])
             tpkts=long(words[9])
         else:
-            iname=words[0]
-            rbytes=words[1]
+            rbytes=long(words[1])
             rpkts=long(words[2])
             tbytes=long(words[9])
             tpkts=long(words[10])
-        res[iname]=(rpkts, tpkts)
+        #print iname, rbytes
+        res[iname]=(rpkts, tpkts, rbytes, tbytes)
             
     handle.close()
     if len(res.keys())<1:
