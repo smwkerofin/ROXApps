@@ -1331,7 +1331,7 @@ done
 
 echo $ac_n "checking extracting version information""... $ac_c" 1>&6
 echo "configure:1334: checking extracting version information" >&5
-VERSION=`sed -n 's/^.*<Version>\([.0-9]*\).*<\/Version>.*$/\1/p' ../AppInfo.xml`
+VERSION=`sed -n 's/^.*<Version>\([^<]*\)<\/Version>.*$/\1/p' ../AppInfo.xml`
 cat >> confdefs.h <<EOF
 #define VERSION "$VERSION"
 EOF
