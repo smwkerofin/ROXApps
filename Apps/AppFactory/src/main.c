@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.10 2003/03/05 15:30:39 stephen Exp $
+ * $Id: main.c,v 1.11 2003/04/23 17:57:41 stephen Exp $
  */
 #include "config.h"
 
@@ -43,7 +43,9 @@
 #include "rox_resources.h"
 #include "options.h"
 
-#define PROMPT_UTIL "promptArgs.py"
+#define PROMPT_UTIL  "promptArgs.py"
+#define DEFAULT_ICON "application.png"
+#define DIR_ICON     ".DirIcon"
 
 /* Declare functions in advance */
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
@@ -227,11 +229,9 @@ int main(int argc, char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
   gtk_widget_show(label);
 
-  icon_path=rox_resources_find(PROJECT, "application.xpm",
+  icon_path=rox_resources_find(PROJECT, DEFAULT_ICON,
 			       ROX_RESOURCES_DEFAULT_LANG);
-  if(!icon_path)
-    icon_path=g_strconcat(app_dir, "/pixmaps/application.xpm", NULL);
-  dprintf(3, "icon_path=%s", icon_path);
+  dprintf(3, "icon_path=%s", icon_path? icon_path: "NULL");
 
   prog_icon=gtk_image_new_from_file(icon_path);
   gtk_box_pack_start(GTK_BOX(hbox), prog_icon, TRUE, TRUE, 0);
@@ -446,10 +446,10 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
 
   src=gtk_object_get_data(GTK_OBJECT(prog_icon), "path");
   if(src) {
-    fname=g_strconcat(pathname, "/AppIcon.xpm", NULL);
+    fname=g_strconcat(pathname, "/", DIR_ICON, NULL);
     cmd=g_strdup_printf("cp %s %s", src, fname);
     if(system(cmd)!=0) {
-      rox_error("Failed to make AppIcon.xpm\n%s", strerror(errno));
+      rox_error("Failed to make %s\n%s", DIR_ICON, strerror(errno));
       g_free(fname);
       g_free(cmd);
       return GTK_XDS_SAVE_ERROR;

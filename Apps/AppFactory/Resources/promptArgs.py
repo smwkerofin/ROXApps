@@ -1,11 +1,9 @@
 #!/usr/bin/env python
-#
-# $Id: promptArgs.py,v 1.1 2001/09/12 13:52:02 stephen Exp $
+
+# $Id: promptArgs.py,v 1.1 2001/11/05 15:55:24 stephen Exp $
 #
 
 import sys
-
-from gtk import *
 
 icmd=""
 prompt='Enter parameters'
@@ -22,40 +20,93 @@ if len(sys.argv)>1:
 
         i=i+1
         
+def gtk1(g):
+    win=g.GtkDialog()
+    win.set_title('Enter parameters')
 
-win=GtkDialog()
-win.set_title('Enter parameters')
+    vbox=win.vbox
 
-vbox=win.vbox
+    hbox=g.GtkHBox()
+    vbox.pack_start(hbox)
 
-hbox=GtkHBox()
-vbox.pack_start(hbox)
+    label=g.GtkLabel(prompt)
+    hbox.pack_start(label)
 
-label=GtkLabel(prompt)
-hbox.pack_start(label)
+    cmd=g.GtkEntry()
+    cmd.set_text(icmd)
+    hbox.pack_start(cmd)
 
-cmd=GtkEntry()
-cmd.set_text(icmd)
-hbox.pack_start(cmd)
+    hbox=win.action_area
 
-hbox=win.action_area
+    def cancel(but, data):
+        g.mainquit()
 
-def cancel(but, data):
-    mainquit()
+    but=g.GtkButton('Run without arguments')
+    but.connect('clicked', cancel, None)
+    hbox.pack_end(but)
 
-but=GtkButton('Run without arguments')
-but.connect('clicked', cancel, None)
-hbox.pack_end(but)
+    def run(but, data):
+        print cmd.get_text()
+        g.mainquit()
 
-def run(but, data):
-    print cmd.get_text()
-    mainquit()
+    but=g.GtkButton('Run with these arguments')
+    hbox.pack_end(but)
+    but.connect('clicked', run, None)
 
-but=GtkButton('Run with these arguments')
-hbox.pack_end(but)
-but.connect('clicked', run, None)
+    win.show_all()
+    win.connect("destroy", g.mainquit)
 
-win.show_all()
-win.connect("destroy", mainquit)
+    g.mainloop()
 
-mainloop()
+def gtk2(g):
+    win=g.Dialog()
+    win.set_title('Enter parameters')
+
+    vbox=win.vbox
+
+    hbox=g.HBox()
+    vbox.pack_start(hbox)
+
+    label=g.Label(prompt)
+    hbox.pack_start(label)
+
+    cmd=g.Entry()
+    cmd.set_text(icmd)
+    hbox.pack_start(cmd)
+
+    hbox=win.action_area
+
+    def cancel(but, data):
+        g.mainquit()
+
+    but=g.Button('Run without arguments')
+    but.connect('clicked', cancel, None)
+    hbox.pack_end(but)
+
+    def run(but, data):
+        print cmd.get_text()
+        g.mainquit()
+
+    but=g.Button('Run with these arguments')
+    hbox.pack_end(but)
+    but.connect('clicked', run, None)
+
+    win.show_all()
+    win.connect("destroy", g.mainquit)
+
+    g.mainloop()
+
+try:
+    import pygtk; pygtk.require('2.0')
+    import gtk
+
+    ver=gtk2
+except:
+    try:
+        import gtk
+        ver=gtk1
+    except:
+        sys.exit(0)
+
+ver(gtk)
+

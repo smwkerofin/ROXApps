@@ -9,3 +9,6 @@ the program name line, an XPM file for the wrapper to the icon line
 and a directory containing the help files to the help line.  The last
 two are optional.  Then click "Create" and drag the icon to a suitable
 directory.
+
+The configure option on the pop-up menu allows you to add your name
+and web site into the generated AppInfo.xml file.

@@ -1,9 +1,15 @@
 AppFactory
 ==========
 
+1.1.2
+-----
+GTK+ 2 version of args window.  Default icon now PNG format. (Thomas Leonard)
+New icon provided by Geoff Youngs.
+
 1.1.1
 -----
-Fix save box handling.  Convert to new options code.
+Fix save box handling.  (Thomas Leonard) 
+Convert to new options code.
 
 1.1.0
 -----
