@@ -213,3 +213,151 @@ directly.  Returns the full path if found (pass to g_free when done)
 or NULL if not.  lang may be ROX_RESOURCES_NO_LANG to not search
 for sub-directories, or ROX_RESOURCES_DEFAULT_LANG for the sub-directory
 appropriate for the selected language.
+
+rox_soap.h
+----------
+
+Communicating with the filer via SOAP.  Note that using SOAP requires libxml2.
+
+typedef struct rox_soap_filer ROXSOAP;
+
+This is an opaque type representing the connection to an instance of the filer.
+
+typedef void (*rox_soap_callback)(ROXSOAP *filer, gboolean status, 
+                                  xmlDocPtr reply, gpointer udata);
+
+Defines the function called when the SOAP call completes.  If status is FALSE 
+then the call failed and reply is NULL.  If status is not FALSE then the call 
+succeeded and reply contains the result (may still be NULL).
+
+void rox_soap_init(void);
+
+Initializes the data.
+
+ROXSOAP *rox_soap_connect_to_filer(void);
+
+Initialise the connection to the filer.
+
+gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
+			      rox_soap_callback callback, gpointer udata);
+
+Send the XML document to filer using SOAP.  If run_filer is TRUE
+and there is no filer to talk to, use rox_soap_send_via_pipe().
+Returns TRUE if comms succeeded, when complete callback is called with
+the status and reply.
+
+gboolean rox_soap_send_via_pipe(ROXSOAP *filer, xmlDocPtr doc, 
+				   rox_soap_callback callback, gpointer udata);
+
+
+Send the XML document to ROX-Filer using the -R option.  When complete
+callback is called with the status and reply.
+
+void rox_soap_set_timeout(ROXSOAP *filer, guint ms);
+
+Set the timeout when contacting ROX-Filer (in ms, defaults to 10000).  If
+filer is NULL it sets the timeout for all new connections.
+
+const char *rox_soap_get_last_error(void);
+
+Returns the text of the last error raised.  This may be "No error" if no error
+has occured, or rox_soap_clear_error() has been called.
+
+void rox_soap_clear_error(void);
+
+Clears the error text.
+
+void rox_soap_close(ROXSOAP *filer);
+
+Close connection.
+
+rox_filer_action.h
+------------------
+
+These functions drive ROX-Filer via the rox_soap.h interface above.
+
+typedef enum panel_side {
+  ROXPS_TOP,ROXPS_BOTTOM,ROXPS_LEFT,ROXPS_RIGHT
+} ROXPanelSide;
+
+The four possible places for a panel, used in rox_filer_panel().
+
+#define ROX_FILER_DEFAULT (-1)  
+
+This value means "use value user has selected in options".
+
+
+void rox_filer_open_dir(const char *filename);
+
+Open a viewer for the given directory.
+
+void rox_filer_close_dir(const char *filename);
+
+Close all viewers for the given directory and any subdirectories.
+
+void rox_filer_examine(const char *filename);
+
+Re-fresh the viewer for the given directory.
+
+void rox_filer_panel(const char *name, ROXPanelSide side);
+
+Open a panel with the given name on the specfied side.  If name is "" then the 
+panel on that side is closed instead.
+
+void rox_filer_pinboard(const char *name);
+
+Display pinboard name on the desktop background.  Name can be a name in 
+Choices (eg, `MyPinboard') or a full pathname.
+
+void rox_filer_run(const char *filename);
+
+Run filename as if it was clicked on in the filer.
+
+void rox_filer_show(const char *directory, const char *leafname);
+
+Open directory and flash the file eafname inside it.
+
+void rox_filer_copy(const char *from, const char *to,
+			   const char *leafname, int quiet);
+
+Copy the object from into the directory to.  If leafname is not NULL then
+use it as the new name of the file.  If quiet is FALSE then prompt the user
+before copying.
+
+void rox_filer_move(const char *from, const char *to,
+			   const char *leafname, int quiet);
+
+Move the object from into the directory to.  If leafname is not NULL then
+use it as the new name of the file.  If quiet is FALSE then prompt the user
+before moving.
+
+void rox_filer_link(const char *from, const char *to,
+			   const char *leafname);
+
+Symbolically link the object from into the directory to.  If leafname
+is not NULL then use it as the new name of the file.
+
+void rox_filer_mount(const char *mountpoint,
+			    int quiet, int opendir);
+
+Attempt to mount on the directory mountpoint (which should be in
+/etc/fstab or similar).  If quiet is FALSE then prompt the user before
+mounting.  If opendir is not FALSE then open a viewer for the new
+directory if succesfully mounted.  The ability to mount is normally
+restricted.
+
+char *rox_filer_file_type(const char *file);
+
+Return a string describing the MIME type of the given file (which need not 
+exist!).  Return value should be passed to g_free when done.  If NULL is 
+returned then there was an error in communication.
+
+const char *rox_filer_get_last_error(void);
+
+Returns the text of the last error raised.  This may be "No error" if no error
+has occured, or rox_filer_clear_error() has been called.
+
+void rox_filer_clear_error(void);
+
+Clears the error text.
+
