@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.10 2005/02/19 11:54:32 stephen Exp $
+# $Id: vidthumb.py,v 1.11 2005/03/04 17:33:02 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -19,6 +19,7 @@ being processed.
 import os, sys
 import md5
 import rox, rox.mime
+import pango
 
 import thumb
 
@@ -47,10 +48,12 @@ class VidThumb(thumb.Thumbnailler):
         thumb.Thumbnailler.__init__(self, 'VideoThumbnail', 'vidthumb',
                                     True, debug)
 
+        self.add_time=options.time_label.int_value
+
     def post_process_image(self, img, w, h):
         """Add the optional film strip effect"""
 
-        if not options.sprocket.int_value and not options.time_label.int_value:
+        if not options.sprocket.int_value and not self.add_time:
             return img
         
         pixmap, mask=img.render_pixmap_and_mask()
@@ -68,7 +71,7 @@ class VidThumb(thumb.Thumbnailler):
                 pixmap.draw_rectangle(gc, gtk.TRUE, 2, y, 4, 4)
                 pixmap.draw_rectangle(gc, gtk.TRUE, w-8+2, y, 4, 4)
 
-        if options.time_label.int_value and self.total_time:
+        if self.add_time and self.total_time:
             secs=self.total_time
             hours=int(secs/3600)
             if hours>0:
@@ -90,29 +93,35 @@ class VidThumb(thumb.Thumbnailler):
         return img.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
 
     def failed_image(self, rsize, tstr):
-        #print 'failed_image', self, rsize
+        if debug: print 'failed_image', self, rsize, tstr
         w=rsize
         h=rsize/4*3
         try:
             p=rox.g.gdk.Pixbuf(rox.g.gdk.COLORSPACE_RGB, False, 8, w, h)
         except:
             sys.exit(2)
-        #print p
+        if debug: print p
 
         pixmap, mask=p.render_pixmap_and_mask()
         cmap=pixmap.get_colormap()
         gc=pixmap.new_gc(foreground=cmap.alloc_color('black'))
-            
+        gc.set_foreground(gc.background)
+
+        if debug: print gc, gc.foreground
         pixmap.draw_rectangle(gc, rox.g.TRUE, 0, 0, w, h)
         
         gc.set_foreground(cmap.alloc_color('red'))
         dummy=rox.g.Window()
         layout=dummy.create_pango_layout(tstr)
         if w>40:
-            layout.set_width(w-20)
+            layout.set_width((w-10)*pango.SCALE)
+            #layout.set_wrap(pango.WRAP_CHAR)
         pixmap.draw_layout(gc, 10, 4, layout)
+        if debug: print pixmap
+
+        self.add_time=False
         
-        return img.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
+        return p.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
 
     def get_image(self, inname, rsize):
         """Generate the raw image from the file.  We run mplayer (twice)
@@ -141,12 +150,17 @@ class VidThumb(thumb.Thumbnailler):
             # if we have 1 return it.  Otherwise mplayer couldn't cope and we
             # return None
             def frame_ok(ofile):
+                if debug: print 'look for', ofile
                 try:
                     os.stat(ofile)
                 except:
+                    if debug: print 'exception', sys.exc_info()[:2]
+                    if debug: os.system('pwd')
+                    if debug: os.system('ls -al')
                     return False
                 return True
-                
+
+            if debug: print cmd
             os.system(cmd)
 
             mtype=rox.mime.get_type(fname)
@@ -164,6 +178,7 @@ class VidThumb(thumb.Thumbnailler):
             else:
                 id=2
             ofile='%08d.png' % id
+            if debug: print ofile
             if not frame_ok(ofile):
                 if not first:
                     id=1
@@ -191,8 +206,9 @@ class VidThumb(thumb.Thumbnailler):
             pos=60
 
         frfname=write_frame(inname, pos)
+        if debug: print inname, pos, frfname
         if frfname is None:
-            return self.failed_image(rsize, 'Bad file')
+            return self.failed_image(rsize, 'Bad or missing frame file')
 
         # Now we load the raw image in
 
