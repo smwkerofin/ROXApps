@@ -5,6 +5,8 @@ PROG=freefs
 APP_DIR=`dirname $0`
 APP_DIR=`cd $APP_DIR;pwd`; export APP_DIR
 
+$APP_DIR/choice_install FreeFS $APP_DIR/gtkrc gtkrc
+
 ARCH=`uname -m`
 case $ARCH in
 	i?86) ARCH=ix86 ;;
