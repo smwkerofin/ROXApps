@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.h,v 1.3 2003/10/18 11:46:18 stephen Exp $
+ * $Id: infowin.h,v 1.4 2004/05/22 15:54:02 stephen Exp $
  */
 
 #ifndef __ROX_INFO_WIN_H__
@@ -36,6 +36,7 @@ struct _InfoWin
 
   GtkWidget *table;
   GtkWidget *slots[ROX_INFO_WIN_NSLOT];
+  GtkWidget *extend;
   
   gchar *web_site;
   GList *browser_cmds;
@@ -53,6 +54,7 @@ extern GtkWidget* rox_info_win_new(const gchar *program, const gchar *purpose,
 /* rox_info_win_new_from_appinfo() is the prefered interface */
 extern GtkWidget* rox_info_win_new_from_appinfo(const gchar *program);
 extern void rox_info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd);
+extern GtkWidget *rox_info_win_get_extension_area(ROXInfoWin *iw);
 
 /* Backwards compatability */
 #define INFO_WIN(obj)          ROX_INFO_WIN(obj)
@@ -76,6 +78,9 @@ extern void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd);
 
 /*
  * $Log: infowin.h,v $
+ * Revision 1.4  2004/05/22 15:54:02  stephen
+ * InfoWin is now ROXInfoWin
+ *
  * Revision 1.3  2003/10/18 11:46:18  stephen
  * Can parse AppInfo.xml file to supply the values for the window.
  *

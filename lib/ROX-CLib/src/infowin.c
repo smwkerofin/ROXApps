@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.c,v 1.9 2004/03/10 22:39:30 stephen Exp $
+ * $Id: infowin.c,v 1.10 2004/05/22 15:54:02 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -24,7 +24,9 @@ static void rox_info_win_finalize (GObject *object);
 
 static GtkDialogClass *parent_class=NULL;
 
-static void rox_info_win_class_init(InfoWinClass *iwc)
+static gboolean persistant=FALSE;
+
+static void rox_info_win_class_init(ROXInfoWinClass *iwc)
 {
   GObjectClass *object_class;
 
@@ -38,22 +40,31 @@ static void rox_info_win_class_init(InfoWinClass *iwc)
 }
 
 /* Make a destroy-frame into a close */
-static int trap_client_destroy(GtkWidget *widget, GdkEvent *event,
+static gboolean trap_client_destroy(GtkWidget *widget, GdkEvent *event,
 			      gpointer data)
 {
   /* Change this destroy into a hide */
+  rox_debug_printf(3, "trap_client_destroy(%p, %p, %p)", widget, event, data);
   gtk_widget_hide(widget);
   return TRUE;
 }
 
+static void dismiss_and_kill(GtkWidget *widget, gpointer data)
+{
+  rox_debug_printf(3, "info win dismiss and kill %p, %p,", widget, data);
+  gtk_widget_hide(GTK_WIDGET(data));
+  gtk_widget_destroy(GTK_WIDGET(data));
+}
+
 static void dismiss(GtkWidget *widget, gpointer data)
 {
+  rox_debug_printf(3, "info win dismiss %p, %p,", widget, data);
   gtk_widget_hide(GTK_WIDGET(data));
 }
 
 static void goto_website(GtkWidget *widget, gpointer data)
 {
-  InfoWin *iw;
+  ROXInfoWin *iw;
   GList *cmds;
   int pid;
   char cpath[1024];
@@ -75,7 +86,7 @@ static void goto_website(GtkWidget *widget, gpointer data)
   if(out) {
     fprintf(out, "URL=%s\n", iw->web_site);
     fclose(out);
-    dprintf(2, "access %s via %s", iw->web_site, tfname);
+    rox_debug_printf(2, "access %s via %s", iw->web_site, tfname);
     rox_filer_run(tfname);
     if(!rox_filer_have_error())
       return;
@@ -98,13 +109,13 @@ static void goto_website(GtkWidget *widget, gpointer data)
     const char *cmd=(const char *) cmds->data;
     
     if(cmd[0]=='/') {
-      dprintf(3, "%s %s", cmd, iw->web_site);
+      rox_debug_printf(3, "%s %s", cmd, iw->web_site);
       execl(cmd, cmd, iw->web_site, NULL);
     } else {
       strcpy(cpath, path);
       for(dir=strtok(cpath, ":"); dir; dir=strtok(NULL, ":")) {
 	file=g_strconcat(dir, "/", cmd, NULL);
-	dprintf(3, "%s %s", file, iw->web_site);
+	rox_debug_printf(3, "%s %s", file, iw->web_site);
 	execl(file, cmd, iw->web_site, NULL);
 	g_free(file);
       }
@@ -141,7 +152,7 @@ static GtkWidget *get_app_icon(void)
   return NULL;
 }
   
-static void rox_info_win_init(InfoWin *iw)
+static void rox_info_win_init(ROXInfoWin *iw)
 {
   GtkWidget *label;
   GtkWidget *frame;
@@ -149,9 +160,6 @@ static void rox_info_win_init(InfoWin *iw)
   GtkWidget *hbox;
   GtkWidget *icon;
   
-  g_signal_connect(G_OBJECT(iw), "delete_event", 
-		     G_CALLBACK(trap_client_destroy), 
-		     "WM destroy");
   gtk_window_set_position(GTK_WINDOW(iw), GTK_WIN_POS_MOUSE);
   
   iw->web_site=NULL;
@@ -237,12 +245,21 @@ static void rox_info_win_init(InfoWin *iw)
 
   iw->slots[ROX_INFO_WIN_WEBSITE]=button;
 
+  iw->extend=gtk_vbox_new(FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(iw)->vbox), iw->extend, TRUE, TRUE, 2);
+  gtk_widget_show(iw->extend);
+
   hbox=GTK_DIALOG(iw)->action_area;
 
   button=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
   gtk_widget_show(button);
-  g_signal_connect(G_OBJECT (button), "clicked",
-                        G_CALLBACK(dismiss), iw);
+  if(persistant) {
+    g_signal_connect(G_OBJECT (button), "clicked",
+		     G_CALLBACK(dismiss), iw);
+  } else {
+    g_signal_connect(G_OBJECT (button), "clicked",
+		     G_CALLBACK(dismiss_and_kill), iw);
+  }
   gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 2);
 }
 
@@ -252,18 +269,18 @@ GType rox_info_win_get_type(void)
 
   if (!iw_type) {
       static const GTypeInfo iw_info = {
-	sizeof (InfoWinClass),
+	sizeof (ROXInfoWinClass),
 	NULL,			/* base_init */
 	NULL,			/* base_finalise */
 	(GClassInitFunc) rox_info_win_class_init,
 	NULL,			/* class_finalise */
 	NULL,			/* class_data */
-	sizeof(InfoWinClass),
+	sizeof(ROXInfoWinClass),
 	0,			/* n_preallocs */
 	(GtkObjectInitFunc) rox_info_win_init,
       };
 
-      iw_type = g_type_register_static(GTK_TYPE_DIALOG, "InfoWin", &iw_info,
+      iw_type = g_type_register_static(GTK_TYPE_DIALOG, "ROXInfoWin", &iw_info,
 				       0);
     }
 
@@ -276,7 +293,7 @@ GtkWidget* rox_info_win_new(const gchar *program, const gchar *purpose,
 {
   GtkWidget *widget=GTK_WIDGET(gtk_type_new(rox_info_win_get_type()));
   GtkWidget *label;
-  InfoWin *iw=INFO_WIN(widget);
+  ROXInfoWin *iw=ROX_INFO_WIN(widget);
   gchar *title;
 
   title=g_strdup_printf(_("Information on %s"), program);
@@ -307,10 +324,10 @@ GtkWidget* rox_info_win_new(const gchar *program, const gchar *purpose,
   return widget;
 }
 
-void rox_info_win_add_browser_command(InfoWin *iw, const gchar *cmd)
+void rox_info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
 {
   g_return_if_fail(iw!=NULL);
-  g_return_if_fail(IS_INFO_WIN(iw));
+  g_return_if_fail(ROX_IS_INFO_WIN(iw));
   g_return_if_fail(cmd!=NULL);
 
   iw->browser_cmds=g_list_prepend(iw->browser_cmds, (void *) cmd);
@@ -318,12 +335,12 @@ void rox_info_win_add_browser_command(InfoWin *iw, const gchar *cmd)
 
 static void rox_info_win_finalize (GObject *object)
 {
-  InfoWin *iw;
+  ROXInfoWin *iw;
   
   g_return_if_fail (object != NULL);
-  g_return_if_fail (IS_INFO_WIN (object));
+  g_return_if_fail (ROX_IS_INFO_WIN (object));
   
-  iw = INFO_WIN (object);
+  iw = ROX_INFO_WIN (object);
 
   g_free(iw->web_site);
   g_list_free(iw->browser_cmds);
@@ -346,7 +363,7 @@ static GList *_expand_lang(const char *locale)
   unsigned mask=0;
   int i;
 
-  dprintf(3, "expand %s", locale);
+  rox_debug_printf(3, "expand %s", locale);
 
   tmp=g_strdup(locale);
   pos=strchr(tmp, '@');
@@ -388,7 +405,7 @@ static GList *_expand_lang(const char *locale)
       }
       
       langs=g_list_prepend(langs, val->str);
-      dprintf(3, "lang=%s", val->str);
+      rox_debug_printf(3, "lang=%s", val->str);
       g_string_free(val, FALSE);
       
     }
@@ -451,14 +468,14 @@ GtkWidget *rox_info_win_new_from_appinfo(const char *program)
   gchar *path;
   GtkWidget *window;
 
-  dprintf(3, "rox_info_win_new_from_appinfo(%s)", program);
+  rox_debug_printf(3, "rox_info_win_new_from_appinfo(%s)", program);
 
   appdir=g_getenv("APP_DIR");
   if(appdir) { 
     xmlDocPtr doc;
     
     path=g_build_filename(appdir, "AppInfo.xml", NULL);
-    dprintf(3, "read from %s", path);
+    rox_debug_printf(3, "read from %s", path);
     doc=xmlParseFile(path);
     if(doc) {
       GList *langs=expand_languages(NULL);
@@ -471,12 +488,12 @@ GtkWidget *rox_info_win_new_from_appinfo(const char *program)
 	if(node->type!=XML_ELEMENT_NODE)
 	  continue;
 
-	dprintf(3, "node->name=%s", node->name);
+	rox_debug_printf(3, "node->name=%s", node->name);
 	if(strcmp(node->name, "About")!=0)
 	  continue;
 
 	lang=xmlNodeGetLang(node);
-	dprintf(2, "About node with lang %s", lang? lang: "NULL");
+	rox_debug_printf(2, "About node with lang %s", lang? lang: "NULL");
 
 	if(lang) {
 	  use_this=FALSE;
@@ -497,7 +514,7 @@ GtkWidget *rox_info_win_new_from_appinfo(const char *program)
 
 	    if(strcmp(sub->name, "Purpose")==0 && (!purpose || lang)) {
 	      value=xmlNodeGetContent(sub);
-	      dprintf(3, "Purpose=%s", value);
+	      rox_debug_printf(3, "Purpose=%s", value);
 	      if(purpose)
 		g_free(purpose);
 	      purpose=g_strdup(value);
@@ -550,6 +567,13 @@ GtkWidget *rox_info_win_new_from_appinfo(const char *program)
   return window;
 }
 
+GtkWidget *rox_info_win_get_extension_area(ROXInfoWin *iw)
+{
+  g_return_if_fail(iw!=NULL);
+
+  return iw->extend;
+}
+
 /* Binary compatability */
 GType info_win_get_type(void)
 {
@@ -560,12 +584,30 @@ GtkWidget* info_win_new(const gchar *program, const gchar *purpose,
 				const gchar *version, const gchar *author,
 				const gchar *website)
 {
-  return rox_info_win_new(program, purpose, version, author, website);
+  GtkWidget *iw;
+
+  persistant=TRUE;
+  iw=rox_info_win_new(program, purpose, version, author, website);
+  persistant=FALSE;
+  g_signal_connect(G_OBJECT(iw), "delete_event", 
+		     G_CALLBACK(trap_client_destroy), 
+		     "WM destroy");
+  
+  return iw;
 }
 
 GtkWidget* info_win_new_from_appinfo(const gchar *program)
 {
-  return rox_info_win_new_from_appinfo(program);
+  GtkWidget *iw;
+
+  persistant=TRUE;
+  iw=rox_info_win_new_from_appinfo(program);
+  persistant=FALSE;
+  g_signal_connect(G_OBJECT(iw), "delete_event", 
+		     G_CALLBACK(trap_client_destroy), 
+		     "WM destroy");
+
+  return iw;
 }
 
 void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
@@ -575,6 +617,9 @@ void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.10  2004/05/22 15:54:02  stephen
+ * InfoWin is now ROXInfoWin
+ *
  * Revision 1.9  2004/03/10 22:39:30  stephen
  * Get icon using rox_get_program_icon
  *

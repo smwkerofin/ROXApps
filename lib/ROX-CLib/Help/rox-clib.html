@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.9 2004/05/22 15:54:13 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.10 2004/05/22 17:03:57 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -88,6 +88,7 @@ to your link line, e.g.
       <li><a href="#basedir.h">basedir.h</a></li>
       <li><a href="#mime.h">mime.h</a></li>
       <li><a href="#appinfo.h">appinfo.h</a></li>
+      <li><a href="#mime_handler.h">mime_handler.h</a></li>
     </ul>
 
     <h4><a name="rox.h">rox.h</a></h4>
@@ -357,11 +358,17 @@ a saved file would go without actually altering the filesystem).
 	      const gchar *<var>website</var>)</code>
 
 	    <dd><p><strong>Deprecated.</strong>  Use 
-<code>rox_info_win_new_from_appinfo()</code> instead.</p>
+<code>rox_info_win_new_from_appinfo()</code> instead.  This is the
+							    same
+as that, except that the new window is persistant: when closed it
+is hidden, not destroyed.</p>
 
 	  <dt><code>GtkWidget* info_win_new_from_appinfo(const gchar *<var>program</var>)</code>
 	    <dd><p><strong>Deprecated.</strong>  Use 
-<code>rox_info_win_new_from_appinfo()</code> instead.</p>
+<code>rox_info_win_new_from_appinfo()</code> instead. This is the
+							    same
+as that, except that the new window is persistant: when closed it
+is hidden, not destroyed</p>
 
 
 	  <dt><code>void info_win_add_browser_command(ROXInfoWin *<var>iw</var>, 
@@ -1446,11 +1453,25 @@ VideoThumbnail for an example.</p></dd>
 
 </dl>
 
+<h4><a name="mime_handler.h">mime_handler.h</a></h4>
+    <p>Install handlers for MIME types.</p>
+
+<dl>
+      <dt><code>void rox_mime_install_from_appinfo(void)</code></dt>
+
+      <dd><p>This offers the user a chance to install the current application
+as the handler for those types given in the application's
+AppInfo.xml file.  Types given in the &lt;CanRun&gt; element are
+offered as run actions and SendTo, those in the  &lt;CanThumbnail&gt;
+element are offered as the thumbnail handler.</p></dd>
+</dd>
+</dl>
+
     <hr>
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Sat May 22 18:03:41 BST 2004
+Last modified: Mon May 31 11:45:39 BST 2004
 <!-- hhmts end -->
   </body>
 </html>
