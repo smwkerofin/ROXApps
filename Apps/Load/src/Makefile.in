@@ -31,6 +31,9 @@ ${PLATFORM_DIR}:
 clean:
 	rm -f *.o Makefile.bak
 
+zero-install: clean
+	strip "${EXEC}"
+
 depend:
 	makedepend -- $(CFLAGS) -- $(SRCS)
 
