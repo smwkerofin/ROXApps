@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id$
+ * $Id: rox_dnd.h,v 1.1 2001/07/17 14:44:50 stephen Exp $
  */
 
 #ifndef _rox_dnd_h
@@ -17,6 +17,7 @@ typedef gboolean (*rox_dnd_handle_uris)(GtkWidget *widget,
 					gpointer udata);
 
 typedef gboolean (*rox_dnd_handle_xds) (GtkWidget *widget,
+					const gchar *path,
 					gpointer data,
 					gpointer udata);
 
@@ -30,6 +31,8 @@ extern void rox_dnd_register_full(GtkWidget *widget,
 
 #define rox_dnd_register_uris(w, f, u, d) \
               rox_dnd_register_full(w, f, u, NULL, d)
+#define rox_dnd_register_xds(w, f, x, d) \
+              rox_dnd_register_full(w, f, NULL, x, d)
 				  
 /*
  * Scans list of URIs and picks out only those that refer to local files.
@@ -40,5 +43,8 @@ extern GSList *rox_dnd_filter_local(GSList *uris);
 #endif
 
 /*
- * $Log$
+ * $Log: rox_dnd.h,v $
+ * Revision 1.1  2001/07/17 14:44:50  stephen
+ * Added DnD stuff (plus path utils and debug util)
+ *
  */
