@@ -15,6 +15,13 @@ window.  From this you have four options:
 
  * Quit         - Quits the program.
 
+You can get the same menu from the applet, or the default panel menu
+(which will allow you to remove the applet) by changing a compile time
+option.  Load Clock/src/clock.c and find the line beginning 
+#define APPLET_MENU
+Set this to 0 to have the normal panel menu, or a non-zero value to
+have the clock menu.
+
 The user-defined format for the text below the clock face is in
 strfime(3) format.  Consult the man page for that function to find out
 how to set up various formats.

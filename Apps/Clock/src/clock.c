@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.5 2001/05/09 10:04:54 stephen Exp $
+ * $Id: clock.c,v 1.6 2001/05/10 14:54:28 stephen Exp $
  */
 #include "config.h"
 
@@ -37,6 +37,7 @@
 
 #define DEBUG              0
 #define SUPPORT_OLD_CONFIG 1
+#define APPLET_MENU        1
 
 typedef struct time_format {
   const char *name;   /* User visible name for this format */
@@ -111,18 +112,20 @@ static GdkColor colours[]={
   {0, 0xffff,0,0},
   {0, 0, 0x8000, 0},
   {0, 0,0,0xffff},
+  {0, 0xf4f4, 0x8d8d, 0x0e0e},
   {0, 0x8888, 0x8888, 0x8888}, /* This gets replaced with the gtk background*/
   {0, 0, 0, 0}
 };
-enum {WHITE, RED, GREEN, BLUE, GREY, BLACK};
+enum {WHITE, RED, GREEN, BLUE, ORANGE, GREY, BLACK};
 #define NUM_COLOUR (BLACK+1)
-#define CL_FACE_BG     (colours+WHITE)
-#define CL_FACE_FG     (colours+BLUE)
-#define CL_HOUR_TEXT   (colours+BLACK)
-#define CL_HOUR_HAND   (colours+BLACK)
-#define CL_MINUTE_HAND (colours+BLACK)
-#define CL_SECOND_HAND (colours+RED)
-#define CL_BACKGROUND  (colours+GREY)
+#define CL_FACE_BG      (colours+WHITE)
+#define CL_FACE_FG      (colours+BLUE)
+#define CL_FACE_FG_ALRM (colours+ORANGE)
+#define CL_HOUR_TEXT    (colours+BLACK)
+#define CL_HOUR_HAND    (colours+BLACK)
+#define CL_MINUTE_HAND  (colours+BLACK)
+#define CL_SECOND_HAND  (colours+RED)
+#define CL_BACKGROUND   (colours+GREY)
 
 static GtkWidget *confwin=NULL;     /* Window for configuring */
 static GtkWidget *mode_sel=NULL;    /* Selects a display format */
@@ -242,7 +245,14 @@ int main(int argc, char *argv[])
 		       "WM destroy");
     gtk_widget_set_usize(plug, 64, 64);
 
+#if APPLET_MENU
+    /* We want to pop up a menu on a button press */
+    gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
+		       GTK_SIGNAL_FUNC(button_press), plug);
+    gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
+#else
     save_alarms=FALSE;
+#endif
 
     /* Isn't object oriented code wonderful.  Now that we have done the
        plug specific code, its just a containing widget.  For the rest of the
@@ -359,6 +369,7 @@ static void do_update(void)
   int x0, y0, x1, y1;
   int tick, twidth, th;
   GdkFont *font;
+  GdkColor *face_fg=CL_FACE_FG;
 
   /* Has the config changed? If we are an applet the only way to change our
      mode is to run as a full app and save the changed config, which we spot
@@ -380,6 +391,9 @@ static void do_update(void)
   
   h=canvas->allocation.height;
   w=canvas->allocation.width;
+
+  if(alarm_have_active())
+    face_fg=CL_FACE_FG_ALRM;
 
   /* Blank out to the background colour */
   gdk_gc_set_foreground(gc, CL_BACKGROUND);
@@ -410,7 +424,7 @@ static void do_update(void)
   y0=h/2;
 
   /* Draw the clock face, including the hours */
-  gdk_gc_set_foreground(gc, CL_FACE_FG);
+  gdk_gc_set_foreground(gc, face_fg);
   gdk_draw_arc(pixmap, gc, TRUE, x0-rad, y0-rad, sw, sh, 0, 360*64);
   sw-=4;
   sh-=4;
@@ -990,6 +1004,8 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win)
 {
   if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
+    if(bev->state & GDK_CONTROL_MASK) /* ctrl-menu */
+      return FALSE; /* Let it pass */
     /* Pop up the menu */
     if(!menu) 
       menu_create_menu(GTK_WIDGET(win));
@@ -1250,6 +1266,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.6  2001/05/10 14:54:28  stephen
+ * Added new alarm feature
+ *
  * Revision 1.5  2001/05/09 10:04:54  stephen
  * New AppInfo data.
  * Turn off debug output.

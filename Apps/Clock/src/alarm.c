@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id$
+ * $Id: alarm.c,v 1.1 2001/05/10 14:54:27 stephen Exp $
  */
 #include "config.h"
 
@@ -21,7 +21,16 @@
 
 typedef enum repeat_mode {
   REPEAT_NONE,
+  REPEAT_HOURLY, REPEAT_DAILY,
+  REPEAT_WEEKDAYS, /* Mon-Fri */
+  REPEAT_WEEKLY, REPEAT_MONTHLY, REPEAT_YEARLY,
 } RepeatMode;
+
+static const char *repeat_text[]={
+  N_("None"), N_("Hourly"), N_("Daily"), N_("Weekdays only"), N_("Weekly"),
+  N_("Monthly"), N_("Yearly"),
+  NULL
+};
 
 typedef struct alarm {
   time_t when;
@@ -32,6 +41,11 @@ typedef struct alarm {
 static GList *alarms=NULL;
 
 static time_t alarms_saved=(time_t) 0;
+
+int alarm_have_active(void)
+{
+  return alarms!=NULL;
+}
 
 static Alarm *alarm_new(time_t w, RepeatMode r, const char *m)
 {
@@ -107,6 +121,64 @@ void alarm_load(void)
 
     g_free(fname);
   }
+}
+
+static time_t next_alarm_time(time_t when, RepeatMode mode)
+{
+  time_t next;
+  struct tm *tms;
+
+  if(mode==REPEAT_NONE)
+    return (time_t) 0;
+
+  tms=localtime(&when);
+
+  switch(mode) {
+  case REPEAT_HOURLY:
+    tms->tm_hour++;
+    break;
+
+  case REPEAT_DAILY:
+    tms->tm_mday++;
+    break;
+
+  case REPEAT_WEEKDAYS:
+    switch(tms->tm_wday) {
+    case 0: case 1: case 2: case 3: case 4:
+      tms->tm_mday++;
+      break;
+    case 5:
+      tms->tm_mday+=3;
+      break;
+    case 6:
+      tms->tm_mday+=2;
+      break;
+    }
+    break;
+
+  case REPEAT_WEEKLY:
+    tms->tm_mday+=7;
+    break;
+
+  case REPEAT_MONTHLY:
+    tms->tm_mon++;
+    if(tms->tm_mon==12) {
+      tms->tm_mon=0;
+      tms->tm_year++;
+    }
+    break;
+
+  case REPEAT_YEARLY:
+    tms->tm_year++;
+    break;
+
+  default:
+    return (time_t) -1;
+  }
+
+  next=mktime(tms);
+
+  return next;
 }
 
 static gint find_alarm(gconstpointer el, gconstpointer udat)
@@ -260,9 +332,19 @@ void alarm_check(void)
     Alarm *alarm=(Alarm *) rover->data;
 
     if(now>alarm->when) {
+      time_t next;
+      
       show_message(alarm);
 
       alarms=g_list_remove_link(alarms, rover);
+      do {
+	next=next_alarm_time(alarm->when, alarm->repeat);
+	if(next<=0)
+	  break;
+      } while(next<now);
+      if(next>0)
+	alarms=g_list_append(alarms, alarm_new(next, alarm->repeat,
+					       alarm->message));
       alarm_delete(alarm);
       rover=alarms;
       continue;
@@ -288,11 +370,16 @@ static GtkWidget *minute;
 /* Seconds == 0 */
 static GtkWidget *message;
 static GtkWidget *list;
+static GtkWidget *repmode;
+static GtkWidget *delalarm;
 
 static void set_alarm(GtkWidget *wid, gpointer data)
 {
   GtkWidget *win=GTK_WIDGET(data);
   struct tm tms;
+  RepeatMode repeat;
+  GtkWidget *menu;
+  GtkWidget *item;
 
   tms.tm_sec=0;
   tms.tm_min=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(minute));
@@ -302,11 +389,30 @@ static void set_alarm(GtkWidget *wid, gpointer data)
   tms.tm_year=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(year))-1900;
   tms.tm_isdst=-1;
 
+  menu=gtk_option_menu_get_menu(GTK_OPTION_MENU(repmode));
+  item=gtk_menu_get_active(GTK_MENU(menu));
+  repeat=(RepeatMode) gtk_object_get_data(GTK_OBJECT(item), "mode");
+
   alarms=g_list_append(alarms,
-		       alarm_new(mktime(&tms), REPEAT_NONE, 
+		       alarm_new(mktime(&tms), repeat, 
 				 gtk_entry_get_text(GTK_ENTRY(message))));
 
   gtk_widget_hide(win);
+
+  alarm_save();
+}
+
+static void delete_alarm(GtkWidget *wid, gpointer data)
+{
+  int row;
+  Alarm *alarm;
+  
+  row=GPOINTER_TO_INT(gtk_object_get_data(GTK_OBJECT(delalarm), "row"));
+  alarm=(Alarm *) gtk_clist_get_row_data(GTK_CLIST(list), row);
+
+  gtk_clist_remove(GTK_CLIST(list), row);
+  alarms=g_list_remove(alarms, alarm);
+  alarm_delete(alarm);
 
   alarm_save();
 }
@@ -328,23 +434,22 @@ static void set_the_time(time_t *when)
 static void alarm_sel(GtkWidget *clist, gint row, gint column,
 		    GdkEvent *event, gpointer data)
 {
-  GList *entry;
   Alarm *alarm;
 
-  entry=g_list_nth(alarms, row);
-  if(!entry)
-    return;
-  alarm=(Alarm *) entry->data;
+  alarm=(Alarm *) gtk_clist_get_row_data(GTK_CLIST(clist), row);
 
   gtk_entry_set_text(GTK_ENTRY(message), alarm->message);
-  
   set_the_time(&alarm->when);
+  gtk_option_menu_set_history(GTK_OPTION_MENU(repmode), alarm->repeat);
+  
+  gtk_widget_set_sensitive(delalarm, TRUE);
+  gtk_object_set_data(GTK_OBJECT(delalarm), "row", GINT_TO_POINTER(row));
 }
 
 static void alarm_unsel(GtkWidget *clist, gint row, gint column,
 		    GdkEvent *event, gpointer data)
 {
-  /* Do nothing */
+  gtk_widget_set_sensitive(delalarm, FALSE);
 }
 
 static GtkWidget *make_alarm_window(void)
@@ -355,9 +460,14 @@ static GtkWidget *make_alarm_window(void)
   GtkWidget *vbox;
   GtkWidget *hbox;
   GtkWidget *scrw;
+  GtkWidget *menu;
+  GtkWidget *item;
   GtkObject *adj;
+  GtkRequisition req;
+  int mw=0, mh=0;
+  int i;
 
-  static gchar *titles[2]={"Time", "Message"};
+  static gchar *titles[3]={"Time", "Repeat", "Message"};
   
   win=gtk_dialog_new();
   gtk_signal_connect(GTK_OBJECT(win), "delete_event", 
@@ -375,9 +485,10 @@ static GtkWidget *make_alarm_window(void)
   gtk_widget_set_usize(scrw, 320, 100);
   gtk_box_pack_start(GTK_BOX(vbox), scrw, TRUE, TRUE, 2);
 
-  list=gtk_clist_new_with_titles(2, titles);
+  list=gtk_clist_new_with_titles(3, titles);
   gtk_clist_set_selection_mode(GTK_CLIST(list), GTK_SELECTION_SINGLE);
   gtk_clist_set_column_width(GTK_CLIST(list), 0, 100);
+  gtk_clist_set_column_width(GTK_CLIST(list), 1, 64);
   gtk_signal_connect(GTK_OBJECT(list), "select_row",
 		       GTK_SIGNAL_FUNC(alarm_sel),
 		       GINT_TO_POINTER(TRUE));
@@ -413,8 +524,8 @@ static GtkWidget *make_alarm_window(void)
   gtk_widget_show(label);
   gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
     
-  adj=gtk_adjustment_new(2001, 2001, 2035, 1, 10, 0);
-  year=gtk_spin_button_new(GTK_ADJUSTMENT(adj), 1, 4);
+  adj=gtk_adjustment_new(2001, 2001, 2037, 1, 10, 0);
+  year=gtk_spin_button_new(GTK_ADJUSTMENT(adj), 1, 0);
   gtk_widget_show(year);
   gtk_box_pack_start(GTK_BOX(hbox), year, TRUE, TRUE, 2);
     
@@ -452,6 +563,35 @@ static GtkWidget *make_alarm_window(void)
   gtk_widget_show(message);
   gtk_box_pack_start(GTK_BOX(hbox), message, TRUE, TRUE, 2);    
 
+  hbox=gtk_hbox_new(FALSE, 0);
+  gtk_widget_show(hbox);
+  gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+
+  label=gtk_label_new(_("Repeat alarm"));
+  gtk_widget_show(label);
+  gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+
+  repmode=gtk_option_menu_new();
+  gtk_widget_show(repmode);
+  gtk_box_pack_start(GTK_BOX(hbox), repmode, FALSE, FALSE, 2);
+
+  menu=gtk_menu_new();
+  gtk_option_menu_set_menu(GTK_OPTION_MENU(repmode), menu);
+
+  for(i=0; repeat_text[i]; i++) {
+    item=gtk_menu_item_new_with_label(_(repeat_text[i]));
+    gtk_object_set_data(GTK_OBJECT(item), "mode", GINT_TO_POINTER(i));
+    gtk_widget_show(item);
+    gtk_widget_size_request(item, &req);
+    if(mw<req.width)
+      mw=req.width;
+    if(mh<req.height)
+      mh=req.height;
+    gtk_menu_append(GTK_MENU(menu), item);
+  }
+  gtk_widget_set_usize(repmode, mw+50, mh+4);
+  gtk_option_menu_set_history(GTK_OPTION_MENU(repmode), REPEAT_NONE);
+    
   hbox=GTK_DIALOG(win)->action_area;
 
   but=gtk_button_new_with_label(_("Set alarm"));
@@ -459,6 +599,13 @@ static GtkWidget *make_alarm_window(void)
   gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
   gtk_signal_connect(GTK_OBJECT(but), "clicked",
 		     GTK_SIGNAL_FUNC(set_alarm), win);
+
+  but=gtk_button_new_with_label(_("Delete alarm"));
+  gtk_widget_show(but);
+  gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+  gtk_signal_connect(GTK_OBJECT(but), "clicked",
+		     GTK_SIGNAL_FUNC(delete_alarm), win);
+  delalarm=but;
 
   but=gtk_button_new_with_label(_("Dismiss"));
   gtk_widget_show(but);
@@ -477,6 +624,7 @@ static void update_alarm_window(GtkWidget *win)
   time(&now);
   set_the_time(&now);
   gtk_entry_set_text(GTK_ENTRY(message), "");
+  gtk_option_menu_set_history(GTK_OPTION_MENU(repmode), REPEAT_NONE);
 
   g_return_if_fail(GTK_IS_CLIST(list));
   gtk_clist_freeze(GTK_CLIST(list));
@@ -485,16 +633,21 @@ static void update_alarm_window(GtkWidget *win)
     Alarm *alarm=(Alarm *) rover->data;
     struct tm *tms;
     char buf[80];
-    gchar *text[2];
+    gchar *text[3];
+    gint row;
 
     tms=localtime(&alarm->when);
     strftime(buf, 80, "%R %x", tms);
 
     text[0]=buf;
-    text[1]=alarm->message;
-    gtk_clist_append(GTK_CLIST(list), text);
+    text[1]=(gchar *) repeat_text[alarm->repeat];
+    text[2]=alarm->message;
+    row=gtk_clist_append(GTK_CLIST(list), text);
+    gtk_clist_set_row_data(GTK_CLIST(list), row, alarm);
   }
   gtk_clist_thaw(GTK_CLIST(list));
+
+  gtk_widget_set_sensitive(delalarm, FALSE);
 }
 
 void alarm_show_window(void)
@@ -511,6 +664,9 @@ void alarm_show_window(void)
 
 
 /*
- * $Log$
+ * $Log: alarm.c,v $
+ * Revision 1.1  2001/05/10 14:54:27  stephen
+ * Added new alarm feature
+ *
  */
 

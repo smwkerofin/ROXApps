@@ -1,6 +1,11 @@
 Changes to Clock
 ================
 
+0.1.9
+-----
+Added repeating alarms.
+Can have the menu on the applet version.
+
 0.1.8
 -----
 Rudimentary alarm facility.
