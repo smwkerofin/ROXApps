@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.15 2005/01/18 23:46:19 stephen Exp $
+# $Id: gui.py,v 1.16 2005/01/23 11:21:29 stephen Exp $
 
 import os
 import sys
@@ -90,6 +90,8 @@ def options_changed():
         iface=interface.value
         if ifdisp:
             ifdisp.set_text(iface)
+        if win:
+            win.set_title(iface)
     if connect.has_changed:
         select_cmd=connect.value
     if disconnect.has_changed:
@@ -111,6 +113,7 @@ rox.app_options.notify()
 
 if xid is None:
     win=rox.Window()
+    win.set_title(iface)
 else:
     win=rox.applet.Applet(xid)
 
@@ -465,9 +468,11 @@ def resize(widget, event, udata=None):
     global slayout
     
     (x, y, width, height)=widget.get_allocation()
-    size=(width+height)/2/6-2
+    size=(width+height)/2/8-2
     if size<6:
         size=6
+    elif size>15:
+        size=15
     #print width, height, size
     pfd=pango.FontDescription('Sans %d' % size)
     slayout.set_font_description(pfd)
