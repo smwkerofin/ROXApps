@@ -2,3 +2,186 @@ ROX-CLib
 ========
 
 A library for ROX applications written in C.
+
+Installation
+------------
+
+Copy to a suitable place, such as ~/lib, and make sure it is on 
+your $LIBDIRPATH.
+
+Compile using ROX-CLib/AppRun --compile
+
+It will ask if it can copy rox_run into a writable directory on your path.  
+This script is used when compiling or linking against the directory (see 
+below).
+
+Compiling and linking against the library
+-----------------------------------------
+
+Add the output of
+   rox_run ROX-CLib --cflags
+to your compile line, e.g.
+   gcc `rox_run ROX-CLib --cflags` -c main.c 
+
+Add the output of
+   rox_run ROX-CLib --cflags
+   rox_run ROX-CLib --libs
+to your link line, e.g.
+   gcc `rox_run ROX-CLib --cflags` -o main main.o `rox_run ROX-CLib --libs`
+
+
+Brief listing of functions
+--------------------------
+
+Organized by header file.
+
+choices.h
+---------
+
+Interface to the choices system and $CHOICESPATH.
+
+void choices_init(void)
+
+Must be called before the other choices_* calls.
+
+GPtrArray *choices_list_dirs(char *dir)
+
+Returns an array of the directories in CHOICESPATH which contain
+a subdirectory called 'dir'.  The result should be freed by passing it
+to choices_free_list
+
+void choices_free_list(GPtrArray *list)
+
+Frees the list returned by choices_list_dirs()
+
+gchar *choices_find_path_load(char *leaf, char *dir)
+
+Get the pathname of a choices file to load. Eg:
+
+ choices_find_path_load("menus", "ROX-Filer")
+		 		-> "/usr/local/share/Choices/ROX-Filer/menus".
+
+The return values may be NULL - use built-in defaults - otherwise
+g_free() the result.
+
+gchar *choices_find_path_save(char *leaf, char *dir, gboolean create)
+
+Returns the pathname of a file to save to, or NULL if saving is
+disabled. If 'create' is TRUE then intermediate directories will
+be created (set this to FALSE if you just want to find out where
+a saved file would go without actually altering the filesystem).
+
+g_free() the result.
+
+error.h
+-------
+
+Reporting errors.
+
+void rox_error(const char *fmt, ...)
+
+Generates a string according to a printf style formatting string and supplied
+args, then displays the string in a dialog window with the title "Error!" and
+an OK button.
+
+gtksavebox.h
+------------
+
+Simple RISC OS style save box.
+
+GtkSaveBox is a GTK+ widget, derived from GtkWindow.
+
+infowin.h
+---------
+
+RISC OS style information window.
+
+InfoWin is a GTK+ widget, derived from GtkDialog.
+
+rox_debug.h
+-----------
+
+Utilities for generating debug output.  Unless the pre-processor symbol 
+DEBUG is defined and non-zero before rox_debug.h is included then nothing 
+is delclared.
+
+void rox_debug_init(const char *progname)
+
+Initialises the debug system.  progname is the name of the program which will 
+prefix the output.  Should be called at start, if not (or progname==NULL) 
+then progname is assumed to be "ROX".
+
+void rox_debug_printf(int level, const char *format, ...)
+
+Sends a debug message, using glib's g_logv.  level is the level of severity
+and should be in the range 0-5, with 0 most severe.  The user controls the
+amount of output by setting the environment PROGNAME_DEBUG_LEVEL to the
+maximum severity to display.
+
+#define dprintf rox_debug_printf
+
+Aliases dprintf as rox_debug_printf
+
+rox_dnd.h
+---------
+
+Utilities to simplify the handling of drag and drop for the client.
+
+typedef gboolean (*rox_dnd_handle_uris)(GtkWidget *widget,
+					GSList *uris,
+					gpointer data,
+					gpointer udata)
+
+Type of function called when a widget registered with rox_dnd has a list
+of URIs dropped on it. It should return TRUE if handled successfully, 
+FALSE otherwise.
+
+void rox_dnd_init(void)
+
+Called to initialise rox_dnd, before any other call.
+
+void rox_dnd_register_full(GtkWidget *widget,
+				  guint flags,
+				  rox_dnd_handle_uris uris,
+				  rox_dnd_handle_xds xds,
+				  gpointer udata)
+
+Registers a widget with rox_dnd to handle any drops on it.  There are no
+flags defined yet, so flags must be set to zero.  uris handles URI list drops,
+xds handles the XDirectSave protocol (not yet implemented!).  udata
+is passed to the handler routine.
+
+void rox_dnd_register_uris(GtkWidget *widget,
+				  guint flags,
+				  rox_dnd_handle_uris uris,
+				  gpointer udata)
+
+Registers a widget with rox_dnd to handle any URI list drops on it.
+There are no flags defined yet, so flags must be set to zero.  uris
+handles URI list drops.  udata is passed to the handler routine.
+
+GSList *rox_dnd_filter_local(GSList *uris)
+
+Scans list of URIs and picks out only those that refer to local files.
+Free result with g_slist_free() after freeing data with g_free().
+
+rox_path.h
+----------
+
+Utilities for handling the URIs used in the drag & drop protocol.  All 
+returned strings should be passed to g_free() when done.
+
+gchar *rox_path_get_local(const gchar *uri)
+
+Returns the local path of the URI if it refers to a local file: path, otherwise
+it returns NULL.
+
+gchar *rox_path_get_server(const gchar *uri);
+
+Returns the host part of the URI if it is a file: URI, otherwise
+it returns NULL.
+
+gchar *rox_path_get_path(const gchar *uri)
+
+Returns the path part of a file: URI regardless of whether it is the local
+host or not.
