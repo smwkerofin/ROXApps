@@ -1,6 +1,10 @@
 Changes to ROX-CLib by Version
 ==============================
 
+0.1.11
+------
+Fixed typo in rox_filer_pinboard().
+
 0.1.10
 ------
 Better way of accessing web site (by running a URI file).  Improvement to

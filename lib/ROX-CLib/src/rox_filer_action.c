@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.3 2002/01/07 15:39:01 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.4 2002/02/13 11:00:38 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -195,7 +195,7 @@ void rox_filer_panel(const char *name, ROXPanelSide side)
 
 void rox_filer_pinboard(const char *name)
 {
-  simple_call("Pinboard", "Nmae", name);
+  simple_call("Pinboard", "Name", name);
 }
      
 void rox_filer_run(const char *filename)
@@ -454,6 +454,12 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.4  2002/02/13 11:00:38  stephen
+ * Better way of accessing web site (by running a URI file).  Improvement to
+ * language checking in rox_resources.c.  Visit by the const fairy in choices.h.
+ * Updated pkg program to check for libxml2.  Added rox.c to access ROX-CLib's
+ * version number.
+ *
  * Revision 1.3  2002/01/07 15:39:01  stephen
  * Updated SOAP namespaces, added rox_filer_version() and improved
  * send_soap() to allow some methods to specify the expected reply.
