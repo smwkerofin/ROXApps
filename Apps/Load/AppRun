@@ -12,7 +12,7 @@ esac
 
 PLATFORM=`uname -s`-$ARCH
 
-if [ ! -e $APP_DIR/AppletRun ]; then
+if [ ! -x $APP_DIR/AppletRun ]; then
   (cd $APP_DIR ; ln -s AppRun AppletRun)
 fi
 
