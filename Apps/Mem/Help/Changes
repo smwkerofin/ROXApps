@@ -1,6 +1,10 @@
 Mem
 ===
 
+23-Jan-2005
+~~~~~~~~~~~
+Update choice_install for XDG basedirs choices.
+
 10-Jan-2004
 ~~~~~~~~~~~
 Had missed one call to the old choices interface.  Made domain consistant
