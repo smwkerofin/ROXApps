@@ -1,6 +1,10 @@
 Versions of Mail
 ================
 
+0.3.6
+-----
+Fix bug which stopped "Select mailer" working.
+
 0.3.5
 -----
 Fix bug which prevented running the reader.

@@ -197,7 +197,7 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
         self.loc.set_text(path)
         self.update_win()
         
-    def set_callback(self, fn, args):
+    def set_callback(self, fn, args=None):
         self.inform=fn
         self.inform_args=args
 
