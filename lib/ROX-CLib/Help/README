@@ -524,3 +524,124 @@ call when a correctly formatted SOAP message is received.
 void rox_soap_server_delete(ROXSOAPServer *server);
 
 Shutdown the server and release its memory.
+
+options.h
+---------
+
+typedef struct _Option Option;
+
+Object used to store an option.  The following members are used to access the
+values:
+  gchar *value		Value of the option, as a string
+  long int_value	Value of the option, as a number
+  gboolean has_changed  Non-zero if the option has changed (valid in the 
+			OptionNotify callback).
+  gchar	*backup;	Copy of value to Revert to 
+
+The other members are used when implementing new widget types.
+  GtkWidget *widget;	Widget that stores the value
+  void (*update_widget)(Option *option); Call to set value
+  gchar *(*read_widget)(Option *option); Call to read value
+
+typedef void OptionNotify(void);
+
+Type of function called when options changed (see option_add_notify() below).
+
+typedef GList * (*OptionBuildFn)(Option *option, xmlNode *node, gchar *label);
+
+Type of function used to build widgets (see option_register_widget()
+below) for the options window.  option is the option for which the
+widget is used.  node is the XML node from the Options.xml file
+describing the widget.  label is the label property from the element,
+to be used as a label.  Returns a list of widgets to be added to the
+window.
+
+void options_init(const char *project);
+
+Called to initialize options system.  Must be called after choices_init(), but 
+before any other function in the options system.  project is the name of the 
+project and is passed to choices functions.
+
+void option_register_widget(char *name, OptionBuildFn builder);
+
+Registers a new widget type.  name is the name of the XML element in the 
+Options.xml file.  builder is the function used to build the widget.  
+Pre-defined widget types are:
+	label
+	spacer
+	frame
+	toggle
+	slider
+	entry
+	numentry
+	radio-group
+	colour
+	menu
+	font
+
+void option_check_widget(Option *option);
+
+This is called when the widget's value is modified by the user.
+Reads the new value of the widget into the option and calls
+the notify callbacks.
+
+void option_add_int(Option *option, const gchar *key, int value);
+
+Adds a new option to hold integer values.
+
+void option_add_string(Option *option, const gchar *key, const gchar *value);
+
+Adds a new option to hold string values, including fonts and colours.
+
+void options_notify(void);
+
+Inform watching functions that options have changed.
+
+void option_add_notify(OptionNotify *callback);
+
+Add a callback to be called when options have changed.
+
+GtkWidget *options_show(void);
+
+Show options window.  Returns the window widget (you don't
+normally need this), NULL if already open.
+
+This causes the Options.xml file to be parsed.  This is an XML file containing
+an 'options' element.  This in turn contains 1 or more 'section' element,
+each with a 'title' property and containing one or more widgets to be built.
+The 'section' elements can be nested.
+
+Widgets available by default (see option_register_widget() for more) are:
+  label help=int
+	A label
+  hbox [label=str]
+  vbox [label=str]
+  spacer
+  frame label=str
+	Container for other objects
+  section title=str
+	Groups options, can be nested.
+
+  toggle name=str label=str
+	Simple on/off switch
+  slider name=str label=str min=int max=int fixed=bool showvalue=bool [end=str]
+	Range of ints.  fixed is fixed width.  If showvalue then current
+	value shown.  end is label after slider widget
+  entry name=str label=str
+	Text entry
+  numentry name=str label=str min=int max=int step=int width=int [unit=str]
+	Numeric entry.  width is number of digits.  unit is text to right
+	of widget (units indicator).
+  radio-group name=str label=str [columns=int]
+	List of exclusive options.  Must contain radio elements
+  radio label=str value=str
+	Option for a radio group
+  colour name=str label=str
+	Button for colour selector
+  menu name=str label=str
+	Option menu.  Must contain 'item' elements.
+  item label=str value=str
+	Option for an option menu
+  font name=str label=str override=int
+	Button for font selector.  If override, adds a checkbox to enable the
+	font.

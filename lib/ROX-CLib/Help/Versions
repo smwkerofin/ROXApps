@@ -3,7 +3,7 @@ Changes to ROX-CLib by Version
 
 1.1.0
 -----
-Converted to GTK+ 2.
+Converted to GTK+ 2.  Added options code from ROX-Filer.
 
 1.0.0
 -----

@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id$ -->
+    <!-- $Id: rox-clib.html,v 1.1 2002/12/07 13:08:13 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -765,13 +765,165 @@ order they were defined in <code>rox_soap_server_add_action()</code>
 <dd><p>Shutdown the server and release its memory.</p>
 </dl>
 
+<h4><a name="options.h">options.h</h4>
 
+<p>Options system for configuring your program, similar to ROX-Filer's
+      options.
+Based on the ROX-Filer code written by
+<a href="mailto:tal197@users.sourceforge.net">Thomas Leonard</a>
+
+<dl>
+      <dt><code>typedef struct _Option Option;</code>
+
+<dd><p>Object used to store an option.  The following members are used to access the
+values:
+<dl>
+	  <dt><code>gchar *value</code>		
+<dd><p>Value of the option, as a string</p>
+	  <dt><code>long int_value</code>	
+<dd><p>Value of the option, as a number</p>
+	  <dt><code>gboolean has_changed</code>  
+<dd><p>Non-zero if the option has changed (valid in the 
+			OptionNotify callback).</p>
+	  <dt><code>gchar	*backup;</code>	
+<dd><p>Copy of value to Revert to </p>
+</dl>
+
+<dl>
+<p>The other members are used when implementing new widget types.
+      <dt><code>GtkWidget *widget;</code>	
+<dd><p>Widget that stores the value</p>
+      <dt><code>void (*update_widget)(Option *option);</code> 
+<dd><p>Call to set value</p>
+      <dt><code>gchar *(*read_widget)(Option *option);</code> 
+<dd><p>Call to read value</p>
+</dl>
+</p>
+
+      <dt><code>typedef void OptionNotify(void);</code>
+
+<dd><p>Type of function called when options changed (see option_add_notify() below).
+</p>
+
+      <dt><code>typedef GList * (*OptionBuildFn)(Option *option, xmlNode *node, gchar *label);</code>
+
+<dd><p>Type of function used to build widgets (see option_register_widget()
+below) for the options window.  option is the option for which the
+widget is used.  node is the XML node from the Options.xml file
+describing the widget.  label is the label property from the element,
+to be used as a label.  Returns a list of widgets to be added to the
+window.
+</p>
+
+      <dt><code>void options_init(const char *project);</code>
+
+<dd><p>Called to initialize options system.  Must be called after choices_init(), but 
+before any other function in the options system.  project is the name of the 
+project and is passed to choices functions.
+</p>
+
+      <dt><code>void option_register_widget(char *name, OptionBuildFn builder);</code>
+
+<dd><p>Registers a new widget type.  name is the name of the XML element in the 
+Options.xml file.  builder is the function used to build the widget.  
+Pre-defined widget types include:
+<ul>
+	<li>label
+	<li>spacer
+	<li>frame
+	<li>toggle
+	<li>slider
+	<li>entry
+	<li>numentry
+	<li>radio-group
+	<li>colour
+	<li>menu
+	<li>font
+</ul>
+</p>
+
+      <dt><code>void option_check_widget(Option *option);</code>
+
+<dd><p>This is called when the widget's value is modified by the user.
+Reads the new value of the widget into the option and calls
+the notify callbacks.
+</p>
+
+      <dt><code>void option_add_int(Option *option, const gchar *key, int value);</code>
+
+<dd><p>Adds a new option to hold integer values.
+</p>
+
+      <dt><code>void option_add_string(Option *option, const gchar *key, const gchar *value);</code>
+
+<dd><p>Adds a new option to hold string values, including fonts and colours.
+</p>
+
+      <dt><code>void options_notify(void);</code>
+
+<dd><p>Inform watching functions that options have changed.
+</p>
+
+      <dt><code>void option_add_notify(OptionNotify *callback);</code>
+
+<dd><p>Add a callback to be called when options have changed.
+</p>
+
+      <dt><code>GtkWidget *options_show(void);</code>
+
+<dd><p>Show options window.  Returns the window widget (you don't
+normally need this), NULL if already open.
+
+This causes the $APP_DIR/Options.xml file to be parsed.  This is an XML file containing
+an 'options' element.  This in turn contains 1 or more 'section' element,
+each with a 'title' property and containing one or more widgets to be built.
+The 'section' elements can be nested.</p>
+
+<p>Widgets available by default (see option_register_widget() for
+	  more) are:
+<dl>
+  <dt><code>label help=int</code>
+	<dd><p>A label</p>
+  <dt><code>hbox [label=str]</code>
+  <dt><code>vbox [label=str]</code>
+  <dt><code>spacer</code>
+  <dt><code>frame label=str</code>
+	<dd><p>Container for other objects</p>
+  <dt><code>section title=str</code>
+	<dd><p>Groups options, can be nested.</p>
+
+  <dt><code>toggle name=str label=str</code>
+	<dd><p>Simple on/off switch</p>
+  <dt><code>slider name=str label=str min=int max=int fixed=bool showvalue=bool [end=str]</code>
+	  <dd><p>Range of ints.  <var>fixed</var> is fixed width.  If <var>showvalue</var> then current
+	      value shown.  <var>end</var> is label after slider widget</p>
+  <dt><code>entry name=str label=str</code>
+	<dd><p>Text entry</p>
+  <dt><code>numentry name=str label=str min=int max=int step=int width=int [unit=str]</code>
+	  <dd><p>Numeric entry.  <var>width</var> is number of digits.  <var>unit</var> is text to right
+	of widget (units indicator).</p>
+  <dt><code>radio-group name=str label=str [columns=int]</code>
+	<dd><p>List of exclusive options.  Must contain radio elements</p>
+  <dt><code>radio label=str value=str</code>
+	<dd><p>Option for a radio group</p>
+  <dt><code>colour name=str label=str</code>
+	<dd><p>Button for colour selector</p>
+  <dt><code>menu name=str label=str</code>
+	<dd><p>Option menu.  Must contain 'item' elements.</p>
+  <dt><code>item label=str value=str</code>
+	<dd><p>Option for an option menu</p>
+  <dt><code>font name=str label=str override=int</code>
+	  <dd><p>Button for font selector.  If <var>override</var>, adds a checkbox to enable the
+	font.</p>
+<dl>
+</p>
+</dl>
 
     <hr>
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Tue Nov 26 18:08:10 GMT 2002
+Last modified: Tue Apr 15 19:26:22 BST 2003
 <!-- hhmts end -->
   </body>
 </html>
