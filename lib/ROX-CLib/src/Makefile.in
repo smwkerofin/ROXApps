@@ -8,7 +8,7 @@ SHELL = @SHELL@
 srcdir = @srcdir@
 PLATFORM = @with_platform@
 PLATFORM_DIR = ../${PLATFORM}
-ABS_PLATFORM_DIR = ${shell pwd}/../${PLATFORM}
+ABS_PLATFORM_DIR = ${shell pwd}/${PLATFORM_DIR}
 SHARED = @SHLIB@
 top_builddir =  .
 LIBTOOL = @LIBTOOL@
@@ -149,7 +149,7 @@ config.h: config.h.in
 	./config.status
 
 config.status: configure
-	./configure --with-platform=${PLATFORM_DIR}
+	./configure --with-platform=${PLATFORM}
 
 configure: configure.in
 	autoconf
