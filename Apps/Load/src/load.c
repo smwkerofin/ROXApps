@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.6 2001/08/20 09:31:19 stephen Exp $
+ * $Id: load.c,v 1.7 2001/09/25 14:59:22 stephen Exp $
  *
  * Log at end of file
  */
@@ -51,14 +51,13 @@ static GdkColor colours[]={
   {0, 0, 0xcccc, 0},
   {0, 0, 0xaaaa, 0},
   {0, 0, 0x8888, 0},
-  {0, 0,0,0xffff},
-  {0, 0x8888, 0x8888, 0x8888},
+  {0, 0xd6d6, 0xd6d6, 0xd6d6},
   {0, 0, 0, 0}
 };
 enum {
   COL_WHITE,
   COL_HIGH0, COL_HIGH1, COL_HIGH2, COL_NORMAL0, COL_NORMAL1, COL_NORMAL2,
-  COL_BLUE, COL_BG, COL_FG
+  COL_BG, COL_FG
 };
 #define COL_HIGH(i) (COL_HIGH0+(i))
 #define COL_NORMAL(i) (COL_NORMAL0+(i))
@@ -78,6 +77,8 @@ static ColourInfo colour_info[]={
   {COL_HIGH0,   {0}, "High, 1 minute",     "HighColour1"},
   {COL_HIGH1,   {0}, "High, 5 minutes",    "HighColour5"},
   {COL_HIGH2,   {0}, "High, 15 minutes",   "HighColour15"},
+  {COL_FG,      {0}, "Foreground",         "ForegroundColour"},
+  {COL_BG,      {0}, "Background",         "BackgroundColour"},
   
   {-1, {0}, NULL}
 };
@@ -96,14 +97,22 @@ typedef struct options {
   gboolean show_vals;
   gboolean show_host;
   guint init_size;
+#if 0
+  /* These aren't used */
   GdkColor *bar_colour[3];
   GdkColor *high_colour[3];
+  GdkColor *fore_colour;
+  GdkColor *back_colour;
+#endif
 } Options;
 
 static Options options={
   2000, TRUE, FALSE, FALSE, MIN_WIDTH,
+#if 0
   {colours+COL_NORMAL0, colours+COL_NORMAL1, colours+COL_NORMAL2},
-  {colours+COL_HIGH0, colours+COL_HIGH1, colours+COL_HIGH2}
+  {colours+COL_HIGH0, colours+COL_HIGH1, colours+COL_HIGH2},
+  colours+COL_FG, colours+COL_BG
+#endif
 };
 
 typedef struct option_widgets {
@@ -197,6 +206,7 @@ int main(int argc, char *argv[])
     gtk_signal_connect(GTK_OBJECT(win), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), win);
     gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
+    gtk_window_set_wmclass(GTK_WINDOW(win), "Load", PROJECT);
     
     dprintf(3, "set size to %d,%d", w, h);
     gtk_widget_set_usize(win, w, h);
@@ -225,9 +235,11 @@ int main(int argc, char *argv[])
   gtk_container_add(GTK_CONTAINER(win), vbox);
   gtk_widget_show(vbox);
 
+  /*
   style=gtk_widget_get_style(vbox);
   colours[COL_BG]=style->bg[GTK_STATE_NORMAL];
-
+  */
+  
   for(i=0; i<NUM_COLOUR; i++) {
     gdk_color_alloc(cmap, colours+i);
     dprintf(3, "colour %d: %4x, %4x, %4x: %ld", i, colours[i].red,
@@ -951,6 +963,7 @@ static void show_config_win(void)
 		     confwin);
     gtk_window_set_title(GTK_WINDOW(confwin), "Configuration");
     gtk_window_set_position(GTK_WINDOW(confwin), GTK_WIN_POS_MOUSE);
+    gtk_window_set_wmclass(GTK_WINDOW(confwin), "Config", PROJECT);
     ow.window=confwin;
 
     vbox=GTK_DIALOG(confwin)->vbox;
@@ -1047,6 +1060,7 @@ static void show_config_win(void)
     gtk_signal_connect(GTK_OBJECT(GTK_COLOR_SELECTION_DIALOG(ow.colour_dialog)->cancel_button),
 		       "clicked", GTK_SIGNAL_FUNC(colour_dialog_cancel),
 		       &ow);
+    gtk_window_set_wmclass(GTK_WINDOW(ow.colour_dialog), "Colour", PROJECT);
 
     but=gtk_button_new_with_label("Change");
     gtk_widget_show(but);
@@ -1179,13 +1193,21 @@ static void show_info_win(void)
 {
   if(!infowin) {
     infowin=info_win_new(PROGRAM, PURPOSE, VERSION, AUTHOR, WEBSITE);
+    gtk_window_set_wmclass(GTK_WINDOW(infowin), "Info", PROJECT);
   }
 
+  gtk_window_set_position(GTK_WINDOW(infowin), GTK_WIN_POS_MOUSE);
   gtk_widget_show(infowin);
 }
 
 /*
  * $Log: load.c,v $
+ * Revision 1.7  2001/09/25 14:59:22  stephen
+ * Create menu early to enable accelerators.
+ * Time index the history so we can plot it right when the sample rate varies.
+ * Bars now have slightly different shades.  Colours can be changed.
+ * No longer check for changed config, not needed because of the applet menu.
+ *
  * Revision 1.6  2001/08/20 09:31:19  stephen
  * Switch to using ROX-CLib.  Option to display hostname.
  *
