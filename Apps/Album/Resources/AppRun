@@ -16,6 +16,10 @@ argv0=sys.argv[0]
 app_dir=os.path.dirname(argv0)
 
 audio_dir=os.path.join(app_dir, 'audio')
+if not os.path.isdir(audio_dir):
+    audio_dir=os.path.join(app_dir, 'mp3')
+if not os.path.isdir(audio_dir):
+    audio_dir=app_dir
 audio_files=os.listdir(audio_dir)
 audio_files.sort()
 
