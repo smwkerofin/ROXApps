@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.17 2002/03/04 11:41:08 stephen Exp $
+ * $Id: freefs.c,v 1.18 2002/04/12 10:21:42 stephen Exp $
  */
 #include "config.h"
 
@@ -117,6 +117,8 @@ static ROXSOAPServer *server=NULL;
 #define FREEFS_NAMESPACE_URL WEBSITE PROJECT
 #endif
 
+static GList *fs_exclude=NULL; /* File system types not to offer on menu */
+
 /* Call backs & stuff */
 static FreeWindow *make_window(guint32 socket, const char *dir);
 static gboolean update_fs_values(FreeWindow *);
@@ -168,12 +170,20 @@ static void do_version(void)
   printf("Distributed under the terms of the GNU General Public License.\n");
   printf("(See the file COPYING in the Help directory).\n");
   printf("%s last compiled %s\n", __FILE__, __DATE__);
-  printf("ROX-CLib version %s (built with %d.%d.%d)\n",
-	 rox_clib_version_string(),
+  printf("ROX-CLib version %s for GTK+ %s (built with %d.%d.%d)\n",
+	 rox_clib_version_string(), rox_clib_gtk_version_string(),
 	 ROX_CLIB_VERSION/10000, (ROX_CLIB_VERSION%10000)/100,
 	 ROX_CLIB_VERSION%100);
 
   printf("\nCompile time options:\n");
+  printf("  GTK+... ");
+#ifdef GTK2
+  printf("version 2");
+#else
+  printf("version 1.2.x");
+#endif
+  printf(" (%d.%d.%d)\n", gtk_major_version, gtk_minor_version,
+	 gtk_micro_version);
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
   printf("  Support drag & drop to applet... %s\n", APPLET_DND? "yes": "no");
   printf("  Using XML... ");
@@ -218,10 +228,11 @@ int main(int argc, char *argv[])
 #endif
 
   rox_debug_init(PROJECT);
+  choices_init();
 
   app_dir=g_getenv("APP_DIR");
 #ifdef HAVE_BINDTEXTDOMAIN
-  localedir=g_strconcat(app_dir, "/Messages", NULL);
+  localedir=rox_resources_find(PROGRAM, "Messages", ROX_RESOURCES_NO_LANG);
   bindtextdomain(PROGRAM, localedir);
   textdomain(PROGRAM);
   g_free(localedir);
@@ -366,9 +377,13 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
   GtkWidget *align;
   GtkAdjustment *adj;
   GtkWidget *pixmapwid;
-  GdkPixmap *pixmap;
-  GdkBitmap *mask;
+#ifdef GTK2
+  static GdkPixbuf *icon=NULL;
+#else
+  static GdkPixmap *pixmap=NULL;
+  static GdkBitmap *mask=NULL;
   GtkStyle *style;
+#endif
   static GtkTooltips *ttips=NULL;
   char tbuf[1024], *home;
   gchar *fname;
@@ -390,25 +405,55 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     fwin->win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_widget_set_name(fwin->win, "fs free");
     gtk_window_set_title(GTK_WINDOW(fwin->win), dir);
+#ifdef GTK2
+    g_signal_connect(fwin->win, "destroy", 
+		       G_CALLBACK(window_gone), 
+		       fwin);
+    g_signal_connect(fwin->win, "button_press_event",
+		       G_CALLBACK(button_press), fwin);
+#else
     gtk_signal_connect(GTK_OBJECT(fwin->win), "destroy", 
 		       GTK_SIGNAL_FUNC(window_gone), 
 		       fwin);
     gtk_signal_connect(GTK_OBJECT(fwin->win), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), fwin);
+#endif
     gtk_widget_realize(fwin->win);
     gtk_widget_add_events(fwin->win, GDK_BUTTON_PRESS_MASK);
     rox_dnd_register_uris(fwin->win, 0, handle_uris, fwin);
 
     /* Set the icon */
-    style = gtk_widget_get_style(fwin->win);
-    fname=rox_resources_find(PROJECT, "freefs.xpm", ROX_RESOURCES_NO_LANG);
-    if(fname) {
-      pixmap = gdk_pixmap_create_from_xpm(GTK_WIDGET(fwin->win)->window,  &mask,
-					  &style->bg[GTK_STATE_NORMAL],
-					  fname);
-      gdk_window_set_icon(GTK_WIDGET(fwin->win)->window, NULL, pixmap, mask);
-      g_free(fname);
+#ifdef GTK2
+    if(!icon) {
+      fname=rox_resources_find(PROJECT, "freefs.xpm", ROX_RESOURCES_NO_LANG);
+      if(fname) {
+	GError *err;
+
+	icon=gdk_pixbuf_new_from_file(fname, &err);
+	if(err) {
+	  dprintf(1, "Failed to load icon %s: %s", fname, err->message);
+	}
+	g_free(fname);
+      }
     }
+    if(icon)
+      gtk_window_set_icon(GTK_WINDOW(fwin->win), icon);
+#else
+    if(!pixmap) {
+      fname=rox_resources_find(PROJECT, "freefs.xpm", ROX_RESOURCES_NO_LANG);
+      if(fname) {      
+	style = gtk_widget_get_style(fwin->win);
+	pixmap = gdk_pixmap_create_from_xpm(GTK_WIDGET(fwin->win)->window,
+					    &mask,
+					    &style->bg[GTK_STATE_NORMAL],
+					    fname);
+	g_free(fname);
+      }
+    }
+    if(pixmap)
+      gdk_window_set_icon(GTK_WIDGET(fwin->win)->window, NULL, pixmap, mask);
+#endif
+    
     gtk_tooltips_set_tip(ttips, fwin->win,
 			 "FreeFS shows the space usage on a single "
 			 "file system",
@@ -467,11 +512,15 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
   
     fwin->fs_per=gtk_progress_bar_new();
     gtk_widget_set_name(fwin->fs_per, "gauge");
+#ifdef GTK2
+    gtk_widget_set_size_request(fwin->fs_per, 240, 24);
+#else
     gtk_progress_bar_set_bar_style(GTK_PROGRESS_BAR(fwin->fs_per),
 				   GTK_PROGRESS_CONTINUOUS);
     gtk_progress_set_format_string(GTK_PROGRESS(fwin->fs_per), "%p%%");
     gtk_progress_set_show_text(GTK_PROGRESS(fwin->fs_per), TRUE);
     gtk_widget_set_usize(fwin->fs_per, 240, 24);
+#endif
     gtk_widget_show(fwin->fs_per);
     gtk_box_pack_start(GTK_BOX(hbox), fwin->fs_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, fwin->fs_per,
@@ -499,15 +548,28 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
 
     dprintf(3, "xid=0x%x", xid);
     plug=gtk_plug_new(xid);
+#ifdef GTK2
+    g_signal_connect(plug, "destroy", 
+		       G_CALLBACK(window_gone), 
+		       fwin);
+    gtk_widget_set_size_request(plug, fwin->options.applet_init_size,
+			 fwin->options.applet_init_size);
+#else
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(window_gone), 
 		       fwin);
     gtk_widget_set_usize(plug, fwin->options.applet_init_size,
 			 fwin->options.applet_init_size);
+#endif
     dprintf(4, "set_usize %d\n", fwin->options.applet_init_size);
     
+#ifdef GTK2
+    g_signal_connect(plug, "button_press_event",
+		       G_CALLBACK(button_press), fwin);
+#else
     gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), fwin);
+#endif
     gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
     gtk_tooltips_set_tip(ttips, plug,
 			 "FreeFS shows the space usage on a single "
@@ -543,10 +605,13 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     fwin->fs_per=gtk_progress_bar_new();
     gtk_widget_set_name(fwin->fs_per, "gauge");
     /*gtk_widget_set_usize(fwin->fs_per, -1, 22);*/
+#ifdef GTK2
+#else
     gtk_progress_bar_set_bar_style(GTK_PROGRESS_BAR(fwin->fs_per),
 				   GTK_PROGRESS_CONTINUOUS);
     gtk_progress_set_format_string(GTK_PROGRESS(fwin->fs_per), "%p%%");
     gtk_progress_set_show_text(GTK_PROGRESS(fwin->fs_per), TRUE);
+#endif
     gtk_widget_show(fwin->fs_per);
     gtk_box_pack_end(GTK_BOX(vbox), fwin->fs_per, FALSE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, fwin->fs_per,
@@ -558,7 +623,6 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
 
     dprintf(5, "show plug");
     gtk_widget_show(plug);
-    (void) applet_get_panel_location(plug);
     dprintf(5, "made applet");
 
     fwin->win=plug;
@@ -633,19 +697,25 @@ static const char *find_mount_point(const char *fname)
   int i;
 
 #ifdef HAVE_REALPATH
+  dprintf(3, "Calling realpath for %s", fname);
   if(!realpath(fname, name))
     return _(failed);
+  dprintf(3, "got %s", name);
+#else
+  strcpy(name, fname);
 #endif
   
-  if(prev && strcmp(prev, name)==0 && prev_ans)
+  if(prev && strcmp(prev, name)==0 && prev_ans) {
+    dprintf(3, "return same answer as last time: %s", prev_ans);
     return prev_ans;
+  }
 
   ents=glibtop_get_mountlist(&list, FALSE);
   
   strcpy(wnm, name);
   do {
     for(i=0; i<list.number; i++) {
-      dprintf(4, "%s - %s\n", wnm, ents[i].mountdir);
+      dprintf(5, "%s - %s", wnm, ents[i].mountdir);
       if(strcmp(wnm, ents[i].mountdir)==0) {
 	ans=wnm;
 	break;
@@ -667,6 +737,8 @@ static const char *find_mount_point(const char *fname)
   prev=g_strdup(name);
   prev_ans=ans;
 
+  free(ents);
+
   return ans? ans: failed;
 }
 
@@ -676,9 +748,10 @@ static gboolean update_fs_values(FreeWindow *fwin)
 {
   int ok=FALSE;
 
+  dprintf(4, "fwin=%p", fwin);
   dprintf(4, "update_sec=%d, update_tag=%u", fwin->options.update_sec,
 	  fwin->update_tag);
-  dprintf(4, "update_fs_values(\"%s\")", fwin->df_dir);
+  dprintf(3, "update_fs_values(\"%s\")", fwin->df_dir);
   
   if(fwin->df_dir) {
     glibtop_fsusage buf;
@@ -691,8 +764,13 @@ static gboolean update_fs_values(FreeWindow *fwin)
     
     if(ok) {
       unsigned long long total, used, avail;
-      gfloat fused;
       int row;
+#ifdef GTK2
+      gdouble fused;
+      char tbuf[32];
+#else
+      gfloat fused;
+#endif
       
       dprintf(5, "%lld %lld %lld", buf.blocks, buf.bfree,
 	     buf.bavail);
@@ -702,6 +780,15 @@ static gboolean update_fs_values(FreeWindow *fwin)
       avail=BLOCKSIZE*(unsigned long long) buf.bavail;
       dprintf(4, "%llu %llu %llu", total, used, avail);
 
+#ifdef GTK2
+      if(buf.blocks>0) {
+	fused=(100.f*(buf.blocks-buf.bavail))/((gdouble) buf.blocks);
+	if(fused>100.)
+	  fused=100.;
+      } else {
+	fused=0.;
+      }
+#else
       if(buf.blocks>0) {
 	fused=(100.f*(buf.blocks-buf.bavail))/((gfloat) buf.blocks);
 	if(fused>100.f)
@@ -709,11 +796,13 @@ static gboolean update_fs_values(FreeWindow *fwin)
       } else {
 	fused=0.f;
       }
+#endif
       dprintf(4, "%2.0f %%", fused);
 
       if(!fwin->is_applet) {
 	dprintf(4, "mount point=%s", find_mount_point(fwin->df_dir));
-	gtk_label_set_text(GTK_LABEL(fwin->fs_name), find_mount_point(fwin->df_dir));
+	gtk_label_set_text(GTK_LABEL(fwin->fs_name),
+			   find_mount_point(fwin->df_dir));
 	gtk_label_set_text(GTK_LABEL(fwin->fs_total), fmt_size(total));
 	gtk_label_set_text(GTK_LABEL(fwin->fs_used), fmt_size(used));
 	gtk_label_set_text(GTK_LABEL(fwin->fs_free), fmt_size(avail));
@@ -724,22 +813,34 @@ static gboolean update_fs_values(FreeWindow *fwin)
 			   g_basename(find_mount_point(fwin->df_dir)));
 	/*gtk_label_set_text(GTK_LABEL(fwin->fs_name), find_mount_point(fwin->df_dir));*/
       }
-      dprintf(5, "set progress");
+      dprintf(5, "set progress %f", fused);
+#ifdef GTK2
+      sprintf(tbuf, "%d%%", (int)(fused*100));
+      gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fwin->fs_per), fused);
+      gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fwin->fs_per), tbuf);
+#else
       gtk_progress_set_value(GTK_PROGRESS(fwin->fs_per), fused);
-
+#endif
     }
   }
   
   dprintf(4, "update_fs_values(%s), ok=%d, update_sec=%d", fwin->df_dir, ok,
 	  fwin->options.update_sec);
   
-  if(!ok && !fwin->is_applet) {
-    gtk_label_set_text(GTK_LABEL(fwin->fs_name), "?");
-    gtk_label_set_text(GTK_LABEL(fwin->fs_total), "?");
-    gtk_label_set_text(GTK_LABEL(fwin->fs_used), "?");
-    gtk_label_set_text(GTK_LABEL(fwin->fs_free), "?");
+  if(!ok) {
+    if(!fwin->is_applet) {
+      gtk_label_set_text(GTK_LABEL(fwin->fs_name), "?");
+      gtk_label_set_text(GTK_LABEL(fwin->fs_total), "?");
+      gtk_label_set_text(GTK_LABEL(fwin->fs_used), "?");
+      gtk_label_set_text(GTK_LABEL(fwin->fs_free), "?");
+    }
 
+#ifdef GTK2
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fwin->fs_per), 0.);
+    gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fwin->fs_per), "");
+#else
     gtk_progress_set_value(GTK_PROGRESS(fwin->fs_per), 0.);
+#endif
   }
 
   return TRUE;
@@ -753,6 +854,7 @@ static void do_update(void)
 #define UPDATE_RATE "UpdateRate"
 #define INIT_SIZE   "AppletInitSize"
 #define SHOW_DIR    "AppletShowDir"
+#define EXCLUDE_FS  "ExcludeFS"
 
 #if USE_XML
 static gboolean read_choices_xml(void)
@@ -811,7 +913,25 @@ static gboolean read_choices_xml(void)
 	  free(string);
 	}
 	
-      }
+      } else if(strcmp(node->name, EXCLUDE_FS)==0) {
+	xmlNodePtr sub;
+	
+	g_list_foreach(fs_exclude, (GFunc) g_free, NULL);
+	g_list_free(fs_exclude);
+	fs_exclude=NULL;
+
+	for(sub=node->xmlChildrenNode; sub; sub=sub->next) {
+	  if(sub->type!=XML_ELEMENT_NODE)
+	    continue;
+	  if(strcmp(sub->name, "Name")==0) {
+	    string=xmlNodeListGetString(doc, sub->xmlChildrenNode, 1);
+	    if(string) {
+	      fs_exclude=g_list_append(fs_exclude, g_strdup(string));
+	      free(string);
+	    }
+	  }
+	}
+     }
 
     }
     xmlFreeDoc(doc);
@@ -828,8 +948,6 @@ static void read_choices(void)
 {
   guchar *fname;
   
-  choices_init();
-
 #if USE_XML
   if(read_choices_xml())
     return;
@@ -894,6 +1012,7 @@ static void write_choices_xml(const Options *opts)
     xmlNodePtr tree;
     FILE *out;
     char buf[80];
+    GList *fs;
 
     doc = xmlNewDoc("1.0");
     doc->children=xmlNewDocNode(doc, NULL, PROJECT, NULL);
@@ -909,6 +1028,12 @@ static void write_choices_xml(const Options *opts)
     xmlSetProp(tree, "initial-size", buf);
     sprintf(buf, "%d", opts->applet_show_dir);
     xmlSetProp(tree, "show-dir", buf);
+
+    if(fs_exclude) {
+      tree=xmlNewChild(doc->children, NULL, EXCLUDE_FS, NULL);
+      for(fs=fs_exclude; fs; fs=g_list_next(fs))
+	(void) xmlNewChild(tree, NULL, "Name", (char *) fs->data);
+    }
   
     ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
 
@@ -1011,6 +1136,32 @@ static void save_config(GtkWidget *widget, gpointer data)
   write_choices(&current_window->options);
 }
 
+#ifdef GTK2
+#define RESPONSE_SAVE 1
+
+static void config_response(GtkWidget *dialog, gint response, gpointer data)
+{
+  switch(response) {
+  case RESPONSE_SAVE:
+    save_config(dialog, data);
+    break;
+  case GTK_RESPONSE_ACCEPT:
+    set_config(dialog, data);
+    break;
+  case GTK_RESPONSE_REJECT:
+    cancel_config(dialog, data);
+    break;
+  case GTK_RESPONSE_NONE:
+    gtk_widget_hide(dialog);
+    break;
+  default:
+    dprintf(3, "config_response(%p, %d, %p) %d?", dialog, response, data,
+	    response);
+    break;
+  }
+}
+#endif
+
 static void show_config_win(void)
 {
   static GtkWidget *confwin=NULL;
@@ -1030,12 +1181,28 @@ static void show_config_win(void)
     GtkWidget *check;
     GtkWidget *frame;
 
+#ifdef GTK2
+    confwin=gtk_dialog_new_with_buttons("Configuration",
+					ow.fwin? ow.fwin->win: NULL,
+					0,
+					GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
+					GTK_STOCK_SAVE, RESPONSE_SAVE,
+					GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+					NULL);
+    g_signal_connect(confwin, "response", 
+		     G_CALLBACK(dialog_response), 
+		     &ow);
+    g_signal_connect(confwin, "delete_event", 
+		     G_CALLBACK(trap_frame_destroy), 
+		     confwin);
+#else
     confwin=gtk_dialog_new();
     gtk_signal_connect(GTK_OBJECT(confwin), "delete_event", 
 		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
 		     confwin);
     gtk_window_set_title(GTK_WINDOW(confwin), "Configuration");
     gtk_window_set_position(GTK_WINDOW(confwin), GTK_WIN_POS_MOUSE);
+#endif
     ow.window=confwin;
 
     vbox=GTK_DIALOG(confwin)->vbox;
@@ -1096,6 +1263,7 @@ static void show_config_win(void)
 				 opts->applet_show_dir);
     ow.show_dir=check;
 
+#ifndef GTK2
     hbox=GTK_DIALOG(confwin)->action_area;
 
     but=gtk_button_new_with_label(_("Save"));
@@ -1115,7 +1283,7 @@ static void show_config_win(void)
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked",
 		       GTK_SIGNAL_FUNC(cancel_config), confwin);
-
+#endif
   } else {
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.update_s),
 			      (gfloat)(opts->update_sec));
@@ -1157,6 +1325,9 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Open"),                NULL, NULL, 0, "<Branch>"},
   { N_("/Open/Directory"),	NULL, do_opendir, 0, NULL },
   { N_("/Open/FS root"),	NULL, do_opendir, 1, NULL },
+  { N_("/Scan"),                NULL, NULL, 0, "<Branch>"},
+  { N_("/Scan/By name"),	NULL, NULL, 0, NULL },
+  { N_("/Scan/By mount point"),	NULL, NULL, 1, NULL },
   { N_("/Close"), 	        NULL, close_window, 0, NULL },
   { N_("/Quit"), 	NULL, gtk_main_quit, 0, NULL },
 };
@@ -1169,9 +1340,86 @@ static void save_menus(void)
   if (menurc) {
     gboolean	mod = FALSE;
 
-    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+#ifdef GTK2
+    gtk_accel_map_save(menurc);
+#else
+    gtk_item_factory_dump_rc(menurc, NULL, TRUE);    
+#endif
     g_free(menurc);
   }
+}
+
+static GtkWidget *scan_by_name_menu=NULL;
+static GtkWidget *scan_by_mount_menu=NULL;
+
+int compare_mountentry(const void *a, const void *b)
+{
+  const glibtop_mountentry *ma=(const glibtop_mountentry *) a;
+  const glibtop_mountentry *mb=(const glibtop_mountentry *) b;
+
+  return strcmp(ma->mountdir, mb->mountdir);
+}
+
+static void menu_set_target(gchar *mount)
+{
+  dprintf(3, "menu_set_target(%s)", mount? mount: "NULL");
+
+  set_target(current_window, mount);
+}
+
+static void menu_item_destroyed(GtkWidget *item, gpointer data)
+{
+  dprintf(3, "menu_item_destroyed(%p, %p)", item, data);
+  g_free(data);
+}
+
+static void update_menus(void)
+{
+  GtkWidget *item;
+  gchar *name;
+  gchar *mount;
+  GtkWidget *name_menu;
+  GtkWidget *mount_menu;
+  int i;
+  
+  glibtop_mountlist mount_info;
+  glibtop_mountentry *mounts;
+
+  name_menu=gtk_menu_new();
+  mount_menu=gtk_menu_new();
+
+  dprintf(3, "name_menu=%p, mount_menu=%p", name_menu, mount_menu);
+  mounts=glibtop_get_mountlist(&mount_info, 0);
+  if(mounts) {
+    qsort(mounts, mount_info.number, sizeof(*mounts), compare_mountentry);
+    for(i=0; i<mount_info.number; i++) {
+      if(g_list_find_custom(fs_exclude, mounts[i].type, (GCompareFunc) strcmp))
+	continue;
+      
+      mount=g_strdup(mounts[i].mountdir);
+      name=mounts[i].devname;
+      dprintf(2, "name=%s, mount=%s type=%s", name, mount, mounts[i].type);
+
+      item=gtk_menu_item_new_with_label(name);
+      gtk_signal_connect_object(GTK_OBJECT(item), "activate",
+				GTK_SIGNAL_FUNC(menu_set_target), mount);
+      gtk_signal_connect(GTK_OBJECT(item), "destroy",
+			 GTK_SIGNAL_FUNC(menu_item_destroyed), mount);
+      gtk_menu_shell_append(GTK_MENU_SHELL(name_menu), item);
+
+      item=gtk_menu_item_new_with_label(mount);
+      gtk_signal_connect_object(GTK_OBJECT(item), "activate",
+				GTK_SIGNAL_FUNC(menu_set_target), mount);
+      gtk_menu_shell_append(GTK_MENU_SHELL(mount_menu), item);
+    }
+
+    free(mounts);
+  }
+
+  gtk_widget_show_all(name_menu);
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(scan_by_name_menu), name_menu);
+  gtk_widget_show_all(mount_menu);
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(scan_by_mount_menu), mount_menu);
 }
 
 static void menu_create_menu(GtkWidget *window)
@@ -1194,13 +1442,25 @@ static void menu_create_menu(GtkWidget *window)
 
   menurc=choices_find_path_load("menus", PROJECT);
   if(menurc) {
+#ifdef GTK2
+    gtk_accel_map_load(menurc);
+#else
     gtk_item_factory_parse_rc(menurc);
+#endif
     g_free(menurc);
   }
 
   atexit(save_menus);
 
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
+
+  /*name=g_strdup_printf("%s")*/
+  scan_by_name_menu=gtk_item_factory_get_widget(item_factory,
+						"/Scan/By name");
+  dprintf(3, "scan_by_name_menu=%p", scan_by_name_menu);
+  scan_by_mount_menu=gtk_item_factory_get_widget(item_factory,
+						"/Scan/By mount point");
+  dprintf(3, "scan_by_mount_menu=%p", scan_by_mount_menu);
 }
 
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
@@ -1214,9 +1474,10 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
     if(bev->button==3) {
       if(!menu)
 	menu_create_menu(window);
-
+      update_menus();
+      
       if(fwin->is_applet) {
-	applet_show_menu(menu, bev);
+	applet_popup_menu(fwin->win, menu, bev);
       } else {
 	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		     bev->button, bev->time);
@@ -1265,6 +1526,7 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   else {
     rox_error("Invalid remote call, Path not given");
   }
+  g_free(dir);
 
   return NULL;
 }
@@ -1274,7 +1536,7 @@ static void open_callback(ROXSOAP *serv, gboolean status,
 {
   gboolean *s=udata;
   
-  dprintf(3, "In open_callback(%p, %d, %p, %p)", clock, status, reply,
+  dprintf(3, "In open_callback(%p, %d, %p, %p)", serv, status, reply,
 	 udata);
   *s=status;
   gtk_main_quit();
@@ -1344,6 +1606,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.18  2002/04/12 10:21:42  stephen
+ * Multiple windows, SOAP server
+ *
  * Revision 1.17  2002/03/04 11:41:08  stephen
  * Now stable release 1.2.0
  *
