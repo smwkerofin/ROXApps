@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.6 2001/05/10 14:54:28 stephen Exp $
+ * $Id: clock.c,v 1.7 2001/05/16 11:02:17 stephen Exp $
  */
 #include "config.h"
 
@@ -684,10 +684,10 @@ static void read_config(void)
 		nmode.format=formats+i;
 	      
 	    } else if(strcmp(var, "flags")==0) {
-	      mode.flags=atoi(val);
+	      nmode.flags=atoi(val);
 	      
 	    } else if(strcmp(var, "interval")==0) {
-	      mode.interval=(guint32) atol(val);
+	      nmode.interval=(guint32) atol(val);
 	      
 	    } else if(strcmp(var, "user_format")==0) {
 	      strncpy(user_defined, val, sizeof(user_defined));
@@ -1266,6 +1266,10 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.7  2001/05/16 11:02:17  stephen
+ * Added repeating alarms.
+ * Menu supported on applet (compile time option).
+ *
  * Revision 1.6  2001/05/10 14:54:28  stephen
  * Added new alarm feature
  *
