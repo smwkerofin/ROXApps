@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id$
+# $Id: AppletRun,v 1.6 2002/05/01 08:38:24 stephen Exp $
 
 import findrox
 import rox.choices
@@ -60,9 +60,13 @@ plug.connect('destroy', mainquit)
 plug.set_usize(48, -1)
 plug.set_border_width(4)
 
+vbox=GtkVBox()
+plug.add(vbox)
+vbox.show()
+
 ebox=GtkEventBox()
 ebox.set_events(GDK.BUTTON_PRESS_MASK | GDK.BUTTON_RELEASE_MASK)
-plug.add(ebox)
+vbox.add(ebox)
 
 view=GtkHBox()
 ebox.add(view)
@@ -72,6 +76,10 @@ mail_pixmap=GtkPixmap(plug, app_dir+"/pixmaps/mail.xpm", None);
 
 view.add(mail_pixmap)
 view.add(nomail_pixmap)
+
+infoline=GtkLabel()
+vbox.add(infoline)
+infoline.show()
 
 #print "made button"
 
@@ -190,11 +198,14 @@ def update():
             mail_pixmap.show()
             mail=1
             gdk_beep()
+        n=count_from(mailfile)
+        infoline.set_text(str(n))
     else:
         if mail!=0:
             mail_pixmap.hide()
             nomail_pixmap.show()
             mail=0
+        infoline.set_text("")
     #print "update, mail=", mail, " (size=", file_size(mailfile), ")"
     return TRUE
 

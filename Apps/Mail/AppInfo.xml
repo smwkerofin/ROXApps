@@ -2,7 +2,7 @@
 <AppInfo>
   <About>
     <Purpose>Provide ROX interface to mail clients</Purpose>
-	<Version>0.1.3 (13 December 2001)</Version>
+	<Version>0.1.4 (17 September 2002)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
