@@ -1,6 +1,11 @@
 Changes to ROX-CLib by Version
 ==============================
 
+1.0.0
+-----
+This is the same as 0.2.3, except for the new HTML help file.  The version
+change is to indicate that this is the stable release.
+
 0.2.3
 -----
 Another fix for libxml.
