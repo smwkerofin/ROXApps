@@ -11,7 +11,7 @@
   <Dependencies>
     <AppDir>
       <Name>ROX-Lib2</Name>
-      <NeedsVersion>1.9.13</NeedsVersion>
+      <NeedsVersion>1.9.17</NeedsVersion>
       <Link>http://rox.sourceforge.net</Link>
       <ZeroInstall>/uri/0install/rox.sourceforge.net/lib/</ZeroInstall>
     </AppDir>

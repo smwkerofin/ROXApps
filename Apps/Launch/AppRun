@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.3 2004/06/19 15:41:50 stephen Exp $
+# $Id: AppRun,v 1.4 2004/09/14 14:38:45 stephen Exp $
 
 import os, sys
 import urlparse
 
-import findrox; findrox.version(1,9,13)
+import findrox; findrox.version(1,9,17)
 import rox
 import rox.options
 import rox.OptionsBox
@@ -18,85 +18,7 @@ def data(node):
 	return ''.join([text.nodeValue for text in node.childNodes
 			if text.nodeType == Node.TEXT_NODE])
 
-class ListOption(rox.options.Option):
-    def __init__(self, name, value, group = None):
-        self.list_value=None
-        rox.options.Option.__init__(self, name, value, group)
-
-        self.default_value=value
-
-    def _set(self, value):
-        #print 'set', self, '=', value
-        #assert hasattr(value, 'append')
-        try:
-            tmp=len(value)
-        except:
-            rox.options.Option._set(self, value)
-            return
-        if hasattr(value, 'upper'):
-            rox.options.Option._set(self, value)
-            return
-
-        if self.list_value!=value:
-            self.list_value=list(value)
-            self.value=str(value)
-            self.int_value=-1
-        #print self
-
-    def _to_xml(self, parent):
-        doc = parent.ownerDocument
-        node = doc.createElement('ListOption')
-        node.setAttribute('name', self.name)
-        if self.list_value:
-            for v in self.list_value:
-                snode=doc.createElement('Value')
-                snode.appendChild(doc.createTextNode(v))
-                node.appendChild(snode)
-        parent.appendChild(node)
-
-    def __str__(self):
-        return "<ListOption %s=%s>" % (self.name, self.list_value)
-
-class MyOptionGroup(rox.options.OptionGroup):
-    def __init__(self, program, leaf):
-        self.program=program
-        self.leaf=leaf
-        self.pending={}	# Loaded, but not registered
-        self.options = {}	# Name -> Option
-        self.callbacks = []
-        self.too_late_for_registrations = 0
-		
-        path = rox.choices.load(program, leaf)
-        if not path:
-            return
-
-        try:
-            doc = minidom.parse(path)
-            
-            root = doc.documentElement
-            assert root.localName == 'Options'
-            for o in root.childNodes:
-                if o.nodeType != Node.ELEMENT_NODE:
-                    continue
-                #print o
-                if o.localName == 'Option':
-                    name = o.getAttribute('name')
-                    self.pending[name] = data(o)
-                elif o.localName=='ListOption':
-                    name = o.getAttribute('name')
-                    v=[]
-                    for s in o.getElementsByTagName('Value'):
-                        #print s, data(s)
-                        v.append(data(s))
-                    self.pending[name]=v
-                else:
-                    print "Warning: Non Option element", o
-                
-        except:
-            rox.report_exception()
-	
-#rox.setup_app_options('Launch')
-options=MyOptionGroup('Launch', 'Options.xml')
+options=rox.options.OptionGroup('Launch', 'Options.xml')
 rox.app_options=options
 #print options.pending
 
@@ -107,7 +29,7 @@ http_cmd=rox.options.Option('http', moz_cmd, options)
 #mailto_cmd=rox.options.Option('mailto', '', options)
 #print options.pending
 
-schemes=ListOption('schemes', ('http=%s' % moz_cmd,), options)
+schemes=rox.options.ListOption('schemes', ('http=%s' % moz_cmd,), options)
 
 #print 'pre notify',schemes, schemes.default_value, type(schemes.default_value)
 options.notify()
@@ -129,123 +51,6 @@ def build_install_button(box, node, label):
 rox.OptionsBox.widget_registry['install-button'] = build_install_button
 
 
-def build_varlist_widget(box, node, label, option):
-    #print box, node, label, option
-
-    def bool_attr(node, name, val=False):
-        try:
-            v=node.getAttribute(name)
-            if v=='yes':
-                return True
-            else:
-                return False
-        except:
-            pass
-        return val
-
-    def str_attr(node, name, val=''):
-        try:
-            v=node.getAttribute(name)
-            return v
-        except:
-            pass
-        return val
-
-    edit=bool_attr(node, 'edit')
-    reorder=bool_attr(node, 'reorder')
-    extend=bool_attr(node, 'extend')
-    select=str_attr(node, 'selection', 'single')
-    
-    cont=rox.g.VBox(False, 4)
-    
-    if label:
-        label_wid = rox.g.Label(label)
-        #label_wid.set_alignment(1.0, 0.5)
-        cont.pack_start(label_wid, False, True, 0)
-                        
-    swin = rox.g.ScrolledWindow()
-    swin.set_border_width(4)
-    swin.set_policy(rox.g.POLICY_NEVER, rox.g.POLICY_ALWAYS)
-    swin.set_shadow_type(rox.g.SHADOW_IN)
-    swin.set_size_request(-1, 128)
-    cont.pack_start(swin, True, True, 0)
-    
-    model = rox.g.ListStore(str, str)
-    view = rox.g.TreeView(model)
-    swin.add(view)
-
-    selection=view.get_selection()
-    if select=='none':
-        selection.set_mode(rox.g.SELECTION_NONE)
-    elif select=='multiple':
-        selection.set_mode(rox.g.SELECTION_MULTIPLE)
-    else:
-        selection.set_mode(rox.g.SELECTION_SINGLE)
-        select='single'
-
-    if reorder:
-        view.set_reorderable(True)
-        
-    def cell_edited(ell, path, new_text, col):
-        if col==0 and new_text.find('=')>=0:
-            return
-        iter=model.get_iter_from_string(path)
-        model.set(iter, col, new_text)
-        box.check_widget(option)
-    cell = rox.g.CellRendererText()
-    column = rox.g.TreeViewColumn('Variable', cell, text = 0)
-    view.append_column(column)
-    if edit:
-        cell.set_property('editable', True)
-        cell.connect('edited', cell_edited, 0)
-
-    cell = rox.g.CellRendererText()
-    column = rox.g.TreeViewColumn('Value', cell, text = 1)
-    view.append_column(column)
-    if edit:
-        cell.set_property('editable', True)
-        cell.connect('edited', cell_edited, 1)
-
-    def add(widget, udata=None):
-        iter=model.append()
-        model.set(iter, 0, 'scheme', 1, '')
-        if select=='single':
-            view.get_selection().select_iter(iter)
-        box.check_widget(option)
-    if extend:
-        hbox=rox.g.HBox(False, 2)
-        cont.pack_start(hbox, False)
-        
-        but=rox.g.Button(stock=rox.g.STOCK_ADD)
-        but.connect('clicked', add)
-        hbox.pack_start(but, False)            
-
-    box.may_add_tip(swin, node)
-
-    def get():
-        v=[]
-        iter=model.get_iter_first()
-        while iter:
-            var=model.get_value(iter, 0)
-            val=model.get_value(iter, 1)
-            v.append(var+'='+val)
-
-            iter=model.iter_next(iter)
-        return v
-
-    def set():
-        #print 'varlist set', option
-        model.clear()
-        for v in option.list_value:
-            var, val=v.split('=', 1)
-            iter=model.append()
-            model.set(iter, 0, var, 1, val)
-
-    box.handlers[option]=(get, set)
-
-    return [cont]
-    
-rox.OptionsBox.widget_registry['varlist']=build_varlist_widget
 
 def uri_from_file(fl):
     for line in fl.readlines():
@@ -258,6 +63,7 @@ def uri_from_file(fl):
 
 def launch_uri(uri):
     scheme, location, path, query, fragment=urlparse.urlsplit(uri, 'file')
+    #print scheme, location, path, query, fragment
 
     if scheme=='file':
         rox.filer.spawn_rox((path,))
@@ -293,6 +99,7 @@ def run_options():
 
 def run_file(fl):
     uri=uri_from_file(fl)
+    #print 'uri from %s is %s' % (fl, uri)
     if not uri:
         rox.alert('No URI found in %s' % fl.name)
         return
