@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.15 2004/09/11 14:04:37 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.16 2004/09/25 10:59:10 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -119,6 +119,7 @@ to your link line, e.g.
       <li><a href="#mime.h">mime.h</a></li>
       <li><a href="#appinfo.h">appinfo.h</a></li>
       <li><a href="#mime_handler.h">mime_handler.h</a></li>
+      <li><a href="#uri.h">uri.h</a></li>
     </ul>
 
     <h4><a name="rox.h">rox.h</a></h4>
@@ -386,6 +387,9 @@ a saved file would go without actually altering the filesystem).
 	      URL passed in <code>rox_info_win_new()</code> or defined
 					in $APP_DIR/AppInfo.xml. 
 	    </p>
+<p><strong>Deprecated</strong>, ROXInfoWin now uses 
+<a href="#rox_uri_launch">rox_uri_launch()</a>  which relies on the 
+handler for the text/x-uri MIME type.
 
 	  <dt><code>GtkWidget* info_win_new(const gchar *<var>program</var>, 
 	      const gchar *<var>purpose</var>,
@@ -409,8 +413,7 @@ is hidden, not destroyed</p>
 	  <dt><code>void info_win_add_browser_command(ROXInfoWin *<var>iw</var>, 
 	      const gchar *<var>cmd</var>)</code>
 
-	    <dd><p><strong>Deprecated.</strong>  Use 
-<code>rox_info_win_add_browser_command()</code> instead.</p>
+	    <dd><p><strong>Deprecated.</strong>
 
 	</dl>
 
@@ -522,18 +525,10 @@ it returns NULL.</p>
 <dd><p>Returns the path part of a file: URI regardless of whether it is the local
 host or not.</p>
 
-      <dt><code>gchar *unescape_uri(const gchar *<var>uri</var>)</code>
-<dd><p>Converts all %xx escape sequences in <var>uri</var> back into 
-characters.</p>
+      <dt><code>int rox_hostname_is_local(const gchar *<var>hname</var>)</code>
 
-      <dt><code>gchar *escape_uri_path(const gchar *<var>path</var>)</code>
-<dd><p>Converts all problematic characters in <var>path</var>
-into %xx escape sequences.</p>
-
-      <dt><code>gchar *encode_path_as_uri(const gchar *<var>uri</var>)</code>
-<dd><p>Converts all problematic characters in <var>path</var>
-into %xx escape sequences and adds a 
-<code>file://<var>hostname</var></code> prefix.</p>
+<dd><p>Returns <code>TRUE</code> if the host name <var>hname</var> is one of 
+the valid host names for the current machine.</p>
 
 </dl>
 
@@ -1502,11 +1497,42 @@ element are offered as the thumbnail handler.</p></dd>
 </dd>
 </dl>
 
+<h4><a name="uri.h">uri.h</a></h4>
+    <p>Utilities for uri handling and launching.</p>
+
+<dl>
+
+      <dt><code>gchar *rox_unescape_uri(const gchar *<var>uri</var>)</code>
+<dd><p>Converts all %xx escape sequences in <var>uri</var> back into 
+characters.</p>
+
+      <dt><code>gchar *rox_escape_uri_path(const gchar *<var>path</var>)</code>
+<dd><p>Converts all problematic characters in <var>path</var>
+into %xx escape sequences.</p>
+
+      <dt><code>gchar *rox_encode_path_as_uri(const gchar *<var>uri</var>)</code>
+<dd><p>Converts all problematic characters in <var>path</var>
+into %xx escape sequences and adds a 
+<code>file://<var>hostname</var></code> prefix.  <var>hostname</var>
+  is as returned from <code>rox_hostname</code></p>
+
+<dt><code>int <a name="rox_uri_launch">rox_uri_launch</a>(const char *<var>uri</var>)</code>
+<dd><p>Attempt to launch <var>uri</var> by passing to the handler for
+	  the mime type text/x-uri.  If no handler is defined attempt
+to open it in mozilla or netscape.  The return value is the exit
+status of the command used to launch.
+</p>
+
+      <dt><code>const char *<a name="rox_hostname">rox_hostname(const gchar *<var>uri</var>)</code>
+<dd><p>Returns the hostname which will be used in drag and drop operations.</p>
+
+</dl>
+
     <hr>
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Sat Sep 25 11:55:30 BST 2004
+Last modified: Mon Sep 27 22:41:08 BST 2004
 <!-- hhmts end -->
   </body>
 </html>
