@@ -30,6 +30,7 @@ AC_SUBST(LIBGTOP_INCS)
 dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
+AC_CHECK_HEADERS(unistd.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 
