@@ -1,4 +1,4 @@
-# $Id$
+# $Id: DesktopFile.py,v 1.1.1.1 2002/11/02 19:01:32 stephen Exp $
 
 """Scan .desktop files and generate rox wrappers for programs"""
 
@@ -28,10 +28,12 @@ class DesktopEntry:
         self.icon=section.get('Icon')
         g_pixmap_dir='share/pixmaps'
         self.ipath=[]
-        for prefix in ('/usr/local/gnome', '/opt/gnome', '/usr/gnome'):
+        for prefix in ('/usr/local/gnome', '/opt/gnome', '/usr/gnome',
+                       '/usr/local/gnome2', '/opt/gnome2', '/usr/gnome2'):
             self.ipath.append(os.path.join(prefix, g_pixmap_dir))
         kde_pixmap_dir='share/icons'
-        for prefix in ('/usr/local/kde2', '/opt/kde2', '/usr/kde'):
+        for prefix in ('/usr/local/kde2', '/opt/kde2', '/usr/local/kde3',
+                       '/opt/kde3', '/usr/kde'):
             for col in ('hicolor', 'locolor'):
                 for size in ('48x48', '64x64', '32x32', '22x22', '16x16'):
                     self.ipath.append(os.path.join(prefix, kde_pixmap_dir,
