@@ -65,6 +65,7 @@ INCLUDES += options.h basedir.h mime.h appinfo.h mime_handler.h
 all: ${EXEC} ${PLATFORM_DIR}/bin/rox_run ${PLATFORM_DIR}/bin/install_on_path
 all: ${PLATFORM_DIR}/bin/test ${PLATFORM_DIR}/bin/rox_pinboard
 all: ${PLATFORM_DIR}/bin/libdir ${PLATFORM_DIR}/bin/appdir
+all: ${PLATFORM_DIR}/lib/ROX-CLib.pc
 ifeq (${SHARED}, yes)
 all: ${LIBFILE.la}
 endif
@@ -104,11 +105,11 @@ ${PLATFORM_DIR}/bin/install_on_path: install_on_path.sh
 	chmod +x $@
 
 ${PLATFORM_DIR}/bin/libdir: libdir.sh
-	sed -e "s/@DEFAULT_PATH@/$$LIBDIRPATH/" libdir.sh > $@
+	sed -e "s/@mode@/libdir/" libdir.sh > $@
 	chmod +x $@
 
 ${PLATFORM_DIR}/bin/appdir: libdir.sh
-	sed -e 's/@DEFAULT_PATH@/$$APPDIRPATH/' libdir.sh > $@
+	sed -e 's/@mode@/appdir/' libdir.sh > $@
 	chmod +x $@
 
 ${PLATFORM_DIR}:
@@ -131,6 +132,9 @@ ${LIBFILE.la}: ${LIBDIR} ${SLIBOBJECTS}
 	${LINK} -o lib${LIBNAME}.la -rpath ${ABSLIBDIR} ${SLIBOBJECTS}
 	${LIBTOOL} --mode=install $(INSTALL) lib${LIBNAME}.la ${ABSLIBDIR}
 	${LIBTOOL} --mode=finish ${ABSLIBDIR}
+
+${PLATFORM_DIR}/lib/ROX-CLib.pc: ROX-CLib.pc.in Makefile
+	sed -e 's/@PLATFORM@/${PLATFORM}/' -e 's/@VERSION@/${ROXCLIB_VERSION_NUM}/' ROX-CLib.pc.in > $@
 
 clean:
 	rm -rf *.o *.lo Makefile.bak .libs

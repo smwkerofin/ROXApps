@@ -2,9 +2,7 @@
 #
 # Locate a named AppDir in LIBDIRPATH, optionally checking version
 #
-# $Id: libdir.sh,v 1.2 2004/06/21 21:10:06 stephen Exp $
-
-prog=`basename $0`
+# $Id: libdir.sh,v 1.3 2004/07/07 20:23:33 stephen Exp $
 
 if [ x"$LIBDIRPATH" = x ]; then
   LIBDIRPATH="$HOME/lib:/usr/local/lib:/usr/lib"
@@ -16,7 +14,15 @@ if [ x"$APPDIRPATH" = x ]; then
   export APPDIRPATH
 fi
 
-path="@DEFAULT_PATH@"
+mode="@mode@"
+
+if [ $mode = libdir ]; then
+  path="$LIBDIRPATH"
+  zero_dir=lib
+else
+  path="$APPDIRPATH"
+  zero_dir=apps
+fi
 
 usage() {
   echo "$prog [--version x.y.z] [--libdir|--appdir|--path PATH]" >&2
@@ -40,41 +46,39 @@ if [ x"$1" = x ]; then
 fi
 
 rver=
+app=""
 
-if [ "$prog" = "libdir" ]; then
-  zero_dir=lib
-else
-  zero_dir=apps
-fi
+while [ "$1"x != "x" ]; do
+    case "$1" in 
+    --version) 
+    rver=$2
+    shift 2;;
+    --appdir)
+    path="$APPDIRPATH"
+    zero_dir=apps
+    shift;;
+    --libdir)
+    path="$LIBDIRPATH"
+    zero_dir=lib
+    shift;;
+    --path)
+    path="$2"
+    shift 2;;
+    --append-path)
+    path="$path:$2"
+    shift 2;;
+    --prepend-path)
+    path="$2:$path"
+    shift 2;;
+    --0install)
+    path="$path:/uri/0install/$2/${zero_dir}"
+    shift 2;;
+    *)
+    app="$1"
+    shift;;
+  esac
+done
 
-case "$1" in 
-  --version) 
-   rver=$2
-   shift 2;;
-  --appdir)
-   path="$APPDIRPATH"
-   shift;;
-  --libdir)
-   path="$LIBDIRPATH"
-   shift;;
-  --path)
-   path="$2"
-   shift 2;;
-  --append-path)
-   path="$path:$2"
-   shift 2;;
-  --prepend-path)
-   path="$2:$path"
-   shift 2;;
-  --0install)
-   path="$path:/uri/0install/$2/${zero_dir}"
-   shift 2;;
-esac
-if [ x"$1" = x ]; then
-  usage
-fi
-
-app="$1"
 found=0
 
 test_version() {

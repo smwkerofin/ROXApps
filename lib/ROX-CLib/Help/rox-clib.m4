@@ -80,25 +80,37 @@ fi
 ])
 
 dnl Check for lib and version
-dnl ROX_LIB_DIR_VERSION(app, arg, major, minor, rel, var)
+dnl ROX_LIB_DIR_VERSION(app, vers, var, 0site)
 AC_DEFUN(ROX_LIB_DIR_VERSION, [
 AC_REQUIRE([ROX_FIND_LIBDIR])
-AC_MSG_CHECKING(version of $1 >= $3.$4.$5)
+AC_MSG_CHECKING(version of $1 >= $2)
 
-if "$LIBDIR" --version $3.$4.$5 $1 > /dev/null 2>&1 ; then
-  ac_lib_path=`"$LIBDIR" --version $3.$4.$5 $1`  
-  if test $# -gt 5; then
-    AC_DEFINE_UNQUOTED($6, $ac_lib_path)
-    $6=$ac_lib_path
-  fi
-  AC_MSG_RESULT(yes)
-
-else
-  if test $# -gt 5; then
-    AC_MSG_RESULT(no)
-    AC_DEFINE_UNQUOTED($6, "")
+if test $# -gt 3 ; then
+  if "$LIBDIR" --version $2 --0install $4 $1 > /dev/null 2>&1 ; then
+    ac_lib_path=`"$LIBDIR" --version $2 --0install $4 $1`  
+    AC_DEFINE_UNQUOTED($3, $ac_lib_path)
+    $3=$ac_lib_path
+    AC_MSG_RESULT(yes)
   else
-    AC_MSG_ERROR(can't run $1)
+    AC_MSG_RESULT(no)
+    AC_DEFINE_UNQUOTED($3, "")
+  fi
+else
+  if "$LIBDIR" --version $2 $1 > /dev/null 2>&1 ; then
+    ac_lib_path=`"$LIBDIR" --version $2 $1`  
+    if test $# -gt 2; then
+      AC_DEFINE_UNQUOTED($3, $ac_lib_path)
+      $3=$ac_lib_path
+    fi
+    AC_MSG_RESULT(yes)
+
+  else
+    if test $# -gt 2; then
+      AC_MSG_RESULT(no)
+      AC_DEFINE_UNQUOTED($3, "")
+    else
+      AC_MSG_ERROR(can't run $1)
+    fi
   fi
 fi
 
@@ -111,7 +123,10 @@ ROX_APP_DIR_VERSION(ROX-CLib, -v, $1, $2, $3, ROX_CLIB_VERSION)
 
 dnl ROX-CLib specific
 AC_DEFUN(ROX_CLIB, [
-ROX_LIB_DIR_VERSION(ROX-CLib, -v, $1, $2, $3, ROX_CLIB_PATH)
+ROX_LIB_DIR_VERSION(ROX-CLib, $1.$2.$3, ROX_CLIB_PATH, www.kerofin.demon.co.uk)
+if test -z "$ROX_CLIB_PATH" ; then
+  AC_MSG_ERROR(Cannot find ROX-CLib)
+fi
 AC_SUBST(ROX_CLIB_PATH)
 ac_verstr=`"$ROX_CLIB_PATH"/AppRun -v`
 ac_ver=`echo $ac_verstr | cut -d " " -f 2`
