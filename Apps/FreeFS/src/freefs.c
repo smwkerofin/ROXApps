@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.27 2004/05/10 18:36:22 stephen Exp $
+ * $Id: freefs.c,v 1.28 2004/11/21 13:19:34 stephen Exp $
  */
 #include "config.h"
 
@@ -510,7 +510,8 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
 
     fwin->fs_per=gtk_progress_bar_new();
     gtk_widget_set_name(fwin->fs_per, "gauge");
-    gtk_widget_set_size_request(fwin->fs_per, -1, 6);
+    if(mini)
+      gtk_widget_set_size_request(fwin->fs_per, -1, 6);
     gtk_widget_show(fwin->fs_per);
     gtk_box_pack_end(GTK_BOX(vbox), fwin->fs_per, FALSE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, fwin->fs_per,
@@ -1101,7 +1102,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
       }
       return TRUE;
     } else if(bev->button==1 && fwin->is_applet) {
-      FreeWindow *nwin=make_window(0, fwin->df_dir, FALSE);
+      FreeWindow *nwin=make_window(0, fwin->df_dir, FALSE, NULL);
 
       gtk_widget_show(nwin->win);
 
@@ -1133,11 +1134,11 @@ static gboolean popup_menu(GtkWidget *window, gpointer udata)
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata)
 {
-  xmlNodePtr path, parent=NULL, mini=NULL;
+  xmlNodePtr path, parent=NULL, mini=NULL, id;
   gchar *str;
   guint32 xid=0;
   gboolean minimal=FALSE;
-  gchar *dir;
+  gchar *dir, *idstr=NULL;
 
   dprintf(3, "rpc_Open(%p, \"%s\", %p, %p)", server, action_name, args, udata);
 
@@ -1147,8 +1148,8 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   g_free(str);
 
   args=g_list_next(args);
-  if(args)
-    parent=args->data;
+
+  parent=args->data;
   if(parent) {
 
     str=xmlNodeGetContent(parent);
@@ -1158,10 +1159,8 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
     }
   }
 
-  if(args)
-    args=g_list_next(args);
-  if(args)
-    mini=args->data;
+  args=g_list_next(args);
+  mini=args->data;
   if(mini) {
 
     str=xmlNodeGetContent(mini);
@@ -1171,12 +1170,20 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
     }
   }
 
+  args=g_list_next(args);
+  id=args->data;
+  if(id) {
+    idstr=xmlNodeGetContent(id);
+  }
+  
   if(dir && dir[0])
-    make_window(xid, dir, minimal);
+    make_window(xid, dir, minimal, idstr);
   else {
     rox_error("Invalid remote call, Path not given");
   }
   g_free(dir);
+  if(idstr)
+    g_free(idstr);
 
   dprintf(3, "rpc_Open complete");
 
@@ -1331,6 +1338,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.28  2004/11/21 13:19:34  stephen
+ * Use new ROX-CLib features.  Added (untested) minimalist applet mode.
+ *
  * Revision 1.27  2004/05/10 18:36:22  stephen
  * Eliminate libgtop
  *
