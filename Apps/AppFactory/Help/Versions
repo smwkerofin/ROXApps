@@ -1,6 +1,10 @@
 AppFactory
 ==========
 
+2.1.1
+-----
+Generated script needs to quote variables (Gareth Williams).
+
 2.1.0
 -----
 Use aclocal.m4 from ROX-CLib 2.1.0.

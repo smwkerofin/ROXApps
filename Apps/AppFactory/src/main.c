@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.12 2003/05/17 13:32:37 stephen Exp $
+ * $Id: main.c,v 1.13 2004/05/15 16:54:56 stephen Exp $
  */
 #include "config.h"
 
@@ -463,7 +463,7 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
     return GTK_XDS_SAVE_ERROR;
   }
   fprintf(out, "#!/bin/sh\n\n");
-  fprintf(out, "APP_DIR=`dirname $0` export APP_DIR\n");
+  fprintf(out, "APP_DIR=`dirname \"$0\"` export APP_DIR\n");
   cmd=gtk_editable_get_chars(GTK_EDITABLE(prog_name), 0, -1);
   if(on_path(cmd))
     acmd=g_basename(cmd);
@@ -472,9 +472,9 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   if(!prompt) {
     fprintf(out, "exec %s \"$@\"\n", acmd);
   } else {
-    fprintf(out, "args=`$APP_DIR/%s -p \"Options for %s\" \"$@\"`\n",
+    fprintf(out, "args=`\"$APP_DIR\"/%s -p \"Options for %s\" \"$@\"`\n",
 	    PROMPT_UTIL, mleaf);
-    fprintf(out, "exec %s $args\n", acmd);
+    fprintf(out, "exec \"%s\" $args\n", acmd);
   }
   g_free(cmd);
   fclose(out);
