@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+04-Mar-2005
+~~~~~~~~~~~
+Fix bug creating alarm window.
+
 29-Oct-2004 (2.1.4)
 ~~~~~~~~~~~
 Switch to rox_info_win.

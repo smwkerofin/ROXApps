@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.16 2004/08/05 22:18:02 stephen Exp $
+ * $Id: alarm.c,v 1.17 2004/10/29 13:36:48 stephen Exp $
  */
 #include "config.h"
 
@@ -906,7 +906,7 @@ static GtkWidget *make_alarm_window(void)
   gtk_signal_connect(GTK_OBJECT(but), "clicked",
   GTK_SIGNAL_FUNC(dismiss), win);*/
   gtk_dialog_add_buttons(GTK_DIALOG(win), GTK_STOCK_CLOSE,
-			 GTK_RESPONSE_CLOSE);
+			 GTK_RESPONSE_CLOSE, NULL);
 
   return win;
 }
@@ -963,6 +963,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.17  2004/10/29 13:36:48  stephen
+ * Use rox_choices_load()/save() and  window counting
+ *
  * Revision 1.16  2004/08/05 22:18:02  stephen
  * Fix problem compiling alarm.c
  *
