@@ -12,7 +12,7 @@ environment variable ROX_USE_XDG_DIRS=1
 11-Sep-2004
 ~~~~~~~~~~~
 Fix bug in rox_path.c that broke drag and drop when the URIs contained
-hostnames.
+hostnames (reported by Nick Mitchell).
 
 04-Aug-2004 2.1.2
 ~~~~~~~~~~~
@@ -188,4 +188,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.13 2004/09/11 14:09:27 stephen Exp $
+$Id: Changes,v 1.14 2004/09/13 11:29:30 stephen Exp $
