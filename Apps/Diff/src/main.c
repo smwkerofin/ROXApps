@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.11 2004/04/13 10:25:32 stephen Exp $
+ * $Id: main.c,v 1.12 2004/04/13 10:31:49 stephen Exp $
  */
 #include "config.h"
 
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
   }
   
   /* Initialise ROX and X/GDK/GTK */
-  rox_init(PROJECT, &argc, &argv);
+  rox_init_with_domain(PROJECT, "kerofin.demon.co.uk", &argc, &argv);
   gdk_rgb_init();
   gtk_widget_push_visual(gdk_rgb_get_visual());
   cmap=gdk_rgb_get_cmap();
@@ -195,12 +195,13 @@ int main(int argc, char *argv[])
 
   /* Make a window */
   window=make_window();
+  rox_add_window(window->win);
 
   /* Show our new window */
   gtk_widget_show(window->win);
 
   /* Main processing loop */
-  gtk_main();
+  rox_main_loop();
 
   return 0;
 }
@@ -346,12 +347,12 @@ static DiffWindow *make_window()
 
 
 /* Read in the config.  */
-static gboolean read_config_xml(void)
+static void read_config(void)
 {
   guchar *fname;
 
   /* Use the choices system to locate the file to read */
-  fname=choices_find_path_load("options.xml", PROJECT);
+  fname=rox_choices_load("options.xml", PROJECT, "kerofin.demon.co.uk");
 
   if(fname) {
     xmlDocPtr doc;
@@ -411,75 +412,15 @@ static gboolean read_config_xml(void)
   }
 }
 
-/* Read in the config */
-static void read_config(void)
-{
-  guchar *fname;
-
-  if(read_config_xml())
-    return;
-  
-  fname=choices_find_path_load("options", PROJECT);
-
-  if(fname) {
-    FILE *in;
-    
-    in=fopen(fname, "r");
-    if(in) {
-      char buf[1024], *line;
-      char *end;
-      gchar *words;
-
-      do {
-	line=fgets(buf, sizeof(buf), in);
-	if(!line)
-	  break;
-	end=strchr(line, '\n');
-	if(end)
-	  *end=0;
-	end=strchr(line, '#');  /* everything after # is a comment */
-	if(end)
-	  *end=0;
-
-	words=g_strstrip(line);
-	if(words[0]) {
-	  gchar *var, *val;
-
-	  end=strchr(words, '=');
-	  if(end) {
-	    /* var = val */
-	    val=g_strstrip(end+1);
-	    *end=0;
-	    var=g_strstrip(words);
-
-	    if(strcmp(var, "font")==0) {
-	      if(options.font_name)
-		g_free(options.font_name);
-	      options.font_name=g_strdup(val);
-	    }
-	  }
-	}
-	
-      } while(!feof(in));
-
-      fclose(in);
-    }
-    
-    g_free(fname);
-  }
-}
-
 /*
  * Pop-up menu
- * Just two entries, one shows our information window, the other quits the
- * applet
  */
 static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),       NULL, show_info_win, 0, "<StockItem>",
                                                GTK_STOCK_DIALOG_INFO },
   { N_("/Choices..."), NULL, show_choices_win, 0, "<StockItem>",
                                                GTK_STOCK_PREFERENCES },
-  { N_("/Quit"),       NULL, gtk_main_quit, 0, "<StockItem>",
+  { N_("/Quit"),       NULL, rox_main_quit, 0, "<StockItem>",
                                                GTK_STOCK_QUIT},
 };
 
@@ -488,7 +429,7 @@ static void save_menus(void)
 {
   char	*menurc;
 	
-  menurc = choices_find_path_save("menus", PROJECT, TRUE);
+  menurc = rox_choices_save("menus", PROJECT, "kerofin.demon.co.uk");
   if (menurc) {
     gtk_accel_map_save(menurc);
     g_free(menurc);
@@ -517,7 +458,7 @@ static GtkWidget *menu_create_menu(GtkWidget *window, const gchar *name)
   /* Load any user-defined menu accelerators */
   menu = gtk_item_factory_get_widget(item_factory, name);
 
-  menurc=choices_find_path_load("menus", PROJECT);
+  menurc=rox_choices_load("menus", PROJECT, "kerofin.demon.co.uk");
   if(menurc) {
     gtk_accel_map_load(menurc);
     g_free(menurc);
@@ -586,28 +527,13 @@ static void add_menu_entries(GtkTextView *view, GtkMenu *menu,
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 }
 
-/* Make a destroy-frame into a close, allowing us to re-use the window */
-static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
-			      gpointer data)
-{
-  /* Change this destroy into a hide */
-  gtk_widget_hide(GTK_WIDGET(data));
-  return TRUE;
-}
-
 /* Show the info window */
 static void show_info_win(void)
 {
-  static GtkWidget *infowin=NULL;
+  GtkWidget *infowin;
   
-  if(!infowin) {
-    /* Need to make it first.  The arguments are macros defined
-     in config.h.in  */
-    infowin=info_win_new(PROJECT, PURPOSE, VERSION, AUTHOR, WEBSITE);
-    gtk_signal_connect(GTK_OBJECT(infowin), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     infowin);
-  }
+  infowin=rox_info_win_new_from_appinfo(PROJECT);
+  rox_add_window(infowin);
 
   gtk_widget_show(infowin);
 }
@@ -892,12 +818,6 @@ static void show_diffs(DiffWindow *win)
 		    win);
 }
 
-static void hide_window(GtkWidget *widget, gpointer data)
-{
-  gtk_widget_hide(GTK_WIDGET(data));
-}
-
-
 static void show_choices_win(void)
 {
   options_show();
@@ -905,6 +825,9 @@ static void show_choices_win(void)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.12  2004/04/13 10:31:49  stephen
+ * Got stock icon wrong
+ *
  * Revision 1.11  2004/04/13 10:25:32  stephen
  * Remove dead code.  Stock items in menus.
  *

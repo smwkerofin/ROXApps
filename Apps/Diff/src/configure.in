@@ -66,10 +66,10 @@ AC_CHECK_HEADERS(locale.h sys/stat.h libintl.h sys/filio.h)
 dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(setlocale bindtextdomain gettext)
+AC_CHECK_FUNCS(setlocale bindtextdomain gettext mkstemp)
 
 dnl Check for ROX-CLib and version
-ROX_CLIB(2, 1, 0)
+ROX_CLIB(2, 1, 4)
 
 dnl Does diff support -u
 AC_MSG_CHECKING(diff -u)
