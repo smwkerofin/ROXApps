@@ -1,6 +1,11 @@
 NetStat
 =======
 
+0.0.12
+------
+Use stock icons in the menu.
+Colour levels for byte count now configurable.
+
 0.0.11
 ------
 Get the byte count if we can and display that in preference to the packet 
