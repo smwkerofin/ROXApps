@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.22 2003/03/05 15:30:40 stephen Exp $
+ * $Id: freefs.c,v 1.23 2003/06/22 09:06:08 stephen Exp $
  */
 #include "config.h"
 
@@ -179,9 +179,13 @@ int main(int argc, char *argv[])
   const char *options="vha:";
 #endif
 
-  rox_debug_init(PROJECT);
-  choices_init();
-  options_init(PROJECT);
+  /* Check for this argument by itself */
+  if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
+    do_version();
+    exit(0);
+  }
+  
+  rox_init(PROJECT, &argc, &argv);
 
   app_dir=g_getenv("APP_DIR");
 #ifdef HAVE_BINDTEXTDOMAIN
@@ -191,16 +195,6 @@ int main(int argc, char *argv[])
   g_free(localedir);
 #endif
   
-  /* Check for this argument by itself */
-  if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
-    do_version();
-    exit(0);
-  }
-  
-  dprintf(5, "%d %s -> %s", argc, argv[1]? argv[1]: "NULL", argv[argc-1]);
-  gtk_init(&argc, &argv);
-  dprintf(5, "%d %s -> %s", argc, argv[1]? argv[1]: "NULL", argv[argc-1]);
-
   /* Process remaining arguments */
   nerr=0;
   do_exit=FALSE;
@@ -267,8 +261,6 @@ int main(int argc, char *argv[])
 		 (1<<GLIBTOP_SYSDEPS_FSUSAGE)|(1<<GLIBTOP_SYSDEPS_MOUNTLIST),
 		 0);
   
-  rox_dnd_init();
-
 #if USE_SERVER
   if(replace_server || !rox_soap_ping(PROJECT)) {
     dprintf(1, "Making SOAP server");
@@ -365,7 +357,7 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     if(!icon) {
       fname=rox_resources_find(PROJECT, "freefs.xpm", ROX_RESOURCES_NO_LANG);
       if(fname) {
-	GError *err;
+	GError *err=NULL;
 
 	icon=gdk_pixbuf_new_from_file(fname, &err);
 	if(err) {
@@ -1095,6 +1087,8 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   }
   g_free(dir);
 
+  dprintf(3, "rpc_Open complete");
+
   return NULL;
 }
 
@@ -1173,6 +1167,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.23  2003/06/22 09:06:08  stephen
+ * Use new options system. New icon provided by Geoff Youngs.
+ *
  * Revision 1.22  2003/03/05 15:30:40  stephen
  * First pass at conversion to GTK 2.
  *
