@@ -35,7 +35,14 @@ you have five options:
 
 The user-defined format for the text below the clock face is in
 strfime(3) format.  Consult the man page for that function to find out
-how to set up various formats.
+how to set up various formats.  The text is displayed using a label
+widget with the name "clock digital" which may be customized in your
+.gtkrc-2.0 file:
+
+style "clock" {
+  font_name = "Serif 30"
+}
+widget "*clock digital*" style "clock"
 
 When re-scheduling a repeating alarm with the option "Follow timezone"
 set then when the time zone changes, due to daylight savings changes,
