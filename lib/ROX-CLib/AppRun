@@ -16,8 +16,15 @@ if [ "x$PLATFORM" = x ]; then
 fi
 
 if [ "x$MAKE" = x ]; then
-  MAKE=make
+  MAKE=make export MAKE
 fi
+
+if [ "x$PKG_CONFIG_PATH" = x ]; then
+  PKG_CONFIG_PATH="$APP_DIR"/"$PLATFORM"/lib
+else
+  PKG_CONFIG_PATH="$APP_DIR"/"$PLATFORM"/lib:"$PKG_CONFIG_PATH"
+fi
+export PKG_CONFIG_PATH
 
 DEBUGGER=""
 

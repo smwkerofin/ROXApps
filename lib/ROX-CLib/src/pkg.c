@@ -1,5 +1,5 @@
 /*
- * $Id: pkg.c,v 1.4 2002/04/29 08:17:24 stephen Exp $
+ * $Id: pkg.c,v 1.5 2004/03/10 22:41:16 stephen Exp $
  */
 
 #include <stdio.h>
@@ -16,6 +16,9 @@ static int do_libs(const char *app_dir, const char *platform);
 static int do_runtime(const char *app_dir, const char *platform);
 static int do_help(const char *app_dir, const char *platform);
 static int do_version(const char *app_dir, const char *platform);
+
+static int run_pkgconfig(const char *app_dir, const char *platform,
+			  const char *flag);
 
 typedef int (*action)(const char *app_dir, const char *platform);
 
@@ -100,100 +103,28 @@ int main(int argc, char *argv[])
   return state;
 }
 
-static void nl_to_space(gchar *text)
+static int run_pkgconfig(const char *app_dir, const char *platform,
+			  const char *flag)
 {
-  for(; *text; text++)
-    if(*text=='\n')
-      *text=' ';
-}
+  gchar *cmd;
+  int stat;
+  
+  cmd=g_strdup_printf("pkg-config --define-variable=APP_DIR=%s %s ROX-CLib",
+		      app_dir, flag);
+  stat=system(cmd);
+  g_free(cmd);
 
-static gchar *capture_output(const char *cmd)
-{
-  GString *outp=NULL;
-  FILE *child;
-  char buf[256], *line;
-
-  child=popen(cmd, "r");
-  if(!child) {
-    fprintf(stderr, "%s: command \"%s\" failed\n", argv0, cmd);
-    return NULL;
-  }
-
-  do {
-    line=fgets(buf, sizeof(buf), child);
-    if(!line)
-      break;
-    if(!outp)
-      outp=g_string_new(buf);
-    else
-      outp=g_string_append(outp, buf);
-  } while(line);
-
-  pclose(child);
-
-  line=outp->str;
-  g_string_free(outp, FALSE);
-  nl_to_space(line);
-
-  return line;
-}
-
-static GString *run_command(GString *prev, const char *cmd)
-{
-  GString *str;
-  gchar *outp;
-
-  outp=capture_output(cmd);
-  if(!outp)
-    return prev;
-  str=g_string_append_c(prev, ' ');
-  str=g_string_append(str, outp);
-  g_free(outp);
-
-  return str;
+  return stat;
 }
 
 static int do_cflags(const char *app_dir, const char *platform)
 {
-  int state=0;
-  GString *line;
-  gchar *tmp;
-  char cmd[256];
-
-  tmp=g_strdup_printf("-I%s/%s/include -I%s/%s/include/rox ",
-		      app_dir, platform, app_dir, platform);
-  line=g_string_new(tmp);
-  g_free(tmp);
-  line=run_command(line, GTK_CFLAGS);
-#ifdef HAVE_XML
-  sprintf(cmd, "%s --cflags", XML_CONFIG);
-  line=run_command(line, cmd);
-#endif
-  puts(line->str);
-  g_string_free(line, TRUE);
-
-  return state;
+  return run_pkgconfig(app_dir, platform, "--cflags");
 }
 
 static int do_libs(const char *app_dir, const char *platform)
 {
-  int state=0;
-  GString *line;
-  gchar *tmp;
-  char cmd[256];
-
-  tmp=g_strdup_printf("-L%s/%s/lib -l%s ", app_dir, platform, LIBNAME);
-  line=g_string_new(tmp);
-  g_free(tmp);
-  line=run_command(line, GTK_LIBS);
-#ifdef HAVE_XML
-  sprintf(cmd, "%s --libs", XML_CONFIG);
-  line=run_command(line, cmd);
-#endif
-  puts(line->str);
-  g_string_free(line, TRUE);
-
-  return state;
+  return run_pkgconfig(app_dir, platform, "--libs");
 }
 
 static int do_runtime(const char *app_dir, const char *platform)
@@ -213,17 +144,6 @@ static int do_help(const char *app_dir, const char *platform)
   for(h=handlers; h->lopt; h++)
     printf(" -%c --%s\t%s\n", h->sopt, h->lopt, h->help);
 
-  printf("\nCompile time options:\n");
-#ifdef GTK2
-  printf("\tGTK+ 2.x, using %s\n", PKG_CONFIG);
-#else
-  printf("\tGTK+ 1.2.x, using %s\n", GTK_CONFIG);
-#endif
-#ifdef HAVE_XML
-  printf("\tHave XML, using %s\n", XML_CONFIG);
-#else
-  printf("\tNo XML\n");
-#endif
 
   return 0;
 }
@@ -237,6 +157,9 @@ static int do_version(const char *app_dir, const char *platform)
 
 /*
  * $Log: pkg.c,v $
+ * Revision 1.5  2004/03/10 22:41:16  stephen
+ * Change default location of include files
+ *
  * Revision 1.4  2002/04/29 08:17:24  stephen
  * Fixed applet menu positioning (didn't work if program was managing more than
  * one applet window)
