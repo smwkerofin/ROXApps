@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id: options.py,v 1.1 2003/10/31 16:46:03 stephen Exp $
+# $Id: options.py,v 1.2 2003/11/08 12:19:46 stephen Exp $
 
 import os
 
@@ -69,6 +69,6 @@ def options_closed(widget):
     options_box = None
 
 def do_install():
-    import rox.mime
-    rox.mime.install_from_appinfo()
+    import rox.mime_handler
+    rox.mime_handler.install_from_appinfo()
     

@@ -3,7 +3,11 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
-20-Dec-2003
+11-Jan-2004 (0.1.1)
+-----------
+Now use mime_handler module to install handlers.
+
+20-Dec-2003 (0.1.0)
 -----------
 Re-written to be more object-orientated.
 
