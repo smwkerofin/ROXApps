@@ -9,8 +9,8 @@ download handler for ROX-Filer 2.1.2 or later.
 
 Installation
 ============
-Copy the application directory to somewhere useful, usually ~/Apps or 
-/usr/local/apps.  Then in ROX-Filer Options select "Drag and Drop" and as the
+Copy the application directory to somewhere useful, usually ~/libs or 
+/usr/local/lib.  Then in ROX-Filer Options select "Drag and Drop" and as the
 download handler enter "/path/Fetch/AppRun %s", where /path is the directory
 you stored the Fetch application.
 
