@@ -1,5 +1,5 @@
 /*
- * $Id: test.c,v 1.7 2003/03/25 14:31:34 stephen Exp $
+ * $Id: test.c,v 1.8 2003/10/22 17:11:14 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -17,26 +17,45 @@
 #include "rox_soap.h"
 #include "error.h"
 #include "rox_filer_action.h"
+#include "basedir.h"
+#include "mime.h"
 
 #define TEST_FILE "tmp/tmp/rm.me"
 
 static void clock_open_callback(ROXSOAP *clock, gboolean status,
 				xmlDocPtr reply, gpointer udata);
 
+static void test_soap(const char *home);
+static void test_basedir(const char *home);
+static void test_mime(const char *home);
+
 int main(int argc, char *argv[])
 {
-  char *type, *ver;
   char *home=g_getenv("HOME");
+  
+  rox_init("test", &argc, &argv);
+  
+  printf("ROX-CLib version %s\n\n", rox_clib_version_string());
+
+  /*test_soap(home);*/
+  test_basedir(home);
+  test_mime(home);
+
+  /*rox_error("This is an error %d", 42);*/
+  
+  return 0;
+}
+
+static void test_soap(const char *home)
+{
+  char *type, *ver;
   char buf[256];
   ROXSOAP *prog;
   xmlDocPtr doc;
   xmlNodePtr act;
   gboolean state;
   
-  rox_init("test", &argc, &argv);
   rox_soap_set_timeout(NULL, 5000);
-
-  printf("ROX-CLib version %s\n\n", rox_clib_version_string());
 
   printf("Version()=");
   ver=rox_filer_version();
@@ -115,10 +134,72 @@ int main(int argc, char *argv[])
   if(state)
     gtk_main();
   rox_soap_close(prog);
+}
 
-  rox_error("This is an error %d", 42);
+static void test_basedir(const char *home)
+{
+  gchar *path;
+  GList *paths, *p;
+
+  printf("test basedirs\n");
   
-  return 0;
+  printf("save_config_path %s %s => ", "ROX-CLib", "dummy");
+  path=basedir_save_config_path("ROX-CLib", "dummy");
+  printf("%s\n", path? path: "NULL");
+  if(path)
+    g_free(path);
+
+  printf("load_config_path %s %s => ", "ROX-CLib", "dummy");
+  path=basedir_load_config_path("ROX-CLib", "dummy");
+  printf("%s\n", path? path: "NULL");
+  if(path)
+    g_free(path);
+
+  printf("load_data_path %s %s => ", "mime", "globs");
+  path=basedir_load_data_path("mime", "globs");
+  printf("%s\n", path? path: "NULL");
+  if(path)
+    g_free(path);
+
+  printf("load_data_paths %s %s => \n", "mime", "globs");
+  paths=basedir_load_data_paths("mime", "globs");
+  for(p=paths; p; p=g_list_next(p)) {
+    printf("  %s\n", (char *) p->data);
+    g_free(p->data);
+  }
+  g_list_free(paths);
+}
+
+static void test_mime_file(const char *path)
+{
+  MIMEType *type=mime_lookup(path);
+  char *tname, *comm;
+
+  printf(" %s -> ", path);
+  if(!type) {
+    printf("UNKNOWN\n");
+    return;
+  }
+  tname=mime_type_name(type);
+  comm=mime_type_comment(type);
+  printf("%s (%s)\n", tname, comm? comm: "UNKNOWN");
+  g_free(tname);
+}
+
+static void test_mime(const char *home)
+{
+  printf("test MIME system\n");
+  
+  mime_init();
+
+  test_mime_file("/etc/passwd");
+  test_mime_file("/dev/null");
+  test_mime_file(home);
+  test_mime_file("/bin/ls");
+  test_mime_file("/usr/include/stdio.h");
+
+  test_mime_file("Makefile");
+  test_mime_file("Makefile.in");
 }
 
 static void clock_open_callback(ROXSOAP *clock, gboolean status,

@@ -4,6 +4,14 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+25-Mar-2004
+~~~~~~~~~~~
+Added Shared MIME database interface (rox/mime.h)
+
+21-Mar-2004
+~~~~~~~~~~~
+Added XDG base dirs (rox/basedir.h).
+
 07-Mar-2004
 ~~~~~~~~~~~
 Include path changed.  It should now be
@@ -127,4 +135,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id$
+$Id: Changes,v 1.1 2004/03/10 22:45:17 stephen Exp $

@@ -1,5 +1,5 @@
 /*
- * $Id: applet.c,v 1.2 2002/04/29 08:17:23 stephen Exp $
+ * $Id: applet.c,v 1.3 2003/03/05 15:31:23 stephen Exp $
  *
  * applet.c - Utilities for rox applet.s
  */
@@ -345,10 +345,18 @@ void applet_popup_menu(GtkWidget *plug, GtkWidget *menu, GdkEventButton *evbut)
 				G_CALLBACK(g_free), pos);
     }
   }
-  gtk_menu_popup(GTK_MENU(menu), NULL, NULL, position_menu2, pos,
-		 evbut->button, evbut->time);
+  if(evbut)
+    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, position_menu2, pos,
+		   evbut->button, evbut->time);
+  else
+    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, position_menu2, pos,
+		   0, gtk_get_current_event_time());
 }
 
 /*
- * $Log$
+ * $Log: applet.c,v $
+ * Revision 1.3  2003/03/05 15:31:23  stephen
+ * First pass a conversion to GTK 2
+ * Known problems in SOAP code.
+ *
  */

@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.4 2003/12/13 19:25:07 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.5 2004/03/10 22:45:18 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -78,6 +78,9 @@ to your link line, e.g.
       <li><a href="#rox_filer_action.h">rox_filer_action.h</a></li>
       <li><a href="#applet.h">applet.h</a></li>
       <li><a href="#rox_soap_server.h">rox_soap_server.h</a></li>
+      <li><a href="#options.h">options.h</a></li>
+      <li><a href="#basedir.h">basedir.h</a></li>
+      <li><a href="#mime.h">mime.h</a></li>
     </ul>
 
     <h4><a name="rox.h">rox.h</a></h4>
@@ -972,15 +975,317 @@ The 'section' elements can be nested.</p>
   <dt><code>font name=str label=str override=int</code>
 	  <dd><p>Button for font selector.  If <var>override</var>, adds a checkbox to enable the
 	font.</p>
-<dl>
+</dl>
 </p>
+</dl>
+
+<h4><a name="basedir.h">basedir.h</a></h4>
+    <p>Interface to the XDG Base directory system.
+
+    <dl>
+
+
+      <dt>
+	<code>gchar *basedir_save_config_path(const char *<var>resource</var>, 
+const char *<var>leaf</var>)</code></dt>
+
+<dd><p>Returns the pathname of a configuration file to save. This will
+be in the directory <code>$XDG_CONFIG_HOME</code> 
+(defaulting to <samp>$HOME/.config</samp>). Eg:
+
+	<code>basedir_save_config_path("MyApp", "options.dat")</code>
+	-> <samp>"/home/myuser/.config/MyApp/options.dat"</samp>.</p>
+
+<p>The directory <code>$XDG_CONFIG_HOME</code> and the sub-directory
+<var>resource</var> are created by this call if required.</p>
+
+<p>The parameter <var>leaf</var> may be <code>NULL</code>.  If so just
+the directory part is returned.<p>
+
+	<code>basedir_save_config_path("MyApp", NULL)</code>
+	-> <samp>"/home/myuser/.config/MyApp"</samp>.</p>
+
+<p>The return value may be NULL - saving is disabled - otherwise
+	  <code>g_free()</code> the result.</p>
+</dd>
+
+      <dt>
+	<code>gchar *basedir_save_data_path(const char *<var>resource</var>, 
+const char *<var>leaf</var>)</code></dt>
+
+<dd><p>Returns the pathname of a data file to save. This will
+be in the directory <code>$XDG_DATA_HOME</code> 
+(defaulting to <samp>$HOME/.local/share</samp>). Eg:
+
+	<code>basedir_save_data_path("MyApp", "data.dat")</code>
+	-> <samp>"/home/myuser/.local/share/MyApp/data.dat"</samp>.</p>
+
+<p>The directory <code>$XDG_DATA_HOME</code> and the sub-directory
+<var>resource</var> are created by this call if required.</p>
+
+<p>The parameter <var>leaf</var> may be <code>NULL</code>.  If so just
+the directory part is returned.<p>
+
+	<code>basedir_save_data_path("MyApp", NULL)</code>
+	-> <samp>"/home/myuser/.local/share/MyApp"</samp>.</p>
+
+<p>The return value may be NULL - saving is disabled - otherwise
+	  <code>g_free()</code> the result.</p>
+</dd>
+
+      <dt>
+	<code>gchar *basedir_load_config_path(const char *<var>resource</var>, 
+const char *<var>leaf</var>)</code></dt>
+
+<dd><p>Returns the pathname of a configuration file to load. This will
+be in the directory <code>$XDG_CONFIG_HOME</code> 
+(defaulting to <samp>$HOME/.config</samp>) or a directory named in
+<code>$XDG_CONFIG_DIRS</code>
+(defaulting to <samp>/etc/xdg</samp>). Eg:
+
+	<code>basedir_load_config_path("MyApp", "options.dat")</code>
+	-> <samp>"/home/myuser/.config/MyApp/options.dat"</samp>.</p>
+
+<p>The return value may be NULL - meaning the file was not found - otherwise
+	  <code>g_free()</code> the result.</p>
+</dd>
+
+      <dt>
+	<code>gchar *basedir_load_data_path(const char *<var>resource</var>, 
+const char *<var>leaf</var>)</code></dt>
+
+<dd><p>Returns the pathname of a data file to load. This will
+be in the directory <code>$XDG_DATA_HOME</code> 
+(defaulting to <samp>$HOME/.local/share</samp>) or a directory named in
+<code>$XDG_DATA_DIRS</code>
+(defaulting to <samp>/usr/local/share:/usr/share</samp>). 
+Eg:
+
+	<code>basedir_load_data_path("MyApp", "data.dat")</code>
+	-> <samp>"/usr/local/share/MyApp/data.dat"</samp>.</p>
+
+<p>The return value may be NULL - meaning the file was not found - otherwise
+	  <code>g_free()</code> the result.</p>
+</dd>
+
+      <dt>
+	<code>GList *basedir_load_config_paths(const char *<var>resource</var>, 
+const char *<var>leaf</var>)</code></dt>
+
+<dd><p>Returns a list of all the pathnames of existing configuration files to load. This 
+includes the directories <code>$XDG_CONFIG_HOME</code> 
+(defaulting to <samp>$HOME/.config</samp>) and
+<code>$XDG_CONFIG_DIRS</code>
+(defaulting to <samp>/etc/xdg</samp>). 
+
+<p>If <var>leaf</var> is <code>NULL</code> then just the existing configuration
+directories for <var>resource</var> are returned.  If
+<var>resource</var>
+is <code>NULL</code> then the existing configuration directories are returned.
+</p>
+
+<p>The return value may be NULL if no config directories or config files
+could be found.  Otherwise <code>g_free()</code> each list item and
+<code>g_list_free()</code> the whole list.</p>
+</dd>
+
+      <dt>
+	<code>GList *basedir_load_data_paths(const char *<var>resource</var>, 
+const char *<var>leaf</var>)</code></dt>
+
+<dd><p>Returns a list of all the pathnames of existing data files to load. This 
+includes the directories <code>$XDG_DATA_HOME</code> 
+(defaulting to <samp>$HOME/.local/share</samp>) and
+<code>$XDG_DATA_DIRS</code>
+(defaulting to <samp>/usr/local/share:/usr/share</samp>). 
+
+<p>If <var>leaf</var> is <code>NULL</code> then just the existing data
+directories for <var>resource</var> are returned.  If
+<var>resource</var>
+is <code>NULL</code> then the existing data directories are returned.
+</p>
+
+<p>The return value may be NULL if no data directories or data files
+could be found.  Otherwise <code>g_free()</code> each list item and
+<code>g_list_free()</code> the whole list.</p>
+</dd>
+
+</dl>
+
+<h4><a name="mime.h">mime.h</a></h4>
+    <p>Interface to the Shared MIME database system.</p>
+
+<dl>
+      <dt><code>typedef struct mime_type MIMEType;</code></dt>
+
+      <dd><p>This type represents a MIME type.  It has a number of
+	members, two of which are public but read-only:</p> 
+<ul>
+<li><code>const char *media;</code>
+<li><code>const char *subtype;</code>
+</ul>
+<p>These are the two parts of the MIME type media/subtype (e.g. 
+<samp>text/plain</samp>).</p>
+</dd>
+
+<dt><code>extern MIMEType *text_plain;</code></dt>
+<dd><p>MIME type representing <samp>text/plain</samp> files.  This is
+the default for a file under *nix.</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern MIMEType *application_executable;</code></dt>
+<dd><p>MIME type representing <samp>application/x-executable</samp>
+files.  
+This represents an executable file.</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern MIMEType *application_octet_stream;</code></dt>
+<dd><p>MIME type representing <samp>application/octet-stream</samp>
+files.  
+This represents a non-text binary file.</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern MIMEType *inode_directory;</code></dt>
+<dd><p>MIME type representing <samp>inode/directory</samp>
+files.  
+This represents a directory.</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern MIMEType *inode_mountpoint;</code></dt>
+<dd><p>MIME type representing <samp>inode/mountpoint</samp>
+files.  
+This represents a directory on which a file system is mounted,
+or may be mounted according to /etc/fstab. 
+ROX-CLib does not yet recognize such objects.</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern MIMEType *inode_pipe;</code></dt>
+<dd><p>MIME type representing <samp>inode/fifo</samp>
+files.  
+This represents a pipe or FIFO object.</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern MIMEType *inode_socket;</code></dt>
+<dd><p>MIME type representing <samp>inode/socket</samp>
+files.  
+This represents a socket object.</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern MIMEType *inode_block;</code></dt>
+<dd><p>MIME type representing <samp>inode/blockdevice</samp>
+files.  
+This represents a block device object.</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern MIMEType *inode_char;</code></dt>
+<dd><p>MIME type representing <samp>inode/char</samp>
+files.  
+This represents a character device object.</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern MIMEType *inode_door;</code></dt>
+<dd><p>MIME type representing <samp>inode/door</samp>
+files.  
+This represents a door object (Solaris only).</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern MIMEType *inode_unknwon;</code></dt>
+<dd><p>MIME type representing <samp>inode/unknown</samp>
+files.  
+This represents an object which could not be identified
+(probably missing).</p>
+<p><strong>This is not valid until <code>mime_init()</code>
+has been called.</strong></p>
+</dd>
+
+<dt><code>extern void mime_init(void)</code></dt>
+<dd><p>Initializes the MIME system, defines the default types,
+and loads the lookup database.
+</p></dd>
+
+<dt><code>extern MIMEType *mime_lookup(const char *path)</code></dt>
+<dd><p>Returns the MIME type of the given file.  If the file exists
+								    then
+it is first checked for being a non-regular file.  If it is regular
+and by content lookups are enabled the contents of the file is
+								    checked.
+If none of the above identifies the file then the file is identified
+by its name.</p>
+<p>In future a check may be made using extended attributes for
+a user-defined MIME type.  This check will be made on regular files
+before contents are checked.</p>
+<p>The object returned is maintained by the MIME system and should
+not be freed or modified.
+</p></dd>
+
+<dt><code>extern char *mime_type_name(const MIMEType *type)</code></dt>
+<dd><p>Returns the name of the MIME type in the form 
+<samp>text/plain</samp>.  The returned string must be passed to
+<code>g_free()</code> when done.
+</p></dd>
+
+<dt><code>extern const char *mime_type_comment(MIMEType *type)</code></dt>
+<dd><p>Returns the comment field of the MIME type.  This is the 
+human readable name of the type, such as <samp>C headers</samp> for
+<samp>text/x-chdr</samp>.  Unlike <code>mime_type_lookup()</code>
+this call reads one or more files, including 
+<code>/uri/0install/zero-install.sourceforge.net/share</code>
+and may take some time to complete.</p>
+<p>The string returned is maintained by the MIME system and should
+not be freed or modified.
+</p></dd>
+
+<dt><code>extern void mime_set_ignore_exec_bit(int ignore)</code></dt>
+<dd><p>If <var>ignore</var> is non-zero then
+<code>mime_type_lookup()</code> will check the name of executable
+files for determining type and only return 
+<code>application/x-executable</code> if that fails.  
+Otherwise <code>application/x-executable</code> is always returned
+for files with an executable bit set.
+</p></dd>
+
+<dt><code>extern int mime_get_ignore_exec_bit(void)</code></dt>
+<dd><p>Returns the ignore executable bit flag.
+</p></dd>
+
+<dt><code>extern void mime_set_by_content(int content)</code></dt>
+<dd><p>If <var>content</var> is zero then
+<code>mime_type_lookup()</code> will not check the contents
+of the file to determine the type.  This is the default.</p>
+<p><em>Currently ignored as by-content lookups are not enabled.</em>
+</p></dd>
+
+<dt><code>extern int mime_get_by_content(void)</code></dt>
+<dd><p>Returns the by content flag.
+</p></dd>
+
 </dl>
 
     <hr>
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Tue Mar  9 18:22:59 GMT 2004
+Last modified: Thu Mar 25 13:09:05 GMT 2004
 <!-- hhmts end -->
   </body>
 </html>
