@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.7 2001/08/20 15:18:12 stephen Exp $
+ * $Id: alarm.c,v 1.8 2001/11/06 12:23:05 stephen Exp $
  */
 #include "config.h"
 
@@ -87,7 +87,7 @@ int alarm_load_xml(const gchar *fname)
 #endif
   xmlDocPtr doc;
   xmlNodePtr node, root;
-  const xmlChar *string;
+  xmlChar *string;
 
   doc=xmlParseFile(fname);
   if(!doc)
@@ -933,6 +933,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.8  2001/11/06 12:23:05  stephen
+ * Use XML for alarms and config file
+ *
  * Revision 1.7  2001/08/20 15:18:12  stephen
  * Switch to using ROX-CLib.
  *
