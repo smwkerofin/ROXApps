@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.c,v 1.4 2002/04/29 08:17:24 stephen Exp $
+ * $Id: infowin.c,v 1.5 2003/03/05 15:31:23 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -41,7 +41,7 @@ static int trap_client_destroy(GtkWidget *widget, GdkEvent *event,
 			      gpointer data)
 {
   /* Change this destroy into a hide */
-  gtk_widget_hide(GTK_WIDGET(data));
+  gtk_widget_hide(widget);
   return TRUE;
 }
 
@@ -112,6 +112,29 @@ static void goto_website(GtkWidget *widget, gpointer data)
 
   _exit(1);
 }
+
+static GtkWidget *get_app_icon(void)
+{
+  const gchar *app_dir=g_getenv("APP_DIR");
+  gchar *path;
+  GdkPixbuf *pixbuf;
+  GtkWidget *image;
+  /*GError *err=NULL;*/
+
+  if(!app_dir)
+    return NULL;
+  
+  path=g_strconcat(app_dir, "/.DirIcon", NULL);
+  pixbuf=gdk_pixbuf_new_from_file(path, NULL);
+
+  if(pixbuf) {
+    image=gtk_image_new_from_pixbuf(pixbuf);
+    g_object_unref(pixbuf);
+    return image;
+  }
+  
+  return NULL;
+}
   
 static void info_win_init(InfoWin *iw)
 {
@@ -119,6 +142,7 @@ static void info_win_init(InfoWin *iw)
   GtkWidget *frame;
   GtkWidget *button;
   GtkWidget *hbox;
+  GtkWidget *icon;
   
   g_signal_connect(G_OBJECT(iw), "delete_event", 
 		     G_CALLBACK(trap_client_destroy), 
@@ -128,8 +152,18 @@ static void info_win_init(InfoWin *iw)
   iw->web_site=NULL;
   iw->browser_cmds=g_list_append(NULL, "netscape");
 
+  hbox=gtk_hbox_new(FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(iw)->vbox), hbox, TRUE, TRUE, 2);
+  gtk_widget_show(hbox);
+
+  icon=get_app_icon();
+  if(icon) {
+    gtk_box_pack_start(GTK_BOX(hbox), icon, FALSE, FALSE, 2);
+    gtk_widget_show(icon);
+  }
+
   iw->table=gtk_table_new(INFO_WIN_NSLOT, 2, FALSE);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(iw)->vbox), iw->table,TRUE, TRUE, 2);
+  gtk_box_pack_start(GTK_BOX(hbox), iw->table, TRUE, TRUE, 2);
   gtk_widget_show(iw->table);
 
   label=gtk_label_new("Program");
@@ -290,6 +324,10 @@ static void info_win_finalize (GObject *object)
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.5  2003/03/05 15:31:23  stephen
+ * First pass a conversion to GTK 2
+ * Known problems in SOAP code.
+ *
  * Revision 1.4  2002/04/29 08:17:24  stephen
  * Fixed applet menu positioning (didn't work if program was managing more than
  * one applet window)
