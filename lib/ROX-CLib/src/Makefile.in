@@ -18,15 +18,15 @@ LIBFILE.a = ${LIBDIR}/lib${LIBNAME}.a
 PROG = pkg
 
 SRCS = pkg.c error.c choices.c infowin.c rox_debug.c rox_dnd.c
-SRCS += gtksavebox.c rox_path.c
+SRCS += gtksavebox.c rox_path.c rox_resources.c
 
 OBJECTS = pkg.o 
 
 LIBOBJECTS = error.o choices.o infowin.o rox_debug.o rox_dnd.o
-LIBOBJECTS += gtksavebox.o rox_path.o
+LIBOBJECTS += gtksavebox.o rox_path.o rox_resources.o
 
 INCLUDES = rox-clib.h error.h choices.h infowin.h rox_debug.h rox_dnd.h
-INCLUDES += gtksavebox.h rox_path.h
+INCLUDES += gtksavebox.h rox_path.h rox_resources.h
 
 ############ Things to keep the same
 

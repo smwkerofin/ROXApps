@@ -197,3 +197,19 @@ gchar *rox_path_get_path(const gchar *uri)
 
 Returns the path part of a file: URI regardless of whether it is the local
 host or not.
+
+rox_resources.h
+---------------
+
+Utility functions for finding resource files, which may be locale specific.
+
+gchar *rox_resources_find(const gchar *app_name,
+				 const gchar *leaf,
+				 const gchar *lang);
+
+Search $CHOICESPATH, then $APP_DIR for a directory called Resources
+which contains the file leaf, whether in a sub-directory lang or
+directly.  Returns the full path if found (pass to g_free when done)
+or NULL if not.  lang may be ROX_RESOURCES_NO_LANG to not search
+for sub-directories, or ROX_RESOURCES_DEFAULT_LANG for the sub-directory
+appropriate for the selected language.

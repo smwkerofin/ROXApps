@@ -1,6 +1,10 @@
 Changes to ROX-CLib by Version
 ==============================
 
+0.1.5
+-----
+Added rox_resources.c to aid locating resource files.
+
 0.1.4
 -----
 Change to compilation system: each app should have its own rox_run.
