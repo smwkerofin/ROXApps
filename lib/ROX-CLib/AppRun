@@ -29,7 +29,6 @@ case $1 in
 	rm -f $APP_DIR/src/config.cache
 	cd $APP_DIR/src && ./configure --bindir=$APP_DIR/$PLATFORM \
 			&& make clean && make BINDIR=$APP_DIR/$PLATFORM \
-			&& $APP_DIR/$PLATFORM/bin/install_on_path $APP_DIR/$PLATFORM/bin/rox_run \
 			&& echo Done >&2 && exit 0
 	echo Compile failed >&2
 	echo Press Return... >&2

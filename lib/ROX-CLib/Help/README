@@ -11,10 +11,6 @@ your $LIBDIRPATH.
 
 Compile using ROX-CLib/AppRun --compile
 
-It will ask if it can copy rox_run into a writable directory on your path.  
-This script is used when compiling or linking against the directory (see 
-below).
-
 Compiling and linking against the library
 -----------------------------------------
 
@@ -29,6 +25,22 @@ Add the output of
 to your link line, e.g.
    gcc `rox_run ROX-CLib --cflags` -o main main.o `rox_run ROX-CLib --libs`
 
+If you are using autoconf and building a ROX program then:
+In src/configure.in add:
+  if test -z "$ROX_RUN"; then
+    AC_CHECK_PROG(ROX_RUN, rox_run, rox_run, "$APP_DIR/rox_run")
+  fi
+  AC_SUBST(ROX_RUN)
+
+In src/Makefile.in add:
+  ROX_CLIB = @ROX_RUN@ ROX-CLib
+and to CFLAGS add: `${ROX_CLIB} --cflags`
+and to LDFLAGS add: `${ROX_CLIB} --libs`
+
+In AppRun and AppletRun ensure you have:
+  APP_DIR=`cd $APP_DIR;pwd`; export APP_DIR
+
+Finally put rox_run in the ROX app dir.
 
 Brief listing of functions
 --------------------------
