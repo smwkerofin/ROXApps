@@ -28,7 +28,7 @@ LDFLAGS = @LDFLAGS@ `${GTK_LIBS}` `${XML_CONFIG} --libs` @LIBS@
 EXEC = ${PLATFORM_DIR}/bin/${PROG}
 LIBDIR = ${PLATFORM_DIR}/lib
 ABSLIBDIR = ${ABS_PLATFORM_DIR}/lib
-INCLUDEDIR = ${PLATFORM_DIR}/include
+INCLUDEDIR = ${PLATFORM_DIR}/include/rox
 LIBFILE.a = ${LIBDIR}/lib${LIBNAME}.a
 LIBFILE.la = ${LIBDIR}/lib${LIBNAME}.la
 LTCOMPILE = ${LIBTOOL} --mode=compile ${CC} ${CFLAGS} -c
@@ -98,7 +98,7 @@ ${LIBDIR}:  ${PLATFORM_DIR}
 	-mkdir ${LIBDIR}
 
 ${INCLUDEDIR}:  ${PLATFORM_DIR} ${INCLUDES}
-	-mkdir ${INCLUDEDIR}
+	-mkdir -p ${INCLUDEDIR}
 	for f in ${INCLUDES}; do ${INSTALL_DATA} $$f ${INCLUDEDIR}; done
 
 ${LIBFILE.a}: ${LIBDIR} ${LIBOBJECTS}

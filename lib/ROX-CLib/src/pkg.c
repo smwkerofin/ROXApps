@@ -1,5 +1,5 @@
 /*
- * $Id: pkg.c,v 1.3 2002/02/25 09:50:23 stephen Exp $
+ * $Id: pkg.c,v 1.4 2002/04/29 08:17:24 stephen Exp $
  */
 
 #include <stdio.h>
@@ -160,7 +160,8 @@ static int do_cflags(const char *app_dir, const char *platform)
   gchar *tmp;
   char cmd[256];
 
-  tmp=g_strdup_printf("-I%s/%s/include ", app_dir, platform);
+  tmp=g_strdup_printf("-I%s/%s/include -I%s/%s/include/rox ",
+		      app_dir, platform, app_dir, platform);
   line=g_string_new(tmp);
   g_free(tmp);
   line=run_command(line, GTK_CFLAGS);
@@ -236,6 +237,11 @@ static int do_version(const char *app_dir, const char *platform)
 
 /*
  * $Log: pkg.c,v $
+ * Revision 1.4  2002/04/29 08:17:24  stephen
+ * Fixed applet menu positioning (didn't work if program was managing more than
+ * one applet window)
+ * Some work for GTK+ 2
+ *
  * Revision 1.3  2002/02/25 09:50:23  stephen
  * Fixed bug in determining XML config
  *
