@@ -1,11 +1,12 @@
-# $Id: gui.py,v 1.11 2003/09/15 12:02:41 stephen Exp $
+# $Id: gui.py,v 1.12 2003/12/05 14:27:17 stephen Exp $
 
 import os
 import sys
 import string
 
-import findrox
+import findrox; findrox.version(1, 9, 12)
 
+#import rox
 import rox.choices
 
 from rox import g
@@ -35,6 +36,7 @@ iface='ppp0'
 select_cmd=''
 adjust_cmd=''
 levels=[500, 50, 1, 0]
+levels2=[4096, 256, 1, 0]
 wsize=48
 
 pids=[]
@@ -197,21 +199,25 @@ can.realize()
 #print dir(can)
 cmap=can.get_colormap()
 #print dir(cmap)
+black=cmap.alloc_color('#000000')
 blue=cmap.alloc_color('#0000ff')
 green=cmap.alloc_color('#00bb00')
 red=cmap.alloc_color('#ff0000')
 high=cmap.alloc_color('#00ff00')
 medium=green
 low=cmap.alloc_color('#007700')
-off=cmap.alloc_color('#000000')
+off=black
 
 colours=(high, medium, low, off)
 
 pfd=pango.FontDescription('Sans bold %d' % (wsize-16))
 layout=can.create_pango_layout('?')
 layout.set_font_description(pfd)
+pfd=pango.FontDescription('Sans bold 6')
+slayout=can.create_pango_layout('?')
+slayout.set_font_description(pfd)
 
-def draw_arrow(drawable, gc, pts, act):
+def draw_arrow(drawable, gc, pts, act, mid, top, bot):
     tmp=gc.foreground
     col=red
     for i in range(len(levels)):
@@ -220,6 +226,47 @@ def draw_arrow(drawable, gc, pts, act):
             break
     gc.foreground=col
     drawable.draw_polygon(gc, 1, pts)
+    gc.foreground=black
+    s=str(act)
+    try:
+        slayout.set_text(s, len(s))
+    except:
+        slayout.set_text(s)
+    w, h=slayout.get_pixel_size()
+    x=mid-w/2
+    y=top+((top+bot)/2-h)/2
+    #print mid, w, x
+    drawable.draw_layout(gc, x, y, slayout)
+    gc.foreground=tmp
+
+def hsize(val):
+    if val>2*1024*1024:
+        return '%dM' % (val/1024/1024)
+    if val>2*1024:
+        return '%dK' % (val/1024)
+    return '%d' % val
+
+def draw_arrow2(drawable, gc, pts, act, mid, top, bot):
+    tmp=gc.foreground
+    col=red
+    for i in range(len(levels2)):
+        if act>=levels2[i]:
+            col=colours[i]
+            break
+    gc.foreground=col
+    drawable.draw_polygon(gc, 1, pts)
+    gc.foreground=black
+    s=hsize(act)
+    try:
+        slayout.set_text(s, len(s))
+    except:
+        slayout.set_text(s)
+    w, h=slayout.get_pixel_size()
+    x=mid-w/2
+    y=top #+((top+bot)/2-h)/2
+    #print mid, w, x
+    #print top, bot, h, y
+    drawable.draw_layout(gc, x, y, slayout)
     gc.foreground=tmp
 
 def expose(widget, event):
@@ -239,25 +286,36 @@ def expose(widget, event):
 
     act=stats.getCurrent(iface)
     #gc=widget.get_style().bg_gc[g.STATE_NORMAL]
+    #print iface, act
 
-    top=2
-    bot=height-2
-    mid=height/2
     if act and len(act)>1:
         # Receive
+        top=2
+        bot=height*5/6-2
+        mid=height*5/6/2
         cx=width/4
         left=2
         right=width/2-2
         pts=((cx-2,top), (cx-2,mid), (left,mid), (cx,bot), (right,mid),
              (cx+2,mid), (cx+2,top))
-        draw_arrow(widget.window, gc, pts, act[0])
+        if act[2]<0:
+            draw_arrow(widget.window, gc, pts, act[0], cx, mid, bot)
+        else:
+            draw_arrow2(widget.window, gc, pts, act[2], cx, bot, height)
+        
         # Transmit
+        top=2+height/6
+        bot=height-2
+        mid=top+height*5/6/2
         cx=3*width/4
         left=width/2+2
         right=width-2
         pts=((cx-2,bot), (cx-2,mid), (left,mid), (cx,top), (right,mid),
              (cx+2,mid), (cx+2,bot))
-        draw_arrow(widget.window, gc, pts, act[1])
+        if act[3]<0:
+            draw_arrow(widget.window, gc, pts, act[1], cx, top, mid)
+        else:
+            draw_arrow2(widget.window, gc, pts, act[3], cx, 2, top)
 
     else:
         tmp=gc.foreground
@@ -268,8 +326,19 @@ def expose(widget, event):
         widget.window.draw_layout(gc, x, y, layout)
         gc.foreground=tmp
         
+def resize(widget, event, udata=None):
+    global slayout
+    
+    (x, y, width, height)=widget.get_allocation()
+    size=(width+height)/2/6-2
+    if size<6:
+        size=6
+    #print width, height, size
+    pfd=pango.FontDescription('Sans %d' % size)
+    slayout.set_font_description(pfd)
     
 can.connect('expose_event', expose)
+can.connect('configure_event', resize)
 
 def update():
     stats.update()
