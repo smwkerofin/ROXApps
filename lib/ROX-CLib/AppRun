@@ -5,12 +5,19 @@ LIB=rox-clib
 APP_DIR=`dirname $0`
 APP_DIR=`cd "$APP_DIR";pwd`; export APP_DIR
 
-ARCH=`uname -m`
-case $ARCH in
-	i?86) ARCH=ix86 ;;
-esac
+if [ "x$PLATFORM" = x ]; then
 
-PLATFORM=`uname -s`-$ARCH ; export PLATFORM
+  ARCH=`uname -m`
+  case $ARCH in
+	i?86) ARCH=ix86 ;;
+  esac
+
+  PLATFORM=`uname -s`-$ARCH ; export PLATFORM
+fi
+
+if [ "x$MAKE" = x ]; then
+  MAKE=make
+fi
 
 DEBUGGER=""
 
@@ -30,7 +37,7 @@ case $1 in
 	fi
 	rm -f "$APP_DIR"/src/config.cache "$APP_DIR"/src/Makefile
 	cd "$APP_DIR"/src && ./configure --with-platform=$PLATFORM \
-			&& make clean && make  \
+			&& $MAKE clean && $MAKE  \
 			&& echo Done >&2 && exit 0
 	echo Compile failed >&2
 	echo Press Return... >&2
