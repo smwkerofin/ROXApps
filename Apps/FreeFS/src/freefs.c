@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.7 2001/07/06 08:30:49 stephen Exp $
+ * $Id: freefs.c,v 1.8 2001/08/20 09:32:15 stephen Exp $
  */
 #include "config.h"
 
@@ -110,6 +110,8 @@ int main(int argc, char *argv[])
   gchar *localedir;
 #endif
 
+  rox_debug_init(PROJECT);
+
   app_dir=g_getenv("APP_DIR");
 #ifdef HAVE_BINDTEXTDOMAIN
   localedir=g_strconcat(app_dir, "/Messages", NULL);
@@ -118,9 +120,9 @@ int main(int argc, char *argv[])
   g_free(localedir);
 #endif
   
-  dprintf(5, "%d %s -> %s\n", argc, argv[1], argv[argc-1]);
+  dprintf(5, "%d %s -> %s", argc, argv[1]? argv[1]: "NULL", argv[argc-1]);
   gtk_init(&argc, &argv);
-  dprintf(5, "%d %s -> %s\n", argc, argv[1], argv[argc-1]);
+  dprintf(5, "%d %s -> %s", argc, argv[1]? argv[1]: "NULL", argv[argc-1]);
   ttips=gtk_tooltips_new();
 
   read_choices();
@@ -133,7 +135,7 @@ int main(int argc, char *argv[])
   }
 
   while((c=getopt(argc, argv, "a:"))!=EOF) {
-    dprintf(5, " %2d -%c %s\n", c, c, optarg? optarg: "NULL");
+    dprintf(5, " %2d -%c %s", c, c, optarg? optarg: "NULL");
     switch(c) {
     case 'a':
       xid=atol(optarg);
@@ -282,21 +284,21 @@ int main(int argc, char *argv[])
 			 TIP_PRIVATE);
 
 #if TRY_DND && APPLET_DND
-    dprintf(3, "make drop target for plug\n");
+    dprintf(3, "make drop target for plug");
     rox_dnd_register_uris(plug, 0, handle_uris, NULL);
 #endif
 
-    dprintf(4, "vbox new\n");
+    dprintf(4, "vbox new");
     vbox=gtk_vbox_new(FALSE, 1);
     gtk_container_add(GTK_CONTAINER(plug), vbox);
     gtk_widget_show(vbox);
   
-    dprintf(4, "alignment new\n");
+    dprintf(4, "alignment new");
     align=gtk_alignment_new(1, 0.5, 1, 0);
     gtk_box_pack_end(GTK_BOX(vbox), align, TRUE, TRUE, 2);
     gtk_widget_show(align);
 
-    dprintf(4, "label new\n");
+    dprintf(4, "label new");
     fs_name=gtk_label_new("");
     gtk_label_set_justify(GTK_LABEL(fs_name), GTK_JUSTIFY_RIGHT);
     gtk_widget_set_name(fs_name, "text display");
@@ -324,27 +326,27 @@ int main(int argc, char *argv[])
     menu_create_menu(plug);
 #endif
 
-    dprintf(5, "show plug\n");
+    dprintf(5, "show plug");
     gtk_widget_show(plug);
-    dprintf(5, "made applet\n");
+    dprintf(5, "made applet");
   }
 
   /* Set up glibtop and check now */
-  dprintf(4, "set up glibtop\n");
+  dprintf(4, "set up glibtop");
   glibtop_init_r(&glibtop_global_server,
 		 (1<<GLIBTOP_SYSDEPS_FSUSAGE)|(1<<GLIBTOP_SYSDEPS_MOUNTLIST),
 		 0);
-  dprintf(3, "update_fs_values(%s)\n", df_dir);
+  dprintf(3, "update_fs_values(%s)", df_dir);
   update_fs_values(df_dir);
 
-  dprintf(3, "show %p (%ld)\n", win, xid);
+  dprintf(3, "show %p (%ld)", win, xid);
   if(!xid)
     gtk_widget_show(win);
-  dprintf(2, "timeout %ds, %p, %s\n", options.update_sec,
+  dprintf(2, "timeout %ds, %p, %s", options.update_sec,
 	  (GtkFunction) update_fs_values, df_dir);
   update_tag=gtk_timeout_add(options.update_sec*1000,
 			 (GtkFunction) update_fs_values, df_dir);
-  dprintf(2, "update_sec=%d, update_tag=%u\n", options.update_sec,
+  dprintf(2, "update_sec=%d, update_tag=%u", options.update_sec,
 	  update_tag);
   
   gtk_main();
@@ -355,6 +357,8 @@ int main(int argc, char *argv[])
 /* Change the directory/file and therefore FS we are monitoring */
 static void set_target(const char *ndir)
 {
+  dprintf(3, "set_target(\"%s\")", ndir);
+  
   if(df_dir)
     g_free(df_dir);
   df_dir=g_strdup(ndir);
@@ -441,9 +445,9 @@ static gboolean update_fs_values(gchar *mntpt)
 {
   int ok=FALSE;
 
-  dprintf(4, "update_sec=%d, update_tag=%u\n", options.update_sec,
+  dprintf(4, "update_sec=%d, update_tag=%u", options.update_sec,
 	  update_tag);
-  dprintf(4, "update_fs_values(\"%s\")\n", mntpt);
+  dprintf(4, "update_fs_values(\"%s\")", mntpt);
   
   if(mntpt) {
     glibtop_fsusage buf;
@@ -459,13 +463,13 @@ static gboolean update_fs_values(gchar *mntpt)
       gfloat fused;
       int row;
       
-      dprintf(5, "%lld %lld %lld\n", buf.blocks, buf.bfree,
+      dprintf(5, "%lld %lld %lld", buf.blocks, buf.bfree,
 	     buf.bavail);
       
       total=BLOCKSIZE*(unsigned long long) buf.blocks;
       used=BLOCKSIZE*(unsigned long long) (buf.blocks-buf.bfree);
       avail=BLOCKSIZE*(unsigned long long) buf.bavail;
-      dprintf(4, "%llu %llu %llu\n", total, used, avail);
+      dprintf(4, "%llu %llu %llu", total, used, avail);
 
       if(buf.blocks>0) {
 	fused=(100.f*(buf.blocks-buf.bavail))/((gfloat) buf.blocks);
@@ -474,28 +478,28 @@ static gboolean update_fs_values(gchar *mntpt)
       } else {
 	fused=0.f;
       }
-      dprintf(4, "%2.0f %%\n", fused);
+      dprintf(4, "%2.0f %%", fused);
 
       if(win) {
-	dprintf(4, "mount point=%s\n", find_mount_point(mntpt));
+	dprintf(4, "mount point=%s", find_mount_point(mntpt));
 	gtk_label_set_text(GTK_LABEL(fs_name), find_mount_point(mntpt));
 	gtk_label_set_text(GTK_LABEL(fs_total), fmt_size(total));
 	gtk_label_set_text(GTK_LABEL(fs_used), fmt_size(used));
 	gtk_label_set_text(GTK_LABEL(fs_free), fmt_size(avail));
 
       } else {
-	dprintf(5, "set text\n");
+	dprintf(5, "set text");
 	gtk_label_set_text(GTK_LABEL(fs_name),
 			   g_basename(find_mount_point(mntpt)));
 	/*gtk_label_set_text(GTK_LABEL(fs_name), find_mount_point(mntpt));*/
       }
-      dprintf(5, "set progress\n");
+      dprintf(5, "set progress");
       gtk_progress_set_value(GTK_PROGRESS(fs_per), fused);
 
     }
   }
   
-  dprintf(4, "update_fs_values(%s), ok=%d, update_sec=%d\n", mntpt, ok,
+  dprintf(4, "update_fs_values(%s), ok=%d, update_sec=%d", mntpt, ok,
 	  options.update_sec);
   
   if(!ok && win) {
@@ -538,22 +542,22 @@ static void read_choices(void)
     do {
       line=fgets(buf, sizeof(buf), in);
       if(line) {
-	dprintf(4, "line=%s\n", line);
+	dprintf(4, "line=%s", line);
 	end=strpbrk(line, "\n#");
 	if(end)
 	  *end=0;
 	if(*line) {
 	  char *sep;
 
-	  dprintf(4, "line=%s\n", line);
+	  dprintf(4, "line=%s", line);
 	  sep=strchr(line, ':');
 	  if(sep) {
-	    dprintf(3, "%.*s: %s\n", sep-line, line, sep+1);
+	    dprintf(3, "%.*s: %s", sep-line, line, sep+1);
 	    if(strncmp(line, UPDATE_RATE, sep-line)==0) {
 	      options.update_sec=atoi(sep+1);
 	      if(options.update_sec<1)
 		options.update_sec=1;
-	      dprintf(3, "update_sec now %d\n", options.update_sec);
+	      dprintf(3, "update_sec now %d", options.update_sec);
 	    } else if(strncmp(line, INIT_SIZE, sep-line)==0) {
 	      options.applet_init_size=(guint) atoi(sep+1);
 	    } else if(strncmp(line, SHOW_DIR, sep-line)==0) {
@@ -863,6 +867,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
   local=rox_dnd_filter_local(uris);
 
+  dprintf(2, "URI dropped, local list is %p (%s)", local,
+	  local? local->data: "NULL");
+
   if(local) {
     GSList *tmp;
     
@@ -877,6 +884,10 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.8  2001/08/20 09:32:15  stephen
+ * Switch to using ROX-CLib.  Menu created at start so accelerators are
+ * always available.
+ *
  * Revision 1.7  2001/07/06 08:30:49  stephen
  * Improved applet appearance for top and bottom panels.  Support menu
  * accelerators.  Add tooltip help.
