@@ -1,6 +1,11 @@
 Fetch
 =====
 
+04-Dec-2004
+~~~~~~~~~~~
+Use download manager.  Possible fix to stalled downloads (message
+saying download finished stuck in pipe!).
+
 22-Nov-2004 (0.0.6)
 ~~~~~~~~~~~
 Error trap for the rename at end of fetch.
