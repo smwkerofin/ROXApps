@@ -1,14 +1,6 @@
 Versions of FreeFS
 ==================
 
-1.0.0
------
-No changes.  This is the stable version.
-
-0.1.8
------
-Fixed bug in memory management.
-
 0.1.7
 -----
 Improved applet appearance for top and bottom panels.  Support menu 
