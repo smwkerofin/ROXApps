@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.1.1.1 2001/04/12 13:24:36 stephen Exp $
+ * $Id: tail.c,v 1.2 2001/04/12 13:59:02 stephen Exp $
  */
 
 #include <stdio.h>
@@ -12,6 +12,8 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <sys/filio.h>
 #include <fcntl.h>
 
 #include <gtk/gtk.h>
@@ -31,6 +33,7 @@ static guint update_tag=0;
 
 static gint check_file(gpointer unused);
 static void set_file(const char *);
+static void set_fd(int nfd);
 static void show_info_win(void);
 
 static void dnd_init(void);
@@ -112,7 +115,7 @@ int main(int argc, char *argv[])
 				 GTK_POLICY_AUTOMATIC,
 				 GTK_POLICY_AUTOMATIC);
   gtk_widget_show(scr);
-  gtk_widget_set_usize(scr, 640, 480);
+  gtk_widget_set_usize(scr, 640, 480/2);
   gtk_box_pack_start(GTK_BOX(vbox), scr, TRUE, TRUE, 2);
   
   text=gtk_text_new(NULL, NULL);
@@ -124,6 +127,9 @@ int main(int argc, char *argv[])
 
   if(argv[1])
     set_file(argv[1]);
+  else
+    set_fd(fileno(stdin));
+  
   update_tag=gtk_timeout_add(500, (GtkFunction) check_file, NULL);
 
   gtk_main();
@@ -137,27 +143,50 @@ static void append_text_from_file(int fd)
   size_t m=sizeof(buf)-1;
   ssize_t nr;
   gint pos;
+  GtkWidget *scr;
+  GtkAdjustment *adj;
+  int ready;
 
   do {
+    if(ioctl(fd, FIONREAD, &ready)<0)
+      break;
+
+    m=sizeof(buf)-1;
+    /*printf("%d %d %d\n", fd, m, ready);*/
+    if(ready<m)
+      m=ready;
+    /*printf("%d %d %d\n", fd, m, ready);*/
+
     nr=read(fd, buf, m);
     if(nr<1)
       break;
     buf[nr]=0;
+    /*printf("%d, %s\n", nr, buf);*/
 
     gtk_text_insert(GTK_TEXT(text), NULL, NULL, NULL, buf, nr);
   } while(TRUE);
+
+  gtk_text_set_point(GTK_TEXT(text), gtk_text_get_length(GTK_TEXT(text)));
+  scr=text->parent;
+  adj=gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scr));
+  if(adj)
+    gtk_adjustment_set_value(adj, adj->upper);
 }
 
 static gint check_file(gpointer unused)
 {
   struct stat statb;
   
-  if(!fd)
+  if(fd<0)
     return TRUE;
 
-  if(fstat(fd, &statb)<0)
+  /*printf("check %d\n", fd);*/
+  if(fstat(fd, &statb)<0) {
+    perror(fname);
     return TRUE;
+  }
 
+  /*printf("size=%d\n", statb.st_size);*/
   if(statb.st_size==size)
     return TRUE;
 
@@ -170,7 +199,10 @@ static gint check_file(gpointer unused)
     size=statb.st_size;
     
   } else {
-    set_file(fname);
+    if(fname)
+      set_file(fname);
+    else
+      size=statb.st_size;
   }
 
   return TRUE;
@@ -212,6 +244,20 @@ static void set_file(const char *name)
   if(fname)
     g_free(fname);
   fname=tmp;
+}
+
+static void set_fd(int nfd)
+{
+  append_text_from_file(nfd);
+  
+  gtk_window_set_title(GTK_WINDOW(win), "Tail: (stdin)");
+  if(fd)
+    close(fd);
+  fd=nfd;
+  pos=lseek(fd, (off_t) 0, SEEK_CUR);
+  if(fname)
+    g_free(fname);
+  fname=NULL;
 }
 
 /* Make a destroy-frame into a close */
@@ -590,6 +636,9 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.2  2001/04/12 13:59:02  stephen
+ * Added info window and a load file selection
+ *
  * Revision 1.1.1.1  2001/04/12 13:24:36  stephen
  * Initial version
  *
