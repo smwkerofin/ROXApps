@@ -1,0 +1,70 @@
+Depend
+======
+
+A ROX utility for checking dependencies of other ROX utilities.
+
+To Install
+----------
+
+De-archive the program and copy it to somewhere you can find it again.
+I suggest ~/Apps.
+
+Using the program (as a user)
+-----------------------------
+
+Drag ROX utilities to Depend.  A window will open listing the
+program's dependencies (if they have been declared, see below) and
+whether or not Depend could find them.  To test another program either
+drag it the open window to re-use it or to Depend to start up another
+instance. 
+
+Using the program (as a developer)
+----------------------------------
+
+Depend reads dependency information from the AppInfo.xml file.  Here
+is an extract from Clock/AppInfo.xml
+
+  <Dependencies>
+    <AppDir><Name>ROX-CLib</Name><NeedsVersion>2.1.0</NeedsVersion></AppDir>
+  </Dependencies>
+
+This means that Clock depends on an AppDir called ROX-CLib and that it
+must be version 2.1.0 or later.  Clock also depends on a host of other
+stuff, including GTK+ 2.0, but these are not listed because ROX-CLib
+depends on it also and it is assumed that ROX-CLib's dependencies have
+all been resolved.  Future versions of Depend may (optionally) check
+recursivly for AppDir dependencies.
+
+The list of implemented dependency types below.  Each must contain a
+Name element and may contain a NeedsVersion element.
+
+* AppDir
+  An application directory called Name, which should reside in either
+  $PATH or $LIBDIRPATH ($HOME/lib:/usr/local/lib:/usr/lib).  If
+  NeedsVersion is specified then the app's AppInfo.xml is checked.
+
+* Program
+  An executable file called Name which should reside in $PATH.
+  NeedsVersion is ignored.
+
+* Library
+  A shared library called Name which should reside in $LIBDIRPATH
+  ($HOME/lib:/usr/local/lib:/usr/lib).  If NeedsVersion is specified
+  then libName.so.version is looked for, otherwise libName.so
+
+* Python
+  A python module called Name.  NeedsVersion is ignored.
+
+* Package
+  A pkg-config package called Name.  NeedsVersion is checked, if
+  specified.
+
+Downloads
+---------
+
+Latest versions are at http://www.kerofin.demon.co.uk/rox/utils.html
+
+-- 
+Stephen Watson stephen@kerofin.demon.co.uk
+
+$Id$
