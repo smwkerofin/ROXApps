@@ -57,8 +57,7 @@ space on a panel or pinboard.  The display is more minimalist,
 consisting only of the size bar and the last component of the path
 name of the mount point (optional).
 
-The file system monitored can not currently be changed and is the one
-hosting the current directory when the program starts, normally your
+The file system monitored can not currently be changed and is your
 home directory.
 
 Compiling
@@ -66,7 +65,7 @@ Compiling
 
 You will need:
   Gtk+ 1.2.8 or later
-  Libgtop 1.1.2 or later
+  Libgtop (I use 1.1.2 but 1.0 may work).
 
 
 Run FreeFS/AppRun --compile.  It should also compile itself when first run.
