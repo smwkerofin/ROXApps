@@ -4,6 +4,11 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+11-Feb-2005
+~~~~~~~~~~~
+Accept "True" as a synonym for "1" when loading options, again to be 
+compatible with ROX-Lib2.
+
 19-Jan-2005
 ~~~~~~~~~~~
 Renamed 'Options' to 'Options.xml' to be compatible with ROX-Lib2.
@@ -207,4 +212,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.18 2004/11/22 15:31:50 stephen Exp $
+$Id: Changes,v 1.19 2005/01/29 11:22:51 stephen Exp $

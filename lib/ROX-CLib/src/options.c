@@ -1,5 +1,5 @@
 /*
- * $Id: options.c,v 1.4 2004/10/29 13:36:07 stephen Exp $
+ * $Id: options.c,v 1.5 2005/01/29 11:22:51 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -123,6 +123,7 @@ static void set_not_changed(gpointer key, gpointer value, gpointer data);
 static void load_options(xmlDoc *doc);
 static gboolean check_anything_changed(void);
 static GtkWidget *button_new_mixed(const char *stock, const char *message);
+static int str_to_int(const char *str);
 
 static GList *build_label(Option *option, xmlNode *node, gchar *label);
 static GList *build_spacer(Option *option, xmlNode *node, gchar *label);
@@ -233,7 +234,7 @@ void option_check_widget(Option *option)
 
 	g_free(option->value);
 	option->value = new;
-	option->int_value = atoi(new);
+	option->int_value = str_to_int(new);
 
 	options_notify();
 }
@@ -305,7 +306,7 @@ void option_add_int(Option *option, const gchar *key, int value)
 void option_add_string(Option *option, const gchar *key, const gchar *value)
 {
 	option->value = g_strdup(value);
-	option->int_value = atoi(value);
+	option->int_value = str_to_int(value);
 	option_add(option, key);
 }
 
@@ -331,6 +332,13 @@ void option_add_saver(OptionNotify *callback)
 /****************************************************************
  *                      INTERNAL FUNCTIONS                      *
  ****************************************************************/
+
+static int str_to_int(const char *str)
+{
+  if(strcmp(str, "True")==0)
+    return 1;
+  return atoi(str);
+}
 
 /* Option should contain the default value.
  * It must never be destroyed after being registered (Options are typically
@@ -365,7 +373,7 @@ static void option_add(Option *option, const gchar *key)
 			
 		g_free(option->value);
 		option->value = value;
-		option->int_value = atoi(value);
+		option->int_value = str_to_int(value);
 		g_hash_table_remove(loading, key);
 		g_free(okey);
 	}
@@ -1029,7 +1037,7 @@ static void restore_backup(gpointer key, gpointer value, gpointer data)
 
 	g_free(option->value);
 	option->value = g_strdup(option->backup);
-	option->int_value = atoi(option->value);
+	option->int_value = str_to_int(option->value);
 }
 
 static void revert_options(GtkWidget *widget, gpointer data)
@@ -1774,6 +1782,9 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: options.c,v $
+ * Revision 1.5  2005/01/29 11:22:51  stephen
+ * Renamed 'Options' to 'Options.xml' to be compatible with ROX-Lib2
+ *
  * Revision 1.4  2004/10/29 13:36:07  stephen
  * Added rox_choices_load()/save()
  *
