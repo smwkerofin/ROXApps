@@ -1,6 +1,10 @@
 Changes to ROX-CLib by Version
 ==============================
 
+0.1.8
+-----
+Updated SOAP namespaces (needed for 1.1.10).  Added rox_filer_version().
+
 0.1.7
 -----
 More work on SOAP, mainly about fixing rox_filer_file_type().
