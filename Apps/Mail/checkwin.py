@@ -1,6 +1,6 @@
 #import rox.loading
 from rox import g
-from Checker import Checker
+import Checker
 from my_support import *
 import rox
 
@@ -8,11 +8,18 @@ ADD = 1
 DELETE = 2
 UPDATE = 3
 
+COMMAND = 0
+INTERVAL = 1
+CHECKER = 2
+
 class CheckWin(g.Dialog):
     def __init__(self, checks):
         # rox.loading.XDSLoader.__init__(self, None)
         self.current=None
-        self.all=checks
+        if checks:
+            self.all=checks
+        else:
+            self.all=[]
         
         g.Dialog.__init__(self)
         self.set_title('Setup checking programs')
@@ -22,30 +29,31 @@ class CheckWin(g.Dialog):
         self.vbox.pack_start(hbox)
 
         scrw=g.ScrolledWindow()
-        scrw.set_size_request(-1, 100)
+        scrw.set_size_request(-1, 200)
+        scrw.set_border_width(4)
+        scrw.set_policy(g.POLICY_NEVER, g.POLICY_ALWAYS)
+        scrw.set_shadow_type(g.SHADOW_IN)
         hbox.pack_start(scrw)
 
-        titles=['Program', 'Interval']
-        self.progs=g.CList(2, titles)
-        self.progs.set_column_auto_resize(0, g.TRUE)
-        self.progs.set_column_auto_resize(1, g.TRUE)
-        if checks!=None:
-            for p in checks:
+        self.model=g.ListStore(str, str, object)
+        view=g.TreeView(self.model)
+        self.progs=view
+
+        cell=g.CellRendererText()
+        column = g.TreeViewColumn('Program', cell, text = COMMAND)
+        view.append_column(column)
+        
+        cell=g.CellRendererText()
+        column = g.TreeViewColumn('Interval', cell, text = INTERVAL)
+        view.append_column(column)
+        
+        for p in self.all:
                 c=p.getCommand()
                 s='%.2f' % p.getInterval()
-                v=[c, s]
-                # print v, c, s
-                row=self.progs.append(v)
-                self.progs.set_row_data(row, p)
+                iter=self.model.append()
+                self.model.set(iter, COMMAND, c, INTERVAL, s, CHECKER, p)
             
-        def sel_row(list, row, column, event, data):
-            checkwin=data
-            checkwin.select_row(list, row, column)
-        def unsel_row(list, row, column, event, data):
-            checkwin=data
-            checkwin.unselect_row(list, row, column)
-        self.progs.connect('select-row', sel_row, self)
-        self.progs.connect('unselect-row', unsel_row, self)
+        self.progs.connect('row-activated', self.active_row)
         scrw.add(self.progs)
 
         hbox=g.HBox(spacing=4)
@@ -100,24 +108,52 @@ class CheckWin(g.Dialog):
         self.cmd.set_text('')
         self.int.set_text('')
 
+    def active_row(self, view, path, col, udata=None):
+        iter=self.model.get_iter(path)
+        c=self.model.get_value(iter, CHECKER)
+        self.current=c
+        self.cmd.set_text(c.getCommand())
+        self.int.set_text("%.0f" % c.getInterval())
+
     def add(self):
-        checker=Checker('true', 300.)
+        cmd=self.cmd.get_text()
+        try:
+            intv=float(self.int.get_text())
+        except:
+            intv=300.
+        checker=Checker.Checker(cmd, intv)
         self.all.append(checker)
-        row=self.progs.append([checker.getCommand(), "%f" % checker.getInterval()])
-        self.progs.set_row_data(row, checker)
+        iter=self.model.append()
+        self.model.set(iter, COMMAND,checker.getCommand() ,
+                       INTERVAL, "%f" % checker.getInterval(),
+                       CHECKER, checker)
+        checker.schedule()
 
     def remove(self):
-        pass
+        sel=self.progs.get_selection()
+        model, iter=sel.get_selected()
+        if iter:
+            c=model.get_value(iter, CHECKER)
+            i=self.all.index(c)
+            del self.all[i]
+            model.remove(iter)
 
     def update(self):
         #print self, self.current
         if self.current!=None:
             self.current.setCommand(self.cmd.get_text())
             self.current.setInterval(float(self.int.get_text()))
-            row=self.progs.find_row_from_data(self.current)
-            self.progs.set_text(row, 0, self.current.getCommand())
-            self.progs.set_text(row, 1, "%f" % checker.getInterval())
-            self.current.schedule()
-            fname=rox.choices.save('Mail', 'check.xml')
-            writeCheckers(self.all, fname)
+
+            iter=self.model.get_iter_first()
+            while iter:
+                c=self.model.get_value(iter, CHECKER)
+                if c==self.current:
+                    break
+            if iter:
+                self.model.set(iter, COMMAND, self.current.getCommand(),
+                               INTERVAL, self.current.getInterval())
+                self.current.schedule()
+            
+        fname=rox.choices.save('Mail', 'check.xml')
+        Checker.writeCheckers(self.all, fname)
 

@@ -6,7 +6,8 @@ from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesImpl
 from xml.dom.minidom import parse
 
-from rox import g
+import rox
+g=rox.g
 
 class Checker:
     def __init__(self, cmd, int):
@@ -28,8 +29,8 @@ class Checker:
         self.int=float(int)
 
     def writeTo(self, gen):
-        gen.startElement('check', AttributesImpl({'command': self.cmd,
-                                                  'interval': self.int}))
+        gen.startElement('check', AttributesImpl({'command': str(self.cmd),
+                                                  'interval': str(self.int)}))
         gen.endElement('check')
         gen.ignorableWhitespace('\n')
 
@@ -47,12 +48,18 @@ class Checker:
         to=self.int*1000
         if self.time!=0:
             g.timeout_remove(self.time)
-        def run_check(self):
-            return self.run()
-        self.time=g.timeout_add(int(to), run_check, self)
+        self.time=g.timeout_add(int(to), self.run)
+
+    def __del__(self):
+        if self.time!=0:
+            g.timeout_remove(self.time)
 
 def getCheckers(fname):
-    doc=parse(fname)
+    try:
+        doc=parse(fname)
+    except:
+        rox.report_exception()
+        return None
 
     ch=doc.getElementsByTagName('check')
     if ch==None:
@@ -60,21 +67,31 @@ def getCheckers(fname):
 
     checkers=[]
     for c in ch:
-        cmd=str(c.getAttribute('command'))
-        interval=float(c.getAttribute('interval'))
+        try:
+            cmd=str(c.getAttribute('command'))
+            interval=float(c.getAttribute('interval'))
 
-        checkers.append(Checker(cmd, interval))
+            checkers.append(Checker(cmd, interval))
+        except:
+            pass
 
     return checkers
 
 def writeCheckers(checkers, fname):
-    file=open(fname, 'w')
-    gen=XMLGenerator(file)
+    try:
+        file=open(fname, 'w')
+        gen=XMLGenerator(file)
 
-    gen.startDocument()
+        gen.startDocument()
 
-    for ch in checkers:
-        ch.writeTo(gen)
+        gen.startElement('checkers', AttributesImpl({}))
+        for ch in checkers:
+            ch.writeTo(gen)
+        gen.endElement('checkers')
+        gen.ignorableWhitespace('\n')
 
-    gen.endDocument()
+        gen.endDocument()
+    except:
+        rox.report_exception()
+
 
