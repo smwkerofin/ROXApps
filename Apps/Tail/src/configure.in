@@ -78,9 +78,8 @@ AC_MSG_CHECKING(ROX-CLib)
 if "$ROX_RUN" ROX-CLib ; then
   verstr=`"$ROX_RUN" ROX-CLib -v`
   ver=`echo $verstr | cut -d " " -f 2`
-  changequote(,)dnl
-  ROX_CLIB_VERSION=`echo $ver | sed -e "s/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)/10000*\1+100*\2+\3/" | bc`
-  changequote([,])dnl
+  set `echo $ver | tr '.' ' '`
+  ROX_CLIB_VERSION=`expr $1 \* 10000 + $2 \* 100 + $3`
   AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ROX_CLIB_VERSION)
   AC_MSG_RESULT(version $ver)
   if test $ROX_CLIB_VERSION -lt 10100 ; then
@@ -93,8 +92,8 @@ fi
 dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(version information)
 changequote(,)dnl
-VERSION=`xsltproc getVersion.xsl ../AppInfo.xml`
-dnl VERSION=`sed -n 's/^.*<Version>\([^<]*\)<\/Version>.*$/\1/p' ../AppInfo.xml`
+dnl VERSION=`xsltproc getVersion.xsl ../AppInfo.xml`
+VERSION=`sed -n 's/^.*<Version>\([^<]*\)<\/Version>.*$/\1/p' ../AppInfo.xml`
 changequote([,])dnl
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
 AC_MSG_RESULT(version $VERSION)

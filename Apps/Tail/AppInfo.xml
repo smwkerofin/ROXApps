@@ -17,6 +17,6 @@
   <Summary>Display a file as it grows.</Summary>
   <Summary xml:lang="it">Mostra il contenuto di un file in crescita.</Summary>
   <Dependencies>
-    <AppDir><Name>ROX-CLib</Name><Version>1.1.2</Version></AppDir>
+    <AppDir><Name>ROX-CLib</Name><NeedsVersion>1.1.2</NeedsVersion></AppDir>
   </Dependencies>
 </AppInfo>
