@@ -12,7 +12,10 @@ esac
 
 PLATFORM=`uname -s`-$ARCH
 
+DEBUGGER=""
+
 case $1 in
+    --debug) shift ; DEBUGGER=gdb ;;
     --compile)
 	if [ ! -d $APP_DIR/src ] ; then
 	    echo "ERROR from $0:" >&2
@@ -31,10 +34,18 @@ esac
 BIN=$APP_DIR/$PLATFORM/$PROG
 
 if [ -x $BIN ] ; then
-    exec $BIN "$@"
+    exec $DEBUGGER $BIN "$@"
 else
     echo "ERROR from $0:" >&2
     echo "I cannot find an executable file for your host type ($PLATFORM)." >&2
-    echo "Try using the --compile option." >&2
+    echo "Trying to compile..." >&2
+    if [ -n "$DISPLAY" ]; then
+	xterm -e $0 --compile
+    else
+	$0 --compile
+    fi
+    if [ -x $BIN ]; then
+	exec $BIN "$@"
+    fi
     exit 1
 fi
