@@ -5,10 +5,12 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.3 2001/05/10 14:56:18 stephen Exp $
+ * $Id: load.c,v 1.4 2001/05/25 07:56:25 stephen Exp $
  *
  * Log at end of file
  */
+
+#include "config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,10 +29,10 @@
 #include <glibtop/cpu.h>
 #include <glibtop/loadavg.h>
 
-#include "config.h"
 #include "choices.h"
 
 #define APPLET_MENU        1
+#define DEBUG              1
 
 static GtkWidget *menu=NULL;
 static GtkWidget *infowin=NULL;
@@ -84,6 +86,7 @@ static time_t config_time=0;
 static double *history=NULL;
 static int nhistory=0;
 static int ihistory=0;
+static gboolean is_applet;
 
 static void do_update(void);
 static gint configure_event(GtkWidget *widget, GdkEventConfigure *event);
@@ -95,6 +98,7 @@ static void show_info_win(void);
 static void read_config(void);
 static void write_config(void);
 static void check_config(void);
+static void dprintf(int level, const char *fmt, ...);
 
 int main(int argc, char *argv[])
 {
@@ -109,18 +113,24 @@ int main(int argc, char *argv[])
 			0);
   if(server->ncpu>0)
     red_line=(double) server->ncpu;
-  /*printf("ncpu=%d %f\n", server->ncpu, red_line);*/
+  dprintf(2, "ncpu=%d %f", server->ncpu, red_line);
 
   gtk_init(&argc, &argv);
+  gdk_rgb_init();
+  gtk_widget_push_visual(gdk_rgb_get_visual());
+  cmap=gdk_rgb_get_cmap();
+  gtk_widget_push_colormap(cmap);
+  
 
   choices_init();
-  /*fprintf(stderr, "read config\n");*/
+  dprintf(1, "read config");
   read_config();
   w=options.init_size;
   h=options.init_size;
 
   if(argc<2 || !atol(argv[1])) {
-    /*fprintf(stderr, "make window\n");*/
+    dprintf(2, "make window");
+    is_applet=FALSE;
     win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_widget_set_name(win, "load");
     gtk_window_set_title(GTK_WINDOW(win), "Load");
@@ -131,28 +141,26 @@ int main(int argc, char *argv[])
 		       GTK_SIGNAL_FUNC(button_press), win);
     gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
     
-    /*fprintf(stderr, "set size to %d,%d\n", w, h);*/
+    dprintf(3, "set size to %d,%d", w, h);
     gtk_widget_set_usize(win, w, h);
     /*gtk_widget_realize(win);*/
     
   } else {
     GtkWidget *plug;
 
-    /*fprintf(stderr, "argv[1]=%s\n", argv[1]);*/
+    dprintf(2, "argv[1]=%s", argv[1]);
     plug=gtk_plug_new(atol(argv[1]));
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
 		       "WM destroy");
     gtk_widget_set_usize(plug, w, h);
     
-#if APPLET_MENU
-    /* We want to pop up a menu on a button press */
     gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), plug);
     gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
-#endif
     
     win=plug;
+    is_applet=TRUE;
   }
   
   vbox=gtk_vbox_new(FALSE, 1);
@@ -162,9 +170,11 @@ int main(int argc, char *argv[])
   style=gtk_widget_get_style(vbox);
   colours[COL_BG]=style->bg[GTK_STATE_NORMAL];
 
-  cmap=gdk_colormap_get_system();
-  for(i=0; i<NUM_COLOUR; i++)
+  for(i=0; i<NUM_COLOUR; i++) {
     gdk_color_alloc(cmap, colours+i);
+    dprintf(3, "colour %d: %4x, %4x, %4x: %ld", i, colours[i].red,
+	   colours[i].green, colours[i].blue, colours[i].pixel);
+  }
 
   canvas=gtk_drawing_area_new();
   gtk_drawing_area_size (GTK_DRAWING_AREA(canvas), w-2, h-2);
@@ -177,6 +187,7 @@ int main(int argc, char *argv[])
   gtk_widget_set_events (canvas, GDK_EXPOSURE_MASK);
   gtk_widget_realize(canvas);
   gc=gdk_gc_new(canvas->window);
+  gdk_gc_set_background(gc, colours+COL_BG);
 
   gtk_widget_show(win);
 
@@ -185,6 +196,43 @@ int main(int argc, char *argv[])
   gtk_main();
 
   return 0;
+}
+
+/*
+ * Debug output.  Controlled by the environment variable LOAD_DEBUG_LEVEL
+ * which should be in the range 0-5, 0 for no debug output, 5 for most.
+ * If unset, defaults to 0
+ */
+static void dprintf(int level, const char *fmt, ...)
+{
+#if DEBUG
+  va_list list;
+  static int dlevel=-1;
+
+  if(dlevel==-1) {
+    gchar *val=g_getenv("LOAD_DEBUG_LEVEL");
+    if(val)
+      dlevel=atoi(val);
+    if(dlevel<0)
+      dlevel=0;
+
+    if(dlevel) {
+      time_t now;
+      char buf[80];
+
+      time(&now);
+      strftime(buf, sizeof(buf), "%c", localtime(&now));
+      g_log(PROJECT, G_LOG_LEVEL_DEBUG, "%s", buf);
+    }
+  }
+
+  if(level>dlevel)
+    return;
+
+  va_start(list, fmt);
+  g_logv(PROJECT, G_LOG_LEVEL_DEBUG, fmt, list);
+  va_end(list);
+#endif
 }
 
 static void do_update(void)
@@ -201,7 +249,7 @@ static void do_update(void)
   int reduce;
   int ndec=1, host_x=0;
 
-  /*printf("gc=%p canvas=%p pixmap=%p\n", gc, canvas, pixmap);*/
+  dprintf(4, "gc=%p canvas=%p pixmap=%p", gc, canvas, pixmap);
 
   if(!gc || !canvas || !pixmap)
     return;
@@ -242,7 +290,7 @@ static void do_update(void)
     bw=MAX_BAR_WIDTH;
     bx=w-2-3*bw-3*BAR_GAP-1;
   }
-  /*printf("w=%d bw=%d\n", w, bw);*/
+  dprintf(4, "w=%d bw=%d", w, bw);
   sbx=bx;
 
   glibtop_get_loadavg_l(server, &load);
@@ -258,6 +306,10 @@ static void do_update(void)
       reduce_delay=10;
     }
   }
+  if(reduce && max_load>=2.0 && history)
+    for(i=0; i<nhistory && i<ihistory; i++)
+      if(history[(ihistory-i-1)%nhistory]>max_load/2)
+	reduce=FALSE;
   if(reduce && max_load>=2.0) {
     if(reduce_delay--<1)
       max_load/=2;
@@ -271,18 +323,18 @@ static void do_update(void)
     bh=mbh*ld/max_load;
     gdk_gc_set_foreground(gc, colours+COL_NORMAL);
     gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bh);
-    /*
-    printf("load=%f max_load=%f, mbh=%d, by=%d, bh=%d, by-bh=%d\n",
+    
+    dprintf(4, "load=%f max_load=%f, mbh=%d, by=%d, bh=%d, by-bh=%d",
 	   ld, max_load, mbh, by, bh, by-bh);
-    printf("(%d, %d) by (%d, %d)\n", bx, by-bh, bw, bh);
-    */
+    dprintf(5, "(%d, %d) by (%d, %d)", bx, by-bh, bw, bh);
+    
     
     if(ld>red_line) {
       int bhred=mbh*(ld-red_line)/max_load;
-      /*
-      printf("bhred=%d by-bhred=%d\n", bhred, by-bhred);
-      printf("(%d, %d) by (%d, %d)\n", bx, by-bh, bw, bhred);
-      */
+      
+      dprintf(5, "bhred=%d by-bhred=%d", bhred, by-bhred);
+      dprintf(5, "(%d, %d) by (%d, %d)", bx, by-bh, bw, bhred);
+      
       gdk_gc_set_foreground(gc, colours+COL_HIGH);
       gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bhred);
     }
@@ -403,7 +455,7 @@ static void write_config(void)
   gchar *fname;
 
   fname=choices_find_path_save("config", PROJECT, TRUE);
-  /*printf("save to %s\n", fname? fname: "NULL");*/
+  dprintf(1, "save to %s", fname? fname: "NULL");
 
   if(fname) {
     FILE *out;
@@ -692,14 +744,28 @@ static GtkItemFactoryEntry menu_items[] = {
   { "/Quit",	NULL, gtk_main_quit, 0, NULL },
 };
 
+static void save_menus(void)
+{
+  char	*menurc;
+	
+  menurc = choices_find_path_save("menus", PROJECT, TRUE);
+  if (menurc) {
+    gboolean	mod = FALSE;
+
+    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+    g_free(menurc);
+  }
+}
+
 static void menu_create_menu(GtkWidget *window)
 {
   GtkItemFactory	*item_factory;
   GtkAccelGroup	*accel_group;
   gint 		n_items = sizeof(menu_items) / sizeof(*menu_items);
+  gchar *menurc;
 
   accel_group = gtk_accel_group_new();
-  gtk_accel_group_lock(accel_group);
+  /*gtk_accel_group_lock(accel_group);*/
 
   item_factory = gtk_item_factory_new(GTK_TYPE_MENU, "<system>", 
 				      accel_group);
@@ -710,17 +776,37 @@ static void menu_create_menu(GtkWidget *window)
   gtk_accel_group_attach(accel_group, GTK_OBJECT(window));
 
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
+
+  menurc=choices_find_path_load("menus", PROJECT);
+  if(menurc) {
+    gtk_item_factory_parse_rc(menurc);
+    g_free(menurc);
+  }
+
+  atexit(save_menus);
 }
 
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win)
 {
-  if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
+  if(bev->type==GDK_BUTTON_PRESS && bev->button==3
+#if !APPLET_MENU
+     && !is_applet
+#endif
+     ) {
     if(!menu)
       menu_create_menu(GTK_WIDGET(win));
 
     gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 				bev->button, bev->time);
+    return TRUE;
+  } else if(is_applet && bev->type==GDK_BUTTON_PRESS && bev->button==1) {
+    gchar *cmd;
+
+    cmd=g_strdup_printf("%s/AppRun &", getenv("APP_DIR"));
+    system(cmd);
+    g_free(cmd);
+      
     return TRUE;
   }
 
@@ -738,6 +824,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.4  2001/05/25 07:56:25  stephen
+ * Added support for menu on applet, can configure initial applet size.
+ *
  * Revision 1.3  2001/05/10 14:56:18  stephen
  * Added strip chart if window is wide enough.
  *

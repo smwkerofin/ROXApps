@@ -1,6 +1,12 @@
 Load
 ====
 
+0.1.9
+-----
+Don't scale down if the history is still big.  Support menu accelerators.
+Run full screen version when applet clicked on.  Better debug output (uses 
+g_logv).
+
 0.1.8
 -----
 Allow user to set initial size.
