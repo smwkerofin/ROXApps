@@ -38,6 +38,19 @@ def file_size(fname):
         size=0
     return size
 
+def count_from(fname):
+    # print 'count_from(%s)' % fname
+    n=0
+    f=file(fname, 'r')
+    while 1:
+        line=f.readline()
+        if line is None or len(line)<1:
+            break
+        # print n, line
+        if len(line)>4 and line[:5]=='From ':
+            n=n+1
+    return n
+
 _host_name = None
 def our_host_name():
 	global _host_name
