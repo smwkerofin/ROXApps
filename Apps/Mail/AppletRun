@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 #
-# $Id: AppletRun,v 1.10 2003/03/16 12:28:57 stephen Exp $
+# $Id: AppletRun,v 1.11 2003/03/18 13:23:40 stephen Exp $
 
 import findrox
 import rox
 import rox.choices
+import rox.options
 import rox.applet
 import rox.loading
 g=rox.g
@@ -52,6 +53,12 @@ if fname!=None:
     checkers=getCheckers(fname)
 else:
     checkers=None
+
+rox.setup_app_options('Mail')
+
+check_out=rox.options.Option('CheckOutgoingQ', 0)
+beep=rox.options.Option('BeepForNew', 1)
+rox.app_options.notify()
 
 version=''
 from xml.dom.minidom import parse
@@ -115,6 +122,12 @@ class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
             iw.show()
         item.connect("activate", show_infowin, iw)
 
+        self.menu.append(item)
+
+        item=g.MenuItem('Options...')
+        def show_opts(widget):
+            rox.edit_options()
+        item.connect("activate", show_opts)
         self.menu.append(item)
 
         item=g.MenuItem("Select mailer...")
@@ -188,15 +201,33 @@ class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
                 self.nomail_pixmap.hide()
                 self.mail_pixmap.show()
                 self.mail=1
-                g.gdk.beep()
-                n=count_from(mailfile)
-                self.infoline.set_text(str(n))
+                if beep.int_value:
+                    g.gdk.beep()
+            nin=count_from(mailfile)
         else:
             if self.mail!=0:
                 self.mail_pixmap.hide()
                 self.nomail_pixmap.show()
-                self.mail=0
-                self.infoline.set_text("")
+                self.mail=0      
+            nin=0
+        if check_out.int_value:
+            try:
+                mailq=os.popen('mailq', 'r').readlines()
+                fline=mailq[0].strip()
+                op=fline.find('(')
+                fline=fline[op+1:]
+                cl=fline.find(' ')
+                nout=int(fline[:cl])
+            except:
+                nout=0
+        else:
+            nout=0
+        if nout:
+            self.infoline.set_text('%d/%d' % (nin, nout))
+        elif nin:
+            self.infoline.set_text(str(nin))
+        else:
+            self.infoline.set_text("")
         return g.TRUE
 
     def xds_load_from_file(self, path):

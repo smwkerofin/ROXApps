@@ -1,6 +1,11 @@
 Versions of Mail
 ================
 
+0.3.2
+-----
+Option to show number of messages in outgoing queue.
+Italian translation of AppInfo provided by Yuri Bongiorno.
+
 0.3.1
 -----
 Fix update to return TRUE, otherwise it never gets called again

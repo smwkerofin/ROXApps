@@ -4,6 +4,10 @@ from Checker import Checker
 from my_support import *
 import rox
 
+ADD = 1
+DELETE = 2
+UPDATE = 3
+
 class CheckWin(g.Dialog):
     def __init__(self, checks):
         # rox.loading.XDSLoader.__init__(self, None)
@@ -64,36 +68,24 @@ class CheckWin(g.Dialog):
         
         hbox=self.action_area
 
-        def cancel(button, self):
-            self.destroy()
+        self.add_button(g.STOCK_ADD, ADD)
+        self.add_button(g.STOCK_DELETE, DELETE)
+        self.add_button(g.STOCK_SAVE, UPDATE)
+        self.add_button(g.STOCK_CLOSE, g.RESPONSE_CANCEL)
 
-        button=g.Button("Cancel")
-        button.connect('clicked', cancel, self)
-        hbox.pack_end(button, expand=g.FALSE)
-        
-        def add(button, self):
-            self.add()
+        self.set_default_response(g.RESPONSE_CANCEL)
 
-        button=g.Button("Add")
-        button.connect('clicked', add, self)
-        hbox.pack_end(button, expand=g.FALSE)
-        
-        def remove(button, self):
-            self.remove()
+        def response(self, resp):
+            if resp == UPDATE:
+                self.update()
+            elif resp == DELETE:
+                self.remove()
+            elif resp == ADD:
+                self.add()
+            else:
+                self.destroy()
+        self.connect('response', response)
 
-        button=g.Button("Remove")
-        button.connect('clicked', remove, self)
-        hbox.pack_end(button, expand=g.FALSE)
-        self.rembut=button
-        self.rembut.set_sensitive(g.FALSE)
-        
-        def update(button, self):
-            self.update()
-
-        button=g.Button("Update")
-        button.connect('clicked', update, self)
-        hbox.pack_end(button, expand=g.FALSE)
-        
         self.vbox.show_all()
         self.action_area.show_all()
 
@@ -118,7 +110,7 @@ class CheckWin(g.Dialog):
         pass
 
     def update(self):
-        print self, self.current
+        #print self, self.current
         if self.current!=None:
             self.current.setCommand(self.cmd.get_text())
             self.current.setInterval(float(self.int.get_text()))
