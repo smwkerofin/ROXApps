@@ -3,7 +3,7 @@
 #define PROJECT "Tail"
 #define PROGRAM PROJECT
 #define PURPOSE "Monitor a file"
-#define VERSION "0.1.1"
+#define VERSION "unknown"
 #define AUTHOR  "Stephen Watson"
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 

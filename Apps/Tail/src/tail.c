@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.3 2001/04/13 11:46:09 stephen Exp $
+ * $Id: tail.c,v 1.4 2001/04/26 13:21:13 stephen Exp $
  */
 
 #include <stdio.h>
@@ -26,7 +26,7 @@
 
 /*#include "choices.h"*/
 
-#define DEBUG 1
+#define DEBUG 0
 void dprintf(const char *fmt, ...);
 
 static GtkWidget *win;
@@ -722,6 +722,11 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.4  2001/04/26 13:21:13  stephen
+ * Don't include sys/filio.h if it isn't there.
+ * Remove code that scrolled to end of window, because it core dumped.
+ * Report error if file can't be read.
+ *
  * Revision 1.3  2001/04/13 11:46:09  stephen
  * Now works, including at the end of a pipe
  *

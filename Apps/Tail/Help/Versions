@@ -1,6 +1,11 @@
 Tail
 ====
 
+0.1.2
+-----
+Disable the debug output.  I tried to monitor the file it itself was appending
+to...
+
 0.1.1
 -----
 Don't include sys/filio.h if it isn't there.
