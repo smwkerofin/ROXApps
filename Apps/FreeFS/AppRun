@@ -30,6 +30,8 @@ case $1 in
 			&& make clean && make BINDIR=$APP_DIR/$PLATFORM \
 			&& echo Done >&2 && exit 0
 	echo Compile failed >&2
+	echo Press Return... >&2
+	read WAIT
 	exit 1
 esac
 
