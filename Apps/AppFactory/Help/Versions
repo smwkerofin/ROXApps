@@ -1,6 +1,10 @@
 AppFactory
 ==========
 
+1.0.3
+-----
+Fix for being stored in a path with a space in it.
+
 1.0.2
 -----
 Fix compilation with libxml2.
