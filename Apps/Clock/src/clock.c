@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.10 2001/05/25 07:58:14 stephen Exp $
+ * $Id: clock.c,v 1.11 2001/06/14 12:28:28 stephen Exp $
  */
 #include "config.h"
 
@@ -217,11 +217,9 @@ int main(int argc, char *argv[])
   
   /* Initialise X/GDK/GTK */
   gtk_init(&argc, &argv);
-#if EXTRA_FUN
   gdk_rgb_init();
   gtk_widget_push_visual(gdk_rgb_get_visual());
   gtk_widget_push_colormap(gdk_rgb_get_cmap());
-#endif
   
   /* Init choices and read them in */
   choices_init();
@@ -290,11 +288,7 @@ int main(int argc, char *argv[])
   style=gtk_widget_get_style(vbox);
   colours[GREY]=style->bg[GTK_STATE_NORMAL];
 
-#if EXTRA_FUN
   cmap=gdk_rgb_get_cmap();
-#else
-  cmap=gdk_colormap_get_system();
-#endif
   for(i=0; i<NUM_COLOUR; i++)
     gdk_color_alloc(cmap, colours+i);
 
@@ -343,14 +337,14 @@ int main(int argc, char *argv[])
 
 void dprintf(const char *fmt, ...)
 {
+#if DEBUG
   va_list list;
 
   va_start(list, fmt);
-#if DEBUG
   /*vfprintf(stderr, fmt, list);*/
   g_logv(PROJECT, G_LOG_LEVEL_DEBUG, fmt, list);
-#endif
   va_end(list);  
+#endif
 }
 
 /* Called when the display mode changes */
@@ -395,10 +389,10 @@ static gboolean do_update(void)
   GdkFont *font;
   GdkColor *face_fg=CL_FACE_FG;
 
-  /* Has the config changed? If we are an applet the only way to change our
-     mode is to run as a full app and save the changed config, which we spot
-     and read in
-  */
+  /*
+   * Has the config changed?  Another instance may have saved its config,
+   * we should read it in and use that.
+   */
   check_config();
 
   time(&now);
@@ -498,7 +492,8 @@ static gboolean do_update(void)
   if(sprite) {
     GdkGC *lgc;
 
-    dprintf("state=%d\n", sprite_state);
+    if(sprite_state)
+      dprintf("state=%d\n", sprite_state);
     switch(sprite_state) {
     case T_SHOW:
       gdk_pixbuf_render_to_drawable_alpha(sprite, pixmap,
@@ -1063,15 +1058,29 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
 };
 
+static void save_menus(void)
+{
+  char	*menurc;
+	
+  menurc = choices_find_path_save("menus", PROJECT, TRUE);
+  if (menurc) {
+    gboolean	mod = FALSE;
+
+    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+    g_free(menurc);
+  }
+}
+
 /* Create the pop-up menu */
 static void menu_create_menu(GtkWidget *window)
 {
   GtkItemFactory	*item_factory;
   GtkAccelGroup	*accel_group;
   gint 		n_items = sizeof(menu_items) / sizeof(*menu_items);
+  gchar *menurc;
 
   accel_group = gtk_accel_group_new();
-  gtk_accel_group_lock(accel_group);
+  /*gtk_accel_group_lock(accel_group);*/
 
   item_factory = gtk_item_factory_new(GTK_TYPE_MENU, "<system>", 
 				      accel_group);
@@ -1082,6 +1091,14 @@ static void menu_create_menu(GtkWidget *window)
   gtk_accel_group_attach(accel_group, GTK_OBJECT(window));
 
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
+
+  menurc=choices_find_path_load("menus", PROJECT);
+  if(menurc) {
+    gtk_item_factory_parse_rc(menurc);
+    g_free(menurc);
+  }
+
+  atexit(save_menus);
 }
 
 /* Button press in canvas */
@@ -1339,6 +1356,10 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.11  2001/06/14 12:28:28  stephen
+ * Save alarms file after one is raised. Added some (untested) i18n
+ * support. Dropped old config format.
+ *
  * Revision 1.10  2001/05/25 07:58:14  stephen
  * Can set initial size of applet.
  *
