@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.15 2002/04/29 08:37:35 stephen Exp $
+ * $Id: load.c,v 1.16 2002/08/24 16:45:04 stephen Exp $
  *
  * Log at end of file
  */
@@ -550,6 +550,7 @@ static LoadWindow *make_window(guint32 xid)
   current_window=lwin;
   gtk_widget_ref(lwin->win);
 
+  return lwin;
 }
 
 /* Return history data for the given index, either in the rolling window,
@@ -2008,6 +2009,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.16  2002/08/24 16:45:04  stephen
+ * Fix compilation problem with libxml2.
+ *
  * Revision 1.15  2002/04/29 08:37:35  stephen
  * Use replacement applet menu positioning code (from ROX-CLib).
  * Fix problem setting options for a window.
