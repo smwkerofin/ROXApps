@@ -1,7 +1,0 @@
-Changes to ROX-CLib by Version
-==============================
-
-0.1.2
------
-DnD: Added function to free list of local paths.
-paths: some debug output if it can't decide if a uri refers to a local file
