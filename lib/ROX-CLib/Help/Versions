@@ -1,6 +1,10 @@
 Changes to ROX-CLib by Version
 ==============================
 
+0.1.9
+-----
+Added applet.c for things useful in implementing applets.
+
 0.1.8
 -----
 Updated SOAP namespaces (needed for 1.1.10).  Added rox_filer_version().

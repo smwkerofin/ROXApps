@@ -372,3 +372,28 @@ void rox_filer_clear_error(void);
 
 Clears the error text.
 
+applet.h
+--------
+
+Utilities for developing ROX applets.
+
+enum panel_location {
+  PANEL_TOP, PANEL_BOTTOM, PANEL_LEFT, PANEL_RIGHT,
+  PANEL_UNKNOWN
+};
+typedef enum panel_location PanelLocation;
+
+Defines the four possible locations for the panel containing the applet,
+plus an error condition.
+
+extern PanelLocation applet_get_panel_location(GtkWidget *plug);
+
+Returns the location of the panel containing the applet.  plug is the GtkPlug
+widget created to hold the applet.  This function will realize the widget.
+
+extern void applet_show_menu(GtkWidget *menu, GdkEventButton *evbut);
+
+Shows a pop-up menu in a suitable place for the applet.  It is assumed that
+this will be called in a button_press handler which is passed a
+GdkEventButton *.  To place it correctly with respect to the panel the 
+function applet_get_panel_location() must have been called first.
