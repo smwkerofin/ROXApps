@@ -1,6 +1,10 @@
 Versions of FreeFS
 ==================
 
+2.1.1
+-----
+Minor changes for Zero Install.
+
 2.1.0
 -----
 New version for ROX-CLib 2.1.0.  Remove dead code.  Open options dialog from 
