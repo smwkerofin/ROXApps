@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.18 2002/04/12 10:21:42 stephen Exp $
+ * $Id: freefs.c,v 1.19 2002/04/29 08:19:39 stephen Exp $
  */
 #include "config.h"
 
@@ -41,8 +41,8 @@
 #include <glibtop/fsusage.h>
 
 #ifdef HAVE_XML
-#include <tree.h>
-#include <parser.h>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
 #endif
 
 #if defined(HAVE_XML) && LIBXML_VERSION>=20400
@@ -1329,6 +1329,7 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Scan/By name"),	NULL, NULL, 0, NULL },
   { N_("/Scan/By mount point"),	NULL, NULL, 1, NULL },
   { N_("/Close"), 	        NULL, close_window, 0, NULL },
+  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
   { N_("/Quit"), 	NULL, gtk_main_quit, 0, NULL },
 };
 
@@ -1606,6 +1607,12 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.19  2002/04/29 08:19:39  stephen
+ * Added menu of mounted file systems so you can choose which to monitor,
+ * otherwise there was no way of changing the FS in the applet version.
+ * Fixed memory leak which manifested if you monitored more than one FS.
+ * Use replacement applet menu positioning code (from ROX-CLib).
+ *
  * Revision 1.18  2002/04/12 10:21:42  stephen
  * Multiple windows, SOAP server
  *
