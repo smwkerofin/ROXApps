@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.c,v 1.5 2003/03/05 15:31:23 stephen Exp $
+ * $Id: infowin.c,v 1.6 2003/08/28 18:53:58 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -166,7 +166,7 @@ static void info_win_init(InfoWin *iw)
   gtk_box_pack_start(GTK_BOX(hbox), iw->table, TRUE, TRUE, 2);
   gtk_widget_show(iw->table);
 
-  label=gtk_label_new("Program");
+  label=gtk_label_new(_("Program"));
   gtk_widget_show(label);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), label, 0, 1,
 			    INFO_WIN_PROGRAM, INFO_WIN_PROGRAM+1);
@@ -179,7 +179,7 @@ static void info_win_init(InfoWin *iw)
 
   iw->slots[INFO_WIN_PROGRAM]=frame;
 
-  label=gtk_label_new("Purpose");
+  label=gtk_label_new(_("Purpose"));
   gtk_widget_show(label);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), label, 0, 1,
 			    INFO_WIN_PURPOSE, INFO_WIN_PURPOSE+1);
@@ -192,7 +192,7 @@ static void info_win_init(InfoWin *iw)
 
   iw->slots[INFO_WIN_PURPOSE]=frame;
 
-  label=gtk_label_new("Version");
+  label=gtk_label_new(_("Version"));
   gtk_widget_show(label);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), label, 0, 1,
 			    INFO_WIN_VERSION, INFO_WIN_VERSION+1);
@@ -205,7 +205,7 @@ static void info_win_init(InfoWin *iw)
 
   iw->slots[INFO_WIN_VERSION]=frame;
 
-  label=gtk_label_new("Author");
+  label=gtk_label_new(_("Author"));
   gtk_widget_show(label);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), label, 0, 1,
 			    INFO_WIN_AUTHOR, INFO_WIN_AUTHOR+1);
@@ -218,7 +218,7 @@ static void info_win_init(InfoWin *iw)
 
   iw->slots[INFO_WIN_AUTHOR]=frame;
 
-  label=gtk_label_new("Web site");
+  label=gtk_label_new(_("Web site"));
   gtk_widget_show(label);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), label, 0, 1,
 			    INFO_WIN_WEBSITE, INFO_WIN_WEBSITE+1);
@@ -234,7 +234,7 @@ static void info_win_init(InfoWin *iw)
 
   hbox=GTK_DIALOG(iw)->action_area;
 
-  button=gtk_button_new_with_label("Dismiss");
+  button=gtk_button_new_with_label(_("Dismiss"));
   gtk_widget_show(button);
   g_signal_connect(G_OBJECT (button), "clicked",
                         G_CALLBACK(dismiss), iw);
@@ -321,9 +321,231 @@ static void info_win_finalize (GObject *object)
   (* G_OBJECT_CLASS (parent_class)->finalize) (object);
 }
 
+/* AppInfo scanning */
+#include <libxml/parser.h>
+
+/* Based on ROX-Lib's i18n.py, could be moved to rox_i18n.c ? */
+#define	COMPONENT_CODESET   (1 << 0)
+#define	COMPONENT_TERRITORY (1 << 1)
+#define	COMPONENT_MODIFIER  (1 << 2)
+static GList *_expand_lang(const char *locale)
+{
+  GList *langs=NULL;
+  gchar *modifier=NULL, *codeset=NULL, *territory=NULL, *language=NULL;
+  gchar *tmp, *pos;
+  unsigned mask=0;
+  int i;
+
+  dprintf(3, "expand %s", locale);
+
+  tmp=g_strdup(locale);
+  pos=strchr(tmp, '@');
+  if(pos) {
+    modifier=pos+1;
+    *pos=0;
+    mask|=COMPONENT_MODIFIER;
+  }
+  pos=strchr(tmp, '.');
+  if(pos) {
+    codeset=pos+1;
+    *pos=0;
+    mask|=COMPONENT_CODESET;
+  }
+  pos=strchr(tmp, '_');
+  if(pos) {
+    territory=pos+1;
+    *pos=0;
+    mask|=COMPONENT_TERRITORY;
+  }
+  language=tmp;
+
+  for(i=0; i<mask+1; i++)
+    if(!(i & ~mask)) {
+      GString *val;
+
+      val=g_string_new(language);
+      if(i & COMPONENT_TERRITORY) {
+	val=g_string_append(val, "_");
+	val=g_string_append(val, territory);
+      }
+      if(i & COMPONENT_CODESET) {
+	val=g_string_append(val, ".");
+	val=g_string_append(val, codeset);
+      }
+      if(i & COMPONENT_MODIFIER) {
+	val=g_string_append(val, "@");
+	val=g_string_append(val, modifier);
+      }
+      
+      langs=g_list_prepend(langs, val->str);
+      dprintf(3, "lang=%s", val->str);
+      g_string_free(val, FALSE);
+      
+    }
+
+  g_free(tmp);
+
+  return langs;
+}
+
+static GList *expand_languages(GList *languages)
+{
+  GList *nelangs=NULL;
+  int i;
+  GList *rover;
+  gboolean we_made=FALSE;
+
+  if(!languages) {
+    static const char *envs[]={
+      "LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG",
+      NULL
+    };
+    const gchar *env;
+
+    for(i=0; envs[i]; i++) {
+      env=g_getenv(envs[i]);
+      if(env)
+	languages=g_list_append(languages, g_strdup(env));
+    }
+    we_made=TRUE;
+  }
+  
+  for(rover=languages; rover; rover=g_list_next(rover))
+    if(strcmp((char *) rover->data, "C")==0)
+      break;
+  if(!rover)
+    languages=g_list_append(languages, g_strdup("C"));
+
+  for(rover=languages; rover; rover=g_list_next(rover)) {
+    GList *langs=_expand_lang((char *) rover->data);
+    GList *l;
+    for(l=langs; l; l=g_list_next(l)) {
+      nelangs=g_list_append(nelangs, l->data);
+    }
+    g_list_free(langs);
+  }
+
+  if(we_made) {
+    for(rover=languages; rover; rover=g_list_next(rover))
+      g_free(rover->data);
+    g_list_free(languages);
+  }
+
+  return nelangs;
+}
+
+GtkWidget *info_win_new_from_appinfo(const char *program)
+{
+  gchar *purpose=NULL, *version=NULL, *author=NULL, *website=NULL;
+  const gchar *appdir;
+  gchar *path;
+  GtkWidget *window;
+
+  dprintf(3, "info_win_new_from_appinfo(%s)", program);
+
+  appdir=g_getenv("APP_DIR");
+  if(appdir) { 
+    xmlDocPtr doc;
+    
+    path=g_build_filename(appdir, "AppInfo.xml", NULL);
+    dprintf(3, "read from %s", path);
+    doc=xmlParseFile(path);
+    if(doc) {
+      GList *langs=expand_languages(NULL);
+      GList *l;
+      xmlNodePtr node, sub;
+      xmlChar *lang, *value;
+      gboolean use_this;
+
+      for(node=doc->children->children; node; node=node->next) {
+	if(node->type!=XML_ELEMENT_NODE)
+	  continue;
+
+	dprintf(3, "node->name=%s", node->name);
+	if(strcmp(node->name, "About")!=0)
+	  continue;
+
+	lang=xmlNodeGetLang(node);
+	dprintf(2, "About node with lang %s", lang? lang: "NULL");
+
+	if(lang) {
+	  use_this=FALSE;
+	  for(l=langs; l; l=g_list_next(l)) {
+	    if(strcmp((char *) l->data, lang)==0) {
+	      use_this=TRUE;
+	      break;
+	    }
+	  }
+	} else {
+	  use_this=TRUE;
+	}
+
+	if(use_this) {
+	  for(sub=node->children; sub; sub=sub->next) {
+	    if(sub->type!=XML_ELEMENT_NODE)
+	      continue;
+
+	    if(strcmp(sub->name, "Purpose")==0 && (!purpose || lang)) {
+	      value=xmlNodeGetContent(sub);
+	      dprintf(3, "Purpose=%s", value);
+	      if(purpose)
+		g_free(purpose);
+	      purpose=g_strdup(value);
+	      free(value);
+	    } else if(strcmp(sub->name, "Version")==0 && (!version || lang)) {
+	      value=xmlNodeGetContent(sub);
+	      if(version)
+		g_free(version);
+	      version=g_strdup(value);
+	      free(value);
+	    } else if(strcmp(sub->name, "Authors")==0 && (!author || lang)) {
+	      value=xmlNodeGetContent(sub);
+	      if(author)
+		g_free(author);
+	      author=g_strdup(value);
+	      free(value);
+	    } else if(strcmp(sub->name, "Homepage")==0 && (!website || lang)) {
+	      value=xmlNodeGetContent(sub);
+	      if(website)
+		g_free(website);
+	      website=g_strdup(value);
+	      free(value);
+	    }
+	  }
+	}
+	if(lang)
+	  free(lang);
+      }
+      
+      xmlFreeDoc(doc);
+      for(l=langs; l; l=g_list_next(l))
+	g_free(l->data);
+      g_list_free(l);
+    }
+
+    g_free(path);
+  }
+
+  window=info_win_new(program, purpose, version, author, website);
+
+  if(purpose)
+    g_free(purpose);
+  if(version)
+    g_free(version);
+  if(author)
+    g_free(author);
+  if(website)
+    g_free(website);
+
+  return window;
+}
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.6  2003/08/28 18:53:58  stephen
+ * Add apps icon to window
+ * Avoid SEGV if window closed by window manager
+ *
  * Revision 1.5  2003/03/05 15:31:23  stephen
  * First pass a conversion to GTK 2
  * Known problems in SOAP code.

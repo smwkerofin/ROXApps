@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.h,v 1.1.1.1 2001/05/29 14:09:59 stephen Exp $
+ * $Id: infowin.h,v 1.2 2003/03/05 15:31:23 stephen Exp $
  */
 
 #ifndef __INFO_WIN_H__
@@ -22,6 +22,7 @@ extern "C" {
 typedef struct _InfoWin       InfoWin;
 typedef struct _InfoWinClass  InfoWinClass;
 
+  /* Internal use */
 enum info_slots {
     INFO_WIN_PROGRAM, INFO_WIN_PURPOSE, INFO_WIN_VERSION, INFO_WIN_AUTHOR,
     INFO_WIN_WEBSITE,
@@ -49,6 +50,7 @@ extern GType    info_win_get_type (void);
 extern GtkWidget* info_win_new(const gchar *program, const gchar *purpose,
 				const gchar *version, const gchar *author,
 				const gchar *website);
+extern GtkWidget* info_win_new_from_appinfo(const gchar *program);
 extern void info_win_add_browser_command(InfoWin *iw, const gchar *cmd);
 
 #ifdef __cplusplus
@@ -59,6 +61,10 @@ extern void info_win_add_browser_command(InfoWin *iw, const gchar *cmd);
 
 /*
  * $Log: infowin.h,v $
+ * Revision 1.2  2003/03/05 15:31:23  stephen
+ * First pass a conversion to GTK 2
+ * Known problems in SOAP code.
+ *
  * Revision 1.1.1.1  2001/05/29 14:09:59  stephen
  * Initial version of the library
  *
