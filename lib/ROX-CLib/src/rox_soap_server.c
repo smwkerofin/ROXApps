@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap_server.c,v 1.6 2003/10/22 17:16:00 stephen Exp $
+ * $Id: rox_soap_server.c,v 1.7 2004/04/07 19:26:59 stephen Exp $
  *
  * rox_soap_server.c - Provide ROX-Filer like SOAP server
  *
@@ -10,7 +10,6 @@
 
 #include <stdlib.h>
 #include <errno.h>
-#include <ctype.h>
 
 #include <unistd.h>
 #include <netdb.h>

@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.12 2004/05/12 18:25:11 stephen Exp $
+ * $Id: rox_soap.c,v 1.13 2004/07/31 12:25:14 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -157,9 +157,9 @@ static Program *find_program(const char *name)
   fmt=g_strdup(name);
   l=strlen(fmt);
   for(i=0; i<l; i++) {
-    if(islower(fmt[i]))
-      fmt[i]=toupper(fmt[i]);
-    else if(!isalnum(fmt[i]))
+    if(g_ascii_islower(fmt[i]))
+      fmt[i]=g_ascii_toupper(fmt[i]);
+    else if(!g_ascii_isalnum(fmt[i]))
       fmt[i]='_';
   }
 
@@ -707,6 +707,9 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.13  2004/07/31 12:25:14  stephen
+ * gtk_timeout now g_timeout
+ *
  * Revision 1.12  2004/05/12 18:25:11  stephen
  * Don't create the ipc_window until we are sure we need it
  *

@@ -20,6 +20,8 @@
 #undef GTK_LIBS
 #undef XML_CONFIG
 
+#undef HAVE_APSYMBOLS_H
+#undef HAVE_APBUILD_APSYMBOLS_H
 #undef HAVE_LIBNSL
 #undef HAVE_MKDIR
 #undef HAVE_GETHOSTNAME
@@ -39,3 +41,10 @@
 # define gdk_x11_xatom_to_atom(x) (x)
 # define gdk_x11_atom_to_xatom(x) (x)
 #endif
+
+#if defined(HAVE_APSYMBOLS_H)
+# include <apsymbols.h>
+#elif defined(HAVE_APBUILD_APSYMBOLS_H)
+# include <apbuild/apsymbols.h>
+#endif
+

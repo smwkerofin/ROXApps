@@ -1,13 +1,12 @@
 /*
  * rox_debug.h - Access to standard debug output
  *
- * $Id$
+ * $Id: rox_debug.c,v 1.1 2001/07/17 14:44:49 stephen Exp $
  */
 #include "rox-clib.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
 #include <glib.h>
 
@@ -59,5 +58,8 @@ void rox_debug_printf(int level, const char *fmt, ...)
 }
 
 /*
- * $Log$
+ * $Log: rox_debug.c,v $
+ * Revision 1.1  2001/07/17 14:44:49  stephen
+ * Added DnD stuff (plus path utils and debug util)
+ *
  */
