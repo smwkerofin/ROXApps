@@ -1,0 +1,36 @@
+VideoThumbnail
+==============
+
+This application can generate thumbnails of video files, for display
+by ROX-Filer.  It requires: 
+
+* ROX-Filer CVS 2003-10-13 or later, or verson 2.1.1
+
+* ROX-Lib2 CVS 2003-10-05 or later, or version 1.9.12
+
+* MPlayer 0.90 or later.
+
+Installation
+------------
+
+To install it, copy to your ~/Apps directory (or /usr/local/apps or
+/usr/apps) and run it.  Click on install handlers and click on OK.
+You can choose not to install it for some of the types.
+
+File type support
+-----------------
+
+Version 0.0.1 supports the following MIME types:
+
+* video/mpeg
+* video/quicktime
+* video/x-msvideo
+* audio/x-pn-realaudio (which can be a video format)
+
+It can also (in theory) support any file type that MPlayer can.  If
+you find it works for more than those four please let me know.
+
+Author
+------
+Stephen Watson    stephen@kerofin.demon.co.uk
+                  http://www.kerofin.demon.co.uk/rox/
