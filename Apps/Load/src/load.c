@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.19 2003/04/16 09:11:15 stephen Exp $
+ * $Id: load.c,v 1.20 2003/06/27 16:27:58 stephen Exp $
  *
  * Log at end of file
  */
@@ -1253,7 +1253,7 @@ static void open_callback(ROXSOAP *serv, gboolean status,
 {
   gboolean *s=udata;
   
-  dprintf(3, "In open_callback(%p, %d, %p, %p)", clock, status, reply,
+  dprintf(3, "In open_callback(%p, %d, %p, %p)", serv, status, reply,
 	 udata);
   *s=status;
   gtk_main_quit();
@@ -1308,6 +1308,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.20  2003/06/27 16:27:58  stephen
+ * Fixed text positioning.  Fix bug in displaying hostname.  Work on memory leak. New icon provided by Geoff Youngs.
+ *
  * Revision 1.19  2003/04/16 09:11:15  stephen
  * Added options system from ROX-CLib
  *
