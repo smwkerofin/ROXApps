@@ -18,6 +18,13 @@ if [ $ARCH = sun4u ] ; then
     unset LD_PRELOAD
 fi
 
+if [ -z "$LD_LIBRARY_PATH" ]; then
+    LD_LIBRARY_PATH=`rox_run ROX-CLib --runtime`
+else
+    LD_LIBRARY_PATH=`rox_run ROX-CLib --runtime`:$LD_LIBRARY_PATH
+fi
+export LD_LIBRARY_PATH
+
 DEBUGGER=""
 
 case $1 in

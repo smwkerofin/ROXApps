@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.10 2001/11/30 11:53:15 stephen Exp $
+ * $Id: load.c,v 1.11 2002/01/30 10:23:34 stephen Exp $
  *
  * Log at end of file
  */
@@ -189,6 +189,7 @@ static void do_version(void)
   printf("Distributed under the terms of the GNU General Public License.\n");
   printf("(See the file COPYING in the Help directory).\n");
   printf("%s last compiled %s\n", __FILE__, __DATE__);
+  printf("ROX-CLib version %s\n", rox_clib_version_string());
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
@@ -1660,6 +1661,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.11  2002/01/30 10:23:34  stephen
+ * Use new applet menu positioning code. Add -h and -v options.
+ *
  * Revision 1.10  2001/11/30 11:53:15  stephen
  * Can show multiple charts (1 min in front, 15min at back)
  *

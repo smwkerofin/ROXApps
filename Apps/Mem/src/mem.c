@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.6 2001/11/30 11:55:31 stephen Exp $
+ * $Id: mem.c,v 1.7 2002/01/30 10:22:05 stephen Exp $
  */
 #include "config.h"
 
@@ -49,9 +49,7 @@
 #define USE_XML 0
 #endif
 
-#include "choices.h"
-#include "infowin.h"
-#include "rox_debug.h"
+#include <rox.h>
 
 /* The icon */
 #include "../AppIcon.xpm"
@@ -162,6 +160,7 @@ static void do_version(void)
   printf("Distributed under the terms of the GNU General Public License.\n");
   printf("(See the file COPYING in the Help directory).\n");
   printf("%s last compiled %s\n", __FILE__, __DATE__);
+  printf("ROX-CLib version %s\n", rox_clib_version_string());
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
@@ -178,7 +177,11 @@ static void do_version(void)
   printf("  Use libgtop for swap... %s\n",
 	 SWAP_SUPPORTED_LIBGTOP? "yes": "no");
   if(!SWAP_SUPPORTED_LIBGTOP) {
+#ifdef LIBGTOP_VERSION_CODE
     printf("    libgtop version %d\n", LIBGTOP_VERSION_CODE);
+#else
+    printf("    libgtop version 1.0.x\n");
+#endif
     printf("    Broken on Solaris up to version %d\n",
 	   SOLARIS_SWAP_BROKEN_UP_TO);
   }
@@ -1505,6 +1508,10 @@ static gboolean update_swap(gpointer unused)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.7  2002/01/30 10:22:05  stephen
+ * Use new applet menu positioning code.
+ * Add -h and -v options.
+ *
  * Revision 1.6  2001/11/30 11:55:31  stephen
  * Use smaller window on start up
  *

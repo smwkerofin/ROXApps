@@ -20,8 +20,14 @@ if [ $ARCH = sun4u ] ; then
     unset LD_PRELOAD
 fi
 
+if [ -z "$LD_LIBRARY_PATH" ]; then
+    LD_LIBRARY_PATH=`rox_run ROX-CLib --runtime`
+else
+    LD_LIBRARY_PATH=`rox_run ROX-CLib --runtime`:$LD_LIBRARY_PATH
+fi
+export LD_LIBRARY_PATH
+
 case $1 in
-    --debug) shift ; DEBUGGER=gdb ;;
     --compile)
 	if [ ! -d $APP_DIR/src ] ; then
 	    echo "ERROR from $0:" >&2

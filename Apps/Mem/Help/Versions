@@ -1,6 +1,14 @@
 Mem
 ===
 
+1.0.0
+-----
+Stable release.
+
+0.1.8
+-----
+Version 1.0.x of libgtop doesn't define a version symbol.
+
 0.1.7
 -----
 Use new applet menu positioning function.
