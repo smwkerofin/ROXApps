@@ -1,6 +1,11 @@
 Versions of FreeFS
 ==================
 
+1.5.1
+-----
+Use new options system.
+New icon provided by Geoff Youngs.
+
 1.5.0
 -----
 Gtk+ 2.0.

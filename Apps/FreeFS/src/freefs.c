@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.21 2002/10/19 14:32:05 stephen Exp $
+ * $Id: freefs.c,v 1.22 2003/03/05 15:30:40 stephen Exp $
  */
 #include "config.h"
 
@@ -44,7 +44,7 @@
 #include <libxml/parser.h>
 
 #define USE_XML 1
-#define USE_SERVER 0
+#define USE_SERVER 1
 
 #include "rox.h"
 #include "choices.h"
@@ -58,17 +58,16 @@
 #include "rox_soap.h"
 #include "rox_soap_server.h"
 #endif
+#include "options.h"
 
 #define TIP_PRIVATE "For more information see the help file"
 
 /* GTK+ objects */
 static GtkWidget *menu=NULL;
 
-typedef struct options {
-  guint update_sec;          /* How often to update */
-  guint applet_init_size;    /* Initial size of applet */
-  gboolean applet_show_dir;  /* Print name of directory on applet version */
-} Options;
+static Option opt_update_sec;
+static Option opt_applet_size;
+static Option opt_applet_show_dir;
 
 typedef struct free_window {
   GtkWidget *win;
@@ -79,23 +78,7 @@ typedef struct free_window {
   
   char *df_dir;
   
-  Options options;
 } FreeWindow;
-
-static Options default_options={
-  5,
-  36,
-  TRUE
-};
-
-typedef struct option_widgets {
-  GtkWidget *window;
-  GtkWidget *update_s;
-  GtkWidget *init_size;
-  GtkWidget *show_dir;
-
-  FreeWindow *fwin;
-} OptionWidgets;
 
 static GList *windows=NULL;
 
@@ -112,10 +95,7 @@ static GList *fs_exclude=NULL; /* File system types not to offer on menu */
 static FreeWindow *make_window(guint32 socket, const char *dir);
 static gboolean update_fs_values(FreeWindow *);
 static void do_update(void);
-static void read_choices(void);
-static void write_choices(const Options *);
-static gboolean read_choices_xml(void);
-static void write_choices_xml(const Options *);
+static void init_options(void);
 static void menu_create_menu(GtkWidget *);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
@@ -163,13 +143,8 @@ static void do_version(void)
 	 ROX_CLIB_VERSION%100);
 
   printf("\nCompile time options:\n");
-  printf("  GTK+... ");
-#ifdef GTK2
-  printf("version 2");
-#else
-  printf("version 1.2.x");
-#endif
-  printf(" (%d.%d.%d)\n", gtk_major_version, gtk_minor_version,
+  printf("  GTK+... version 2 (%d.%d.%d)\n", gtk_major_version,
+	 gtk_minor_version,
 	 gtk_micro_version);
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
   printf("  Support drag & drop to applet... %s\n", APPLET_DND? "yes": "no");
@@ -206,6 +181,7 @@ int main(int argc, char *argv[])
 
   rox_debug_init(PROJECT);
   choices_init();
+  options_init(PROJECT);
 
   app_dir=g_getenv("APP_DIR");
 #ifdef HAVE_BINDTEXTDOMAIN
@@ -261,7 +237,7 @@ int main(int argc, char *argv[])
   if(do_exit)
     exit(0);
 
-  read_choices();
+  init_options();
 
   /* Pick the gtkrc file up from CHOICESPATH */
   fname=rox_resources_find(PROJECT, "gtkrc", ROX_RESOURCES_DEFAULT_LANG);
@@ -312,6 +288,7 @@ int main(int argc, char *argv[])
   gtk_main();
 
 #if USE_SERVER
+  dprintf(2, "server=%p", server);
   if(server)
     rox_soap_server_delete(server);
 #endif
@@ -354,13 +331,7 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
   GtkWidget *align;
   GtkAdjustment *adj;
   GtkWidget *pixmapwid;
-#ifdef GTK2
   static GdkPixbuf *icon=NULL;
-#else
-  static GdkPixmap *pixmap=NULL;
-  static GdkBitmap *mask=NULL;
-  GtkStyle *style;
-#endif
   static GtkTooltips *ttips=NULL;
   char tbuf[1024], *home;
   gchar *fname;
@@ -372,7 +343,6 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
   
   fwin=g_new0(FreeWindow, 1);
 
-  fwin->options=default_options;
   fwin->df_dir=g_strdup(dir);
 
   if(!xid) {
@@ -382,25 +352,16 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     fwin->win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_widget_set_name(fwin->win, "fs free");
     gtk_window_set_title(GTK_WINDOW(fwin->win), dir);
-#ifdef GTK2
     g_signal_connect(fwin->win, "destroy", 
 		       G_CALLBACK(window_gone), 
 		       fwin);
     g_signal_connect(fwin->win, "button_press_event",
 		       G_CALLBACK(button_press), fwin);
-#else
-    gtk_signal_connect(GTK_OBJECT(fwin->win), "destroy", 
-		       GTK_SIGNAL_FUNC(window_gone), 
-		       fwin);
-    gtk_signal_connect(GTK_OBJECT(fwin->win), "button_press_event",
-		       GTK_SIGNAL_FUNC(button_press), fwin);
-#endif
     gtk_widget_realize(fwin->win);
     gtk_widget_add_events(fwin->win, GDK_BUTTON_PRESS_MASK);
     rox_dnd_register_uris(fwin->win, 0, handle_uris, fwin);
 
     /* Set the icon */
-#ifdef GTK2
     if(!icon) {
       fname=rox_resources_find(PROJECT, "freefs.xpm", ROX_RESOURCES_NO_LANG);
       if(fname) {
@@ -415,21 +376,6 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     }
     if(icon)
       gtk_window_set_icon(GTK_WINDOW(fwin->win), icon);
-#else
-    if(!pixmap) {
-      fname=rox_resources_find(PROJECT, "freefs.xpm", ROX_RESOURCES_NO_LANG);
-      if(fname) {      
-	style = gtk_widget_get_style(fwin->win);
-	pixmap = gdk_pixmap_create_from_xpm(GTK_WIDGET(fwin->win)->window,
-					    &mask,
-					    &style->bg[GTK_STATE_NORMAL],
-					    fname);
-	g_free(fname);
-      }
-    }
-    if(pixmap)
-      gdk_window_set_icon(GTK_WIDGET(fwin->win)->window, NULL, pixmap, mask);
-#endif
     
     gtk_tooltips_set_tip(ttips, fwin->win,
 			 "FreeFS shows the space usage on a single "
@@ -489,15 +435,7 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
   
     fwin->fs_per=gtk_progress_bar_new();
     gtk_widget_set_name(fwin->fs_per, "gauge");
-#ifdef GTK2
     gtk_widget_set_size_request(fwin->fs_per, 240, 24);
-#else
-    gtk_progress_bar_set_bar_style(GTK_PROGRESS_BAR(fwin->fs_per),
-				   GTK_PROGRESS_CONTINUOUS);
-    gtk_progress_set_format_string(GTK_PROGRESS(fwin->fs_per), "%p%%");
-    gtk_progress_set_show_text(GTK_PROGRESS(fwin->fs_per), TRUE);
-    gtk_widget_set_usize(fwin->fs_per, 240, 24);
-#endif
     gtk_widget_show(fwin->fs_per);
     gtk_box_pack_start(GTK_BOX(hbox), fwin->fs_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, fwin->fs_per,
@@ -525,28 +463,15 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
 
     dprintf(3, "xid=0x%x", xid);
     plug=gtk_plug_new(xid);
-#ifdef GTK2
     g_signal_connect(plug, "destroy", 
 		       G_CALLBACK(window_gone), 
 		       fwin);
-    gtk_widget_set_size_request(plug, fwin->options.applet_init_size,
-			 fwin->options.applet_init_size);
-#else
-    gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
-		       GTK_SIGNAL_FUNC(window_gone), 
-		       fwin);
-    gtk_widget_set_usize(plug, fwin->options.applet_init_size,
-			 fwin->options.applet_init_size);
-#endif
-    dprintf(4, "set_usize %d\n", fwin->options.applet_init_size);
+    gtk_widget_set_size_request(plug, opt_applet_size.int_value,
+			 opt_applet_size.int_value);
+    dprintf(4, "set_usize %d\n", opt_applet_size.int_value);
     
-#ifdef GTK2
     g_signal_connect(plug, "button_press_event",
 		       G_CALLBACK(button_press), fwin);
-#else
-    gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
-		       GTK_SIGNAL_FUNC(button_press), fwin);
-#endif
     gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
     gtk_tooltips_set_tip(ttips, plug,
 			 "FreeFS shows the space usage on a single "
@@ -573,7 +498,7 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     gtk_label_set_justify(GTK_LABEL(fwin->fs_name), GTK_JUSTIFY_RIGHT);
     gtk_widget_set_name(fwin->fs_name, "text display");
     gtk_container_add(GTK_CONTAINER(align), fwin->fs_name);
-    if(default_options.applet_show_dir)
+    if(opt_applet_show_dir.int_value)
       gtk_widget_show(fwin->fs_name);
     gtk_tooltips_set_tip(ttips, fwin->fs_name,
 			 "This shows the dir where the FS is mounted",
@@ -582,13 +507,6 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     fwin->fs_per=gtk_progress_bar_new();
     gtk_widget_set_name(fwin->fs_per, "gauge");
     /*gtk_widget_set_usize(fwin->fs_per, -1, 22);*/
-#ifdef GTK2
-#else
-    gtk_progress_bar_set_bar_style(GTK_PROGRESS_BAR(fwin->fs_per),
-				   GTK_PROGRESS_CONTINUOUS);
-    gtk_progress_set_format_string(GTK_PROGRESS(fwin->fs_per), "%p%%");
-    gtk_progress_set_show_text(GTK_PROGRESS(fwin->fs_per), TRUE);
-#endif
     gtk_widget_show(fwin->fs_per);
     gtk_box_pack_end(GTK_BOX(vbox), fwin->fs_per, FALSE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, fwin->fs_per,
@@ -612,11 +530,11 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
   dprintf(3, "show %p (%ld)", fwin->win, xid);
   if(!xid)
     gtk_widget_show(fwin->win);
-  dprintf(2, "timeout %ds, %p, %s", fwin->options.update_sec,
+  dprintf(2, "timeout %ds, %p, %s", opt_update_sec.int_value,
 	  (GtkFunction) update_fs_values, fwin->df_dir);
-  fwin->update_tag=gtk_timeout_add(fwin->options.update_sec*1000,
+  fwin->update_tag=gtk_timeout_add(opt_update_sec.int_value*1000,
 			 (GtkFunction) update_fs_values, fwin);
-  dprintf(2, "update_sec=%d, update_tag=%u", fwin->options.update_sec,
+  dprintf(2, "update_sec=%d, update_tag=%u", opt_update_sec.int_value,
 	  fwin->update_tag);
   
   windows=g_list_append(windows, fwin);
@@ -637,7 +555,7 @@ static void set_target(FreeWindow *fwin, const char *ndir)
 
   gtk_timeout_remove(fwin->update_tag);
   update_fs_values(fwin);
-  fwin->update_tag=gtk_timeout_add(fwin->options.update_sec*1000,
+  fwin->update_tag=gtk_timeout_add(opt_update_sec.int_value*1000,
 			 (GtkFunction) update_fs_values, fwin);
   gtk_window_set_title(GTK_WINDOW(fwin->win), fwin->df_dir);
 }
@@ -726,7 +644,7 @@ static gboolean update_fs_values(FreeWindow *fwin)
   int ok=FALSE;
 
   dprintf(4, "fwin=%p", fwin);
-  dprintf(4, "update_sec=%d, update_tag=%u", fwin->options.update_sec,
+  dprintf(4, "update_sec=%d, update_tag=%u", opt_update_sec.int_value,
 	  fwin->update_tag);
   dprintf(3, "update_fs_values(\"%s\")", fwin->df_dir);
   
@@ -742,12 +660,8 @@ static gboolean update_fs_values(FreeWindow *fwin)
     if(ok) {
       unsigned long long total, used, avail;
       int row;
-#ifdef GTK2
       gdouble fused;
       char tbuf[32];
-#else
-      gfloat fused;
-#endif
       
       dprintf(5, "%lld %lld %lld", buf.blocks, buf.bfree,
 	     buf.bavail);
@@ -757,7 +671,6 @@ static gboolean update_fs_values(FreeWindow *fwin)
       avail=BLOCKSIZE*(unsigned long long) buf.bavail;
       dprintf(4, "%llu %llu %llu", total, used, avail);
 
-#ifdef GTK2
       if(buf.blocks>0) {
 	fused=(100.f*(buf.blocks-buf.bavail))/((gdouble) buf.blocks);
 	if(fused>100.)
@@ -765,15 +678,6 @@ static gboolean update_fs_values(FreeWindow *fwin)
       } else {
 	fused=0.;
       }
-#else
-      if(buf.blocks>0) {
-	fused=(100.f*(buf.blocks-buf.bavail))/((gfloat) buf.blocks);
-	if(fused>100.f)
-	  fused=100.f;
-      } else {
-	fused=0.f;
-      }
-#endif
       dprintf(4, "%2.0f %%", fused);
 
       if(!fwin->is_applet) {
@@ -794,18 +698,15 @@ static gboolean update_fs_values(FreeWindow *fwin)
 	  gtk_label_set_text(GTK_LABEL(fwin->fs_name), g_basename(mpt));
       }
       dprintf(5, "set progress %f", fused);
-#ifdef GTK2
-      sprintf(tbuf, "%d%%", (int)(fused*100));
-      gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fwin->fs_per), fused);
+      sprintf(tbuf, "%d%%", (int)(fused));
+      gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fwin->fs_per),
+				    fused/100.);
       gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fwin->fs_per), tbuf);
-#else
-      gtk_progress_set_value(GTK_PROGRESS(fwin->fs_per), fused);
-#endif
     }
   }
   
   dprintf(4, "update_fs_values(%s), ok=%d, update_sec=%d", fwin->df_dir, ok,
-	  fwin->options.update_sec);
+	  opt_update_sec.int_value);
   
   if(!ok) {
     if(!fwin->is_applet) {
@@ -815,12 +716,8 @@ static gboolean update_fs_values(FreeWindow *fwin)
       gtk_label_set_text(GTK_LABEL(fwin->fs_free), "?");
     }
 
-#ifdef GTK2
     gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fwin->fs_per), 0.);
     gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fwin->fs_per), "");
-#else
-    gtk_progress_set_value(GTK_PROGRESS(fwin->fs_per), 0.);
-#endif
   }
 
   return TRUE;
@@ -831,14 +728,33 @@ static void do_update(void)
   update_fs_values(current_window);
 }
 
+static void opts_changed(void)
+{
+  if(opt_applet_size.has_changed) {
+    GList *p;
+
+    for(p=windows; p; p=g_list_next(p)) {
+      FreeWindow *fw=(FreeWindow *) p->data;
+      if(fw && fw->is_applet) {
+	gtk_widget_set_size_request(fw->win, opt_applet_size.int_value,
+				    opt_applet_size.int_value);
+      }
+    }
+  }
+}
+
 #define UPDATE_RATE "UpdateRate"
 #define INIT_SIZE   "AppletInitSize"
 #define SHOW_DIR    "AppletShowDir"
 #define EXCLUDE_FS  "ExcludeFS"
 
-static gboolean read_choices_xml(void)
+static void init_options(void)
 {
   guchar *fname;
+  
+  guint update_sec=5;           /* How often to update */
+  guint applet_init_size=32;    /* Initial size of applet */
+  gboolean applet_show_dir=TRUE;/* Print name of directory on applet version */
 
   fname=choices_find_path_load("Config.xml", PROJECT);
 
@@ -850,20 +766,20 @@ static gboolean read_choices_xml(void)
     doc=xmlParseFile(fname);
     if(!doc) {
       g_free(fname);
-      return FALSE;
+      return;
     }
 
     root=xmlDocGetRootElement(doc);
     if(!root) {
       g_free(fname);
       xmlFreeDoc(doc);
-      return FALSE;
+      return;
     }
 
     if(strcmp(root->name, "FreeFS")!=0) {
       g_free(fname);
       xmlFreeDoc(doc);
-      return FALSE;
+      return;
     }
 
     for(node=root->xmlChildrenNode; node; node=node->next) {
@@ -877,18 +793,18 @@ static gboolean read_choices_xml(void)
  	string=xmlGetProp(node, "value");
 	if(!string)
 	  continue;
-	default_options.update_sec=atoi(string);
+	update_sec=atoi(string);
 	free(string);
 	
       } else if(strcmp(node->name, "Applet")==0) {
  	string=xmlGetProp(node, "initial-size");
 	if(string) {
-	  default_options.applet_init_size=atoi(string);
+	  applet_init_size=atoi(string);
 	  free(string);
 	}
  	string=xmlGetProp(node, "show-dir");
 	if(string) {
-	  default_options.applet_show_dir=atoi(string);
+	  applet_show_dir=atoi(string);
 	  free(string);
 	}
 	
@@ -916,111 +832,14 @@ static gboolean read_choices_xml(void)
     xmlFreeDoc(doc);
     
     g_free(fname);
-    return TRUE;
   }
+  option_add_int(&opt_update_sec, "update_rate", update_sec);
+  option_add_int(&opt_applet_size, "applet_size", applet_init_size);
+  option_add_int(&opt_applet_show_dir, "show_dir", applet_show_dir);
 
-  return FALSE;
+  option_add_notify(opts_changed);
 }
 
-static void read_choices(void)
-{
-  guchar *fname;
-  
-  if(read_choices_xml())
-    return;
-  
-  fname=choices_find_path_load("Config", "FreeFS");
-  if(fname) {
-    FILE *in=fopen(fname, "r");
-    char buf[256], *line;
-    char *end;
-
-    g_free(fname);
-    if(!in)
-      return;
-
-    do {
-      line=fgets(buf, sizeof(buf), in);
-      if(line) {
-	dprintf(4, "line=%s", line);
-	end=strpbrk(line, "\n#");
-	if(end)
-	  *end=0;
-	if(*line) {
-	  char *sep;
-
-	  dprintf(4, "line=%s", line);
-	  sep=strchr(line, ':');
-	  if(sep) {
-	    dprintf(3, "%.*s: %s", sep-line, line, sep+1);
-	    if(strncmp(line, UPDATE_RATE, sep-line)==0) {
-	      default_options.update_sec=atoi(sep+1);
-	      if(default_options.update_sec<1)
-		default_options.update_sec=1;
-	      dprintf(3, "update_sec now %d", default_options.update_sec);
-	    } else if(strncmp(line, INIT_SIZE, sep-line)==0) {
-	      default_options.applet_init_size=(guint) atoi(sep+1);
-	    } else if(strncmp(line, SHOW_DIR, sep-line)==0) {
-	      default_options.applet_show_dir=(guint) atoi(sep+1);
-	    }
-	  }
-	}
-      }
-    } while(line);
-
-    fclose(in);
-  } else {
-    write_choices(&default_options);
-  }
-}
-
-static void write_choices_xml(const Options *opts)
-{
-  gchar *fname;
-  gboolean ok;
-
-  fname=choices_find_path_save("Config.xml", PROJECT, TRUE);
-  dprintf(2, "save to %s", fname? fname: "NULL");
-
-  if(fname) {
-    xmlDocPtr doc;
-    xmlNodePtr tree;
-    FILE *out;
-    char buf[80];
-    GList *fs;
-
-    doc = xmlNewDoc("1.0");
-    doc->children=xmlNewDocNode(doc, NULL, PROJECT, NULL);
-    xmlSetProp(doc->children, "version", VERSION);
-
-    /* Insert data here */
-    tree=xmlNewChild(doc->children, NULL, UPDATE_RATE, NULL);
-    sprintf(buf, "%d", opts->update_sec);
-    xmlSetProp(tree, "value", buf);
-  
-    tree=xmlNewChild(doc->children, NULL, "Applet", NULL);
-    sprintf(buf, "%d", opts->applet_init_size);
-    xmlSetProp(tree, "initial-size", buf);
-    sprintf(buf, "%d", opts->applet_show_dir);
-    xmlSetProp(tree, "show-dir", buf);
-
-    if(fs_exclude) {
-      tree=xmlNewChild(doc->children, NULL, EXCLUDE_FS, NULL);
-      for(fs=fs_exclude; fs; fs=g_list_next(fs))
-	(void) xmlNewChild(tree, NULL, "Name", (char *) fs->data);
-    }
-  
-    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
-
-    g_free(fname);
-    xmlFreeDoc(doc);
-  }
-}
-
-static void write_choices(const Options *opts)
-{
-  write_choices_xml(opts);
-}
 
 static void show_info_win(void)
 {
@@ -1047,182 +866,6 @@ static void hide_window(GtkWidget *widget, gpointer data)
   gtk_widget_hide(GTK_WIDGET(data));
 }
 
-/*
-static void cancel_config(GtkWidget *widget, gpointer data)
-{
-  GtkWidget *confwin=GTK_WIDGET(data);
-  
-  gtk_widget_hide(confwin);
-}
-*/
-
-static void set_config(GtkWidget *widget, gpointer data)
-{
-  OptionWidgets *ow=(OptionWidgets *) data;
-  Options *opts;
-  gfloat s;
-
-  opts=ow->fwin? &ow->fwin->options: &default_options;
-
-  opts->update_sec=
-    gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ow->update_s));
-  opts->applet_init_size=
-    gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ow->init_size));
-  opts->applet_show_dir=
-    gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_dir));
-
-  if(ow->fwin) {
-    gtk_timeout_remove(ow->fwin->update_tag);
-    ow->fwin->update_tag=gtk_timeout_add(opts->update_sec*1000,
-					 (GtkFunction) update_fs_values,
-					 ow->fwin);
-    if(ow->fwin->is_applet) {
-      if(opts->applet_show_dir)
-	gtk_widget_show(ow->fwin->fs_name);
-      else
-	gtk_widget_hide(ow->fwin->fs_name);
-    }
-  }
-  
-  gtk_widget_hide(ow->window);
-}
-
-static void save_config(GtkWidget *widget, gpointer data)
-{
-  set_config(widget, data);
-  write_choices(&current_window->options);
-}
-
-#define RESPONSE_SAVE 1
-
-static void config_response(GtkWidget *dialog, gint response, gpointer data)
-{
-  switch(response) {
-  case RESPONSE_SAVE:
-    save_config(dialog, data);
-    break;
-  case GTK_RESPONSE_ACCEPT:
-    set_config(dialog, data);
-    break;
-  case GTK_RESPONSE_REJECT:
-    /*dprintf(3, "calling cancel_config(%p, %p)", dialog, data);
-      cancel_config(dialog, data);*/
-    gtk_widget_hide(dialog);
-    break;
-  case GTK_RESPONSE_NONE:
-    dprintf(3, "calling gtk_widget_hide(%p)", dialog);
-    gtk_widget_hide(dialog);
-    break;
-  default:
-    dprintf(3, "config_response(%p, %d, %p) %d?", dialog, response, data,
-	    response);
-    break;
-  }
-}
-
-static void show_config_win(void)
-{
-  static GtkWidget *confwin=NULL;
-  static OptionWidgets ow;
-  Options *opts;
-
-  opts=current_window? &current_window->options: &default_options;
-  ow.fwin=current_window;
-
-  if(!confwin) {
-    GtkWidget *vbox;
-    GtkWidget *hbox;
-    GtkWidget *but;
-    GtkWidget *label;
-    GtkObject *range;
-    GtkWidget *spin;
-    GtkWidget *check;
-    GtkWidget *frame;
-
-    confwin=gtk_dialog_new_with_buttons("Configuration",
-					ow.fwin? GTK_WINDOW(ow.fwin->win): NULL,
-					0,
-					GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
-					GTK_STOCK_SAVE, RESPONSE_SAVE,
-					GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
-					NULL);
-    g_signal_connect(confwin, "response", 
-		     G_CALLBACK(config_response), 
-		     &ow);
-    g_signal_connect(confwin, "delete_event", 
-		     G_CALLBACK(trap_frame_destroy), 
-		     confwin);
-    ow.window=confwin;
-
-    vbox=GTK_DIALOG(confwin)->vbox;
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 4);
-
-    label=gtk_label_new(_("Update rate (s)"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-
-    range=gtk_adjustment_new((gfloat) opts->update_sec,
-			     1, 60., 1., 10., 10.);
-    spin=gtk_spin_button_new(GTK_ADJUSTMENT(range), 1, 0);
-    gtk_widget_set_name(spin, "update_s");
-    gtk_widget_show(spin);
-    gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 4);
-    ow.update_s=spin;
-
-    frame=gtk_frame_new(_("Applet configuration"));
-    gtk_widget_show(frame);
-    gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, FALSE, 6);
-
-    vbox=gtk_vbox_new(FALSE, 0);
-    gtk_widget_show(vbox);
-    gtk_container_add(GTK_CONTAINER(frame), vbox);
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 6);
-
-    label=gtk_label_new(_("Initial size"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-
-    range=gtk_adjustment_new((gfloat) opts->applet_init_size,
-			     16, 128, 2, 16, 16);
-    spin=gtk_spin_button_new(GTK_ADJUSTMENT(range), 1, 0);
-    gtk_widget_set_name(spin, "init_size");
-    gtk_widget_show(spin);
-    gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 4);
-    ow.init_size=spin;
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 4);
-
-    label=gtk_label_new(_("Display"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-
-    check=gtk_check_button_new_with_label(_("Show directory"));
-    gtk_widget_set_name(check, "show_dir");
-    gtk_widget_show(check);
-    gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 4);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check),
-				 opts->applet_show_dir);
-    ow.show_dir=check;
-
-  } else {
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.update_s),
-			      (gfloat)(opts->update_sec));
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.init_size),
-			      (gfloat)(opts->applet_init_size));
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.show_dir),
-				 opts->applet_show_dir);
-  }
-
-  gtk_widget_show(confwin);  
-}
 
 static void do_opendir(gpointer dat, guint action, GtkWidget *wid)
 {
@@ -1243,6 +886,11 @@ static void close_window(void)
   gtk_widget_hide(fwin->win);
   gtk_widget_unref(fwin->win);
   gtk_widget_destroy(fwin->win);
+}
+
+static void show_config_win(int ignored)
+{
+  options_show();
 }
 
 /* Pop-up menu */
@@ -1525,6 +1173,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.22  2003/03/05 15:30:40  stephen
+ * First pass at conversion to GTK 2.
+ *
  * Revision 1.21  2002/10/19 14:32:05  stephen
  * Fixed bug when applet monitors FS mounted as /
  *
