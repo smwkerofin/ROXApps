@@ -1,6 +1,10 @@
 Fetch
 =====
 
+26-Jun-2004 (0.0.3)
+~~~~~~~~~~~
+Option to set delay after download finished.  Fixed bug in password code.
+
 20-Jun-2004 (0.0.2)
 ~~~~~~~~~~~
 Added options (well, one so far).

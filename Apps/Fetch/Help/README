@@ -14,6 +14,12 @@ Copy the application directory to somewhere useful, usually ~/Apps or
 download handler enter "/path/Fetch/AppRun %s", where /path is the directory
 you stored the Fetch application.
 
+The program is then run automatically when a file dragged to a
+ROX-Filer window is to be fetched from the net.
+
+If you run the program independantly it will show the options window
+to allow you to configure it manually.
+
 Updates
 =======
 This program is available at http://www.kerofin.demon.co.uk/rox/fetch.html

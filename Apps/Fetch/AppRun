@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.5 2004/06/19 11:31:03 stephen Exp $
+# $Id: AppRun,v 1.6 2004/06/21 20:59:59 stephen Exp $
 
 import os, sys
 import time
@@ -18,6 +18,7 @@ _=rox._
 rox.setup_app_options('Fetch')
 
 allow_pw_change=rox.options.Option('allow_pw_change', True)
+wait_for=rox.options.Option('wait_for', 3)
 
 rox.app_options.notify()
 
@@ -55,7 +56,7 @@ class ROXURLopener(urllib.FancyURLopener):
                 user=None
                 password=None
 
-            if user and password and not allow_pw_change.int_value():
+            if user and password and not allow_pw_change.int_value:
                 return user, password
             ouser=user
             opass=password
@@ -294,7 +295,7 @@ class FetchWindow(rox.Dialog):
         if header.has_key('Content-Type'):
             self.type_l.set_text(header['Content-Type'])
         self.message('Done')
-        rox.g.timeout_add(3*1000, self.close)
+        rox.g.timeout_add(wait_for.int_value*1000, self.close)
         rox.g.main()
         
 class PasswordWindow(rox.Dialog):
