@@ -1,0 +1,60 @@
+Mail
+====
+
+This is an applet which indicates whether or not you have new mail.
+You can also use it to launch your favourite mail client.
+
+Installing
+----------
+
+Copy it where you want it to be.  It is written in Python so there is
+no need to compile.
+
+Choosing a mail client
+----------------------
+
+Right click on the Mail applet to pop-up its menu and select "Select
+mailer".  Choose your prefered client or click on "New mailer" to
+define a new one.
+
+        Name: Unique name for the client
+
+    Location: File name of the command to run
+
+Read command: Either just '%s' for a GUI client or 'xterm -e %s' for a
+	      command line program.  Below this is an example of the
+	      command.
+
+Send command: How to send a file, in terms of
+		  %(Command)s	  file name of command
+		  %(Subject)s	  subject of email
+		  %(To)s	  intended recipient of file
+		  %(File)s	  path of file to send
+	      Below this is an example command.
+
+Sending a file
+--------------
+
+Drag the file to the Mail icon and fill in the details in the window
+which opens.
+                To: email address to send the file to
+           Subject: subject of the email
+  Encode as binary: select if file is not text (uses uuencode)
+              Send: click to send the file
+
+Bugs
+----
+
+A message similar to 
+  Gtk-WARNING **: gtk_signal_disconnect_by_data(): could not find
+  handler containing data (0xFC6E8) 
+appears at start up.  I don't know why.
+
+Other bugs (or a fix for the one listed above) should be reported to
+stephen@kerofin.demon.co.uk
+
+Updates
+-------
+
+Latest version is at <URL:http://www.kerofin.demon.co.uk/rox/>
+
