@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.1 2001/07/17 14:44:50 stephen Exp $
+ * $Id: rox_dnd.c,v 1.2 2001/07/23 12:58:56 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -288,6 +288,16 @@ GSList *rox_dnd_filter_local(GSList *uris)
   return filt;
 }
 
+void rox_dnd_local_free(GSList *paths)
+{
+  GSList *t;
+
+  for(t=paths; t; t=g_slist_next(t))
+    g_free(t->data);
+  
+  g_slist_free(paths);
+}
+
 /* XDS not yet tested... */
 static void got_xds(GtkWidget 		*widget,
 			 GdkDragContext 	*context,
@@ -373,6 +383,9 @@ static void drag_data_received(GtkWidget      	*widget,
 }
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.2  2001/07/23 12:58:56  stephen
+ * (untested) XDS support
+ *
  * Revision 1.1  2001/07/17 14:44:50  stephen
  * Added DnD stuff (plus path utils and debug util)
  *
