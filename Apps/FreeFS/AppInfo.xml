@@ -2,7 +2,7 @@
 <AppInfo>
   <About>
     <Purpose>Monitor file system usage</Purpose>
-	<Version>0.1.5</Version>
+	<Version>0.1.6</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
