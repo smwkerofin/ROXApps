@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.17 2004/10/23 11:39:35 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.18 2004/10/23 11:49:06 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -99,7 +99,7 @@ to your link line, e.g.
 
     <h3>Library reference</h3>
 
-    <p>Organized by header file.  Last updated for version 2.1.2. Use
+    <p>Organized by header file.  Last updated for version 2.1.4. Use
 			    as e.g.
 <pre>
 #include &lt;rox/rox.h&gt;
@@ -144,7 +144,7 @@ to your link line, e.g.
 
     <dl>
       <dt>
-	<code>void rox_init(const char *program, int *argc, char ***argv)</code>
+	<code>void rox_init(const char *program, const char *domain, int *argc, char ***argv)</code>
       <dd><p>
 
 	  This handles the initialization of the library.  It calls:
@@ -153,11 +153,25 @@ to your link line, e.g.
           <li><code>gtk_init(argc, argv)</code>
           <li><code>rox_debug_init(program)</code>
           <li><code>choices_init()</code>
-          <li><code>options_init(program)</code> (if it detects an
+          <li><code>options_init_with_domain(program, domain)</code> (if it detects an
 					      $APP_DIR/Options.xml file)
           <li><code>rox_dnd_init()</code>
           <li><code>mime_init()</code>
         </ul>
+<p><var>domain</var> is used to differentiate your program called
+					  "App" from every other
+program called "App".  It is a domain name under the control of the 
+program's author.  If you do not have a unique domain, you can use 
+your email address.</p>
+	</dd>
+
+      <dt>
+	<code>void rox_init(const char *program, int *argc, char ***argv)</code>
+      <dd><p>
+
+	  This handles the initialization of the library.  It is 
+equivalent to <code>rox_init_with_domain(program, NULL, argc, argv)</code>.
+	</p>
 
       <dt>
 	<code>const gchar *rox_get_program_name(void);</code>
@@ -239,7 +253,7 @@ window is destoyed it will automatically be de-registered.
 	</p>
 
       <dt>
-	<code>void rox_mainloop(void)</code>
+	<code>void rox_main_loop(void)</code>
 
       <dd><p>
 	  This behaves as <code>gtk_main()</code>, except that it
@@ -249,16 +263,20 @@ there are no registered windows when called it will return
 (Opening an options window via <code>options_show()</code> registers
 a window).
 	</p>
+      <dt>
+	<code>void rox_main_quit(void)</code>
+
+      <dd><p>
+	  Exit from <code>rox_main_loop()</code> by calling
+<code>gtk_main_quit()</code>.  The number of registered windows is ignored.
+	</p>
+</dd>
     </dl>
 
 <h4><a name="choices.h">choices.h</a></h4>
     <p>Interface to the choices system and $CHOICESPATH.  Originally by 
       <a href="mailto:tal197@users.sourceforge.net">Thomas Leonard</a> and
       taken from the ROX-Filer source.
-
-<p>If the environment variable <samp>ROX_USE_XDG_DIRS</samp> is set
-				    and is 1, "yes" or "true" then the
-				    XDG Basedir spec is used instead.</p>
 
     <dl>
       <dt>
@@ -299,6 +317,40 @@ be created (set this to FALSE if you just want to find out where
 a saved file would go without actually altering the filesystem).
 
 	<p><code>g_free()</code> the result.</p>
+
+      <dt>
+	<code>gchar *rox_choices_load(const char *<var>leaf</var>,
+								  const char *<var>dir</var>, const char *<var>domain</var>)</code>
+
+<dd><p>Get the pathname of a choices file to load. Eg:
+
+	<code>rox_choices_load("menus", "ROX-Filer", "rox.sourceforge.net")</code>
+	-> <samp>"/usr/local/share/Choices/ROX-Filer/menus"</samp> 
+(or <samp>"/etc/xdg/rox.sourceforge.net/ROX-Filer/menus"</samp> ).
+
+<p>The return values may be NULL - use built-in defaults - otherwise
+	  <code>g_free()</code> the result.</p>
+<p>This uses the XDG base directories specification 
+(used by <a href="#basedir.h">basedir.h</a>)
+to look up the file,
+falling back on the old $CHOICESPATH system.  <var>domain</var> may be
+<code>NULL</code>.</p>
+</dd>
+
+      <dt>
+	<code>gchar *rox_choices_save(const char *<var>leaf</var>, const char *<var>dir</var>, 
+	  const char *<var>domain</var>)</code>
+
+<dd><p>Returns the pathname of a file to save to, or NULL if saving is
+	  disabled. 
+
+	<p><code>g_free()</code> the result.</p>
+<p>This uses the XDG base directories specification 
+(used by <a href="#basedir.h">basedir.h</a>)
+to look up the file,
+but it does not use the old $CHOICESPATH system.  <var>domain</var> may be
+<code>NULL</code>.</p>
+</dd>
 
 </dl>
 
@@ -1014,11 +1066,19 @@ to be used as a label.  Returns a list of widgets to be added to the
 window.
 </p>
 
-      <dt><code>void options_init(const char *project);</code>
+									      <dt><code>void options_init_with_domain(const char *<var>project</var>,
+										  const char *<var>domain</var>);</code>
 
 <dd><p>Called to initialize options system.  Must be called after choices_init(), but 
-before any other function in the options system.  project is the name of the 
-project and is passed to choices functions.
+										    before any other function in the options system.  <var>project</var> is the name of the 
+project and is passed to choices functions.  <var>domain</var> is also
+										    passed to the choices functions and may be <code>NULL</code>.
+</p>
+
+      <dt><code>void options_init(const char *project);</code>
+
+<dd><p>Equivalent to <code>options_init_with_domain(<var>project</var>,
+										  NULL)</code>.
 </p>
 
       <dt><code>void option_register_widget(char *name, OptionBuildFn builder);</code>
@@ -1567,7 +1627,7 @@ status of the command used to launch.
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Sat Oct 23 12:48:28 BST 2004
+Last modified: Sat Oct 23 15:04:48 BST 2004
 <!-- hhmts end -->
   </body>
 </html>

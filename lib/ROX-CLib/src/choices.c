@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.4 2002/02/13 11:00:36 stephen Exp $
+ * $Id: choices.c,v 1.5 2004/09/13 11:29:31 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -35,15 +35,11 @@
 #include "choices.h"
 #include "basedir.h"
 
-/* change to TRUE when we switch to XDG */
-#define ROX_USE_XDG_DIRS_DEFAULT FALSE  
-
 static gboolean saving_disabled = TRUE;
 static gchar **dir_list = NULL;
 
 /* Static prototypes */
 static gboolean exists(char *path);
-static void init_basedir(void);
 static void init_choices(void);
 
 /****************************************************************
@@ -59,25 +55,10 @@ static void init_choices(void);
 void choices_init(void)
 {
 	char	*evar;
-	int      use_xdg=ROX_USE_XDG_DIRS_DEFAULT;
 
 	g_return_if_fail(dir_list == NULL);
 
-	evar=getenv("ROX_USE_XDG_DIRS");
-
-	if(evar) {
-	  if(g_ascii_strcasecmp(evar, "yes")==0 ||
-	     g_ascii_strcasecmp(evar, "true")==0 || atoi(evar))
-	    use_xdg=TRUE;
-	  else if(g_ascii_strcasecmp(evar, "no")==0 ||
-		  g_ascii_strcasecmp(evar, "false")==0)
-	    use_xdg=FALSE;
-	} 
-
-	if(use_xdg)
-	  init_basedir();
-	else
-	  init_choices();
+	init_choices();
 
 }
 
@@ -193,6 +174,53 @@ gchar *choices_find_path_save(const char *leaf, const char *dir,
 	return retval;
 }
 
+gchar *rox_choices_save(const char *leaf, const char *dir,
+			       const char *domain)
+{
+  gchar *path;
+
+  rox_debug_printf(2, "rox_choices_save(%s, %s, %s)", leaf? leaf: "NULL",
+		   dir, domain? domain: "NULL");
+  
+  if(domain) {
+    gchar *resource;
+    gchar *tmp;
+
+    tmp=basedir_save_config_path(domain, dir);
+    rox_debug_printf(3, "tmp=%s", tmp? tmp: "NULL");
+    g_free(tmp);
+
+    resource=g_strconcat(domain, "/", dir, NULL);
+    path=basedir_save_config_path(resource, leaf);
+    g_free(resource);
+  } else {
+    path=basedir_save_config_path(dir, leaf);
+  }
+  rox_debug_printf(2, "=%s", path? path: "NULL");
+
+  return path;
+}
+
+gchar *rox_choices_load(const char *leaf, const char *dir,
+			       const char *domain)
+{
+  gchar *path;
+  
+  if(domain) {
+    gchar *resource;
+
+    resource=g_strconcat(domain, "/", dir, NULL);
+    path=basedir_load_config_path(resource, leaf);
+    g_free(resource);
+  } else {
+    path=basedir_load_config_path(dir, leaf);
+  }
+
+  if(!path)
+    path=choices_find_path_load(leaf, dir);
+
+  return path;
+}
 
 /****************************************************************
  *			INTERNAL FUNCTIONS			*
@@ -250,23 +278,6 @@ static void init_choices(void)
 
 }
 
-/* Initialize using new XDG system */
-static void init_basedir(void)
-{
-  const gchar *home;
-  GList *paths, *p;
-  int i, n;
-
-  home=basedir_get_config_home();
-  saving_disabled=(home!=NULL);
-
-  paths=basedir_get_config_paths();
-  n=g_list_length(paths);
-
-  dir_list=g_new(gchar *, n+1);
-  for(i=0, p=paths; p; p=g_list_next(p), i++)
-    dir_list[i]=g_strdup((const gchar *) p->data);
-  dir_list[n]=NULL;
-
-  g_list_free(paths);
-}
+/*
+ * $Log$
+ */

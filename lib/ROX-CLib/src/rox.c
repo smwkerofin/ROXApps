@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.6 2004/06/21 21:09:02 stephen Exp $
+ * $Id: rox.c,v 1.7 2004/10/23 11:50:12 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -15,15 +15,24 @@
 #include "options.h"
 
 static gchar *program_name=NULL;
+static gchar *domain_name=NULL;
 static GdkPixbuf *program_icon=NULL;
 const gchar *app_dir=NULL;
 
 void rox_init(const char *program, int *argc, char ***argv)
 {
+  rox_init_with_domain(program, NULL, argc, argv);
+}
+
+void rox_init_with_domain(const char *program, const char *domain,
+			  int *argc, char ***argv)
+{
   
   gtk_init(argc, argv);
 
   program_name=g_strdup(program);
+  if(domain)
+    domain_name=g_strdup(domain);
   rox_debug_init(program); 
 
   choices_init();
@@ -35,7 +44,7 @@ void rox_init(const char *program, int *argc, char ***argv)
     
     options_file=g_build_filename(app_dir, "Options.xml", NULL);
     if(access(options_file, R_OK)==0) {
-      options_init(program);
+      options_init_with_domain(program, domain);
     }
     g_free(options_file);
     
@@ -140,17 +149,28 @@ int rox_get_n_windows(void)
   return num_windows;
 }
 
-void rox_mainloop(void)
+static int exit_now=FALSE;
+
+void rox_main_loop(void)
 {
   in_mainloops++;
-  while(num_windows>0)
+  while(num_windows>0 && !exit_now)
     gtk_main();
   in_mainloops--;
+  exit_now=FALSE;
 }
 
+void rox_main_quit(void)
+{
+  exit_now=TRUE;
+  gtk_main_quit();
+}
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.7  2004/10/23 11:50:12  stephen
+ * Added window counting
+ *
  * Revision 1.6  2004/06/21 21:09:02  stephen
  * rox_init calls mime_init
  *

@@ -1,5 +1,5 @@
 /*
- * $Id: options.c,v 1.2 2003/05/24 10:01:37 stephen Exp $
+ * $Id: options.c,v 1.3 2004/10/23 11:49:59 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -70,6 +70,8 @@
 
 /* Name of project, recorded at init time */
 static gchar *PROJECT=NULL;
+/* Domain to use accessing rox_choices */
+static gchar *DOMAIN=NULL;
 
 /* Add all option tooltips to this group */
 static GtkTooltips *option_tooltips = NULL;
@@ -139,18 +141,20 @@ static GList *build_font(Option *option, xmlNode *node, gchar *label);
  *			EXTERNAL INTERFACE			*
  ****************************************************************/
 
-void options_init(const char *project)
+void options_init_with_domain(const char *project, const char *domain)
 {
 	char	*path;
 	xmlDoc	*doc;
 
 	PROJECT=g_strdup(project);
+	if(domain)
+	  DOMAIN=g_strdup(domain);
 	
 	loading = g_hash_table_new(g_str_hash, g_str_equal);
 	option_hash = g_hash_table_new(g_str_hash, g_str_equal);
 	widget_builder = g_hash_table_new(g_str_hash, g_str_equal);
 
-	path = choices_find_path_load("Options", project);
+	path = rox_choices_load("Options", project, DOMAIN);
 	if (path) {
 		/* Load in all the options set in the filer, storing them
 		 * temporarily in the loading hash table.
@@ -177,6 +181,11 @@ void options_init(const char *project)
 	option_register_widget("colour", build_colour);
 	option_register_widget("menu", build_menu);
 	option_register_widget("font", build_font);
+}
+
+void options_init(const char *project)
+{
+  options_init_with_domain(project, NULL);
 }
 
 /* When parsing the XML file, process an element named 'name' by
@@ -896,7 +905,7 @@ static GtkWidget *build_window_frame(GtkTreeView **tree_view)
 	gtk_widget_grab_default(button);
 	gtk_widget_grab_focus(button);
 
-	save_path = choices_find_path_save("...", PROJECT, FALSE);
+	save_path = rox_choices_save("...", PROJECT, DOMAIN);
 	if (save_path)
 	{
 		string = g_strdup_printf(_("Choices will be saved as:\n%s"),
@@ -907,7 +916,7 @@ static GtkWidget *build_window_frame(GtkTreeView **tree_view)
 	}
 	else
 		gtk_tooltips_set_tip(option_tooltips, button,
-				_("(saving disabled by CHOICESPATH)"), NULL);
+				_("(saving disabled)"), NULL);
 
 	if (tree_view)
 		*tree_view = GTK_TREE_VIEW(tv);
@@ -1069,7 +1078,7 @@ static void save_options(void)
 	GList	*next;
 	gchar	*save, *save_new;
 
-	save = choices_find_path_save("Options", PROJECT, TRUE);
+	save = rox_choices_save("Options", PROJECT, DOMAIN);
 	if (!save)
 		goto out;
 
@@ -1763,6 +1772,9 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: options.c,v $
+ * Revision 1.3  2004/10/23 11:49:59  stephen
+ * Added window counting
+ *
  * Revision 1.2  2003/05/24 10:01:37  stephen
  * Fix bug in options.  Improve configure.in.
  *

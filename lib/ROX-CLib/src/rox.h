@@ -1,5 +1,5 @@
 /*
- * $Id: rox.h,v 1.5 2004/05/22 17:03:57 stephen Exp $
+ * $Id: rox.h,v 1.6 2004/10/23 11:50:12 stephen Exp $
  *
  * rox.h - Top level header for ROX-CLib
  */
@@ -19,6 +19,8 @@
 
 /* Initialize GTK+ and bits of ROX-CLib */
 extern void rox_init(const char *program, int *argc, char ***argv);
+extern void rox_init_with_domain(const char *program, const char *domain,
+				 int *argc, char ***argv);
 
 /* Return name of program as passed to rox_init.
    Returns NULL if rox_init not called. */
@@ -43,12 +45,16 @@ extern const char *rox_clib_gtk_version_string(void);
 extern void rox_add_window(GtkWidget *window);
 extern int rox_get_n_windows(void);
 
-extern void rox_mainloop(void);
+extern void rox_main_loop(void);
+extern void rox_main_quit(void);
 
 #endif
 
 /*
  * $Log: rox.h,v $
+ * Revision 1.6  2004/10/23 11:50:12  stephen
+ * Added window counting
+ *
  * Revision 1.5  2004/05/22 17:03:57  stephen
  * Added AppInfo parser
  *

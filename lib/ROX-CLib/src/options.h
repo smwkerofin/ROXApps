@@ -1,5 +1,5 @@
 /*
- * $Id: options.h,v 1.1 2003/04/16 09:01:19 stephen Exp $
+ * $Id: options.h,v 1.2 2003/10/18 11:46:56 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -32,6 +32,7 @@ struct _Option {
 /* Prototypes */
 
 extern void options_init(const char *project);
+extern void options_init_with_domain(const char *project, const char *domain);
 
 extern void option_register_widget(char *name, OptionBuildFn builder);
 extern void option_check_widget(Option *option);
@@ -50,6 +51,9 @@ GtkWidget *options_show(void);
 
 /*
  * $Log: options.h,v $
+ * Revision 1.2  2003/10/18 11:46:56  stephen
+ * Make sure xmlNode is defined
+ *
  * Revision 1.1  2003/04/16 09:01:19  stephen
  * Added options code from filer
  *
