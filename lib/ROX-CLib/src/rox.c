@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.2 2002/04/29 08:17:24 stephen Exp $
+ * $Id: rox.c,v 1.3 2003/10/22 17:17:01 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -15,11 +15,11 @@
 #include "options.h"
 
 static gchar *program_name=NULL;
+static GdkPixbuf *program_icon=NULL;
 
 void rox_init(const char *program, int *argc, char ***argv)
 {
   const gchar *app_dir;
-  gchar *options_file;
   
   gtk_init(argc, argv);
 
@@ -30,18 +30,39 @@ void rox_init(const char *program, int *argc, char ***argv)
 
   app_dir=g_getenv("APP_DIR");
   if(app_dir) {
+    gchar *options_file;
+    gchar *dir_icon;
+    
     options_file=g_build_filename(app_dir, "Options.xml", NULL);
     if(access(options_file, R_OK)==0) {
       options_init(program);
     }
     g_free(options_file);
+    
+    dir_icon=g_build_filename(app_dir, ".DirIcon", NULL);
+    program_icon=gdk_pixbuf_new_from_file(dir_icon, NULL);
+    if(program_icon) {
+      GList *list=g_list_append(NULL, program_icon);
+      
+      gtk_window_set_default_icon_list(list);
+      g_list_free(list);
+    }
+    g_free(dir_icon);
   }
+  
   rox_dnd_init();
 }
 
 const gchar *rox_get_program_name(void)
 {
   return program_name;
+}
+
+GdkPixbuf *rox_get_program_icon(void)
+{
+  if(program_icon)
+    g_object_ref(program_icon);
+  return program_icon;
 }
 
 int rox_clib_version_number(void)
@@ -88,6 +109,9 @@ const char *rox_clib_gtk_version_string(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.3  2003/10/22 17:17:01  stephen
+ * Added rox_init
+ *
  * Revision 1.2  2002/04/29 08:17:24  stephen
  * Fixed applet menu positioning (didn't work if program was managing more than
  * one applet window)
