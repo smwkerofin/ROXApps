@@ -1,90 +1,78 @@
 import os
 
-from gtk import *
-from GDK import *
+import findrox
+from rox import g
+#from gtk import *
+#from GDK import *
+import webbrowser
 
-class InfoWin(GtkDialog):
+class InfoWin(g.Dialog):
     def __init__(self, program, purpose, version, author, website):
-        GtkDialog.__init__(self)
+        g.Dialog.__init__(self)
         self.website=website
-        self.browser_cmds=["netscape"]
 
         def close(iw, event=None, data=None):
             iw.hide()
 
         self.connect("delete_event", close)
 
-        table=GtkTable(5, 2)
+        table=g.Table(5, 2)
         self.vbox.pack_start(table)
 
-        label=GtkLabel("Program")
+        label=g.Label("Program")
         table.attach(label, 0, 1, 0, 1)
 
-        frame=GtkFrame()
-        frame.set_shadow_type(SHADOW_IN)
+        frame=g.Frame()
+        frame.set_shadow_type(g.SHADOW_IN)
         table.attach(frame, 1, 2, 0, 1)
 
-        label=GtkLabel(program)
+        label=g.Label(program)
         frame.add(label)
 
-        label=GtkLabel("Purpose")
+        label=g.Label("Purpose")
         table.attach(label, 0, 1, 1, 2)
 
-        frame=GtkFrame()
-        frame.set_shadow_type(SHADOW_IN)
+        frame=g.Frame()
+        frame.set_shadow_type(g.SHADOW_IN)
         table.attach(frame, 1, 2, 1, 2)
 
-        label=GtkLabel(purpose)
+        label=g.Label(purpose)
         frame.add(label)
 
-        label=GtkLabel("Version")
+        label=g.Label("Version")
         table.attach(label, 0, 1, 2, 3)
 
-        frame=GtkFrame()
-        frame.set_shadow_type(SHADOW_IN)
+        frame=g.Frame()
+        frame.set_shadow_type(g.SHADOW_IN)
         table.attach(frame, 1, 2, 2, 3)
 
-        label=GtkLabel(version)
+        label=g.Label(version)
         frame.add(label)
 
-        label=GtkLabel("Author")
+        label=g.Label("Author")
         table.attach(label, 0, 1, 3, 4)
 
-        frame=GtkFrame()
-        frame.set_shadow_type(SHADOW_IN)
+        frame=g.Frame()
+        frame.set_shadow_type(g.SHADOW_IN)
         table.attach(frame, 1, 2, 3, 4)
 
-        label=GtkLabel(author)
+        label=g.Label(author)
         frame.add(label)
 
-        label=GtkLabel("Web site")
+        label=g.Label("Web site")
         table.attach(label, 0, 1, 5, 6)
 
-        button=GtkButton(website)
+        button=g.Button(website)
         table.attach(button, 1, 2, 5, 6)
 
         def goto_website(widget, iw):
-            child_pid=os.fork()
-            if child_pid==-1:
-                gdk_beep()
-                return
-            if child_pid>0:
-                return
-
-            for browser in iw.browser_cmds:
-                cmd=browser+" "+iw.website
-                
-                try:
-                    error=os.system(cmd)
-                except:
-                    pass
-            os._exit(127)
+            webbrowser.open(iw.website)
 
         button.connect("clicked", goto_website, self)
 
         hbox=self.action_area
 
-        button=GtkButton("Dismiss")
+        button=g.Button("Dismiss")
         hbox.pack_start(button)
 
         def dismiss(widget, iw):
@@ -95,5 +83,4 @@ class InfoWin(GtkDialog):
 
         self.vbox.show_all()
 
-    def add_browser_command(self, cmd):
-        self.browser_cmds.insert(0, cmd)
+
