@@ -1,6 +1,7 @@
 import os, sys, time
 import dbus
 
+# DBus setup
 service_name='uk.co.demon.kerofin.DownloadManager'
 interface_name=service_name
 object_path='/DownloadManager'
@@ -9,16 +10,21 @@ defdelay=5
 inc=5
 
 class DMException(Exception):
+    """Generic DownloadManager exception"""
     pass
 
 class DMNotRunning(DMException):
+    """DownloadManager is not running"""
     pass
 
 class DMNoAnswer(DMException):
-    pass
+    """DownloadManager did not answer us"""
 
 class Manager:
+    """This class represents a connection to the DownloadManager."""
     def __init__(self, service=service_name, object=object_path):
+        """Create and instance of the class.  Do not call this directly,
+        use the connect() call below"""
         self.bus=dbus.Bus(dbus.Bus.TYPE_SESSION)
         self.service=self.bus.get_service(service)
         interface_name=service
@@ -33,6 +39,8 @@ class Manager:
             raise DMNotRunning
 
     def getQueueSize(self):
+        """Return number of clients in the queue waiting to start.  If
+        we are waiting then this will include us."""
         try:
             return self.object.QueueSize()
         except:
@@ -40,6 +48,15 @@ class Manager:
         raise DMNoAnswer
 
     def acquire(self, host, fname, block=True, delay=defdelay):
+        """Attempt to start.
+        host - name of host we will be downloading from
+        fname - name of resource we will be downloading
+        block - if True (the default) wait until we are given the go ahead
+                (use False if a GUI program and will do own polling)
+        delay - delay in seconds to wait between polls if block is True
+        If true is returned then the client can start, false means to wait.
+        If an exception is raised then DownloadManager is not responding and
+        the client should start anyway."""
         check=True
         while check:
             try:
@@ -59,24 +76,44 @@ class Manager:
         return False
 
     def update(self, size, total=-1):
+        """Tell DownloadManager we have downloaded some more.  Call
+        periodically to ensure we keep our slot.  Don't call if no data
+        received just to maintain the slot, that defeats the purpose.
+        size - number of bytes downloaded so far
+        total - total number of bytes to download (optional)"""
         try:
             self.object.Update(size, total)
         except:
             pass
 
     def done(self):
+        """Download has finished sucessfully"""
         try:
             self.object.Done()
         except:
             pass
 
     def cancel(self, why):
+        """Download was cancelled, either by user intervention or some error.
+        why - string describing the reason the download was cancelled"""
         try:
             self.object.Cancel(why)
         except:
             pass
 
+    def register(self, fn):
+        """Register a function to be called when a slot becomes available
+        fn - function to call, passed: interface, signal_name, service, path, message
+        When this is called, you can then call acquire to try and claim
+        this slot."""
+        self.object.connect_to_signal('slot_available', fn)
+
 def connect(start=False):
+    """Make connection to DownloadManager.
+    start - if True and the DownloadManager is not running attempt to start it
+            (defaults to False) (not yet implemented)
+    Returns a Manager object representing the connect.
+    Can raise a DMException."""
     try:
         man=Manager()
     except DMNotRunning:
@@ -89,6 +126,7 @@ def connect(start=False):
     return man
 
 def run_test(obj):
+    """Test function."""
     p=0
     size=20*1024*1024
     while p<100:
