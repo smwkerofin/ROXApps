@@ -1,3 +1,6 @@
 #!/bin/sh
 
-fortune | xsay -t=fortune
+APP_DIR=`dirname $0`
+PATH=$APP_DIR/..:$PATH export PATH
+
+/usr/games/fortune | rox_run Tail -c -t Fortune -- -
