@@ -1,7 +1,7 @@
 /*
  * rox_path.c - utilities for path handling, support for drag & drop
  *
- * $Id: rox_path.c,v 1.5 2003/03/05 15:31:23 stephen Exp $
+ * $Id: rox_path.c,v 1.6 2003/12/13 19:26:05 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -28,9 +28,10 @@ char *rox_path_get_local(const char *uri)
   const char *orig=uri;
 #ifdef HAVE_GETHOSTNAME
   struct hostent *hp;
-  struct hostent *lhp;
 #endif
   
+  rox_debug_printf(3, "rox_path_get_local(%s) %s", uri, hostn);
+    
   if(strncmp(uri, "file:", 5)==0)
     uri+=5;
   
@@ -44,11 +45,14 @@ char *rox_path_get_local(const char *uri)
     end=strchr(host, '/');
     host=g_strndup(host, end-host);
 
+    rox_debug_printf(3, "rox_path_get_local(%s) %s", orig, host);
+    
     if(strcmp(host, "localhost")==0) {
       g_free(host);
       return unescape_uri(end);
     }
 
+#ifdef HAVE_GETHOSTNAME
     if(!hostn[0]) {
       if(gethostname(hostn, sizeof(hostn))!=0) {
 	rox_debug_printf(2, "rox_path_get_local(%s) couldn't get hostname!",
@@ -57,33 +61,36 @@ char *rox_path_get_local(const char *uri)
 	return NULL;
       }
     }
+#endif
+    
+    rox_debug_printf(3, "rox_path_get_local(%s) %s hostname is %s", orig,
+		     host, hostn);
 
     if(strcmp(host, hostn)==0) {
       g_free(host);
       return unescape_uri(end);
     }
 
-#ifdef HAVE_GETHOSTNAME
+#ifdef HAVE_GETHOSTBYNAME
     hp=gethostbyname(host);
     if(hp) {
       char **alias;
-      if(strcmp(hp->h_name, hostn)==0) {
+      
+	rox_debug_printf(3, "rox_path_get_local(%s) %s byname %s", orig,
+		     host, hp->h_name);
+      if(strcmp(hp->h_name, host)==0) {
 	g_free(host);
 	return unescape_uri(end);
       }
-      for(alias=hp->h_aliases; *alias; alias**)
-	if(strcmp(*alias, hostn)==0) {
-	  g_free(host);
-	  return unescape_uri(end);
-	}
-
-      lhp=gethostbyname(hostn);
-      if(lhp) {
-	if(strcmp(hp->h_name, lhp->h_name)==0) {
+      for(alias=hp->h_aliases; *alias; alias++) {
+	rox_debug_printf(3, "rox_path_get_local(%s) %s alias %s", orig,
+		     host, *alias);
+	if(strcmp(*alias, host)==0) {
 	  g_free(host);
 	  return unescape_uri(end);
 	}
       }
+
     }
 #endif
     
@@ -215,6 +222,10 @@ gchar *unescape_uri(const char *uri)
 
 /*
  * $Log: rox_path.c,v $
+ * Revision 1.6  2003/12/13 19:26:05  stephen
+ * Exposed functions to escape and unescape uri's.
+ * rox_path_get_local() and rox_path_get_path() now unescape uri's.
+ *
  * Revision 1.5  2003/03/05 15:31:23  stephen
  * First pass a conversion to GTK 2
  * Known problems in SOAP code.

@@ -22,6 +22,7 @@
 
 #undef HAVE_LIBNSL
 #undef HAVE_MKDIR
+#undef HAVE_GETHOSTNAME
 #undef HAVE_GETHOSTBYNAME
 #undef HAVE_XML
 #undef GTK2

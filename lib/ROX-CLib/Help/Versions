@@ -1,6 +1,10 @@
 Changes to ROX-CLib by Version
 ==============================
 
+2.0.1
+-----
+Fix hostname recognition in drag and drop.
+
 2.0.0
 -----
 Added Help/ToDo
