@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.4 2002/02/13 11:00:38 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.5 2002/02/21 11:56:48 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -163,10 +163,8 @@ void rox_filer_examine(const char *filename)
   simple_call("Examine", "Filename", filename);
 }
 
-void rox_filer_panel(const char *name, ROXPanelSide side)
+static const char *panel_side(ROXPanelSide side)
 {
-  xmlDocPtr rpc;
-  xmlNodePtr tree;
   const char *sidename;
 
   switch(side) {
@@ -176,12 +174,23 @@ void rox_filer_panel(const char *name, ROXPanelSide side)
   case ROXPS_RIGHT: sidename="Right"; break;
   default:
     dprintf(0, "Illegal panel side: %d", side);
-    sprintf(last_error_buffer, "rox_filer_panel: Illegal panel side: %d",
-	    side);
+    sprintf(last_error_buffer, "Illegal panel side: %d", side);
     last_error=last_error_buffer;
-    return;
+    return NULL;
   }
 
+  return sidename;
+}
+
+void rox_filer_panel(const char *name, ROXPanelSide side)
+{
+  xmlDocPtr rpc;
+  xmlNodePtr tree;
+  const char *sidename=panel_side(side);
+
+  if(!sidename)
+    return;
+  
   check_init();
 
   make_soap("Panel", &rpc, &tree);
@@ -193,11 +202,56 @@ void rox_filer_panel(const char *name, ROXPanelSide side)
   xmlFreeDoc(rpc);
 }
 
+void rox_filer_panel_add(ROXPanelSide side, const char *path, int after)
+{
+  xmlDocPtr rpc;
+  xmlNodePtr tree;
+  const char *sidename=panel_side(side);
+
+  if(!sidename)
+    return;
+  
+  check_init();
+
+  make_soap("PanelAdd", &rpc, &tree);
+  (void) xmlNewChild(tree, NULL, "Side", sidename);
+  (void) xmlNewChild(tree, NULL, "Path", path);
+  if(after!=ROX_FILER_DEFAULT) {
+    char tmp[32];
+    sprintf(tmp, "%d", !!after);
+    (void) xmlNewChild(tree, NULL, "After", tmp);
+  } 
+
+  send_soap(rpc, expect_no_reply, NULL);
+  
+  xmlFreeDoc(rpc);
+}
+
 void rox_filer_pinboard(const char *name)
 {
   simple_call("Pinboard", "Name", name);
 }
      
+void rox_filer_pinboard_add(const char *path, int x, int y)
+{
+  xmlDocPtr rpc;
+  xmlNodePtr tree;
+  char tmp[32];
+
+  check_init();
+
+  make_soap("PinboardAdd", &rpc, &tree);
+  (void) xmlNewChild(tree, NULL, "Path", path);
+  sprintf(tmp, "%d", x);
+  (void) xmlNewChild(tree, NULL, "X", tmp);
+  sprintf(tmp, "%d", y);
+  (void) xmlNewChild(tree, NULL, "Y", tmp);
+
+  send_soap(rpc, expect_no_reply, NULL);
+  
+  xmlFreeDoc(rpc);
+}
+
 void rox_filer_run(const char *filename)
 {
   simple_call("Run", "Filename", filename);
@@ -454,6 +508,9 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.5  2002/02/21 11:56:48  stephen
+ * Fix typo which causes rox_filer_pinboard() to fail.
+ *
  * Revision 1.4  2002/02/13 11:00:38  stephen
  * Better way of accessing web site (by running a URI file).  Improvement to
  * language checking in rox_resources.c.  Visit by the const fairy in choices.h.

@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.h,v 1.1 2001/12/05 16:46:33 stephen Exp $
+ * $Id: rox_filer_action.h,v 1.2 2002/01/07 15:37:59 stephen Exp $
  *
  * rox_filer_action.h - drive the filer via SOAP
  */
@@ -17,7 +17,10 @@ extern void rox_filer_open_dir(const char *filename);
 extern void rox_filer_close_dir(const char *filename);
 extern void rox_filer_examine(const char *filename);
 extern void rox_filer_panel(const char *name, ROXPanelSide side);
+extern void rox_filer_panel_add(ROXPanelSide side, const char *path,
+				int after);
 extern void rox_filer_pinboard(const char *name);
+extern void rox_filer_pinboard_add(const char *path, int x, int y);
 extern void rox_filer_run(const char *filename);
 extern void rox_filer_show(const char *directory, const char *leafname);
 
@@ -43,6 +46,9 @@ extern void rox_filer_clear_error(void);
 
 /*
  * $Log: rox_filer_action.h,v $
+ * Revision 1.2  2002/01/07 15:37:59  stephen
+ * added rox_filer_version() and rox_filer_have_error()
+ *
  * Revision 1.1  2001/12/05 16:46:33  stephen
  * Added rox_soap.c to talk to the filer using SOAP.  Added rox_filer_action.c
  * to use rox_soap to drive the filer.
