@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.1.1.1 2001/04/10 12:30:25 stephen Exp $
+ * $Id: choices.c,v 1.1.1.1 2001/05/29 14:09:58 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -21,7 +21,7 @@
  */
 /* choices.c - code for handling loading and saving of user choices */
 
-#include "testlib_config.h"
+#include "rox-clib.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +30,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "global.h"
+#include <glib.h>
 
 #include "choices.h"
 
@@ -86,20 +86,6 @@ void choices_init(void)
 		dir_list[3] = NULL;
 	}
 
-#if 0
-	{
-		gchar	**cdir = dir_list;
-
-		while (*cdir)
-		{
-			g_print("[ choices dir '%s' ]\n", *cdir);
-			cdir++;
-		}
-
-		g_print("[ saving is %s ]\n", saving_disabled ? "disabled"
-							      : "enabled");
-	}
-#endif
 }
 
 /* Returns an array of the directories in CHOICESPATH which contain
@@ -181,19 +167,15 @@ gchar *choices_find_path_load(char *leaf, char *dir)
  * disabled. If 'create' is TRUE then intermediate directories will
  * be created (set this to FALSE if you just want to find out where
  * a saved file would go without actually altering the filesystem).
+ *
+ * g_free() the result.
  */
 gchar *choices_find_path_save(char *leaf, char *dir, gboolean create)
 {
-	static gchar	*path = NULL;
+	gchar	*path, *retval;
 	
 	g_return_val_if_fail(dir_list != NULL, NULL);
 
-	if (path)
-	{
-		g_free(path);
-		path = NULL;
-	}
-	
 	if (saving_disabled)
 		return NULL;
 
@@ -211,9 +193,10 @@ gchar *choices_find_path_save(char *leaf, char *dir, gboolean create)
 			g_warning("mkdir(%s): %s\n", path, g_strerror(errno));
 	}
 
-	path = g_strconcat(path, "/", leaf, NULL);
+	retval = g_strconcat(path, "/", leaf, NULL);
+	g_free(path);
 
-	return path;
+	return retval;
 }
 
 
