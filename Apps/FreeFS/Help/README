@@ -17,7 +17,23 @@ The window displays the file system mount point, the total size of the
 file system, the used size and the size available.
 
 Hold down the right mouse button for a menu.  From this menu you can
-change the update rate or quit the program.
+view the program info, change the configuration or quit the program.
+
+Configuration
+-------------
+
+There are three things that may be configured, two of which only apply
+to the applet mode (see below).
+
+The update rate is how often, in seconds, the file system is checked.
+
+The initial size is the number of pixels (in each direction) the
+applet uses in the panel or pinboard.  Note that the directory label
+will have its own minimum size.  This option only applies when the
+applet starts.
+
+If the show directory option is selected then last component of the path
+name of the mount point is shown below the size bar.
 
 Widgets
 -------
@@ -33,6 +49,18 @@ used	       GtkLabel	       "text display"
 size bar       GtkProgressBar  "gauge"
 free	       GtkLabel	       "text display"
 
+Applet mode
+-----------
+
+With ROX-Filer 1.1.2 or later FreeFS can provide an display of free
+space on a panel or pinboard.  The display is more minimalist,
+consisting only of the size bar and the last component of the path
+name of the mount point (optional).
+
+The file system monitored can not currently be changed and is the one
+hosting the current directory when the program starts, normally your
+home directory.
+
 Compiling
 ---------
 
@@ -40,15 +68,12 @@ You will need:
   Gtk+ 1.2.8 or later
   Libgtop 1.1.2 or later
 
-Run FreeFS/AppRun --compile
 
-This has only been tried under Solaris 7.  Reports of success/failure
-under other OS's to stephen@kerofin.demon.co.uk please.
+Run FreeFS/AppRun --compile.  It should also compile itself when first run.
 
-Bugs
-----
-
-FreeFS starts with the wrong time interval highlighted on its menus.
+This has only been tried under Solaris 7-8 and Linux .  Reports of
+success/failure under other OS's to stephen@kerofin.demon.co.uk
+please.
 
 Credits
 -------
