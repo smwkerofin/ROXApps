@@ -16,9 +16,9 @@ EXEC = ${PLATFORM_DIR}/${PROG}
 
 PROG = Clock
 
-SRCS = clock.c choices.c infowin.c
+SRCS = clock.c alarm.c choices.c infowin.c
 
-OBJECTS = clock.o choices.o infowin.o
+OBJECTS = clock.o alarm.o choices.o infowin.o
 
 ############ Things to keep the same
 

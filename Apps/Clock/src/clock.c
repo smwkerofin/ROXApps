@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.4 2001/04/24 07:51:47 stephen Exp $
+ * $Id: clock.c,v 1.5 2001/05/09 10:04:54 stephen Exp $
  */
 #include "config.h"
 
@@ -33,6 +33,7 @@
 #endif
 
 #include "choices.h"
+#include "alarm.h"
 
 #define DEBUG              0
 #define SUPPORT_OLD_CONFIG 1
@@ -132,6 +133,8 @@ static GtkWidget *interval=NULL;
 
 static guint update_tag;            /* Handle for the timeout */
 static time_t config_time=0;        /* Time our config file was last changed */
+static gboolean load_alarms=TRUE;   /* Also controls if we show them */
+static gboolean save_alarms=TRUE;   
 
 #if EXTRA_FUN
 #define FADING 1
@@ -207,6 +210,8 @@ int main(int argc, char *argv[])
   /* Init choices and read them in */
   choices_init();
   read_config();
+  if(load_alarms)
+    alarm_load();
 
   /*dprintf("argc=%d\n", argc);*/
   if(argc<2 || !atol(argv[1])) {
@@ -236,6 +241,8 @@ int main(int argc, char *argv[])
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
 		       "WM destroy");
     gtk_widget_set_usize(plug, 64, 64);
+
+    save_alarms=FALSE;
 
     /* Isn't object oriented code wonderful.  Now that we have done the
        plug specific code, its just a containing widget.  For the rest of the
@@ -296,6 +303,9 @@ int main(int argc, char *argv[])
 
   dprintf("into main.\n");
   gtk_main();
+
+  if(save_alarms)
+    alarm_save();
 
   return 0;
 }
@@ -512,6 +522,9 @@ static void do_update(void)
 		  0, 0,
 		  0, 0,
 		  w, h);
+
+  if(load_alarms)
+    alarm_check();
 }
 
 static gint expose_event(GtkWidget *widget, GdkEventExpose *event)
@@ -946,8 +959,9 @@ static void show_conf_win(void)
 /* Pop-up menu */
 static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),		NULL, show_info_win, 0, NULL },
-  { N_("/Configure"),		NULL, show_conf_win, 0, NULL },
-  { N_("/Quit"),	NULL, gtk_main_quit, 0, NULL },
+  { N_("/Configure..."),       	NULL, show_conf_win, 0, NULL },
+  { N_("/Alarms..."),		NULL, alarm_show_window, 0, NULL },
+  { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
 };
 
 /* Create the pop-up menu */
@@ -977,9 +991,16 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 {
   if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
     /* Pop up the menu */
-    if(!menu)
+    if(!menu) 
       menu_create_menu(GTK_WIDGET(win));
 
+    if(!save_alarms || !load_alarms) {
+      GList *children=GTK_MENU_SHELL(menu)->children;
+      GtkWidget *alarms=GTK_WIDGET(g_list_nth(children, 2));
+      
+      gtk_widget_set_sensitive(alarms, FALSE);
+    }
+    
     gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 				bev->button, bev->time);
     return TRUE;
@@ -1229,6 +1250,10 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.5  2001/05/09 10:04:54  stephen
+ * New AppInfo data.
+ * Turn off debug output.
+ *
  * Revision 1.4  2001/04/24 07:51:47  stephen
  * Better config system.  Many display improvements
  *
