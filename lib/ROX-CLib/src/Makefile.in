@@ -7,7 +7,7 @@ PLATFORM_DIR = @bindir@
 LIBNAME = @LIBNAME@
 CC = @CC@
 CFLAGS = @CFLAGS@ `gtk-config --cflags` -I. -DLIBNAME=\"${LIBNAME}\"
-LDFLAGS = @LDFLAGS@ `gtk-config --libs`
+LDFLAGS = @LDFLAGS@ `gtk-config --libs` @LIBS@
 EXEC = ${PLATFORM_DIR}/bin/${PROG}
 LIBDIR = ${PLATFORM_DIR}/lib
 INCLUDEDIR = ${PLATFORM_DIR}/include
