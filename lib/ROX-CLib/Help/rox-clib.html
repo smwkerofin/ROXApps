@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.12 2004/06/21 21:08:38 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.13 2004/07/07 20:23:09 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -23,6 +23,19 @@ to extract it from then downloaded archive then make sure you rename
 to <code>ROX-CLib</code>.
 
     <p>Compile using <samp>ROX-CLib/AppRun --compile</samp>
+ or running ROX-CLib from the filer.
+
+<p>You will need 
+GTK+ 2.x, 
+libxml 2.4.x 
+and GNU <code>make</code>.  Linux users should 
+already have GNU make installed <code>/usr/bin</code>.  Other OS's may require you
+use a different directory (<code>/usr/bin/local</samp>) or program name (<code>gmake</code>).
+Set the environment variable MAKE to the correct value before
+compiling, e.g.
+<pre>
+$ MAKE=gmake ROX-CLib/AppRun --compile
+</pre>
 
     <h2>For Programmers</h2>
 
@@ -1484,7 +1497,7 @@ element are offered as the thumbnail handler.</p></dd>
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Wed Jul  7 20:51:13 BST 2004
+Last modified: Sun Jul 11 11:36:51 BST 2004
 <!-- hhmts end -->
   </body>
 </html>

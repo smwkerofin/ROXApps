@@ -12,7 +12,15 @@ Copy to a suitable place such as ~/lib or make sure it is on
 your $LIBDIRPATH.  It must be called ROX-CLib, otherwise other 
 programs can't find it.
 
-Compile using ROX-CLib/AppRun --compile
+Compile using ROX-CLib/AppRun --compile or running ROX-CLib from the filer.
+
+You will need GTK+ 2.x, libxml 2.4.x and GNU make.  Linux users should 
+already have GNU make installed /usr/bin.  Other OS's may require you
+use a different directory (/usr/bin/local) or program name (gmake).
+Set the environment variable MAKE to the correct value before
+compiling, e.g.
+
+$ MAKE=gmake ROX-CLib/AppRun --compile
 
 Compiling and linking against the library
 -----------------------------------------
@@ -42,7 +50,7 @@ If you are using autoconf and building a ROX program then:
 
     * In src/Makefile.in add:
 
-   ROX_CLIB = @ROX_CLIB_PATH@/AppRun
+   ROX_CLIB = "@ROX_CLIB_PATH@/AppRun"
 
       and to CFLAGS add: 
    `${ROX_CLIB} --cflags` 
@@ -53,11 +61,11 @@ If you are using autoconf and building a ROX program then:
 
    APP_DIR=`dirname $0`
    APP_DIR=`cd $APP_DIR;pwd`; export APP_DIR
-   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"
+   ROX_CLIB=`"$APP_DIR/libdir" ROX-CLib`/AppRun
    if [ -z "$LD_LIBRARY_PATH" ]; then
-       LD_LIBRARY_PATH=`$ROX_CLIB --runtime`
+       LD_LIBRARY_PATH=`"$ROX_CLIB" --runtime`
    else
-       LD_LIBRARY_PATH=`$ROX_CLIB --runtime`:$LD_LIBRARY_PATH
+       LD_LIBRARY_PATH=`"$ROX_CLIB" --runtime`:$LD_LIBRARY_PATH
    fi
    export LD_LIBRARY_PATH
 
