@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.c,v 1.7 2003/10/18 11:46:18 stephen Exp $
+ * $Id: infowin.c,v 1.8 2003/12/13 19:25:39 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -16,6 +16,7 @@
 #include "infowin.h"
 
 #define DEBUG 1
+#include <rox.h>
 #include "rox_debug.h"
 #include "rox_filer_action.h"
 
@@ -115,21 +116,25 @@ static void goto_website(GtkWidget *widget, gpointer data)
 
 static GtkWidget *get_app_icon(void)
 {
-  const gchar *app_dir=g_getenv("APP_DIR");
-  gchar *path;
-  GdkPixbuf *pixbuf;
   GtkWidget *image;
-  /*GError *err=NULL;*/
-
-  if(!app_dir)
-    return NULL;
+  GdkPixbuf *pixbuf;
   
-  path=g_strconcat(app_dir, "/.DirIcon", NULL);
-  pixbuf=gdk_pixbuf_new_from_file(path, NULL);
+  pixbuf=rox_get_program_icon();
 
+  if(!pixbuf) {
+    const gchar *app_dir=g_getenv("APP_DIR");
+    if(app_dir) {
+      gchar *dir_icon;
+    
+      dir_icon=g_build_filename(app_dir, ".DirIcon", NULL);
+      pixbuf=gdk_pixbuf_new_from_file(dir_icon, NULL);
+      g_free(dir_icon);
+    }
+  }
   if(pixbuf) {
     image=gtk_image_new_from_pixbuf(pixbuf);
     g_object_unref(pixbuf);
+
     return image;
   }
   
@@ -542,6 +547,9 @@ GtkWidget *info_win_new_from_appinfo(const char *program)
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.8  2003/12/13 19:25:39  stephen
+ * InfoWin dismiss button is now a stock close.
+ *
  * Revision 1.7  2003/10/18 11:46:18  stephen
  * Can parse AppInfo.xml file to supply the values for the window.
  *
