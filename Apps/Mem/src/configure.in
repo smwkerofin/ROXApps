@@ -87,8 +87,8 @@ if $ROX_RUN ROX-CLib ; then
   changequote([,])dnl
   AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ROX_CLIB_VERSION)
   AC_MSG_RESULT(version $ver)
-  if test $ROX_CLIB_VERSION -lt 112 ; then
-    AC_MSG_ERROR(ROX-CLib is too old.  Need 0.1.12 or later not $verstr)
+  if test $ROX_CLIB_VERSION -lt 202 ; then
+    AC_MSG_ERROR(ROX-CLib is too old.  Need 0.2.2 or later not $verstr)
   fi
 else
   AC_MSG_ERROR(can't run ROX-CLib)
