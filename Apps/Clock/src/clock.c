@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.11 2001/06/14 12:28:28 stephen Exp $
+ * $Id: clock.c,v 1.12 2001/06/29 10:41:25 stephen Exp $
  */
 #include "config.h"
 
@@ -39,7 +39,7 @@
 #include "choices.h"
 #include "alarm.h"
 
-#define DEBUG              0
+#define DEBUG              1
 #define SUPPORT_OLD_CONFIG 0
 #define APPLET_MENU        1
 
@@ -186,7 +186,12 @@ static void check_config(void);
 static void read_old_config(void);
 #endif
 
-void dprintf(const char *fmt, ...);
+void dprintf(int level, const char *fmt, ...);
+
+void debug_free(gpointer p, const char *file, int line);
+#if 0
+#define g_free(p) debug_free((gpointer) p, __FILE__, __LINE__);
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -227,7 +232,7 @@ int main(int argc, char *argv[])
   if(load_alarms)
     alarm_load();
 
-  dprintf("argc=%d\n", argc);
+  dprintf(4, "argc=%d\n", argc);
   if(argc<2 || !atol(argv[1])) {
     /* No arguments, or the first argument was not a (non-zero) number.
        We are not an applet, so create a window */
@@ -237,7 +242,7 @@ int main(int argc, char *argv[])
     gtk_signal_connect(GTK_OBJECT(win), "destroy", 
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
 		       "WM destroy");
-    dprintf("initial size=%d\n", mode.init_size);
+    dprintf(3, "initial size=%d\n", mode.init_size);
     gtk_widget_set_usize(win, mode.init_size, mode.init_size);
 
     /* We want to pop up a menu on a button press */
@@ -250,7 +255,7 @@ int main(int argc, char *argv[])
     /* We are an applet, plug ourselves in */
     GtkWidget *plug;
 
-    dprintf("argv[1]=%s\n", argv[1]);
+    dprintf(3, "argv[1]=%s\n", argv[1]);
     plug=gtk_plug_new(atol(argv[1]));
     if(!plug) {
       fprintf(stderr, _("%s: failed to plug into socket %s, not a XID?\n"),
@@ -261,7 +266,7 @@ int main(int argc, char *argv[])
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
 		       "WM destroy");
-    dprintf("initial size=%d\n", mode.init_size);
+    dprintf(3, "initial size=%d\n", mode.init_size);
     gtk_widget_set_usize(plug, mode.init_size, mode.init_size);
 
 #if APPLET_MENU
@@ -326,7 +331,7 @@ int main(int argc, char *argv[])
   setup_sprite();
 #endif
 
-  dprintf("into main.\n");
+  dprintf(2, "into main.\n");
   gtk_main();
 
   if(save_alarms)
@@ -335,10 +340,22 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-void dprintf(const char *fmt, ...)
+void dprintf(int level, const char *fmt, ...)
 {
 #if DEBUG
   va_list list;
+  static int dlevel=-1;
+
+  if(dlevel==-1) {
+    gchar *val=g_getenv("CLOCK_DEBUG_LEVEL");
+    if(val)
+      dlevel=atoi(val);
+    if(dlevel<0)
+      dlevel=0;
+  }
+
+  if(level>dlevel)
+    return;
 
   va_start(list, fmt);
   /*vfprintf(stderr, fmt, list);*/
@@ -350,7 +367,7 @@ void dprintf(const char *fmt, ...)
 /* Called when the display mode changes */
 static void set_mode(Mode *nmode)
 {
-  dprintf("mode now %s, %d, %#x\n", nmode->format->name, nmode->interval,
+  dprintf(3, "mode now %s, %d, %#x\n", nmode->format->name, nmode->interval,
 	  nmode->flags);
 
   /* Do we need to change the update rate? */
@@ -358,7 +375,7 @@ static void set_mode(Mode *nmode)
     gtk_timeout_remove(update_tag);
     update_tag=gtk_timeout_add(nmode->interval,
 			       (GtkFunction) do_update, digital_out);
-    dprintf("tag now %u (%d)\n", update_tag, nmode->interval);
+    dprintf(4, "tag now %u (%d)\n", update_tag, nmode->interval);
   }
 
   /* Change visibility of text line? */
@@ -483,7 +500,7 @@ static gboolean do_update(void)
       sprintf(buf, "%d", tick==0? 12: tick);
       l=strlen(buf);
       xt=x2-gdk_text_width(font, buf, l)/2;
-      yt=y2+gdk_text_height(font, buf, l)*cos(ang);
+      yt=y2+gdk_text_height(font, buf, l)/2;
       gdk_draw_string(pixmap, font, gc, xt, yt, buf);
     }
   }
@@ -492,8 +509,7 @@ static gboolean do_update(void)
   if(sprite) {
     GdkGC *lgc;
 
-    if(sprite_state)
-      dprintf("state=%d\n", sprite_state);
+    dprintf(5, "state=%d\n", sprite_state);
     switch(sprite_state) {
     case T_SHOW:
       gdk_pixbuf_render_to_drawable_alpha(sprite, pixmap,
@@ -507,7 +523,7 @@ static gboolean do_update(void)
       break;
 
     case T_APPEAR: case T_GO:
-      dprintf("state=%d, frame=%d\n", sprite_state, sprite_frame);
+      dprintf(3, "state=%d, frame=%d\n", sprite_state, sprite_frame);
       if(sprite_frame>=0 && sprite_frame<NFRAME && masks[sprite_frame]) {
 	lgc=gdk_gc_new(canvas->window);
 
@@ -634,7 +650,7 @@ static void write_config(void)
   gchar *fname;
 
   fname=choices_find_path_save("options", PROJECT, TRUE);
-  dprintf("save to %s\n", fname? fname: "NULL");
+  dprintf(2, "save to %s", fname? fname: "NULL");
 
   if(fname) {
     FILE *out;
@@ -781,6 +797,7 @@ static void check_config(void)
   }
   
   fname=choices_find_path_load("options", PROJECT);
+  dprintf(5, "%p: %s", fname, fname? fname: "NULL");
 
   if(fname) {
 #ifdef HAVE_SYS_STAT_H
@@ -851,8 +868,8 @@ static void set_config(GtkWidget *widget, gpointer data)
   udef=gtk_entry_get_text(GTK_ENTRY(user_fmt));
   strncpy(user_defined, udef, sizeof(user_defined));
 
-  dprintf("format=%s, %s\n", nmode.format->name, nmode.format->fmt);
-  dprintf("flags=%d, interval=%d\n", nmode.flags, nmode.interval);
+  dprintf(2, "format=%s, %s\n", nmode.format->name, nmode.format->fmt);
+  dprintf(2, "flags=%d, interval=%d\n", nmode.flags, nmode.interval);
   
   set_mode(&nmode);
   
@@ -1064,8 +1081,6 @@ static void save_menus(void)
 	
   menurc = choices_find_path_save("menus", PROJECT, TRUE);
   if (menurc) {
-    gboolean	mod = FALSE;
-
     gtk_item_factory_dump_rc(menurc, NULL, TRUE);
     g_free(menurc);
   }
@@ -1188,7 +1203,7 @@ static gboolean start_show_sprite(void)
 
   sprite_x=(rand()>>3)%(w-sprite_width);
   sprite_y=(rand()>>4)%(h-sprite_height);
-  dprintf("%dx%d (%dx%d) -> %d,%d\n", w, h, sprite_width, sprite_height,
+  dprintf(3, "%dx%d (%dx%d) -> %d,%d\n", w, h, sprite_width, sprite_height,
 	 sprite_x, sprite_y);
   sprite_state=T_APPEAR;
   sprite_frame=0;
@@ -1217,20 +1232,20 @@ static void setup_sprite(void)
   if(!sprite)
     return;
   
-  dprintf("sprite=%p\n", sprite);
+  dprintf(4, "sprite=%p\n", sprite);
   sprite_width=gdk_pixbuf_get_width(sprite);
   sprite_height=gdk_pixbuf_get_height(sprite);
-  dprintf("%dx%d\n", sprite_width, sprite_height);
+  dprintf(4, "%dx%d\n", sprite_width, sprite_height);
 
   for(i=0; i<NFRAME; i++) {
     gdk_pixbuf_render_pixmap_and_mask(sprite, &pmap, masks+i, 127);
-    dprintf("%d %p %p\n", i, pmap, masks[i]);
+    dprintf(5, "%d %p %p\n", i, pmap, masks[i]);
     gdk_pixmap_unref(pmap);
 
     if(masks[i]) {
       GdkGC *bgc=gdk_gc_new(masks[i]);
       
-      dprintf("got mask %d, %p (gc=%p)\n", i, masks[i], bgc);
+      dprintf(5, "got mask %d, %p (gc=%p)\n", i, masks[i], bgc);
       gdk_gc_set_foreground(gc, colours+BLACK);
       for(y=0; y<sprite_height; y++) {
 	for(x=0; x<sprite_width; x++) {
@@ -1247,7 +1262,7 @@ static void setup_sprite(void)
     }
   }
   
-  dprintf("set up callback\n");
+  dprintf(3, "set up callback\n");
   time(&now);
   srand((unsigned int) now);
   sprite_tag=gtk_timeout_add(NEXT_SHOW(),
@@ -1353,9 +1368,19 @@ static void show_info_win(void)
   gtk_widget_show(infowin);
 }
 
+#undef g_free
+void debug_free(gpointer p, const char *file, int line)
+{
+  dprintf(5, "free %08p at %s:%d", p, file, line);
+  g_free(p);
+}
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.12  2001/06/29 10:41:25  stephen
+ * Fix use of colourmap when we are running under a theme.
+ * Add (saved) menu acellerators
+ *
  * Revision 1.11  2001/06/14 12:28:28  stephen
  * Save alarms file after one is raised. Added some (untested) i18n
  * support. Dropped old config format.
