@@ -17,17 +17,16 @@ fi
 AC_SUBST(ROX_RUN)
 
 dnl Make sure we have libgtop
-changequote(,)dnl
 LIBGTOP_LIBS=`echo \`libgtop-config --libs --extra-libs\``
 LIBGTOP_EXTRA_LIBS=`libgtop-config --extra-libs`
 
 AC_MSG_CHECKING(for libgtop library)
-if [ -n "$LIBGTOP_LIBS" ]; then
+if test -n "$LIBGTOP_LIBS" ; then
   AC_MSG_RESULT(yes - and with new style config)
   LIBGTOP_INCS=`libgtop-config --cflags`
 else
   GTOP_CONFIG=`libgtop-config --config`
-  if [ -n "$GTOP_CONFIG" ]; then
+  if test -n "$GTOP_CONFIG" ; then
     AC_MSG_RESULT(yes - using '$GTOP_CONFIG')
   else
     AC_MSG_ERROR(can't run 'libgtop-config --config' - \
@@ -35,7 +34,6 @@ else
   fi
   source "$GTOP_CONFIG"
 fi
-changequote([,])dnl
 AC_SUBST(LIBGTOP_EXTRA_LIBS)
 AC_SUBST(LIBGTOP_LIBS)
 AC_SUBST(LIBGTOP_INCS)
