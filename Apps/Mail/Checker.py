@@ -48,7 +48,7 @@ class Checker:
         if self.time!=0:
             gtk.timeout_remove(self.time)
         def run_check(self):
-            self.run()
+            return self.run()
         self.time=gtk.timeout_add(int(to), run_check, self)
 
 def getCheckers(fname):
