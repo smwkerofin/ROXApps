@@ -64,17 +64,12 @@ Compiling
 ---------
 
 You will need:
-  GTK+ 1.2.8 or later
-  Libgtop (I use 1.1.2 but 1.0 may work).
-  autoconf
-  ROX-CLib
+  GTK+ 2.0 or later
+  Libgtop2
+  ROX-CLib 2.0.0
 
 Run FreeFS/AppRun --compile.  It should also compile itself when first run
 or used as an applet.
-
-This has only been tried under Solaris 7-8 and Linux .  Reports of
-success/failure under other OS's to stephen@kerofin.demon.co.uk
-please.
 
 Credits
 -------

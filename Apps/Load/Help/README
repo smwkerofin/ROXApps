@@ -17,9 +17,9 @@ Compilation and Installation
 To compile the program, simply run it from ROX-Filer (or run 
 Load/AppRun --compile).  You will need these libraries
   * GTK+ 2
-  * libgtop 2
+  * libgtop2
   * libxml2
-  * ROX-CLib
+  * ROX-CLib 2.0.x
 
 The program may be run from any location.  To install it, simply copy the 
 application directory.
