@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 #
-# $Id$
+# $Id: AppRun,v 1.1 2003/10/31 16:46:02 stephen Exp $
 
 """Manage the video thumbnail program"""
 
-import findrox; findrox.version(1, 9, 11)
+import findrox; findrox.version(1, 9, 13)
 import rox
 
 import sys
