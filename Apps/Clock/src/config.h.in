@@ -2,7 +2,7 @@
 
 #define PROJECT "Clock"
 #define PURPOSE "Tell the time"
-#define VERSION "0.1.4"
+#define VERSION "0.1.5"
 #define AUTHOR  "Stephen Watson"
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 
