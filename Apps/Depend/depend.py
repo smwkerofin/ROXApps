@@ -1,4 +1,4 @@
-# $Id$
+# $Id: depend.py,v 1.1.1.1 2004/04/17 11:34:56 stephen Exp $
 
 """depend"""
 
@@ -12,6 +12,26 @@ MISSING=2
 stat_msgs=('Ok', 'Old version', 'Missing')
 
 import appinfo
+
+try:
+    libdirpath=os.environ['LIBDIRPATH']
+    libdirpaths=libdirpath.split(':')
+except:
+    libdirpaths=[os.environ['HOME']+'/lib', '/usr/local/lib', '/usr/lib']
+
+try:
+    libpath=os.environ['LD_LIBRARY_PATH']
+    libpaths=libpath.split(':')
+except:
+    libpaths=[os.environ['HOME']+'/lib', '/usr/local/lib']
+libpaths.append('/usr/lib')
+
+try:
+    f=file('/etc/ld.so.conf', 'r')
+    for line in f.readlines():
+        libpaths.append(line.strip())
+except:
+    pass
 
 class Dependency:
     def __init__(self, type, name, version=None):
@@ -64,12 +84,6 @@ class FileDependency(Dependency):
         self.actual_version=None
         return self.status
     
-try:
-    libdirpath=os.environ['LIBDIRPATH']
-    libdirpaths=libdirpath.split(':')
-except:
-    libdirpaths=[os.environ['HOME']+'/lib', '/usr/local/lib', '/usr/lib']
-
 def data(node):
 	"""Return all the text directly inside this DOM Node."""
 	return ''.join([text.nodeValue for text in node.childNodes
@@ -163,13 +177,6 @@ class PythonDependency(Dependency):
             #print 'Reading module: %s %s' % sys.exc_info()[:2]
             self.status=MISSING
         return self.status
-
-try:
-    libpath=os.environ['LD_LIBRARY_PATH']
-    libpaths=libpath.split(':')
-except:
-    libpaths=[os.environ['HOME']+'/lib', '/usr/local/lib']
-libpaths.append('/usr/lib')
 
 class LibraryDependency(FileDependency):
     """Dependancy on a single shared library, in the usual places"""
