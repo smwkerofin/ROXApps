@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.12 2003/03/05 15:30:40 stephen Exp $
+ * $Id: mem.c,v 1.13 2003/04/16 09:12:38 stephen Exp $
  */
 #include "config.h"
 
@@ -52,6 +52,7 @@
 
 #include <rox.h>
 #include "applet.h"
+#include "options.h"
 #if USE_SERVER
 #include "rox_soap.h"
 #include "rox_soap_server.h"
@@ -98,6 +99,13 @@ static Options default_options={
   AD_PER
 };
 
+static Option o_update_rate;
+static Option o_applet_size;
+static Option o_show_host;
+static Option o_gauge_width;
+static Option o_mem_disp;
+static Option o_swap_disp;
+
 typedef struct mem_window {
   gboolean is_applet;
   
@@ -108,20 +116,8 @@ typedef struct mem_window {
   
   guint update_tag;
   
-  Options options;
+  /*Options options;*/
 } MemWindow;
-
-typedef struct option_widgets {
-  GtkWidget *window;
-  GtkWidget *update_s;
-  GtkWidget *init_size;
-  GtkWidget *show_host;
-
-  GtkWidget *mem_disp[NUM_DISPLAY];
-  GtkWidget *swap_disp[NUM_DISPLAY];
-
-  MemWindow *mwin;
-} OptionWidgets;
 
 #if !SWAP_SUPPORTED_LIBGTOP
 struct _swap_data {
@@ -152,10 +148,11 @@ static MemWindow *make_window(guint32 socket);
 static gboolean update_values(MemWindow *);
 static void do_update(void);
 static void read_choices(void);
-static void write_choices(const Options *);
+static void setup_options(void);
 static void menu_create_menu(GtkWidget *);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
+static void opts_changed(void);
 
 #if !SWAP_SUPPORTED_LIBGTOP
 static gboolean update_swap(gpointer);
@@ -307,7 +304,7 @@ int main(int argc, char *argv[])
   if(do_exit)
     exit(0);
 
-  read_choices();
+  setup_options();
 
   /* Pick the gtkrc file up from CHOICESPATH */
   fname=choices_find_path_load("gtkrc", PROJECT);
@@ -355,6 +352,25 @@ int main(int argc, char *argv[])
   return 0;
 }
 
+static void setup_options(void)
+{
+  choices_init();
+  options_init(PROJECT);
+
+  read_choices();  /* Read old format config */
+
+  option_add_int(&o_update_rate, "update_rate",
+		 1000*default_options.update_sec);
+  option_add_int(&o_applet_size, "applet_size",
+		  default_options.applet_init_size);
+  option_add_int(&o_show_host, "show_host", default_options.show_host);
+  option_add_int(&o_gauge_width, "gauge_width", default_options.gauge_width);
+  option_add_int(&o_mem_disp, "mem_disp", default_options.mem_disp);
+  option_add_int(&o_swap_disp, "swap_disp", default_options.swap_disp);
+
+  option_add_notify(opts_changed);
+}
+
 static void remove_window(MemWindow *win)
 {
   if(win==current_window)
@@ -388,10 +404,9 @@ static MemWindow *make_window(guint32 xid)
   GtkWidget *label;
   GtkWidget *align;
   GtkAdjustment *adj;
-  GtkWidget *pixmapwid;
-  static GdkPixmap *pixmap=NULL;
-  static GdkBitmap *mask=NULL;
-  GtkStyle *style;
+  /*GtkWidget *pixmapwid;*/
+  static GdkPixbuf *pixbuf=NULL;
+  /*GtkStyle *style;*/
   static GtkTooltips *ttips=NULL;
   char hname[1024];
 
@@ -401,8 +416,6 @@ static MemWindow *make_window(guint32 xid)
     ttips=gtk_tooltips_new();
   
   mwin=g_new0(MemWindow, 1);
-
-  mwin->options=default_options;
 
   if(!xid) {
     /* Full window mode */
@@ -419,20 +432,20 @@ static MemWindow *make_window(guint32 xid)
     gtk_widget_add_events(mwin->win, GDK_BUTTON_PRESS_MASK);
 
     /* Set the icon */
-    style = gtk_widget_get_style(mwin->win);
-    if(!pixmap) {
+    if(!pixbuf) {
       gchar *fname;
-      fname=rox_resources_find(PROJECT, "AppIcon.xpm", ROX_RESOURCES_NO_LANG);
+      fname=rox_resources_find(PROJECT, "AppIcon.png", ROX_RESOURCES_NO_LANG);
+      if(!fname)
+	fname=rox_resources_find(PROJECT, "AppIcon.xpm",
+				 ROX_RESOURCES_NO_LANG);
       if(fname) {
-	pixmap = gdk_pixmap_create_from_xpm(GTK_WIDGET(mwin->win)->window,
-					    &mask,
-					    &style->bg[GTK_STATE_NORMAL],
-					    fname);
+	GError *error=NULL;
+	pixbuf=gdk_pixbuf_new_from_file(fname, &error);
 	g_free(fname);
       }
     }
-    if(pixmap) {
-      gdk_window_set_icon(GTK_WIDGET(mwin->win)->window, NULL, pixmap, mask);
+    if(pixbuf) {
+      gtk_window_set_icon(GTK_WINDOW(mwin->win), pixbuf);
     }
 
     gtk_tooltips_set_tip(ttips, mwin->win,
@@ -446,7 +459,8 @@ static MemWindow *make_window(guint32 xid)
     hbox=gtk_hbox_new(FALSE, 1);
     gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
 
-    label=gtk_label_new(_("Host:"));
+    label=gtk_label_new(_("<b>Host:</b>"));
+    gtk_label_set_use_markup(GTK_LABEL(label), TRUE);
     gtk_widget_set_name(label, "simple label");
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
     gtk_widget_show(label);
@@ -457,7 +471,7 @@ static MemWindow *make_window(guint32 xid)
     gtk_widget_set_name(label, "text display");
     gtk_widget_show(label);
     mwin->host=hbox;
-    if(mwin->options.show_host)
+    if(o_show_host.int_value)
       gtk_widget_show(mwin->host);
 
     frame=gtk_frame_new(_("Memory"));
@@ -472,7 +486,8 @@ static MemWindow *make_window(guint32 xid)
     gtk_box_pack_start(GTK_BOX(vbox2), hbox, FALSE, FALSE, 2);
     gtk_widget_show(hbox);
 
-    label=gtk_label_new(_("Total:"));
+    label=gtk_label_new(_("<b>Total:</b>"));
+    gtk_label_set_use_markup(GTK_LABEL(label), TRUE);
     gtk_widget_set_name(label, "simple label");
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
     gtk_widget_show(label);
@@ -505,7 +520,7 @@ static MemWindow *make_window(guint32 xid)
 				   GTK_PROGRESS_CONTINUOUS);
     gtk_progress_set_format_string(GTK_PROGRESS(mwin->mem_per), "%p%%");
     gtk_progress_set_show_text(GTK_PROGRESS(mwin->mem_per), TRUE);
-    gtk_widget_set_usize(mwin->mem_per, 120, -1);
+    gtk_widget_set_usize(mwin->mem_per, o_gauge_width.int_value, -1);
     gtk_widget_show(mwin->mem_per);
     gtk_box_pack_start(GTK_BOX(hbox), mwin->mem_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, mwin->mem_per,
@@ -532,7 +547,8 @@ static MemWindow *make_window(guint32 xid)
     gtk_box_pack_start(GTK_BOX(vbox2), hbox, FALSE, FALSE, 2);
     gtk_widget_show(hbox);
 
-    label=gtk_label_new(_("Total:"));
+    label=gtk_label_new(_("<b>Total:</b>"));
+    gtk_label_set_use_markup(GTK_LABEL(label), TRUE);
     gtk_widget_set_name(label, "simple label");
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
     gtk_widget_show(label);
@@ -565,7 +581,7 @@ static MemWindow *make_window(guint32 xid)
 				   GTK_PROGRESS_CONTINUOUS);
     gtk_progress_set_format_string(GTK_PROGRESS(mwin->swap_per), "%p%%");
     gtk_progress_set_show_text(GTK_PROGRESS(mwin->swap_per), TRUE);
-    gtk_widget_set_usize(mwin->swap_per, 120, -1);
+    gtk_widget_set_usize(mwin->swap_per, o_gauge_width.int_value, -1);
     gtk_widget_show(mwin->swap_per);
     gtk_box_pack_start(GTK_BOX(hbox), mwin->swap_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, mwin->swap_per,
@@ -591,9 +607,9 @@ static MemWindow *make_window(guint32 xid)
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(window_gone), 
 		       mwin);
-    gtk_widget_set_usize(plug, mwin->options.applet_init_size,
-			 mwin->options.applet_init_size);
-    dprintf(4, "set_usize %d\n", mwin->options.applet_init_size);
+    gtk_widget_set_size_request(plug, o_applet_size.int_value,
+			 o_applet_size.int_value);
+    dprintf(4, "set_usize %d\n", o_applet_size.int_value);
     
     gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), mwin);
@@ -640,7 +656,7 @@ static MemWindow *make_window(guint32 xid)
 			 "This shows the relative usage of memory",
 			 TIP_PRIVATE);
 
-    switch(mwin->options.mem_disp) {
+    switch(o_mem_disp.int_value) {
     case AD_TOTAL:
       gtk_widget_show(mwin->mem_total);
       break;
@@ -689,7 +705,7 @@ static MemWindow *make_window(guint32 xid)
 			 "This shows the relative usage of swap space",
 			 TIP_PRIVATE);
     
-    switch(mwin->options.swap_disp) {
+    switch(o_swap_disp.int_value) {
     case AD_TOTAL:
       gtk_widget_show(mwin->swap_total);
       break;
@@ -720,11 +736,11 @@ static MemWindow *make_window(guint32 xid)
   dprintf(3, "show %p (%ld)", mwin->win, xid);
   if(!xid)
     gtk_widget_show(mwin->win);
-  dprintf(2, "timeout %ds, %p, %p", mwin->options.update_sec,
+  dprintf(2, "timeout %ds, %p, %p", o_update_rate.int_value,
 	  (GtkFunction) update_values, mwin);
-  mwin->update_tag=gtk_timeout_add(mwin->options.update_sec*1000,
+  mwin->update_tag=gtk_timeout_add(o_update_rate.int_value,
 			 (GtkFunction) update_values, mwin);
-  dprintf(2, "update_sec=%d, update_tag=%u", mwin->options.update_sec,
+  dprintf(2, "update_sec=%d, update_tag=%u", o_update_rate.int_value,
 	  mwin->update_tag);
 
   windows=g_list_append(windows, mwin);
@@ -766,7 +782,7 @@ static gboolean update_values(MemWindow *mwin)
 #endif
   unsigned long long total, used, avail;
   
-  dprintf(4, "update_sec=%d, update_tag=%u", mwin->options.update_sec,
+  dprintf(4, "update_sec=%d, update_tag=%u", o_update_rate.int_value,
 	  mwin->update_tag);
   
   errno=0;
@@ -985,8 +1001,6 @@ static void read_choices(void)
 {
   gchar *fname;
   
-  choices_init();
-
 #if USE_XML
   if(read_choices_xml())
     return;
@@ -1050,83 +1064,9 @@ static void read_choices(void)
     } while(line);
 
     fclose(in);
-  } else {
-    write_choices(&default_options);
   }
 }
 
-#if USE_XML
-static void write_choices_xml(const Options *opts)
-{
-  gchar *fname;
-  gboolean ok;
-
-  fname=choices_find_path_save("Config.xml", PROJECT, TRUE);
-  dprintf(2, "save to %s", fname? fname: "NULL");
-
-  if(fname) {
-    xmlDocPtr doc;
-    xmlNodePtr tree;
-    FILE *out;
-    char buf[80];
-
-    doc = xmlNewDoc("1.0");
-    doc->children=xmlNewDocNode(doc, NULL, PROJECT, NULL);
-    xmlSetProp(doc->children, "version", VERSION);
-
-    /* Insert data here */
-    tree=xmlNewChild(doc->children, NULL, "update", NULL);
-    sprintf(buf, "%d", opts->update_sec);
-    xmlSetProp(tree, "rate", buf);
-  
-    tree=xmlNewChild(doc->children, NULL, "Applet", NULL);
-    sprintf(buf, "%d", opts->applet_init_size);
-    xmlSetProp(tree, "initial-size", buf);
-    sprintf(buf, "%d", opts->mem_disp);
-    xmlSetProp(tree, "mem", buf);
-    sprintf(buf, "%d", opts->swap_disp);
-    xmlSetProp(tree, "swap", buf);
-  
-    tree=xmlNewChild(doc->children, NULL, "Window", NULL);
-    sprintf(buf, "%d", opts->show_host);
-    xmlSetProp(tree, "show-host", buf);
-    sprintf(buf, "%d", opts->gauge_width);
-    xmlSetProp(tree, "gauge-width", buf);
-
-    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
-
-    xmlFreeDoc(doc);
-    g_free(fname);
-  }
-}
-#endif
-
-static void write_choices(const Options *opts)
-{
-#if USE_XML
-  write_choices_xml(opts);
-#else
-  FILE *out;
-  gchar *fname;
-    
-  fname=choices_find_path_save("Config", PROJECT, TRUE);
-  if(!fname)
-    return;
-  out=fopen(fname, "w");
-  g_free(fname);
-  if(!out)
-    return;
-  
-  fprintf(out, _("# Config file for Mem\n"));
-  fprintf(out, "%s: %d\n", UPDATE_RATE, opts->update_sec);
-  fprintf(out, "%s: %d\n", INIT_SIZE, opts->applet_init_size);
-  fprintf(out, "%s: %d\n", SHOW_HOST, opts->show_host);
-  fprintf(out, "%s: %d\n", GAUGE_WIDTH, opts->gauge_width);
-  fprintf(out, "%s: %d\n", MEM_DISP, opts->mem_disp);
-  fprintf(out, "%s: %d\n", SWAP_DISP, opts->swap_disp);
-  fclose(out);
-#endif
-}
 
 static void show_info_win(void)
 {
@@ -1153,319 +1093,141 @@ static void hide_window(GtkWidget *widget, gpointer data)
   gtk_widget_hide(GTK_WIDGET(data));
 }
 
-static void cancel_config(GtkWidget *widget, gpointer data)
+static void opts_changed(void)
 {
-  GtkWidget *confwin=GTK_WIDGET(data);
-  
-  gtk_widget_hide(confwin);
-}
-
-static void set_config(GtkWidget *widget, gpointer data)
-{
-  OptionWidgets *ow=(OptionWidgets *) data;
   gfloat s;
   int i;
-  MemWindow *mwin=ow->mwin;
-  Options *opts;
+  MemWindow *mwin;
+  GList *w;
 
-  opts=mwin? &mwin->options: &default_options;
-
-  opts->update_sec=
-    gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ow->update_s));
-  opts->applet_init_size=
-    gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ow->init_size));
-  opts->show_host=
-    gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_host));
-
-  opts->mem_disp=AD_PER;
-  for(i=0; i<NUM_DISPLAY; i++)
-    if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->mem_disp[i]))) {
-      opts->mem_disp=i;
-      break;
-    }
-  opts->swap_disp=AD_PER;
-  for(i=0; i<NUM_DISPLAY; i++)
-    if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->swap_disp[i]))) {
-      opts->swap_disp=i;
-      break;
-    }
-
-  if(mwin) {
-    gtk_timeout_remove(mwin->update_tag);
-    mwin->update_tag=gtk_timeout_add(opts->update_sec*1000,
-				     (GtkFunction) update_values, mwin);
-
-    if(mwin->host) {
-      if(opts->show_host)
-	gtk_widget_show(mwin->host);
-      else
-	gtk_widget_hide(mwin->host);
-    }
-
-    if(mwin->is_applet) {
-      switch(opts->mem_disp) {
-      case AD_TOTAL:
-	gtk_widget_show(mwin->mem_total);
-	gtk_widget_hide(mwin->mem_used);
-	gtk_widget_hide(mwin->mem_free);
-	gtk_widget_hide(mwin->mem_per);
-	break;
+  if(o_update_rate.has_changed) {
+    for(w=windows; w; w=g_list_next(w)) {
+      mwin=(MemWindow *) w->data;
       
-      case AD_USED:
-	gtk_widget_hide(mwin->mem_total);
-	gtk_widget_show(mwin->mem_used);
-	gtk_widget_hide(mwin->mem_free);
-	gtk_widget_hide(mwin->mem_per);
-	break;
-      
-      case AD_FREE:
-	gtk_widget_hide(mwin->mem_total);
-	gtk_widget_hide(mwin->mem_used);
-	gtk_widget_show(mwin->mem_free);
-	gtk_widget_hide(mwin->mem_per);
-      break;
-      
-      case AD_PER:
-	gtk_widget_hide(mwin->mem_total);
-	gtk_widget_hide(mwin->mem_used);
-	gtk_widget_hide(mwin->mem_free);
-	gtk_widget_show(mwin->mem_per);
-	break;
-      
-      }
-      switch(opts->swap_disp) {
-      case AD_TOTAL:
-	gtk_widget_show(mwin->swap_total);
-	gtk_widget_hide(mwin->swap_used);
-	gtk_widget_hide(mwin->swap_free);
-	gtk_widget_hide(mwin->swap_per);
-	break;
-      
-      case AD_USED:
-	gtk_widget_hide(mwin->swap_total);
-	gtk_widget_show(mwin->swap_used);
-	gtk_widget_hide(mwin->swap_free);
-	gtk_widget_hide(mwin->swap_per);
-	break;
-      
-      case AD_FREE:
-	gtk_widget_hide(mwin->swap_total);
-	gtk_widget_hide(mwin->swap_used);
-	gtk_widget_show(mwin->swap_free);
-	gtk_widget_hide(mwin->swap_per);
-	break;
-      
-      case AD_PER:
-	gtk_widget_hide(mwin->swap_total);
-	gtk_widget_hide(mwin->swap_used);
-	gtk_widget_hide(mwin->swap_free);
-	gtk_widget_show(mwin->swap_per);
-	break;
-      }
-      
+      gtk_timeout_remove(mwin->update_tag);
+      mwin->update_tag=gtk_timeout_add(o_update_rate.int_value,
+				    (GtkFunction) update_values, mwin);
     }
   }
 
-  gtk_widget_hide(ow->window);
-}
+  if(o_applet_size.has_changed) {
+    for(w=windows; w; w=g_list_next(w)) {
+      mwin=(MemWindow *) w->data;
 
-static void save_config(GtkWidget *widget, gpointer data)
-{
-  OptionWidgets *ow=(OptionWidgets *) data;
-  set_config(widget, data);
-  write_choices(ow->mwin? &ow->mwin->options: &default_options);
+      if(mwin->is_applet)
+	gtk_widget_set_size_request(mwin->win, o_applet_size.int_value,
+				    o_applet_size.int_value);
+    }
+  }
+  
+  if(o_show_host.has_changed) {
+    for(w=windows; w; w=g_list_next(w)) {
+      mwin=(MemWindow *) w->data;
+
+      if(!mwin->is_applet) {
+	if(o_show_host.int_value)
+	  gtk_widget_show(mwin->host);
+	else
+	  gtk_widget_hide(mwin->host);
+      }
+    }
+  }
+
+  if(o_gauge_width.has_changed) {
+    for(w=windows; w; w=g_list_next(w)) {
+      mwin=(MemWindow *) w->data;
+
+      if(!mwin->is_applet) {
+	gtk_widget_set_size_request(mwin->mem_per, o_gauge_width.int_value,
+				    -1);
+	gtk_widget_set_size_request(mwin->swap_per, o_gauge_width.int_value,
+				    -1);
+      }
+    }
+  }
+
+  if(o_mem_disp.has_changed) {
+    for(w=windows; w; w=g_list_next(w)) {
+      mwin=(MemWindow *) w->data;
+
+      if(mwin->is_applet) {
+	switch(o_mem_disp.int_value) {
+	case AD_TOTAL:
+	  gtk_widget_show(mwin->mem_total);
+	  gtk_widget_hide(mwin->mem_used);
+	  gtk_widget_hide(mwin->mem_free);
+	  gtk_widget_hide(mwin->mem_per);
+	  break;
+      
+	case AD_USED:
+	  gtk_widget_hide(mwin->mem_total);
+	  gtk_widget_show(mwin->mem_used);
+	  gtk_widget_hide(mwin->mem_free);
+	  gtk_widget_hide(mwin->mem_per);
+	  break;
+      
+	case AD_FREE:
+	  gtk_widget_hide(mwin->mem_total);
+	  gtk_widget_hide(mwin->mem_used);
+	  gtk_widget_show(mwin->mem_free);
+	  gtk_widget_hide(mwin->mem_per);
+	  break;
+      
+	case AD_PER:
+	  gtk_widget_hide(mwin->mem_total);
+	  gtk_widget_hide(mwin->mem_used);
+	  gtk_widget_hide(mwin->mem_free);
+	  gtk_widget_show(mwin->mem_per);
+	  break;
+      
+	}
+      }
+    }
+  }
+  
+  if(o_swap_disp.has_changed) {
+    for(w=windows; w; w=g_list_next(w)) {
+      mwin=(MemWindow *) w->data;
+
+      if(mwin->is_applet) {
+	switch(o_swap_disp.int_value) {
+	case AD_TOTAL:
+	  gtk_widget_show(mwin->swap_total);
+	  gtk_widget_hide(mwin->swap_used);
+	  gtk_widget_hide(mwin->swap_free);
+	  gtk_widget_hide(mwin->swap_per);
+	  break;
+      
+	case AD_USED:
+	  gtk_widget_hide(mwin->swap_total);
+	  gtk_widget_show(mwin->swap_used);
+	  gtk_widget_hide(mwin->swap_free);
+	  gtk_widget_hide(mwin->swap_per);
+	  break;
+      
+	case AD_FREE:
+	  gtk_widget_hide(mwin->swap_total);
+	  gtk_widget_hide(mwin->swap_used);
+	  gtk_widget_show(mwin->swap_free);
+	  gtk_widget_hide(mwin->swap_per);
+	  break;
+      
+	case AD_PER:
+	  gtk_widget_hide(mwin->swap_total);
+	  gtk_widget_hide(mwin->swap_used);
+	  gtk_widget_hide(mwin->swap_free);
+	  gtk_widget_show(mwin->swap_per);
+	  break;
+      
+	}
+      }
+    }
+  }
 }
 
 static void show_config_win(void)
 {
-  static GtkWidget *confwin=NULL;
-  static OptionWidgets ow;
-  MemWindow *mwin=current_window;
-  Options *opts;
-
-  opts=mwin? &mwin->options: &default_options;
-
-  if(!confwin) {
-    GtkWidget *vbox;
-    GtkWidget *hbox;
-    GtkWidget *but;
-    GtkWidget *label;
-    GtkObject *range;
-    GtkWidget *spin;
-    GtkWidget *check;
-    GtkWidget *frame;
-    GtkWidget *radio;
-
-    confwin=gtk_dialog_new();
-    gtk_signal_connect(GTK_OBJECT(confwin), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     confwin);
-    gtk_window_set_title(GTK_WINDOW(confwin), _("Mem Configuration"));
-    gtk_window_set_position(GTK_WINDOW(confwin), GTK_WIN_POS_MOUSE);
-    ow.window=confwin;
-
-    vbox=GTK_DIALOG(confwin)->vbox;
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 4);
-
-    label=gtk_label_new(_("Update rate (s)"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-
-    range=gtk_adjustment_new((gfloat) opts->update_sec,
-			     1, 60., 1., 10., 10.);
-    spin=gtk_spin_button_new(GTK_ADJUSTMENT(range), 1, 0);
-    gtk_widget_set_name(spin, "update_s");
-    gtk_widget_show(spin);
-    gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 4);
-    ow.update_s=spin;
-
-    frame=gtk_frame_new(_("Applet display"));
-    gtk_widget_show(frame);
-    gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, FALSE, 6);
-
-    vbox=gtk_vbox_new(FALSE, 0);
-    gtk_widget_show(vbox);
-    gtk_container_add(GTK_CONTAINER(frame), vbox);
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 6);
-
-    label=gtk_label_new(_("Initial size"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-
-    range=gtk_adjustment_new((gfloat) opts->applet_init_size,
-			     16, 128, 2, 16, 16);
-    spin=gtk_spin_button_new(GTK_ADJUSTMENT(range), 1, 0);
-    gtk_widget_set_name(spin, "init_size");
-    gtk_widget_show(spin);
-    gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 4);
-    ow.init_size=spin;
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 6);
-
-    label=gtk_label_new(_("For memory show"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-
-    radio=gtk_radio_button_new_with_label(NULL, _("Total"));
-    gtk_widget_show(radio);
-    gtk_box_pack_start(GTK_BOX(hbox), radio, FALSE, FALSE, 4);
-    ow.mem_disp[AD_TOTAL]=radio;
-
-    radio=gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(radio),
-						      _("Used"));
-    gtk_widget_show(radio);
-    gtk_box_pack_start(GTK_BOX(hbox), radio, FALSE, FALSE, 4);
-    ow.mem_disp[AD_USED]=radio;
-
-    radio=gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(radio),
-						      _("Free"));
-    gtk_widget_show(radio);
-    gtk_box_pack_start(GTK_BOX(hbox), radio, FALSE, FALSE, 4);
-    ow.mem_disp[AD_FREE]=radio;
-
-    radio=gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(radio),
-						      _("Percentage"));
-    gtk_widget_show(radio);
-    gtk_box_pack_start(GTK_BOX(hbox), radio, FALSE, FALSE, 4);
-    ow.mem_disp[AD_PER]=radio;
-
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.mem_disp[opts->mem_disp]),
-				 TRUE);
-    
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 6);
-
-    label=gtk_label_new(_("For swap space show"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-
-    radio=gtk_radio_button_new_with_label(NULL, _("Total"));
-    gtk_widget_show(radio);
-    gtk_box_pack_start(GTK_BOX(hbox), radio, FALSE, FALSE, 4);
-    ow.swap_disp[AD_TOTAL]=radio;
-
-    radio=gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(radio),
-						      _("Used"));
-    gtk_widget_show(radio);
-    gtk_box_pack_start(GTK_BOX(hbox), radio, FALSE, FALSE, 4);
-    ow.swap_disp[AD_USED]=radio;
-
-    radio=gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(radio),
-						      _("Free"));
-    gtk_widget_show(radio);
-    gtk_box_pack_start(GTK_BOX(hbox), radio, FALSE, FALSE, 4);
-    ow.swap_disp[AD_FREE]=radio;
-
-    radio=gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(radio),
-						      _("Percentage"));
-    gtk_widget_show(radio);
-    gtk_box_pack_start(GTK_BOX(hbox), radio, FALSE, FALSE, 4);
-    ow.swap_disp[AD_PER]=radio;
-
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.swap_disp[opts->swap_disp]),
-				 TRUE);
-    
-    vbox=GTK_DIALOG(confwin)->vbox;
-
-    frame=gtk_frame_new(_("Window display"));
-    gtk_widget_show(frame);
-    gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, FALSE, 6);
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_container_add(GTK_CONTAINER(frame), hbox);
-
-    check=gtk_check_button_new_with_label(_("Show host name"));
-    gtk_widget_set_name(check, "show_host");
-    gtk_widget_show(check);
-    gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 4);
-    ow.show_host=check;
-
-    hbox=GTK_DIALOG(confwin)->action_area;
-
-    but=gtk_button_new_with_label(_("Save"));
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(save_config), &ow);
-
-    but=gtk_button_new_with_label(_("Set"));
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
-		       &ow);
-
-    but=gtk_button_new_with_label(_("Cancel"));
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(cancel_config), confwin);
-
-  } else {
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.update_s),
-			      (gfloat)(opts->update_sec));
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.init_size),
-			      (gfloat)(opts->applet_init_size));
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.show_host),
-				 opts->show_host);
-
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.mem_disp[opts->mem_disp]),
-				 TRUE);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.swap_disp[opts->swap_disp]),
-				 TRUE);
-  }
-  ow.mwin=mwin;
-
-  gtk_widget_show(confwin);  
+  options_show();
 }
 
 static void close_window(void)
@@ -1713,7 +1475,7 @@ static gboolean update_swap(gpointer unused)
 {
   dprintf(2, "in update_swap");
   
-  if(!swap_process) {
+  if(swap_process<=0) {
     int com[2];
 
     pipe(com);
@@ -1748,6 +1510,9 @@ static gboolean update_swap(gpointer unused)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.13  2003/04/16 09:12:38  stephen
+ * Re-enabled server code
+ *
  * Revision 1.12  2003/03/05 15:30:40  stephen
  * First pass at conversion to GTK 2.
  *

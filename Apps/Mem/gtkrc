@@ -1,13 +1,4 @@
-style "normal-text" {
-  font = "-*-times-medium-r-*-14-*"
-}
-
-style "bold-text" {
-  font = "-*-times-bold-r-*-14-*"
-}
-
-widget "*text display*" style "normal-text"
-widget "*simple label*" style "bold-text"
+# This gtkrc sets up the red/green gauges
 
 # Edit progress bar
 style "red-green bar"="bold-text" {
