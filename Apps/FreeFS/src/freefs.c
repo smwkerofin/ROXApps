@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.24 2004/02/14 13:49:26 stephen Exp $
+ * $Id: freefs.c,v 1.25 2004/04/12 13:33:56 stephen Exp $
  */
 #include "config.h"
 
@@ -419,9 +419,6 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
 			 "This is the space available on the file system",
 			 TIP_PRIVATE);
 
-    if(!menu)
-      menu_create_menu(fwin->win);
-
     fwin->is_applet=FALSE;
   } else {
     /* We are an applet, plug ourselves in */
@@ -480,9 +477,6 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
 			 "This shows the relative usage of the file system",
 			 TIP_PRIVATE);
 
-    if(!menu)
-      menu_create_menu(plug);
-
     dprintf(5, "show plug");
     gtk_widget_show(plug);
     dprintf(5, "made applet");
@@ -490,6 +484,9 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     fwin->win=plug;
     fwin->is_applet=TRUE;
   }
+  if(!menu)
+    menu_create_menu(fwin->win);
+
 
   gtk_signal_connect(GTK_OBJECT(fwin->win), "popup-menu",
 		     GTK_SIGNAL_FUNC(popup_menu), fwin);
@@ -841,9 +838,13 @@ static void do_opendir(gpointer dat, guint action, GtkWidget *wid)
 {
   const char *dir=current_window->df_dir;
 
+  rox_debug_printf(2, "do_opendir %p %d %s", current_window, action,
+		   dir);
+
   if(action)
     dir=find_mount_point(dir);
 
+  rox_debug_printf(3, "open %s", dir);
   rox_filer_open_dir(dir);
 }
 
@@ -1015,12 +1016,15 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   FreeWindow *fwin=(FreeWindow *) udata;
   
   current_window=fwin;
-  
+
+  rox_debug_printf(3, "in button_press %d", bev->button);
   if(bev->type==GDK_BUTTON_PRESS) {
     if(bev->button==3) {
+      rox_debug_printf(3, "menu=%p", menu);
       if(!menu)
 	menu_create_menu(window);
       update_menus();
+      rox_debug_printf(3, "menu=%p", menu);
       
       if(fwin->is_applet) {
 	applet_popup_menu(fwin->win, menu, bev);
@@ -1212,6 +1216,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.25  2004/04/12 13:33:56  stephen
+ * Remove dead code.  Open options dialog from command line or SOAP message.  Stock items in menus.
+ *
  * Revision 1.24  2004/02/14 13:49:26  stephen
  * Use rox_init().  Fix load of icon.
  *
