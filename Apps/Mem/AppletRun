@@ -30,6 +30,8 @@ case $1 in
 			&& make clean && make BINDIR=$APP_DIR/$PLATFORM \
 			&& echo Done >&2 && exit 0
 	echo Compile failed >&2
+	echo Press Return... >&2
+	read WAIT
 	exit 1
 esac
 
@@ -41,7 +43,7 @@ else
     echo "ERROR from $0:" >&2
     echo "I cannot find an executable file for your host type ($PLATFORM)." >&2
     #echo "Try using the --compile option." >&2
-    exit 1
+    #exit 1
     echo "Trying to compile..." >&2
     if [ -n "$DISPLAY" ]; then
 	xterm -e $0 --compile
