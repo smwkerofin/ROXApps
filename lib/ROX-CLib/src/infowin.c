@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.c,v 1.10 2004/05/22 15:54:02 stephen Exp $
+ * $Id: infowin.c,v 1.11 2004/05/31 10:47:06 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -19,6 +19,7 @@
 #include "rox.h"
 #include "rox_debug.h"
 #include "rox_filer_action.h"
+#include "uri.h"
 
 static void rox_info_win_finalize (GObject *object);
 
@@ -80,49 +81,7 @@ static void goto_website(GtkWidget *widget, gpointer data)
   if(!iw->web_site)
     return;
 
-  time(&now);
-  sprintf(tfname, "/tmp/infowin.%d.%ld.uri", (int) geteuid(), (long) now);
-  out=fopen(tfname, "w");
-  if(out) {
-    fprintf(out, "URL=%s\n", iw->web_site);
-    fclose(out);
-    rox_debug_printf(2, "access %s via %s", iw->web_site, tfname);
-    rox_filer_run(tfname);
-    if(!rox_filer_have_error())
-      return;
-  }
-
-  pid=fork();
-
-  if(pid<0) {
-    gdk_beep();
-    return;
-  } else if(pid>0) {
-    return;
-  }
-
-  /* This is the child process */
-  path=getenv("PATH");
-  if(!path)
-    path="/usr/local/bin:/usr/bin";
-  for(cmds=iw->browser_cmds; cmds; cmds=g_list_next(cmds)) {
-    const char *cmd=(const char *) cmds->data;
-    
-    if(cmd[0]=='/') {
-      rox_debug_printf(3, "%s %s", cmd, iw->web_site);
-      execl(cmd, cmd, iw->web_site, NULL);
-    } else {
-      strcpy(cpath, path);
-      for(dir=strtok(cpath, ":"); dir; dir=strtok(NULL, ":")) {
-	file=g_strconcat(dir, "/", cmd, NULL);
-	rox_debug_printf(3, "%s %s", file, iw->web_site);
-	execl(file, cmd, iw->web_site, NULL);
-	g_free(file);
-      }
-    }
-  }
-
-  _exit(1);
+  rox_uri_launch(iw->web_site);
 }
 
 static GtkWidget *get_app_icon(void)
@@ -617,6 +576,9 @@ void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.11  2004/05/31 10:47:06  stephen
+ * Added mime_handler support (needs testing)
+ *
  * Revision 1.10  2004/05/22 15:54:02  stephen
  * InfoWin is now ROXInfoWin
  *

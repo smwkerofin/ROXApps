@@ -1,7 +1,7 @@
 /*
  * rox_path.c - utilities for path handling, support for drag & drop
  *
- * $Id: rox_path.c,v 1.6 2003/12/13 19:26:05 stephen Exp $
+ * $Id: rox_path.c,v 1.7 2004/09/11 14:09:27 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -19,17 +19,11 @@
 #define DEBUG 1
 #include "rox_debug.h"
 
-static char hostn[256]={0};
-
 char *rox_path_get_local(const char *uri)
 {
   char *host;
   char *end;
   const char *orig=uri;
-#ifdef HAVE_GETHOSTNAME
-  struct hostent *hp;
-  struct hostent *lhp;
-#endif
   
   if(strncmp(uri, "file:", 5)==0)
     uri+=5;
@@ -46,60 +40,58 @@ char *rox_path_get_local(const char *uri)
 
     if(strcmp(host, "localhost")==0) {
       g_free(host);
-      return unescape_uri(end);
+      return rox_unescape_uri(end);
     }
 
-#ifdef HAVE_GETHOSTNAME
-    if(!hostn[0]) {
-      if(gethostname(hostn, sizeof(hostn))!=0) {
-	rox_debug_printf(2, "rox_path_get_local(%s) couldn't get hostname!",
-			 orig);
-	g_free(host);
-	return NULL;
-      }
-    }
-#else
-    rox_debug_printf(1, "gethostname not available");
-#endif
-
-    if(strcmp(host, hostn)==0) {
+    if(rox_hostname_is_local(host)) {
       g_free(host);
-      return unescape_uri(end);
+      return rox_unescape_uri(end);
     }
     
-#ifdef HAVE_GETHOSTBYNAME
-    hp=gethostbyname(host);
-    if(hp) {
-      char **alias;
-      if(strcmp(hp->h_name, hostn)==0) {
-	g_free(host);
-	return unescape_uri(end);
-      }
-      for(alias=hp->h_aliases; *alias; alias++) {
-	rox_debug_printf(3, "compare %s to %s", *alias, hostn);
-	if(strcmp(*alias, hostn)==0) {
-	  g_free(host);
-	  return unescape_uri(end);
-	}
-      }
-
-      lhp=gethostbyname(hostn);
-      if(lhp) {
-	if(strcmp(hp->h_name, lhp->h_name)==0) {
-	  g_free(host);
-	  return unescape_uri(end);
-	}
-      }
-    }
-#endif
-    
-    rox_debug_printf(1, "rox_path_get_local(%s) is %s local? (%s)",
-		     orig, host, hostn);
+    rox_debug_printf(1, "rox_path_get_local(%s) is %s local?",
+		     orig, host);
 
     g_free(host);
   }
 
   return NULL;
+}
+
+int rox_hostname_is_local(const char *hname)
+{
+  const char *ahname=rox_hostname();
+#ifdef HAVE_GETHOSTBYNAME
+  struct hostent *hp;
+  struct hostent *lhp;
+#endif
+
+  if(ahname && strcmp(ahname, hname)==0)
+    return TRUE;
+  
+#ifdef HAVE_GETHOSTBYNAME
+    hp=gethostbyname(hname);
+    if(hp) {
+      char **alias;
+      if(strcmp(hp->h_name, hname)==0) {
+	return TRUE;
+      }
+      for(alias=hp->h_aliases; *alias; alias++) {
+	rox_debug_printf(3, "compare %s to %s", *alias, hname);
+	if(strcmp(*alias, hname)==0) {
+	  return TRUE;
+	}
+      }
+
+      lhp=gethostbyname(hname);
+      if(lhp) {
+	if(strcmp(hp->h_name, lhp->h_name)==0) {
+	  return TRUE;
+	}
+      }
+    }
+#endif
+    
+  return FALSE;
 }
 
 char *rox_path_get_server(const char *uri)
@@ -131,96 +123,25 @@ char *rox_path_get_path(const char *uri)
   
   if(uri[0]=='/') {
     if(uri[1]!='/')
-      return unescape_uri(uri);
+      return rox_unescape_uri(uri);
     if(uri[2]=='/')
-      return unescape_uri(uri+2);
+      return rox_unescape_uri(uri+2);
 
     host=(char *) uri+2;
     end=strchr(host, '/');
     
-    return unescape_uri(end);
+    return rox_unescape_uri(end);
   }
 
   return NULL;
 }
 
 
-/* handle % escapes in DnD */
-/* Escape path for future use in URI */
-gchar *escape_uri_path(const char *path)
-{
-  const char *safe = "-_./"; /* Plus isalnum() */
-  const guchar *s;
-  gchar *ans;
-  GString *str;
-
-  str = g_string_sized_new(strlen(path));
-
-  for (s = path; *s; s++) {
-    if (!g_ascii_isalnum(*s) && !strchr(safe, *s))
-      g_string_append_printf(str, "%%%02x", *s);
-    else
-      str = g_string_append_c(str, *s);
-  }
-
-  ans = str->str;
-  g_string_free(str, FALSE);
-  
-  return ans;
-}
-
-static const gchar *our_host_name(void)
-{
-  static char host[1025]={0};
-
-  if(!host[0])
-    gethostname(host, sizeof(host));
-
-  return host;
-}
-
-gchar *encode_path_as_uri(const guchar *path)
-{
-  gchar *tpath = escape_uri_path(path);
-  gchar *uri;
-
-  uri = g_strconcat("file://", our_host_name(), tpath, NULL);
-  g_free(tpath);
-
-  return uri;
-}
-
-gchar *unescape_uri(const char *uri)
-{
-  const gchar *s;
-  gchar *d;
-  gchar *tmp;
-	
-  tmp = g_strdup(uri);
-  for (s = uri, d=tmp; *s; s++, d++) {
-    /*printf("%s\n", s);*/
-    if (*s=='%' && g_ascii_isxdigit(s[1]) &&
-	g_ascii_isxdigit(s[2])) {
-      int c;
-      char buf[3];
-      buf[0]=s[1];
-      buf[1]=s[2];
-      buf[2]=0;
-      c=(int) strtol(buf, NULL, 16);
-      *d=c;
-      s+=2;
-    } else {
-      *d=*s;
-    }
-  }
-  *d=0;
-
-  return tmp;
-}
-
-
 /*
  * $Log: rox_path.c,v $
+ * Revision 1.7  2004/09/11 14:09:27  stephen
+ * Fix bug in drag and drop
+ *
  * Revision 1.6  2003/12/13 19:26:05  stephen
  * Exposed functions to escape and unescape uri's.
  * rox_path_get_local() and rox_path_get_path() now unescape uri's.
