@@ -1,6 +1,10 @@
 Load
 ====
 
+1.0.1
+-----
+Fix for older versions of libgtop.
+
 1.0.0
 -----
 No changes.  This is the stable version.
