@@ -1,9 +1,0 @@
-# This gtkrc sets up the red/green gauges
-
-# Edit progress bar
-style "red-green bar"="bold-text" {
-  bg[PRELIGHT]={1.0, 0.0, 0.0}
-  bg[NORMAL]={0.0, 1.0, 0.0}
-}
-
-widget "*gauge*" style "red-green bar"
