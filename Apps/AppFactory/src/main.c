@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.6 2001/12/21 09:51:01 stephen Exp $
+ * $Id: main.c,v 1.7 2002/02/04 11:13:05 stephen Exp $
  */
 #include "config.h"
 
@@ -14,6 +14,8 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+
+#include <unistd.h>
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -113,6 +115,7 @@ static void do_version(void)
   printf("Distributed under the terms of the GNU General Public License.\n");
   printf("(See the file COPYING in the Help directory).\n");
   printf("%s last compiled %s\n", __FILE__, __DATE__);
+  printf("ROX-CLib version %s\n", rox_clib_version_string());
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
@@ -124,7 +127,11 @@ static void do_version(void)
     if(HAVE_XML)
       printf("libxml not found)\n");
     else
-    printf("libxml version %d)\n", LIBXML_VERSION);
+#ifdef LIBXML_VERSION
+      printf("libxml version %d)\n", LIBXML_VERSION);
+#else
+      printf("unknown libxml version)\n");
+#endif
   }
 }
 
@@ -514,6 +521,9 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   doc = xmlNewDoc("1.0");
   doc->children=xmlNewDocNode(doc, NULL, "AppInfo", NULL);
     
+  sprintf(buf, "ROX wrapper for %s", mleaf);
+  tree=xmlNewChild(doc->children, NULL, "Summary", buf);
+  
   tree=xmlNewChild(doc->children, NULL, "About", NULL);
   sprintf(buf, "Wrapper for %s", mleaf);
   subtree=xmlNewChild(tree, NULL, "Purpose", buf);
@@ -528,9 +538,6 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   if(options.homepage && options.homepage[0])
     subtree=xmlNewChild(tree, NULL, "Homepage", options.homepage);
     
-  sprintf(buf, "ROX wrapper for %s", mleaf);
-  tree=xmlNewChild(doc->children, NULL, "Summary", buf);
-  
   xmlSaveFormatFileEnc(fname, doc, NULL, 1);
   xmlFreeDoc(doc);
 #else
@@ -538,7 +545,9 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   if(!out) {
     rox_error("Failed to make %s\n%s", fname, strerror(errno));
   } else {
-    fprintf(out, "<?xml version=\"1.0\"?>\n<AppInfo>\n  <About>\n");
+    fprintf(out, "<?xml version=\"1.0\"?>\n<AppInfo>\n");
+    fprintf(out, "  <Summary>ROX wrapper for %s</Summary>\n", mleaf);
+    fprintf(out, "  <About>\n");
     fprintf(out, "    <Purpose>Wrapper for %s</Purpose>\n", mleaf);
     fprintf(out, "    <Version>0.1.0 by AppFactory %s</Version>\n", VERSION);
     if(options.author && options.author[0]) 
@@ -551,7 +560,6 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
     if(options.homepage && options.homepage[0])
       fprintf(out, "    <Homepage>%s</Homepage>\n", options.homepage);
     fprintf(out, "  </About>\n");
-    fprintf(out, "  <Summary>ROX wrapper for %s</Summary>\n", mleaf);
     fprintf(out, "</AppInfo>\n");
     
     fclose(out);
