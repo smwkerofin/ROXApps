@@ -16,6 +16,8 @@
 #undef HAVE_LIBINTL_H
 #undef HAVE_SYS_SWAP_H
 #undef HAVE_KSTAT_H
+#undef HAVE_APSYMBOLS_H
+#undef HAVE_APBUILD_APSYMBOLS_H
 
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
@@ -35,3 +37,8 @@
 #define GTK_WINDOW_DIALOG GTK_WINDOW_TOPLEVEL
 #define G_DISABLE_CONST_RETURNS
 
+#if defined(HAVE_APSYMBOLS_H)
+#include <apsymbols.h>
+#elif defined(HAVE_APBUILD_APSYMBOLS_H)
+#include <apbuild/apsymbols.h>
+#endif
