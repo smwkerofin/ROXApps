@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: mem.c,v 1.1.1.1 2001/08/24 11:08:30 stephen Exp $
+ * $Id: mem.c,v 1.2 2001/08/28 14:07:52 stephen Exp $
  */
 #include "config.h"
 
@@ -29,8 +29,8 @@
 #endif
 
 #include <fcntl.h>
-#include <sys/statvfs.h>
-#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include <gtk/gtk.h>
 
@@ -53,21 +53,18 @@
 
 #if defined(__sparc__) && defined(__svr4__)
 #if LIBGTOP_VERSION_CODE>SOLARIS_SWAP_BROKEN_UP_TO
-#define SWAP_SUPPORTED 1 
+#define SWAP_SUPPORTED_LIBGTOP 1 
 #else
-#define SWAP_SUPPORTED 0
+#define SWAP_SUPPORTED_LIBGTOP 0
 #endif
 #else
-#define SWAP_SUPPORTED 1
+#define SWAP_SUPPORTED_LIBGTOP 1
 #endif
 
 /* GTK+ objects */
 static GtkWidget *win=NULL;
 static GtkWidget *mem_total, *mem_used, *mem_free=NULL, *mem_per;
-#if SWAP_SUPPORTED
-static GtkWidget *swap_total, *swap_used, *swap_free, *swap_per,
-  *swap_total_label;
-#endif
+static GtkWidget *swap_total, *swap_used, *swap_free, *swap_per;
 static GtkWidget *menu=NULL;
 static guint update_tag=0;
 typedef struct option_widgets {
@@ -88,6 +85,21 @@ static Options options={
   TRUE
 };
 
+#if !SWAP_SUPPORTED_LIBGTOP
+struct _swap_data {
+  uint64_t alloc, reserved, used, avail;
+  gboolean valid;
+};
+
+static struct _swap_data swap_data={
+  0ll, 0ll, 0ll, 0LL,
+  FALSE
+};
+static guint swap_update_tag=0;
+static pid_t swap_process=0;
+static gint swap_read_tag;
+#endif
+
 /* Call backs & stuff */
 static gboolean update_values(gpointer);
 static void do_update(void);
@@ -96,6 +108,10 @@ static void write_choices(void);
 static void menu_create_menu(GtkWidget *);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
+
+#if !SWAP_SUPPORTED_LIBGTOP
+static gboolean update_swap(gpointer);
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -127,9 +143,9 @@ int main(int argc, char *argv[])
 
   rox_debug_init(PROJECT);
   
-  dprintf(5, "%d %s -> %s\n", argc, argv[1], argv[argc-1]);
+  dprintf(5, "%d %s -> %s", argc, argv[1], argv[argc-1]);
   gtk_init(&argc, &argv);
-  dprintf(5, "%d %s -> %s\n", argc, argv[1], argv[argc-1]);
+  dprintf(5, "%d %s -> %s", argc, argv[1], argv[argc-1]);
   ttips=gtk_tooltips_new();
 
   read_choices();
@@ -142,7 +158,7 @@ int main(int argc, char *argv[])
   }
 
   while((c=getopt(argc, argv, "a:"))!=EOF) {
-    dprintf(5, " %2d -%c %s\n", c, c, optarg? optarg: "NULL");
+    dprintf(5, " %2d -%c %s", c, c, optarg? optarg: "NULL");
     switch(c) {
     case 'a':
       xid=atol(optarg);
@@ -172,11 +188,7 @@ int main(int argc, char *argv[])
     gdk_window_set_icon(GTK_WIDGET(win)->window, NULL, pixmap, mask);
 
     gtk_tooltips_set_tip(ttips, win,
-			 "Mem shows the memory"
-#if SWAP_SUPPORTED
-			 " and swap usage"
-#endif
-			 " on a host",
+			 "Mem shows the memory and swap usage on a host",
 			 TIP_PRIVATE);
   
     vbox=gtk_vbox_new(FALSE, 1);
@@ -243,7 +255,6 @@ int main(int argc, char *argv[])
 			 "This is the memory available on the host",
 			 TIP_PRIVATE);
 
-#if SWAP_SUPPORTED
     frame=gtk_frame_new(_("Swap"));
     gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 2);
     gtk_widget_show(frame);
@@ -260,7 +271,6 @@ int main(int argc, char *argv[])
     gtk_widget_set_name(label, "simple label");
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
     gtk_widget_show(label);
-    swap_total_label=label;
 
     swap_total=gtk_label_new("XXxxx ybytes");
     gtk_widget_set_name(swap_total, "text display");
@@ -305,7 +315,6 @@ int main(int argc, char *argv[])
 			 "This is the swap space available on the host",
 			 TIP_PRIVATE);
 
-#endif
     
     menu_create_menu(win);
   } else {
@@ -328,7 +337,7 @@ int main(int argc, char *argv[])
 			 "Mem shows the memory and swap usage",
 			 TIP_PRIVATE);
 
-    dprintf(4, "vbox new\n");
+    dprintf(4, "vbox new");
     vbox=gtk_vbox_new(FALSE, 1);
     gtk_container_add(GTK_CONTAINER(plug), vbox);
     gtk_widget_show(vbox);
@@ -346,7 +355,6 @@ int main(int argc, char *argv[])
 			 "This shows the relative usage of memory",
 			 TIP_PRIVATE);
 
-#if SWAP_SUPPORTED
     swap_per=gtk_progress_bar_new();
     gtk_widget_set_name(swap_per, "gauge");
     /*gtk_widget_set_usize(swap_per, -1, 22);*/
@@ -359,43 +367,39 @@ int main(int argc, char *argv[])
     gtk_tooltips_set_tip(ttips, swap_per,
 			 "This shows the relative usage of swap space",
 			 TIP_PRIVATE);
-#else
-    mem_free=gtk_label_new("XXxxx ybytes");
-    gtk_widget_set_name(mem_free, "text display");
-    gtk_box_pack_start(GTK_BOX(vbox), mem_free, FALSE, FALSE, 2);
-    gtk_widget_show(mem_free);
-    gtk_tooltips_set_tip(ttips, mem_free,
-			 "This is the memory available on the host",
-			 TIP_PRIVATE);
-
-#endif
     
     menu_create_menu(plug);
 
-    dprintf(5, "show plug\n");
+    dprintf(5, "show plug");
     gtk_widget_show(plug);
-    dprintf(5, "made applet\n");
+    dprintf(5, "made applet");
   }
 
   /* Set up glibtop and check now */
-  dprintf(4, "set up glibtop\n");
+  dprintf(4, "set up glibtop");
   glibtop_init_r(&glibtop_global_server,
 		 (1<<GLIBTOP_SYSDEPS_MEM)
-#if SWAP_SUPPORTED
+#if SWAP_SUPPORTED_LIBGTOP
 		 |(1<<GLIBTOP_SYSDEPS_SWAP)
 #endif
 		 , 0);
   update_values(NULL);
 
-  dprintf(3, "show %p (%ld)\n", win, xid);
+  dprintf(3, "show %p (%ld)", win, xid);
   if(!xid)
     gtk_widget_show(win);
-  dprintf(2, "timeout %ds, %p, %p\n", options.update_sec,
+  dprintf(2, "timeout %ds, %p, %p", options.update_sec,
 	  (GtkFunction) update_values, NULL);
   update_tag=gtk_timeout_add(options.update_sec*1000,
 			 (GtkFunction) update_values, NULL);
-  dprintf(2, "update_sec=%d, update_tag=%u\n", options.update_sec,
+  dprintf(2, "update_sec=%d, update_tag=%u", options.update_sec,
 	  update_tag);
+
+#if !SWAP_SUPPORTED_LIBGTOP
+  swap_update_tag=gtk_timeout_add(10*1000,
+			 (GtkFunction) update_swap, NULL);
+  (void) update_swap(NULL);
+#endif
   
   gtk_main();
 
@@ -421,7 +425,7 @@ static const char *fmt_size(unsigned long long bytes)
 
 #define MEM_FLAGS ((1<<GLIBTOP_MEM_TOTAL)|(1<<GLIBTOP_MEM_USED)|(1<<GLIBTOP_MEM_FREE))
 
-#if SWAP_SUPPORTED
+#if SWAP_SUPPORTED_LIBGTOP
 #define SWAP_FLAGS ((1<<GLIBTOP_SWAP_TOTAL)|(1<<GLIBTOP_SWAP_USED)|(1<<GLIBTOP_SWAP_FREE))
 #define SWAP_FIX 1
 #endif
@@ -430,11 +434,11 @@ static gboolean update_values(gpointer unused)
 {
   int ok=FALSE;
   glibtop_mem mem;
-#if SWAP_SUPPORTED
+#if SWAP_SUPPORTED_LIBGTOP
   glibtop_swap swap;
 #endif
   
-  dprintf(4, "update_sec=%d, update_tag=%u\n", options.update_sec,
+  dprintf(4, "update_sec=%d, update_tag=%u", options.update_sec,
 	  update_tag);
   
   errno=0;
@@ -453,7 +457,7 @@ static gboolean update_values(gpointer unused)
     if(fused>100.f)
       fused=100.f;
 
-    dprintf(4, "%2.0f %%\n", fused);
+    dprintf(4, "%2.0f %%", fused);
 
     if(win) {
       gtk_label_set_text(GTK_LABEL(mem_total), fmt_size(total));
@@ -464,6 +468,7 @@ static gboolean update_values(gpointer unused)
       gtk_label_set_text(GTK_LABEL(mem_free), fmt_size(avail));
     dprintf(5, "set progress\n");
     gtk_progress_set_value(GTK_PROGRESS(mem_per), fused);
+    gtk_widget_set_sensitive(GTK_WIDGET(mem_per), TRUE);
     
   } else {
     if(win) {
@@ -472,10 +477,11 @@ static gboolean update_values(gpointer unused)
     }
     if(mem_free)
       gtk_label_set_text(GTK_LABEL(mem_free), "Free?");
-    gtk_progress_set_value(GTK_PROGRESS(mem_per), 0.);
+    /*gtk_progress_set_value(GTK_PROGRESS(mem_per), 0.);*/
+    gtk_widget_set_sensitive(GTK_WIDGET(mem_per), FALSE);
   }
 
-#if SWAP_SUPPORTED
+#if SWAP_SUPPORTED_LIBGTOP
   errno=0;
   glibtop_get_swap(&swap);
   ok=(errno==0) && (swap.flags & SWAP_FLAGS)==SWAP_FLAGS;
@@ -505,8 +511,9 @@ static gboolean update_values(gpointer unused)
       gtk_label_set_text(GTK_LABEL(swap_free), fmt_size(avail));
       
     }
-    dprintf(5, "set progress\n");
+    dprintf(5, "set progress");
     gtk_progress_set_value(GTK_PROGRESS(swap_per), fused);
+    gtk_widget_set_sensitive(GTK_WIDGET(swap_per), TRUE);
     
   } else {
     if(win) {
@@ -514,7 +521,42 @@ static gboolean update_values(gpointer unused)
       gtk_label_set_text(GTK_LABEL(swap_used), "?");
       gtk_label_set_text(GTK_LABEL(swap_free), "?");
     }
-    gtk_progress_set_value(GTK_PROGRESS(swap_per), 0.);
+    /*gtk_progress_set_value(GTK_PROGRESS(swap_per), 0.);*/
+    gtk_widget_set_sensitive(GTK_WIDGET(swap_per), FALSE);
+  }
+#else
+  if(swap_data.valid) {
+    unsigned long long total;
+    gfloat fused;
+
+    total=swap_data.used+swap_data.avail;
+    dprintf(2, "swap: %lldM %lldM %lldM", total>>20, swap_data.used>>20,
+	    swap_data.avail>>20);
+      
+    fused=(100.f*swap_data.used)/((gfloat) total);
+    if(fused>100.f)
+      fused=100.f;
+
+    dprintf(4, "%2.0f %%", fused);
+
+    if(win) {
+      gtk_label_set_text(GTK_LABEL(swap_total), fmt_size(total));
+      gtk_label_set_text(GTK_LABEL(swap_used), fmt_size(swap_data.used));
+      gtk_label_set_text(GTK_LABEL(swap_free), fmt_size(swap_data.avail));
+      
+    }
+    dprintf(5, "set progress");
+    gtk_progress_set_value(GTK_PROGRESS(swap_per), fused);
+    gtk_widget_set_sensitive(GTK_WIDGET(swap_per), TRUE);    
+    
+  } else {
+    if(win) {
+      gtk_label_set_text(GTK_LABEL(swap_total), "?");
+      gtk_label_set_text(GTK_LABEL(swap_used), "?");
+      gtk_label_set_text(GTK_LABEL(swap_free), "?");
+    }
+    /*gtk_progress_set_value(GTK_PROGRESS(swap_per), 0.);*/
+    gtk_widget_set_sensitive(GTK_WIDGET(swap_per), FALSE);
   }
 #endif
   
@@ -549,22 +591,22 @@ static void read_choices(void)
     do {
       line=fgets(buf, sizeof(buf), in);
       if(line) {
-	dprintf(4, "line=%s\n", line);
+	dprintf(4, "line=%s", line);
 	end=strpbrk(line, "\n#");
 	if(end)
 	  *end=0;
 	if(*line) {
 	  char *sep;
 
-	  dprintf(4, "line=%s\n", line);
+	  dprintf(4, "line=%s", line);
 	  sep=strchr(line, ':');
 	  if(sep) {
-	    dprintf(3, "%.*s: %s\n", sep-line, line, sep+1);
+	    dprintf(3, "%.*s: %s", sep-line, line, sep+1);
 	    if(strncmp(line, UPDATE_RATE, sep-line)==0) {
 	      options.update_sec=atoi(sep+1);
 	      if(options.update_sec<1)
 		options.update_sec=1;
-	      dprintf(3, "update_sec now %d\n", options.update_sec);
+	      dprintf(3, "update_sec now %d", options.update_sec);
 	    } else if(strncmp(line, INIT_SIZE, sep-line)==0) {
 	      options.applet_init_size=(guint) atoi(sep+1);
 	    } else if(strncmp(line, SWAP_NUM, sep-line)==0) {
@@ -828,8 +870,121 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   return FALSE;
 }
 
+#if !SWAP_SUPPORTED_LIBGTOP
+static void read_from_pipe(gpointer data, gint com, GdkInputCondition cond)
+{
+  char buf[BUFSIZ];
+  int nr;
+
+  nr=read(com, buf, BUFSIZ);
+  dprintf(3, "read %d from %d", nr, com);
+  
+  if(nr>0) {
+    buf[nr]=0;
+    
+    if(strncmp(buf, "total: ", 7)==0) {
+      long tmp;
+      char *start, *ptr;
+
+      start=buf+7;
+      tmp=strtol(start, &ptr, 10);
+      if(ptr<=start)
+	return;
+      swap_data.valid=FALSE;
+      swap_data.alloc=tmp<<10;
+
+      start=strstr(ptr, " + ");
+      if(!start)
+	return;
+      start+=3;
+      tmp=strtol(start, &ptr, 10);
+      if(ptr<=start)
+	return;
+      swap_data.reserved=tmp<<10;
+      
+      start=strstr(ptr, " = ");
+      if(!start)
+	return;
+      start+=3;
+      tmp=strtol(start, &ptr, 10);
+      if(ptr<=start)
+	return;
+      swap_data.used=tmp<<10;
+      
+      start=strstr(ptr, ", ");
+      if(!start)
+	return;
+      start+=2;
+      tmp=strtol(start, &ptr, 10);
+      if(ptr<=start)
+	return;
+      swap_data.avail=tmp<<10;
+
+      swap_data.valid=TRUE;
+    }
+  } else if(nr==0) {
+    int stat;
+    
+    waitpid(swap_process, &stat, 0);
+    dprintf(2, "status %d from %d, closing %d", stat, swap_process, com);
+    close(com);
+    if(WIFEXITED(stat) && WEXITSTATUS(stat))
+      dprintf(1, "%d exited with status %d", swap_process, WEXITSTATUS(stat));
+    else if(WIFSIGNALED(stat))
+      dprintf(1, "%d killed by signal %d %s", swap_process, WTERMSIG(stat),
+	      strsignal(WTERMSIG(stat)));
+    if(WIFEXITED(stat) || WIFSIGNALED(stat))
+      swap_process=0;
+    gdk_input_remove(swap_read_tag);
+    
+  } else {
+    dprintf(1, "error reading data from pipe: %s", strerror(errno));
+  }
+}
+
+static gboolean update_swap(gpointer unused)
+{
+  dprintf(2, "in update_swap");
+  
+  if(!swap_process) {
+    int com[2];
+
+    pipe(com);
+    dprintf(3, "pipes are %d, %d", com[0], com[1]);
+    swap_process=fork();
+
+    switch(swap_process) {
+    case -1:
+      dprintf(0, "failed to fork! %s", strerror(errno));
+      close(com[0]);
+      close(com[1]);
+      return;
+
+    case 0:
+      close(com[0]);
+      dup2(com[1], 1);
+      execl("/usr/sbin/swap", "swap", "-s", NULL);
+      _exit(1);
+
+    default:
+      dprintf(3, "child is %d, monitor %d", swap_process, com[0]);
+      close(com[1]);
+      swap_read_tag=gdk_input_add(com[0], GDK_INPUT_READ,
+				  read_from_pipe, NULL);
+      break;
+    }
+  }
+  
+  return TRUE;
+}
+#endif
+
 /*
  * $Log: mem.c,v $
+ * Revision 1.2  2001/08/28 14:07:52  stephen
+ * Fix compilation bugs on Linux.  Fix bug in setting non-existant label.
+ * Show swap option out, compilation control on LIBGTOP_VERSION better.
+ *
  * Revision 1.1.1.1  2001/08/24 11:08:30  stephen
  * Monitor memory and swap
  *
