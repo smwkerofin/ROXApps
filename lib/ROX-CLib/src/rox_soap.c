@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.10 2003/10/22 17:15:59 stephen Exp $
+ * $Id: rox_soap.c,v 1.11 2004/05/05 19:24:18 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -503,19 +503,6 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   if(!done_init)
     rox_soap_init();
 
-  ipc_window = gtk_invisible_new();
-  dprintf(2, "ipc_window=%p ref=%d", ipc_window,
-	  G_OBJECT(ipc_window)->ref_count);
-  /*gtk_widget_realize(ipc_window);
-  dprintf(2, "ipc_window=%p ref=%d", ipc_window,
-  G_OBJECT(ipc_window)->ref_count);*/
-  /*gtk_widget_ref(ipc_window);
-  dprintf(2, "ipc_window=%p ref=%d", ipc_window,
-	  G_OBJECT(ipc_window)->ref_count);
-  gtk_object_sink(GTK_OBJECT(ipc_window));
-  dprintf(2, "ipc_window=%p ref=%d", ipc_window,
-  G_OBJECT(ipc_window)->ref_count);*/
-
   if(!filer->existing_ipc_window)
     filer->existing_ipc_window=get_existing_ipc_window(filer->atom);
   dprintf(3, "existing_ipc_window %p", filer->existing_ipc_window);
@@ -524,12 +511,8 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
     last_error=last_error_buffer;
     return FALSE;
   }
-  dprintf(3, "existing_ipc_window %p, ipc_window=%p ref=%d",
-	  filer->existing_ipc_window, ipc_window,
-	  G_OBJECT(ipc_window)->ref_count);
 
   if(!filer->existing_ipc_window) {
-    g_object_unref(ipc_window);
     return rox_soap_send_via_pipe(filer, doc, callback, udata);
   }
 
@@ -540,6 +523,10 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
     return FALSE;
   }
   dprintf(3, "doc is %d bytes (%.10s)", size, mem);
+
+  ipc_window = gtk_invisible_new();
+  dprintf(2, "ipc_window=%p ref=%d", ipc_window,
+	  G_OBJECT(ipc_window)->ref_count);
 
   gdk_property_change(ipc_window->window, filer->xsoap,
 		      gdk_x11_xatom_to_atom(XA_STRING), 8,
@@ -720,6 +707,9 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.11  2004/05/05 19:24:18  stephen
+ * Extra debug (problem when target for SOAP doesn't exist)
+ *
  * Revision 1.10  2003/10/22 17:15:59  stephen
  * Fix race condition in SOAP code.  Might finally have it working properly!
  *
