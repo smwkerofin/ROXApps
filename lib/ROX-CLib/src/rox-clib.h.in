@@ -1,7 +1,7 @@
-/* The configure script will auto-generate config.h from config.h.in */
+/* The configure script will auto-generate rox-clib.h from rox-clib.h.in */
 
 /* Define our data */
-#define ROXCLIB_PROJECT "TestLib"
+#define ROXCLIB_PROJECT "ROX-CLib"
 #define ROXCLIB_PURPOSE "C library for ROX apps"
 #define ROXCLIB_VERSION "0.1.0"
 #define ROXCLIB_AUTHOR  "Stephen Watson"
@@ -14,3 +14,6 @@
 #define LIB_AUTHOR  ROXCLIB_AUTHOR
 #define LIB_WEBSITE ROXCLIB_WEBSITE
 #endif
+
+#define _(String) (String)
+#define N_(String) (String)
