@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.6 2001/07/18 10:41:54 stephen Exp $
+ * $Id: alarm.c,v 1.7 2001/08/20 15:18:12 stephen Exp $
  */
 #include "config.h"
 
@@ -21,6 +21,8 @@
 #endif
 
 #include <gtk/gtk.h>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
 
 #include "choices.h"
 #include "rox_debug.h"
@@ -39,10 +41,13 @@ static const char *repeat_text[]={
   NULL
 };
 
+#define ALARM_FOLLOW_TIMEZONE 1
+
 typedef struct alarm {
   time_t when;
   RepeatMode repeat;
   gchar *message;
+  guint flags;
 } Alarm;
 
 static GList *alarms=NULL;
@@ -54,7 +59,7 @@ int alarm_have_active(void)
   return alarms!=NULL;
 }
 
-static Alarm *alarm_new(time_t w, RepeatMode r, const char *m)
+static Alarm *alarm_new(time_t w, RepeatMode r, const char *m, guint flags)
 {
   Alarm *alarm=g_new(Alarm, 1);
 
@@ -64,6 +69,7 @@ static Alarm *alarm_new(time_t w, RepeatMode r, const char *m)
   alarm->when=w;
   alarm->repeat=r;
   alarm->message=g_strdup(m);
+  alarm->flags=flags;
 
   return alarm;
 }
@@ -74,6 +80,88 @@ static void alarm_delete(Alarm *alarm)
   g_free(alarm);
 }
 
+int alarm_load_xml(const gchar *fname)
+{
+#ifdef HAVE_SYS_STAT_H
+  struct stat statb;
+#endif
+  xmlDocPtr doc;
+  xmlNodePtr node, root;
+  const xmlChar *string;
+
+  doc=xmlParseFile(fname);
+  if(!doc)
+    return FALSE;
+
+  root=xmlDocGetRootElement(doc);
+  if(!root) {
+    xmlFreeDoc(doc);
+    return FALSE;
+  }
+
+  if(strcmp(root->name, "Alarms")!=0) {
+    xmlFreeDoc(doc);
+    return FALSE;
+  }
+
+  for(node=root->xmlChildrenNode; node; node=node->next) {
+    time_t when;
+    RepeatMode rep;
+    guint flags;
+    const char *message;
+    Alarm *nalarm;
+    
+    if(node->type!=XML_ELEMENT_NODE)
+      continue;
+    if(strcmp(node->name, "alarm")!=0)
+      continue;
+
+    string=xmlGetProp(node, "time");
+    if(!string)
+      continue;
+    when=atol(string);
+    free(string);
+    
+    string=xmlGetProp(node, "repeat");
+    if(!string) {
+      rep=REPEAT_NONE;
+    } else {
+      rep=atoi(string);
+      free(string);
+    }
+    
+    string=xmlGetProp(node, "flags");
+    if(!string) {
+      flags=0;
+    } else {
+      flags=atoi(string);
+      free(string);
+    }
+
+    string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+    if(!string)
+      continue;
+
+    message=(const char *) string;
+    nalarm=alarm_new(when, rep, message, flags);
+    dprintf(3, "read alarm: %s at %ld (%d %u)", nalarm->message,
+	    nalarm->when, nalarm->repeat, nalarm->flags);
+    alarms=g_list_append(alarms, nalarm);
+    free(string);
+  }
+#ifdef HAVE_STAT
+  if(stat(fname, &statb)==0)
+    alarms_saved=statb.st_mtime;
+  else
+    time(&alarms_saved);
+#else
+  time(&alarms_saved);
+#endif
+
+  xmlFreeDoc(doc);
+  return TRUE;
+}
+
 void alarm_load(void)
 {
   gchar *fname;
@@ -81,6 +169,14 @@ void alarm_load(void)
     struct stat statb;
 #endif
 
+  fname=choices_find_path_load("alarms.xml", PROJECT);
+  if(fname) {
+    if(alarm_load_xml(fname)) {
+      g_free(fname);
+      return;
+    }
+    g_free(fname);
+  }
   fname=choices_find_path_load("alarms", PROJECT);
 
   if(fname) {
@@ -112,14 +208,21 @@ void alarm_load(void)
 	  sep=strchr(rep, ':');
 
 	  if(sep) {
-	    *sep=0;
+	    int val;
+	    guint flags;
+	    RepeatMode rm;
 	    
-	    nalarm=alarm_new((time_t) atol(line), atoi(rep), sep+1);
+	    *sep=0;
+	    val=atoi(rep);
+	    rm=val & 0xff;
+	    flags=((guint) val)>>8;
+	    
+	    nalarm=alarm_new((time_t) atol(line), rm, sep+1, flags);
 	  } else {
-	    nalarm=alarm_new((time_t) atol(line), REPEAT_NONE, rep);
+	    nalarm=alarm_new((time_t) atol(line), REPEAT_NONE, rep, 0);
 	  }
-	  dprintf(3, "read alarm: %s at %ld (%d)", nalarm->message,
-		  nalarm->when, nalarm->repeat);
+	  dprintf(3, "read alarm: %s at %ld (%d %u)", nalarm->message,
+		  nalarm->when, nalarm->repeat, nalarm->flags);
 	  alarms=g_list_append(alarms, nalarm);
 	}
 	
@@ -140,13 +243,18 @@ void alarm_load(void)
   }
 }
 
-static time_t next_alarm_time(time_t when, RepeatMode mode)
+static time_t next_alarm_time(time_t when, RepeatMode mode, guint flags)
 {
-  time_t next;
+  time_t next, now;
   struct tm *tms;
+  int old_dst;
 
   if(mode==REPEAT_NONE)
     return (time_t) 0;
+
+  time(&now);
+  tms=localtime(&now);
+  old_dst=tms->tm_isdst;
 
   tms=localtime(&when);
 
@@ -195,6 +303,17 @@ static time_t next_alarm_time(time_t when, RepeatMode mode)
 
   next=mktime(tms);
 
+  /* Check and correct for DST change if we follow the time zone */
+  if(old_dst!=tms->tm_isdst && (flags&ALARM_FOLLOW_TIMEZONE)) {
+    if(tms->tm_isdst) {
+      /* Switch to altzone */
+      tms->tm_sec+=(timezone-altzone);
+    } else {
+      /* Switch from altzone */
+      tms->tm_sec-=(timezone-altzone);
+    }
+    next=mktime(tms);
+  }
   return next;
 }
 
@@ -207,7 +326,7 @@ static gint find_alarm(gconstpointer el, gconstpointer udat)
   dprintf(4, "     to: %ld %d %s", user->when, user->repeat, user->message);
 
   if(elem->when==user->when && elem->repeat==user->repeat &&
-     strcmp(elem->message, user->message)==0)
+     strcmp(elem->message, user->message)==0 && elem->flags==user->flags)
     return 0;
   dprintf(5, " nope");
 
@@ -258,8 +377,70 @@ static void check_alarms_file(void)
   }
 }
 
+void alarm_save_xml(void)
+{
+  gchar *fname;
+#ifdef HAVE_SYS_STAT_H
+  struct stat statb;
+#endif
+  gboolean ok;
+
+  fname=choices_find_path_save("alarms.xml", PROJECT, TRUE);
+  dprintf(2, "Save alarms to %s", fname? fname: "NULL");
+
+  if(fname) {
+    xmlDocPtr doc;
+    xmlNodePtr tree;
+    char buf[80];
+    GList *rover;
+    FILE *out;
+
+    doc = xmlNewDoc("1.0");
+    doc->children=xmlNewDocNode(doc, NULL, "Alarms", NULL);
+    xmlSetProp(doc->children, "version", VERSION);
+
+    for(rover=alarms; rover; rover=g_list_next(rover)) {
+      Alarm *alarm=(Alarm *) rover->data;
+      tree=xmlNewChild(doc->children, NULL, "alarm", alarm->message);
+      sprintf(buf, "%ld", alarm->when);
+      xmlSetProp(tree, "time", buf);
+      sprintf(buf, "%d", alarm->repeat);
+      xmlSetProp(tree, "repeat", buf);
+      sprintf(buf, "%u", alarm->flags);
+      xmlSetProp(tree, "flags", buf);
+    }
+
+#if LIBXML_VERSION > 20400
+    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
+#else
+    out=fopen(fname, "w");
+    if(out) {
+      xmlDocDump(out, doc);
+      fclose(out);
+      ok=TRUE;
+    } else {
+      ok=FALSE;
+    }
+#endif
+    if(ok) {
+#ifdef HAVE_STAT
+      if(stat(fname, &statb)==0)
+	alarms_saved=statb.st_mtime;
+      else
+	time(&alarms_saved);
+#else
+      time(&alarms_saved);
+#endif
+      dprintf(3, "wrote %s at %ld", fname, alarms_saved);
+    }
+    xmlFreeDoc(doc);
+    g_free(fname);
+  }
+}
+
 void alarm_save(void)
 {
+#if 0
   gchar *fname;
 #ifdef HAVE_SYS_STAT_H
   struct stat statb;
@@ -287,7 +468,8 @@ void alarm_save(void)
 
       for(rover=alarms; rover; rover=g_list_next(rover)) {
 	Alarm *alarm=(Alarm *) rover->data;
-	fprintf(out, "%ld:%d:%s\n", alarm->when, alarm->repeat,
+	fprintf(out, "%ld:%u:%s\n", alarm->when,
+		(alarm->repeat|(alarm->flags<<8)),
 		alarm->message);
 	dprintf(3, "wrote %s %ld %d", alarm->message, alarm->when,
 		alarm->repeat);
@@ -306,6 +488,9 @@ void alarm_save(void)
     }
     g_free(fname);
   }
+#else
+  alarm_save_xml();
+#endif
 }
 
 static void dismiss(GtkWidget *wid, gpointer data)
@@ -387,14 +572,15 @@ int alarm_check(void)
       if(alarm->repeat!=REPEAT_NONE) {
 	next=alarm->when;
 	do {
-	  next=next_alarm_time(next, alarm->repeat);
+	  next=next_alarm_time(next, alarm->repeat, alarm->flags);
 	  if(next<=0)
 	    break;
 	} while(next<now);
 	if(next>0) {
 	  dprintf(3, "re-schedule %s for %ld", alarm->message, next);
 	  alarms=g_list_append(alarms, alarm_new(next, alarm->repeat,
-						 alarm->message));
+						 alarm->message,
+						 alarm->flags));
 	}
       }
       alarm_delete(alarm);
@@ -425,6 +611,7 @@ static GtkWidget *minute;
 static GtkWidget *message;
 static GtkWidget *list;
 static GtkWidget *repmode;
+static GtkWidget *follow_tzone;
 static GtkWidget *delalarm;
 
 static void set_alarm(GtkWidget *wid, gpointer data)
@@ -435,6 +622,7 @@ static void set_alarm(GtkWidget *wid, gpointer data)
   GtkWidget *menu;
   GtkWidget *item;
   gchar *mess;
+  guint flags;
 
   tms.tm_sec=0;
   tms.tm_min=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(minute));
@@ -447,6 +635,9 @@ static void set_alarm(GtkWidget *wid, gpointer data)
   menu=gtk_option_menu_get_menu(GTK_OPTION_MENU(repmode));
   item=gtk_menu_get_active(GTK_MENU(menu));
   repeat=(RepeatMode) gtk_object_get_data(GTK_OBJECT(item), "mode");
+  flags=0;
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(follow_tzone)))
+    flags|=ALARM_FOLLOW_TIMEZONE;
 
   mess=gtk_entry_get_text(GTK_ENTRY(message));
 
@@ -454,7 +645,7 @@ static void set_alarm(GtkWidget *wid, gpointer data)
 	  tms.tm_mday, tms.tm_mon+1, tms.tm_year+1900, tms.tm_hour, tms.tm_min,
 	  repeat);
 	  
-  alarms=g_list_append(alarms, alarm_new(mktime(&tms), repeat, mess));
+  alarms=g_list_append(alarms, alarm_new(mktime(&tms), repeat, mess, flags));
 
   gtk_widget_hide(win);
 
@@ -503,6 +694,8 @@ static void alarm_sel(GtkWidget *clist, gint row, gint column,
   gtk_entry_set_text(GTK_ENTRY(message), alarm->message);
   set_the_time(&alarm->when);
   gtk_option_menu_set_history(GTK_OPTION_MENU(repmode), alarm->repeat);
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(follow_tzone),
+			       alarm->flags & ALARM_FOLLOW_TIMEZONE);
   
   gtk_widget_set_sensitive(delalarm, TRUE);
   gtk_object_set_data(GTK_OBJECT(delalarm), "row", GINT_TO_POINTER(row));
@@ -654,6 +847,18 @@ static GtkWidget *make_alarm_window(void)
   gtk_widget_set_usize(repmode, mw+50, mh+4);
   gtk_option_menu_set_history(GTK_OPTION_MENU(repmode), REPEAT_NONE);
     
+  hbox=gtk_hbox_new(FALSE, 0);
+  gtk_widget_show(hbox);
+  gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+
+  label=gtk_label_new(_("Options"));
+  gtk_widget_show(label);
+  gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+
+  follow_tzone=gtk_check_button_new_with_label(_("Follow timezone"));
+  gtk_widget_show(follow_tzone);
+  gtk_box_pack_start(GTK_BOX(hbox), follow_tzone, FALSE, FALSE, 2);
+
   hbox=GTK_DIALOG(win)->action_area;
 
   but=gtk_button_new_with_label(_("Set alarm"));
@@ -687,6 +892,7 @@ static void update_alarm_window(GtkWidget *win)
   set_the_time(&now);
   gtk_entry_set_text(GTK_ENTRY(message), "");
   gtk_option_menu_set_history(GTK_OPTION_MENU(repmode), REPEAT_NONE);
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(follow_tzone), FALSE);
 
   g_return_if_fail(GTK_IS_CLIST(list));
   gtk_clist_freeze(GTK_CLIST(list));
@@ -727,6 +933,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.7  2001/08/20 15:18:12  stephen
+ * Switch to using ROX-CLib.
+ *
  * Revision 1.6  2001/07/18 10:41:54  stephen
  * Use new dprintf and do much debug output
  *

@@ -5,12 +5,11 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.13 2001/07/18 10:42:29 stephen Exp $
+ * $Id: clock.c,v 1.14 2001/08/20 15:18:13 stephen Exp $
  */
 #include "config.h"
 
 #define DEBUG              1
-#define SUPPORT_OLD_CONFIG 0
 #define APPLET_MENU        1
 
 #include <stdio.h>
@@ -38,6 +37,9 @@
 #if USE_GDK_PIXBUF
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #endif
+
+#include <libxml/tree.h>
+#include <libxml/parser.h>
 
 #include "choices.h"
 #include "rox_debug.h"
@@ -83,29 +85,6 @@ static Mode mode={
   formats, MODE_SECONDS, 500, 64
 };
 
-#if SUPPORT_OLD_CONFIG
-typedef struct old_mode {
-  const char *name;
-  Mode mode;
-} OldMode;
-
-static OldMode old_modes[]={
-  {N_("24 hour"), {formats+0, MODE_SECONDS, 500}},
-  {N_("24 hour, no seconds"), {formats+1, 0, 30000}},
-  {N_("12 hour"), {formats+2, MODE_SECONDS, 500}},
-  {N_("12 hour, no seconds"), {formats+3, 0, 30000}},
-  {N_("Date"), {formats+4, MODE_SECONDS, 500}},
-  {N_("Date, no second hand"), {formats+4, 0, 30000}},
-  {N_("Full"), {formats+5, MODE_SECONDS, 500}},
-  {N_("Full, no second hand"), {formats+5, 0, 500}},
-  {N_("None"), {formats+0, MODE_NO_TEXT|MODE_SECONDS, 500}},
-  {N_("None, no second hand"), {formats+1, MODE_NO_TEXT, 30000}},
-  {N_("User defined"), {formats+6, MODE_SECONDS, 500}},
-  {N_("User defined, no second hand"), {formats+6, 0, 500}},
-
-  {NULL, {NULL, 0, 0}}
-};
-#endif
 
 static GtkWidget *digital_out = NULL; /* Text below clock face */
 static GtkWidget *menu=NULL;          /* Popup menu */
@@ -182,10 +161,9 @@ static void show_conf_win(void);
 
 static void read_config(void);
 static void write_config(void);
+static gboolean read_config_xml(void);
+static void write_config_xml(void);
 static void check_config(void);
-#if SUPPORT_OLD_CONFIG
-static void read_old_config(void);
-#endif
 
 int main(int argc, char *argv[])
 {
@@ -616,9 +594,61 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event)
   return TRUE;
 }
 
+static void write_config_xml(void)
+{
+  gchar *fname;
+  gboolean ok;
+
+  fname=choices_find_path_save("options.xml", PROJECT, TRUE);
+  dprintf(2, "save to %s", fname? fname: "NULL");
+
+  if(fname) {
+    xmlDocPtr doc;
+    xmlNodePtr tree;
+    FILE *out;
+    char buf[80];
+
+    doc = xmlNewDoc("1.0");
+    doc->children=xmlNewDocNode(doc, NULL, "Clock", NULL);
+    xmlSetProp(doc->children, "version", VERSION);
+
+    tree=xmlNewChild(doc->children, NULL, "format", NULL);
+    xmlSetProp(tree, "name", mode.format->name);
+    tree=xmlNewChild(doc->children, NULL, "flags", NULL);
+    sprintf(buf, "%u", (unsigned int) mode.flags);
+    xmlSetProp(tree, "value", buf);
+    tree=xmlNewChild(doc->children, NULL, "interval", NULL);
+    sprintf(buf, "%ld", (long) mode.flags);
+    xmlSetProp(tree, "value", buf);
+    tree=xmlNewChild(doc->children, NULL, "user-format", user_defined);
+    tree=xmlNewChild(doc->children, NULL, "applet", NULL);
+    sprintf(buf, "%d", (int) mode.init_size);
+    xmlSetProp(tree, "initial-size", buf);
+  
+#if LIBXML_VERSION > 20400
+    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
+#else
+    out=fopen(fname, "w");
+    if(out) {
+      xmlDocDump(out, doc);
+      
+      fclose(out);
+      ok=TRUE;
+    } else {
+      ok=FALSE;
+    }
+#endif
+    if(ok) 
+      time(&config_time);
+
+    g_free(fname);
+  }
+}
+
 /* Write the config to a file */
 static void write_config(void)
 {
+#if 0
   gchar *fname;
 
   fname=choices_find_path_save("options", PROJECT, TRUE);
@@ -653,12 +683,122 @@ static void write_config(void)
 
     g_free(fname);
   }
+#else
+  write_config_xml();
+#endif
+}
+
+static gboolean read_config_xml(void)
+{
+  guchar *fname;
+
+  fname=choices_find_path_load("options.xml", PROJECT);
+
+  if(fname) {
+#if defined(HAVE_SYS_STAT_H)
+    struct stat statb;
+#endif
+    Mode nmode;
+    xmlDocPtr doc;
+    xmlNodePtr node, root;
+    const xmlChar *string;
+
+    nmode=mode;
+    
+#ifdef HAVE_STAT
+    if(stat(fname, &statb)==0) {
+      config_time=statb.st_mtime;
+    }
+#else
+    time(&config_time);
+#endif
+
+    doc=xmlParseFile(fname);
+    if(!doc) {
+      g_free(fname);
+      return FALSE;
+    }
+
+    root=xmlDocGetRootElement(doc);
+    if(!root) {
+      g_free(fname);
+      xmlFreeDoc(doc);
+      return FALSE;
+    }
+
+    if(strcmp(root->name, "Clock")!=0) {
+      g_free(fname);
+      xmlFreeDoc(doc);
+      return FALSE;
+    }
+
+    for(node=root->xmlChildrenNode; node; node=node->next) {
+      const xmlChar *string;
+      
+      if(node->type!=XML_ELEMENT_NODE)
+	continue;
+
+      if(strcmp(node->name, "format")==0) {
+	int i;
+	
+	string=xmlGetProp(node, "name");
+	if(!string)
+	  continue;
+
+	for(i=0; formats[i].name; i++)
+	  if(strcmp(string, formats[i].name)==0)
+	    break;
+	if(formats[i].name)
+	  nmode.format=formats+i;
+	free(string);
+	
+      } else if(strcmp(node->name, "flags")==0) {
+ 	string=xmlGetProp(node, "value");
+	if(!string)
+	  continue;
+	nmode.flags=atoi(string);
+	free(string);
+
+      } else if(strcmp(node->name, "interval")==0) {
+ 	string=xmlGetProp(node, "value");
+	if(!string)
+	  continue;
+	nmode.interval=atol(string);
+	free(string);
+
+      } else if(strcmp(node->name, "user-format")==0) {
+	string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+	if(!string)
+	  continue;
+	strncpy(user_defined, string, sizeof(user_defined));
+	free(string);
+
+      } else if(strcmp(node->name, "applet")==0) {
+ 	string=xmlGetProp(node, "initial-size");
+	if(!string)
+	  continue;
+	nmode.init_size=atoi(string);
+	free(string);
+
+      }
+    }
+    
+    if(nmode.init_size<16)
+      nmode.init_size=16;
+    set_mode(&nmode);
+    
+    g_free(fname);
+    return TRUE;
+  }
 }
 
 /* Read in the config */
 static void read_config(void)
 {
   guchar *fname;
+
+  if(read_config_xml())
+    return;
 
   fname=choices_find_path_load("options", PROJECT);
 
@@ -747,11 +887,6 @@ static void read_config(void)
 	nmode.init_size=16;
       set_mode(&nmode);
     }
-#if SUPPORT_OLD_CONFIG
-    else {
-      read_old_config();
-    }
-#endif
     
     g_free(fname);
   }
@@ -768,7 +903,9 @@ static void check_config(void)
     return;
   }
   
-  fname=choices_find_path_load("options", PROJECT);
+  fname=choices_find_path_load("options.xml", PROJECT);
+  if(!fname)
+    fname=choices_find_path_load("options", PROJECT);
   dprintf(5, "%p: %s", fname, fname? fname: "NULL");
 
   if(fname) {
@@ -1244,87 +1381,6 @@ static void setup_sprite(void)
 
 #endif /* EXTRA_FUN */
 
-#if SUPPORT_OLD_CONFIG
-/* Read in the config */
-static void read_old_config(void)
-{
-  guchar *fname;
-
-  fname=choices_find_path_load("config", PROJECT);
-
-  if(fname) {
-    FILE *in;
-
-    in=fopen(fname, "r");
-    if(in) {
-#if defined(HAVE_SYS_STAT_H)
-      struct stat statb;
-#endif
-      char buf[1024], *line;
-      char *end;
-      gchar *words;
-
-#ifdef HAVE_FSTAT
-      if(fstat(fileno(in), &statb)==0) {
-	config_time=statb.st_mtime;
-      }
-#else
-#ifdef HAVE_STAT
-      if(stat(fname, &statb)==0) {
-	config_time=statb.st_mtime;
-      }
-#else
-      time(&config_time);
-#endif
-#endif
-
-      do {
-	line=fgets(buf, sizeof(buf), in);
-	if(!line)
-	  break;
-	end=strchr(line, '\n');
-	if(end)
-	  *end=0;
-	end=strchr(line, '#');  /* everything after # is a comment */
-	if(end)
-	  *end=0;
-
-	words=g_strstrip(line);
-	if(words[0]) {
-	  gchar *var, *val;
-
-	  end=strchr(words, '=');
-	  if(end) {
-	    /* var = val */
-	    val=g_strstrip(end+1);
-	    *end=0;
-	    var=g_strstrip(words);
-
-	    if(strcmp(var, "mode")==0) {
-	      int i;
-
-	      for(i=0; old_modes[i].name; i++)
-		if(strcmp(val, old_modes[i].name)==0)
-		  break;
-	      if(old_modes[i].name) 
-		set_mode(&old_modes[i].mode);
-	      
-	    } else if(strcmp(var, "user_format")==0) {
-	      strncpy(user_defined, val, sizeof(user_defined));
-	    }
-	  }
-	}
-	
-      } while(!feof(in));
-
-      fclose(in);
-    }
-
-    g_free(fname);
-  }
-}
-
-#endif
 
 /* Show the info window */
 static void show_info_win(void)
@@ -1342,6 +1398,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.14  2001/08/20 15:18:13  stephen
+ * Switch to using ROX-CLib.
+ *
  * Revision 1.13  2001/07/18 10:42:29  stephen
  * Improved debug output
  *

@@ -3,13 +3,13 @@ XML_CONFIG = @XML_CONFIG@
 SHELL = @SHELL@
 srcdir = @srcdir@
 PLATFORM_DIR = @bindir@
-LIBS = @GDK_PIXBUF_LIBS@ 
+LIBS = @GDK_PIXBUF_LIBS@ `${XML_CONFIG} --libs`
 .SUFFIXES:
 .SUFFIXES: .c .o
 ROX_CLIB = @ROX_RUN@ ROX-CLib
 
 CC = @CC@
-CFLAGS = @CFLAGS@ `${GTK_CONFIG} --cflags` -I. `${ROX_CLIB} --cflags`
+CFLAGS = @CFLAGS@ `${GTK_CONFIG} --cflags` -I. `${ROX_CLIB} --cflags` `${XML_CONFIG} --cflags`
 LDFLAGS = @LDFLAGS@ `${GTK_CONFIG} --libs` ${LIBS} `${ROX_CLIB} --libs`
 EXEC = ${PLATFORM_DIR}/${PROG}
 

@@ -1,6 +1,11 @@
 Changes to Clock
 ================
 
+1.1.2
+-----
+Configuration and alarms now saved in XML format, old format still supported
+when reading.
+
 1.1.1
 -----
 Small changes to compilation system.

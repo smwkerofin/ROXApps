@@ -26,6 +26,12 @@ The user-defined format for the text below the clock face is in
 strfime(3) format.  Consult the man page for that function to find out
 how to set up various formats.
 
+When re-scheduling a repeating alarm with the option "Follow timezone"
+set then when the time zone changes, due to daylight savings changes,
+Clock will attempt to correct the alarm time.  Otherwise it will go
+off an hour early/late.  This facility is not well tested (because it
+only happens twice a year!).
+
 If you have multiple copies of Clock running (say one in a window and
 one on a panel) and an alarm is due to go off then each copy of Clock
 will display the alarm.
