@@ -1,6 +1,10 @@
 Changes to ROX-CLib by Version
 ==============================
 
+0.1.3
+-----
+DnD: fixed bug where we were getting the drag twice.
+
 0.1.2
 -----
 DnD: Added function to free list of local paths.
