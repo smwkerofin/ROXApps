@@ -1,5 +1,5 @@
 /*
- * $Id: rox.h,v 1.4 2004/03/10 22:40:35 stephen Exp $
+ * $Id: rox.h,v 1.5 2004/05/22 17:03:57 stephen Exp $
  *
  * rox.h - Top level header for ROX-CLib
  */
@@ -39,10 +39,19 @@ extern const char *rox_clib_version_string(void);
 extern int rox_clib_gtk_version_number(void);
 extern const char *rox_clib_gtk_version_string(void);
 
+/* Window counting */
+extern void rox_add_window(GtkWidget *window);
+extern int rox_get_n_windows(void);
+
+extern void rox_mainloop(void);
+
 #endif
 
 /*
  * $Log: rox.h,v $
+ * Revision 1.5  2004/05/22 17:03:57  stephen
+ * Added AppInfo parser
+ *
  * Revision 1.4  2004/03/10 22:40:35  stephen
  * Get the .DirIcon in rox_init and set it as default icon for windows
  *

@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.5 2004/05/22 17:03:57 stephen Exp $
+ * $Id: rox.c,v 1.6 2004/06/21 21:09:02 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -115,8 +115,45 @@ const char *rox_clib_gtk_version_string(void)
   return buf;
 }
 
+/* Window counting */
+static int num_windows=0;
+static int in_mainloops=0;
+
+static void window_destroy(GtkWidget *win, gpointer udata)
+{
+  if(num_windows<1)
+    rox_debug_printf(1, "num_windows=%d when destroying %p", num_windows,
+		     win);
+  num_windows--;
+  if(num_windows==0 && in_mainloops)
+    gtk_main_quit();
+}
+
+void rox_add_window(GtkWidget *window)
+{
+  num_windows++;
+  g_signal_connect(window, "destroy", G_CALLBACK(window_destroy), NULL);
+}
+
+int rox_get_n_windows(void)
+{
+  return num_windows;
+}
+
+void rox_mainloop(void)
+{
+  in_mainloops++;
+  while(num_windows>0)
+    gtk_main();
+  in_mainloops--;
+}
+
+
 /*
  * $Log: rox.c,v $
+ * Revision 1.6  2004/06/21 21:09:02  stephen
+ * rox_init calls mime_init
+ *
  * Revision 1.5  2004/05/22 17:03:57  stephen
  * Added AppInfo parser
  *

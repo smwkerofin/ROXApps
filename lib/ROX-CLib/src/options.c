@@ -1,5 +1,5 @@
 /*
- * $Id: options.c,v 1.1 2003/04/16 09:01:19 stephen Exp $
+ * $Id: options.c,v 1.2 2003/05/24 10:01:37 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -830,6 +830,7 @@ static GtkWidget *build_window_frame(GtkTreeView **tree_view)
 	char		*string, *save_path;
 
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	rox_add_window(window);
 
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
 	gtk_window_set_title(GTK_WINDOW(window), _("Options"));
@@ -1762,6 +1763,9 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: options.c,v $
+ * Revision 1.2  2003/05/24 10:01:37  stephen
+ * Fix bug in options.  Improve configure.in.
+ *
  * Revision 1.1  2003/04/16 09:01:19  stephen
  * Added options code from filer
  *

@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.16 2004/09/25 10:59:10 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.17 2004/10/23 11:39:35 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -53,6 +53,12 @@ into your app dir.
 to your compile line, e.g.
 <pre>   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"</pre>
     <pre>   gcc `$ROX_CLIB --cflags` -c main.c </pre>
+
+<p>You should include the main file:
+<pre>
+   #include &lt;rox/rox.h&gt;
+</pre>
+and any of the others you need.
 
 <p>Add the output of
 <pre>   ROX-CLib --cflags
@@ -208,12 +214,40 @@ to your link line, e.g.
 	</p>
 
       <dt>
-	<code>const char *rox_clib_gtk+version_string(void)</code>
+	<code>const char *rox_clib_gtk_version_string(void)</code>
 
       <dd><p>
 	  Returns a string of the version number of the GTK+ library
 	  ROX-CLib is 
 	  linked against.
+	</p>
+
+      <dt>
+	<code>void rox_add_window(GtkWidget *window)</code>
+
+      <dd><p>
+	  Registers the window with the window counting system.  When
+									  the
+window is destoyed it will automatically be de-registered.
+	</p>
+
+      <dt>
+	<code>int rox_get_n_windows(void)</code>
+
+      <dd><p>
+	  Returns the number of windows registered.
+	</p>
+
+      <dt>
+	<code>void rox_mainloop(void)</code>
+
+      <dd><p>
+	  This behaves as <code>gtk_main()</code>, except that it
+will return when the number of registered windows reaches zero.  If
+there are no registered windows when called it will return
+										  immediately.
+(Opening an options window via <code>options_show()</code> registers
+a window).
 	</p>
     </dl>
 
@@ -1082,6 +1116,7 @@ The 'section' elements can be nested.</p>
 	font.</p>
 </dl>
 </p>
+<p>The new window is registered using <code>rox_add_window()</code>
 </dl>
 
 <h4><a name="basedir.h">basedir.h</a></h4>
@@ -1532,7 +1567,7 @@ status of the command used to launch.
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Mon Sep 27 22:41:08 BST 2004
+Last modified: Sat Oct 23 12:48:28 BST 2004
 <!-- hhmts end -->
   </body>
 </html>
