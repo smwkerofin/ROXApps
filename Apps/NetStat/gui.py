@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.10 2003/06/09 17:29:11 stephen Exp $
+# $Id: gui.py,v 1.11 2003/09/15 12:02:41 stephen Exp $
 
 import os
 import sys
@@ -15,6 +15,7 @@ import netstat
 import rox.Menu
 import rox.applet
 import rox.options
+import rox.InfoWin
 
 from sockwin import SocketsWindow
 
@@ -26,21 +27,6 @@ else:
     xid=None
 
 app_dir=os.path.dirname(sys.argv[0])
-version=''
-from xml.dom.minidom import parse
-doc=parse(os.path.join(app_dir, 'AppInfo.xml'))
-about=doc.getElementsByTagName("About")
-def get_text(node):
-    t=''
-    for sub in node.childNodes:
-        if sub.nodeType==node.TEXT_NODE:
-            t+=sub.data
-    return t
-for a in about:
-    for node in a.childNodes:
-        if node.nodeType==node.ELEMENT_NODE:
-            if node.tagName=='Version':
-                version=get_text(node)
 
 stats=netstat.NetStat()
 
@@ -123,10 +109,6 @@ win.set_size_request(wsize, wsize)
 win.set_border_width(2)
 
 style=win.get_style()
-#print style
-#print dir(style)
-#print style.base_gc, dir(style.base_gc)
-#print style.base_gc()
 
 vbox=g.VBox()
 win.add(vbox)
@@ -148,17 +130,10 @@ menu=rox.Menu.Menu('main', [
     ('/Quit', 'do_quit', '')
     ])
 
-import InfoWin
-iw=InfoWin.InfoWin('NetStat', 'Monitor network activity',
-           version,
-           'Stephen Watson', 'http://www.kerofin.demon.co.uk/rox/')
-iw.connect('delete_event', lambda iw: iw.hide())
-
 class MenuHelper:
     def show_info(unused):
-        iw.show()
-        #import rox.InfoWin
-        #rox.InfoWin.infowin('NetStat')
+        import rox.InfoWin
+        rox.InfoWin.infowin('NetStat')
     def do_quit(unused):
         rox.toplevel_unref()
     def edit_options(unused):
