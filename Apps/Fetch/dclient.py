@@ -108,6 +108,9 @@ class Manager:
         this slot."""
         self.object.connect_to_signal('slot_available', fn)
 
+    def showOptions(self):
+        self.object.ShowOptions()
+
 def connect(start=False):
     """Make connection to DownloadManager.
     start - if True and the DownloadManager is not running attempt to start it
