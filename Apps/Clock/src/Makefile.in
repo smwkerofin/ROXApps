@@ -29,7 +29,6 @@ ${EXEC}: ${PROG}
 ${PROG}: ${OBJECTS}
 	${CC} -o ${PROG} ${OBJECTS} ${LDFLAGS}
 
-
 ${PLATFORM_DIR}:
 	mkdir "${PLATFORM_DIR}"
 
