@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.1.1.1 2001/07/17 14:39:02 stephen Exp $
+ * $Id: main.c,v 1.2 2001/09/12 13:50:44 stephen Exp $
  */
 #include "config.h"
 
@@ -30,11 +30,15 @@
 #include <gtk/gtk.h>
 #include "infowin.h"
 
+#include <libxml/tree.h>
+#include <libxml/parser.h>
+
 #include "choices.h"
 #define DEBUG              1   /* Allow debug output */
 #include "rox_debug.h"
 #include "rox_dnd.h"
 #include "gtksavebox.h"
+#include "rox_resources.h"
 
 #define PROMPT_UTIL "promptArgs.py"
 
@@ -44,6 +48,8 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 static void show_info_win(void);        /* Show information box */
 static void read_config(void);          /* Read configuration */
 static void write_config(void);         /* Write configuration */
+static gboolean read_config_xml(void);  /* Read XML configuration */
+static void write_config_xml(void);     /* Write XML configuration */
 
 static gboolean app_dropped(GtkWidget *, GSList *uris, gpointer data,
 			    gpointer udata);
@@ -86,7 +92,7 @@ int main(int argc, char *argv[])
   setlocale(LC_TIME, "");
   setlocale (LC_ALL, "");
 #endif
-  /* What is the directory where our resources are? (set by AppletRun) */
+  /* What is the directory where our resources are? (set by AppRun) */
   app_dir=g_getenv("APP_DIR");
 #ifdef HAVE_BINDTEXTDOMAIN
   /* More (untested) i18n support */
@@ -153,7 +159,11 @@ int main(int argc, char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
   gtk_widget_show(label);
 
-  icon_path=g_strconcat(app_dir, "/pixmaps/application.xpm", NULL);
+  icon_path=rox_resources_find(PROJECT, "application.xpm",
+			       ROX_RESOURCES_DEFAULT_LANG);
+  if(!icon_path)
+    icon_path=g_strconcat(app_dir, "/pixmaps/application.xpm", NULL);
+  dprintf(3, "icon_path=%s", icon_path);
   pixmap = gdk_pixmap_create_from_xpm(GTK_WIDGET(win)->window,  &mask,
 				      NULL, icon_path);
   prog_icon=gtk_pixmap_new(pixmap, mask);
@@ -352,6 +362,8 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   prompt=gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(prompt_args));
   mleaf=g_basename(pathname);
 
+  dprintf(1, "Creating %s (%s)", pathname, mleaf);
+
   if(mkdir(pathname, 0777)!=0) {
     rox_error("Failed to make %s\n%s", pathname, strerror(errno));
     return GTK_XDS_SAVE_ERROR;
@@ -367,10 +379,12 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
       g_free(cmd);
       return GTK_XDS_SAVE_ERROR;
     }
+    dprintf(2, "Copied %s as icon", src);
     g_free(fname);
     g_free(cmd);
   }
 
+  dprintf(2, "Making AppRun");
   fname=g_strconcat(pathname, "/AppRun", NULL);
   out=fopen(fname, "w");
   if(!out) {
@@ -396,6 +410,7 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   chmod(fname, 0755);
   g_free(fname);
 
+  dprintf(2, "Making AppInfo.xml");
   fname=g_strconcat(pathname, "/AppInfo.xml", NULL);
   out=fopen(fname, "w");
   if(!out) {
@@ -417,7 +432,8 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   src=gtk_editable_get_chars(GTK_EDITABLE(prog_help), 0, -1);
   if(src && src[0]) {
     fname=g_strconcat(pathname, "/Help", NULL);
-    cmd=g_strdup_printf("cp -r %s %s", src, pathname);
+    dprintf(2, "Copy help directory from %s to %s", src, fname);
+    cmd=g_strdup_printf("cp -r %s %s", src, fname);
     if(system(cmd)!=0) {
       rox_error("Failed to make help files\n%s", strerror(errno));
     }
@@ -429,13 +445,9 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   if(prompt) {
     gchar *loc;
 
-    loc=choices_find_path_load(PROMPT_UTIL, PROJECT);
-    if(!loc) {
-      gchar *app_dir=getenv("APP_DIR");
-      if(app_dir)
-	loc=g_strconcat(app_dir, "/", PROMPT_UTIL, NULL);
-    }
+    loc=rox_resources_find(PROJECT, PROMPT_UTIL, ROX_RESOURCES_DEFAULT_LANG);
     if(loc) {
+      dprintf(2, "Copy prompt utility from %s", loc);
       cmd=g_strdup_printf("cp %s %s", loc, pathname);
       if(system(cmd)!=0) {
 	rox_error("Failed to copy prompt utility\n%s", strerror(errno));
@@ -508,9 +520,48 @@ static void begin_save(GtkWidget *widget, gpointer data)
   gtk_widget_show(save);
 }
 
+static void write_config_xml(void)
+{
+  gchar *fname;
+  gboolean ok;
+
+  fname=choices_find_path_save("options.xml", PROJECT, TRUE);
+  dprintf(2, "save to %s", fname? fname: "NULL");
+
+  if(fname) {
+    xmlDocPtr doc;
+    xmlNodePtr tree;
+    FILE *out;
+    char buf[80];
+
+    doc = xmlNewDoc("1.0");
+    doc->children=xmlNewDocNode(doc, NULL, "AppFactory", NULL);
+    xmlSetProp(doc->children, "version", VERSION);
+
+    /* Insert data here */
+  
+#if LIBXML_VERSION > 20400
+    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
+#else
+    out=fopen(fname, "w");
+    if(out) {
+      xmlDocDump(out, doc);
+            
+      fclose(out);
+      ok=TRUE;
+    } else {
+      ok=FALSE;
+    }
+#endif
+
+    g_free(fname);
+  }
+}
+
 /* Write the config to a file. We have no config to save, but you might...  */
 static void write_config(void)
 {
+#if 0
   gchar *fname;
 
   /* Use the choices system to get the name to save to */
@@ -538,12 +589,62 @@ static void write_config(void)
 
     g_free(fname);
   }
+#else
+  write_config_xml();
+#endif
+}
+
+static gboolean read_config_xml(void)
+{
+  guchar *fname;
+
+  fname=choices_find_path_load("options.xml", PROJECT);
+
+  if(fname) {
+    xmlDocPtr doc;
+    xmlNodePtr node, root;
+    const xmlChar *string;
+    
+    doc=xmlParseFile(fname);
+    if(!doc) {
+      g_free(fname);
+      return FALSE;
+    }
+
+    root=xmlDocGetRootElement(doc);
+    if(!root) {
+      g_free(fname);
+      xmlFreeDoc(doc);
+      return FALSE;
+    }
+
+    if(strcmp(root->name, "AppFactory")!=0) {
+      g_free(fname);
+      xmlFreeDoc(doc);
+      return FALSE;
+    }
+
+    for(node=root->xmlChildrenNode; node; node=node->next) {
+      const xmlChar *string;
+      
+      if(node->type!=XML_ELEMENT_NODE)
+	continue;
+
+      /* Process data here */
+    }
+    
+    g_free(fname);
+    return TRUE;
+  }
 }
 
 /* Read in the config.  Again, nothing defined for this demo  */
 static void read_config(void)
 {
   guchar *fname;
+
+  if(read_config_xml())
+    return;
 
   /* Use the choices system to locate the file to read */
   fname=choices_find_path_load("options", PROJECT);
