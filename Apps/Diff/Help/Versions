@@ -1,6 +1,10 @@
 Versions of Diff
 ================
 
+1.0.0
+-----
+Added support for shared ROX-CLib.
+
 0.1.2
 -----
 Added -h and -v options.

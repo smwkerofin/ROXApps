@@ -8,7 +8,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.3 2001/12/21 09:54:26 stephen Exp $
+ * $Id: main.c,v 1.4 2002/01/30 10:17:41 stephen Exp $
  */
 #include "config.h"
 
@@ -121,6 +121,7 @@ static void do_version(void)
   printf("Distributed under the terms of the GNU General Public License.\n");
   printf("(See the file COPYING in the Help directory).\n");
   printf("%s last compiled %s\n", __FILE__, __DATE__);
+  printf("ROX-CLib version %s\n", rox_clib_version_string());
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
@@ -873,6 +874,9 @@ static void show_diffs(DiffWindow *win)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.4  2002/01/30 10:17:41  stephen
+ * Added -h and -v options.
+ *
  * Revision 1.3  2001/12/21 09:54:26  stephen
  * Added some debug lines (not ready for new release yet).
  *
