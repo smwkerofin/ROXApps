@@ -1,6 +1,14 @@
 Fetch
 =====
 
+13-Nov-2004
+~~~~~~~~~~~
+Improvements to the file type icon display.
+
+30-Oct-2004
+~~~~~~~~~~~
+Display the icon for the file type, if we can.
+
 25-Sep-2004 (0.0.5)
 ~~~~~~~~~~~
 More ways to avoid blocking reads.  Better report of partial download when 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.9 2004/08/28 15:09:35 stephen Exp $
+# $Id: AppRun,v 1.10 2004/09/25 10:41:00 stephen Exp $
 
 import os, sys
 import time
@@ -21,6 +21,9 @@ rox.app_options.notify()
 
 bsize=4096
 stimeo=5*60
+
+unknown_type=rox.mime.lookup('text/plain')
+html_type=rox.mime.lookup('text/html')
 
 def run_main():
     while rox.g.events_pending():
@@ -55,6 +58,7 @@ class FetchWindow(rox.Dialog):
         self.start_time=None
         self.size=0
         self.con=None
+        self.bad_fetch=0 # 1=maybe, 2=yes
         
         rox.Dialog.__init__(self)
         self.set_title(self.url)
@@ -63,7 +67,7 @@ class FetchWindow(rox.Dialog):
 
         vbox=self.vbox
 
-        table=rox.g.Table(9, 2)
+        table=rox.g.Table(9, 3)
         vbox.pack_start(table, padding=4)
 
         line=0
@@ -74,7 +78,7 @@ class FetchWindow(rox.Dialog):
         l=rox.g.Label(self.url)
         l.set_line_wrap(True)
         l.set_alignment(0., 0.5)
-        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        table.attach(l, 2, 3, line, line+1, xpadding=2)
 
         line+=1
         l=rox.g.Label(_('<b>Size</b>'))
@@ -83,7 +87,7 @@ class FetchWindow(rox.Dialog):
         table.attach(l, 0, 1, line, line+1, xpadding=2)
         l=rox.g.Label('')
         l.set_alignment(0., 0.5)
-        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        table.attach(l, 2, 3, line, line+1, xpadding=2)
         self.size_l=l
 
         line+=1
@@ -91,9 +95,11 @@ class FetchWindow(rox.Dialog):
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
+        self.stype_icon=rox.g.Image()
+        table.attach(self.stype_icon, 1, 2, line, line+1, xpadding=2)
         l=rox.g.Label('')
         l.set_alignment(0., 0.5)
-        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        table.attach(l, 2, 3, line, line+1, xpadding=2)
         self.type_l=l
 
         line+=1
@@ -101,10 +107,20 @@ class FetchWindow(rox.Dialog):
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
+        self.ltype_icon=rox.g.Image()
         ltype=rox.mime.get_type_by_name(self.target)
+        if ltype:
+            icon=ltype.get_icon(rox.mime.ICON_SIZE_SMALL)
+            if icon:
+                self.ltype_icon.set_from_pixbuf(icon)
+            icon=ltype.get_icon(rox.mime.ICON_SIZE_LARGE)
+            if icon:
+                self.set_icon(icon)
+        self.ltype=ltype
+        table.attach(self.ltype_icon, 1, 2, line, line+1, xpadding=2)
         l=rox.g.Label(str(ltype))
         l.set_alignment(0., 0.5)
-        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        table.attach(l, 2, 3, line, line+1, xpadding=2)
         self.ltype_l=l
 
         line+=1
@@ -114,20 +130,20 @@ class FetchWindow(rox.Dialog):
         table.attach(l, 0, 1, line, line+1, xpadding=2)
         l=rox.g.Label(os.getcwd()+'/')
         l.set_alignment(0., 0.5)
-        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        table.attach(l, 2, 3, line, line+1, xpadding=2)
         line+=1
         l=rox.g.Label(self.target)
         l.set_alignment(0., 0.5)
-        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        table.attach(l, 2, 3, line, line+1, xpadding=2)
 
         line+=1
         self.msg1=rox.g.Label('')
         self.msg1.set_line_wrap(True)
-        table.attach(self.msg1, 0, 2, line, line+1)
+        table.attach(self.msg1, 0, 3, line, line+1)
 
         line+=1
         self.prog=rox.g.ProgressBar()
-        table.attach(self.prog, 0, 2, line, line+1)
+        table.attach(self.prog, 0, 3, line, line+1)
 
         line+=1
         l=rox.g.Label(_('<b>Estimated time</b>'))
@@ -136,7 +152,7 @@ class FetchWindow(rox.Dialog):
         table.attach(l, 0, 1, line, line+1, xpadding=2)
         l=rox.g.Label('')
         l.set_alignment(0., 0.5)
-        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        table.attach(l, 2, 3, line, line+1, xpadding=2)
         self.etime=l
 
         line+=1
@@ -146,7 +162,7 @@ class FetchWindow(rox.Dialog):
         table.attach(l, 0, 1, line, line+1, xpadding=2)
         l=rox.g.Label('')
         l.set_alignment(0., 0.5)
-        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        table.attach(l, 2, 3, line, line+1, xpadding=2)
         self.speed=l
 
         self.connect('delete_event', self.delete_event)
@@ -235,6 +251,27 @@ class FetchWindow(rox.Dialog):
         self.prog=None
         rox.g.main_quit()
 
+    def set_server_type(self, stype_name):
+        self.type_l.set_text(stype_name)
+        if stype_name.find(';')>=0:
+            stype_name, para=stype_name.split(';', 1)
+        try:
+            stype=rox.mime.lookup(stype_name.strip())
+        except:
+            stype=unknown_type
+        if stype:
+            icon=stype.get_icon(rox.mime.ICON_SIZE_SMALL)
+            if icon:
+                self.stype_icon.set_from_pixbuf(icon)
+            if stype!=unknown_type:
+                icon=stype.get_icon(rox.mime.ICON_SIZE_LARGE)
+                if icon:
+                    self.set_icon(icon)
+
+            if stype!=self.ltype and stype==html_type:
+                self.bad_fetch=1
+        
+
     def read_some(self, source, condition, *unused):
         #print source, condition, unused
         #print self.con
@@ -252,7 +289,7 @@ class FetchWindow(rox.Dialog):
             if code=='m':
                 self.message(arg.strip())
             elif code=='t':
-                self.type_l.set_text(arg.strip())
+                self.set_server_type(arg.strip())
             elif code=='s':
                 self.size = int(arg)
                 self.report(0, self.size)
