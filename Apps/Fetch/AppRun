@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.16 2005/02/19 11:49:15 stephen Exp $
+# $Id: AppRun,v 1.17 2005/03/10 21:56:06 stephen Exp $
 
 import os, sys
 import time
@@ -26,6 +26,7 @@ rox.app_options.notify()
 #bsize=4096
 #stimeo=5*60
 tsuf='.fetching'
+delay=500
 
 unknown_type=rox.mime.lookup('text/plain')
 html_type=rox.mime.lookup('text/html')
@@ -196,7 +197,7 @@ class FetchWindow(rox.Dialog):
         self.speed=l
 
         self.connect('delete_event', self.delete_event)
-        rox.g.timeout_add(2000, self.idle_update)
+        rox.g.timeout_add(delay, self.idle_update)
 
         self.show_all()
         self.start()
@@ -390,7 +391,7 @@ class FetchWindow(rox.Dialog):
         
     def acquire(self):
         self.dl_man.register(self.on_slot_available)
-        self.wtag=rox.g.timeout_add(2000, self.waiting)
+        self.wtag=rox.g.timeout_add(delay, self.waiting)
         #rox.mainloop()
 
     def waiting(self):
@@ -498,20 +499,20 @@ class FetchWindow(rox.Dialog):
         #rox.mainloop()
         
 def main():
-    if len(sys.argv)>1:
+    if len(sys.argv)==1 or (len(sys.argv)==2 and sys.argv[1]=='-o'):
+         rox.edit_options()
+         rox.mainloop()
+        
+    else:
         url=sys.argv[1]
         local=None
         if len(sys.argv)>2:
             local=sys.argv[2]
         try:
             win=FetchWindow(url, local)
-            #rox.g.timeout_add(2*1000, win.update)
             rox.mainloop()
         except:
             rox.report_exception()
-    else:
-         rox.edit_options()
-         rox.mainloop()
 
 if __name__=='__main__':
     main()
