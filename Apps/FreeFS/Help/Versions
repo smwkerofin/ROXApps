@@ -1,6 +1,11 @@
 Versions of FreeFS
 ==================
 
+0.1.7
+-----
+Improved applet appearance for top and bottom panels.  Support menu 
+accelerators.  Add tooltip help.
+
 0.1.6
 -----
 getopt lives in different places on different OS's.  Clicking button-1 on 
