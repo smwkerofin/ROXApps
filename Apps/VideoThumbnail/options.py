@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id$
+# $Id: options.py,v 1.1 2003/10/31 16:46:03 stephen Exp $
 
 import os
 
@@ -68,12 +68,7 @@ def options_closed(widget):
     assert options_box == widget
     options_box = None
 
-import rox.mime
-import rox.AppInfo
-
 def do_install():
-    ainfo=rox.AppInfo.AppInfo(os.path.join(rox.app_dir, 'AppInfo.xml'))
-
-    rox.mime.install_run_action(ainfo.getCanRun())
-    rox.mime.install_thumbnailer(ainfo.getCanThumbnail())
+    import rox.mime
+    rox.mime.install_from_appinfo()
     
