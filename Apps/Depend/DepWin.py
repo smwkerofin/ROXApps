@@ -1,4 +1,4 @@
-# $Id: DepWin.py,v 1.1.1.1 2004/04/17 11:34:56 stephen Exp $
+# $Id: DepWin.py,v 1.2 2004/05/12 18:46:49 stephen Exp $
 """Window"""
 
 import rox
@@ -181,8 +181,8 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
             
         else:
             rox.alert("""%s could not be found on your system.  You may need
-            to set some environment variables to locate it, install it from
-            your distribution discs or download it from a web site.""" %
+to set some environment variables to locate it, install it from
+your distribution discs or download it from a web site.""" %
                       dep.name)
             link=dep.getLink()
             if link and rox.confirm("Do you want to visit the web site '%s'?" %
