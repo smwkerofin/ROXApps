@@ -1,4 +1,4 @@
-# $Id: nethack.py,v 1.1.1.1 2001/08/22 07:44:37 stephen Exp $
+# $Id: nethack.py,v 1.2 2001/08/22 11:00:06 stephen Exp $
 #
 # Shell for running nethack
 
@@ -25,7 +25,7 @@ class NHSelProfile(GtkWindow):
 
         self.set_title("Nethack")
 
-        vbox=GtkVBox(FALSE)
+        vbox=GtkVBox(FALSE, 4)
         self.add(vbox)
 
         label=GtkLabel("Profiles")
@@ -58,7 +58,7 @@ class NHSelProfile(GtkWindow):
         
         scrw.add(self.profiles)
 
-        hbox=GtkHBox(FALSE)
+        hbox=GtkHBox(FALSE, 2)
         vbox.pack_start(hbox, FALSE, FALSE, 0)
 
         label=GtkLabel("Name")
@@ -80,7 +80,7 @@ class NHSelProfile(GtkWindow):
         hbox.pack_start(name_used, FALSE, FALSE, 0)
         self.name_used=name_used
 
-        hbox=GtkHBox(FALSE)
+        hbox=GtkHBox(FALSE, 2)
         vbox.pack_start(hbox, FALSE, FALSE, 0)
 
         label=GtkLabel("Role")
@@ -114,7 +114,7 @@ class NHSelProfile(GtkWindow):
         role_menu.set_history(0)
         self.role_menu=role_menu
 
-        hbox=GtkHBox(FALSE)
+        hbox=GtkHBox(FALSE, 2)
         vbox.pack_start(hbox, FALSE, FALSE, 0)
 
         label=GtkLabel("Race")
@@ -148,7 +148,7 @@ class NHSelProfile(GtkWindow):
         race_menu.set_history(0)
         self.race_menu=race_menu
 
-        hbox=GtkHBox(FALSE)
+        hbox=GtkHBox(FALSE, 2)
         vbox.pack_start(hbox, FALSE, FALSE, 0)
 
         def start_click(button, obj):
