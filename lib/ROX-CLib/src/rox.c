@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.3 2003/10/22 17:17:01 stephen Exp $
+ * $Id: rox.c,v 1.4 2004/03/10 22:40:35 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -16,10 +16,10 @@
 
 static gchar *program_name=NULL;
 static GdkPixbuf *program_icon=NULL;
+const gchar *app_dir=NULL;
 
 void rox_init(const char *program, int *argc, char ***argv)
 {
-  const gchar *app_dir;
   
   gtk_init(argc, argv);
 
@@ -56,6 +56,13 @@ void rox_init(const char *program, int *argc, char ***argv)
 const gchar *rox_get_program_name(void)
 {
   return program_name;
+}
+
+const gchar *rox_get_app_dir(void)
+{
+  if(!app_dir)
+    app_dir=g_getenv("APP_DIR");
+  return app_dir;
 }
 
 GdkPixbuf *rox_get_program_icon(void)
@@ -109,6 +116,9 @@ const char *rox_clib_gtk_version_string(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.4  2004/03/10 22:40:35  stephen
+ * Get the .DirIcon in rox_init and set it as default icon for windows
+ *
  * Revision 1.3  2003/10/22 17:17:01  stephen
  * Added rox_init
  *

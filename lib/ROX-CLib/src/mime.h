@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: mime.h,v 1.1 2004/03/25 13:10:40 stephen Exp $
  *
  * Shared MIME databse functions for ROX-CLib
  */
@@ -31,6 +31,7 @@ extern MIMEType *inode_unknown;
 extern void mime_init(void);
 
 extern MIMEType *mime_lookup(const char *path);
+extern MIMEType *mime_lookup_by_name(const char *name);
 extern char *mime_type_name(const MIMEType *type);
 extern const char *mime_type_comment(MIMEType *type);
 
@@ -42,6 +43,9 @@ extern int mime_get_by_content(void);
 #endif
 
 /*
- * $Log$
+ * $Log: mime.h,v $
+ * Revision 1.1  2004/03/25 13:10:40  stephen
+ * Added basedir and mime
+ *
  */
 

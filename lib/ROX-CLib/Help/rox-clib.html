@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.8 2004/04/10 10:30:52 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.9 2004/05/22 15:54:13 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -127,6 +127,16 @@ to your link line, e.g.
 	  Returns the program name, as passed to rox_init().  If
 					      rox_init() was not
 					      called then it returns NULL.
+	</p>
+
+      <dt>
+	<code>const gchar *rox_get_app_dir(void);</code>
+      <dd><p>
+
+	  Returns the program's application directory, the environment
+				      variable APP_DIR.  If
+					      APP_DIR is not defined 
+				      then it returns NULL.
 	</p>
 
       <dt>
@@ -1296,6 +1306,14 @@ before contents are checked.</p>
 not be freed or modified.
 </p></dd>
 
+<dt><code>extern MIMEType *mime_lookup_by_name(const char *name)</code></dt>
+<dd><p>Returns the MIME type object for the named type.
+							    <var>name</var>
+should be in the form <samp>media/subtype</samp>.</p>
+<p>The object returned is maintained by the MIME system and should
+not be freed or modified.
+</p></dd>
+
 <dt><code>extern char *mime_type_name(const MIMEType *type)</code></dt>
 <dd><p>Returns the name of the MIME type in the form 
 <samp>text/plain</samp>.  The returned string must be passed to
@@ -1339,11 +1357,100 @@ of the file to determine the type.  This is the default.</p>
 
 </dl>
 
+<h4><a name="appinfo.h">appinfo.h</a></h4>
+    <p>An object representing a parsed AppInfo.xml file.</p>
+
+<dl>
+      <dt><code>typedef struct _ROXAppInfo ROXAppInfo;</code></dt>
+
+      <dd><p>This type represents an AppInfo.xml.  It is derived from
+GObject.</p></dd>
+</dd>
+
+<dt><code>GObject *rox_appinfo_new(void)</code></dt>
+<dd><p>This parses the current app's AppInfo.xml file and returns a 
+pointer to a
+<code>ROXAppInfo</code> object.  If $APP_DIR is unset,
+							  $APP_DIR/AppInfo.xml is missing or not valid XML then <code>NULL</code> is returned.</p>
+<p>You should call 
+<code>g_object_unref()</code> to free this object when done.</p></dd>
+
+<dt><code>GObject *rox_appinfo_new_from_path(const gchar *<var>path</var>)</code></dt>
+<dd><p>This parses the named AppInfo.xml file and returns a 
+pointer to a
+<code>ROXAppInfo</code> object.  If <var>path</var> is missing or not valid XML then <code>NULL</code> is returned.</p>
+<p>You should call 
+<code>g_object_unref()</code> to free this object when done.</p></dd>
+
+<dt><code>void rox_appinfo_set_language(ROXAppInfo *<var>ai</var>,
+    const gchar *<var>lang</var>)</code></dt>
+<dd><p>Set the language used when parsing the AppInfo data.  If
+<var>lang</var> is <code>NULL</code> then the data returned will be
+that with no language set, otherwise the appropriate elements for the
+set language will be returned, falling back to the no language
+elements if the specific language is not found.</p></dd>
+
+<dt><code>const char *rox_appinfo_get_language(ROXAppInfo *<var>ai</var>)</code></dt>
+<dd><p>Return the language code used when parsing the AppInfo data.
+This may be <code>NULL</code> for no language set.</p></dd>
+
+<dt><code>const char *rox_appinfo_get_summary(ROXAppInfo *<var>ai</var>)</code></dt>
+<dd><p>Return the contents of the Summary element.</p></dd>
+
+<dt><code>char *rox_appinfo_get_about(ROXAppInfo *<var>ai</var>,
+const gchar *<var>element</var>)</code></dt>
+<dd><p>Return the contents of the named element in the About element.
+Pass the return value to <code>g_free()</code> when done.</p></dd>
+
+<dt><code>char *rox_appinfo_get_label(ROXAppInfo *<var>ai</var>,
+const gchar *<var>element</var>)</code></dt>
+<dd><p>Return the label for the named element in the About element in
+the current language.  If this is not set or is empty then a copy of 
+<var>element</var> is returned.
+Pass the return value to <code>g_free()</code> when done.</p></dd>
+
+<dt><code>const xmlNodePtr rox_appinfo_get_element(ROXAppInfo *<var>ai</var>,
+const gchar *<var>element</var>)</code></dt>
+<dd><p>Return the <code>xmlNode</code> object for the named element.  
+Only child elements of the root AppInfo element are searched, no
+recursive search is performed.  <code>NULL</code> is returned if no
+element was found, otherwise just the first matching entry is
+returned.  Language is not checked.</p>
+<p><code>xmlNodePtr</code> is part of libxml.</p></dd>
+
+<dt><code>GList *rox_appinfo_get_mime_type_list(ROXAppInfo *<var>ai</var>,
+const gchar *<var>element</var>)</code></dt>
+<dd><p>Returns a list of <a href="#mime.h"><code>MIMEType *</code></a>
+objects.  The mime types are listed in &lt;MimeType&gt; elements in
+the top level <var>element</var> element (found by
+<code>rox_appinfo_get_element()</code>).  See the AppInfo.xml file for
+VideoThumbnail for an example.</p></dd>
+
+<dt><code>void rox_appinfo_free_mime_type_list(
+GList *<var>list</var>)</code></dt>
+<dd><p>Free a list of <a href="#mime.h"><code>MIMEType *</code></a>
+objects, as returned by <code>rox_appinfo_get_mime_type_list()</code>.</p></dd>
+
+<dt><code>GList *rox_appinfo_get_can_run_list(ROXAppInfo *<var>ai</var>)</code></dt>
+<dd><p>Returns a list of <a href="#mime.h"><code>MIMEType *</code></a>
+objects declared in the &lt;CanRun&gt; element.  This is equivalent to
+<code>rox_appinfo_get_mime_type_list(ai, "CanRun").
+</dd></p>
+
+<dt><code>GList *rox_appinfo_get_can_thumbnail_list(ROXAppInfo *<var>ai</var>)</code></dt>
+<dd><p>Returns a list of <a href="#mime.h"><code>MIMEType *</code></a>
+objects declared in the &lt;CanThumbnail&gt; element.  This is equivalent to
+<code>rox_appinfo_get_mime_type_list(ai, "CanThumbnail").
+See the AppInfo.xml file for
+VideoThumbnail for an example.</p></dd>
+
+</dl>
+
     <hr>
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Sat May 22 16:51:22 BST 2004
+Last modified: Sat May 22 18:03:41 BST 2004
 <!-- hhmts end -->
   </body>
 </html>

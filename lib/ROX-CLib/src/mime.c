@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: mime.c,v 1.1 2004/03/25 13:10:40 stephen Exp $
  *
  * Shared MIME databse functions for ROX-CLib
  */
@@ -122,6 +122,11 @@ MIMEType *mime_lookup(const char *path)
     return type;
 
   return exec? application_executable: UNKNOWN;
+}
+
+MIMEType *mime_lookup_by_name(const char *name)
+{
+  return get_type(name, TRUE);
 }
 
 char *mime_type_name(const MIMEType *type)
@@ -427,6 +432,9 @@ static MIMEType *type_by_path(const char *path)
 }
 
 /*
- * $Log$
+ * $Log: mime.c,v $
+ * Revision 1.1  2004/03/25 13:10:40  stephen
+ * Added basedir and mime
+ *
  */
 

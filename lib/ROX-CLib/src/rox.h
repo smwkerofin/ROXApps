@@ -1,5 +1,5 @@
 /*
- * $Id: rox.h,v 1.3 2003/10/22 17:17:01 stephen Exp $
+ * $Id: rox.h,v 1.4 2004/03/10 22:40:35 stephen Exp $
  *
  * rox.h - Top level header for ROX-CLib
  */
@@ -28,6 +28,9 @@ extern const gchar *rox_get_program_name(void);
    Returns NULL if not available. */
 extern GdkPixbuf *rox_get_program_icon(void);
 
+/* Returns $APP_DIR, or NULL if not set */
+extern const gchar *rox_get_app_dir(void);
+
 /* Version number of ROX-CLib where x.y.z is encoded as xxyyzz */
 extern int rox_clib_version_number(void);
 extern const char *rox_clib_version_string(void);
@@ -40,6 +43,9 @@ extern const char *rox_clib_gtk_version_string(void);
 
 /*
  * $Log: rox.h,v $
+ * Revision 1.4  2004/03/10 22:40:35  stephen
+ * Get the .DirIcon in rox_init and set it as default icon for windows
+ *
  * Revision 1.3  2003/10/22 17:17:01  stephen
  * Added rox_init
  *

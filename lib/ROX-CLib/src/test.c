@@ -1,5 +1,5 @@
 /*
- * $Id: test.c,v 1.8 2003/10/22 17:11:14 stephen Exp $
+ * $Id: test.c,v 1.9 2004/03/25 13:10:40 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -19,6 +19,7 @@
 #include "rox_filer_action.h"
 #include "basedir.h"
 #include "mime.h"
+#include "appinfo.h"
 
 #define TEST_FILE "tmp/tmp/rm.me"
 
@@ -28,6 +29,7 @@ static void clock_open_callback(ROXSOAP *clock, gboolean status,
 static void test_soap(const char *home);
 static void test_basedir(const char *home);
 static void test_mime(const char *home);
+static void test_appinfo(const char *home);
 
 int main(int argc, char *argv[])
 {
@@ -40,6 +42,7 @@ int main(int argc, char *argv[])
   /*test_soap(home);*/
   test_basedir(home);
   test_mime(home);
+  test_appinfo(home);
 
   /*rox_error("This is an error %d", 42);*/
   
@@ -200,6 +203,78 @@ static void test_mime(const char *home)
 
   test_mime_file("Makefile");
   test_mime_file("Makefile.in");
+}
+
+static void test_appinfo_2(ROXAppInfo *ai, const char *lbl)
+{
+  gchar *l, *v;
+
+  l=rox_appinfo_get_about_label(ai, lbl);
+  v=rox_appinfo_get_about(ai, lbl);
+
+  printf("%8s: %s=%s\n", lbl, l? l: "NULL", v? v: "NULL");
+
+  g_free(l);
+  g_free(v);
+}
+
+static void test_appinfo_1(ROXAppInfo *ai)
+{
+  const char *labs[]={"Purpose", "Version", "Authors", "Author",
+		      "License", "Homepage", NULL};
+  int i;
+  const gchar *lang;
+  const gchar *summary;
+
+  lang=rox_appinfo_get_language(ai);
+  printf("Language is \"%s\"\n", lang? lang: "NULL");
+  summary=rox_appinfo_get_summary(ai);
+  printf("Summary: %s\n", summary? summary: "NULL");
+  for(i=0; labs[i]; i++)
+    test_appinfo_2(ai, labs[i]);
+}
+  
+static void test_appinfo(const char *home)
+{
+  GObject *obj;
+  ROXAppInfo *ai;
+  gchar *path;
+
+  printf("Test AppInfo parser\n");
+
+  obj=rox_appinfo_new();
+  ai=ROX_APPINFO(obj);
+
+  printf("obj=%p ai=%p ROX_IS_APPINFO(obj)=%d\n", obj, ai,
+	 ROX_IS_APPINFO(obj));
+
+  test_appinfo_1(ai);
+  rox_appinfo_set_language(ai, "it"); 
+  test_appinfo_1(ai);
+
+  g_object_unref(obj);
+
+  path=g_strdup_printf("%s/Apps/VideoThumbnail/AppInfo.xml", home);
+  obj=rox_appinfo_new_from_path(path);
+  if(obj) {
+    GList *list, *p;
+    MIMEType *type;
+    
+    ai=ROX_APPINFO(obj);
+    test_appinfo_1(ai);
+    list=rox_appinfo_get_can_thumbnail_list(ai);
+    printf("Thumbnail:\n");
+    for(p=list; p; p=g_list_next(p)) {
+      char *tname, *comm;
+      
+      type=(MIMEType *) p->data;
+      tname=mime_type_name(type);
+      comm=mime_type_comment(type);
+      printf("  %s (%s)\n", tname, comm? comm: "UNKNOWN");
+      g_free(tname);
+    }
+    g_object_unref(obj);
+  }
 }
 
 static void clock_open_callback(ROXSOAP *clock, gboolean status,
