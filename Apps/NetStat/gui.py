@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.2 2002/10/30 13:39:46 stephen Exp $
+# $Id: gui.py,v 1.3 2002/10/30 13:43:10 stephen Exp $
 
 import os
 import sys
@@ -24,8 +24,12 @@ stats=netstat.NetStat()
 # Defaults
 iface='ppp0'
 #iface='lo'
+select_cmd=None
+adjust_cmd=None
 fontname=None
 levels=(500, 50, 1, 0)
+
+pids=[]
 
 # Load config
 fname=rox.choices.load('NetStat', 'config')
@@ -42,6 +46,8 @@ try:
             continue
         if line[:eq]=='interface':
             iface=line[eq+1:]
+        elif line[:eq]=='connect':
+            select_cmd=line[eq+1:]
     inf.close()
     
 except:
@@ -100,7 +106,10 @@ menu.show_all()
 def click(widget, event, data=None):
     #print widget, event, data
     if event.button==1:
-        pass
+        if select_cmd:
+            pid=os.spawnl(os.P_NOWAIT, '/bin/sh', 'sh', '-c', select_cmd)
+            if pid>0: pids.append(pid)
+            return 1
     elif event.button==3:
         menu.popup(None, None, None, event.button, event.time)
         return 1
@@ -175,3 +184,6 @@ tag=g.timeout_add(1000, update)
 
 win.show_all()
 g.mainloop()
+
+for pid in pids:
+    os.waitpid(pid, 0)
