@@ -3,7 +3,7 @@
   <Summary>C library for ROX apps</Summary>
   <About>
     <Purpose>C library for ROX apps</Purpose>
-        <Version>1.1.0 (16th April 2003)</Version>
+        <Version>1.1.1 (24rd May 2003)</Version>
     <Authors>Stephen Watson, Thomas Leonard</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
