@@ -15,5 +15,8 @@ activity.
 Number of packets per second that indicates a medium level of
 activity.
 </numentry>
+<numentry name='wsize' label='Window size' min='8' max='128'>
+Size of the display window.
+</numentry>
 </section>
 </options>

@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.7 2002/12/14 17:25:47 stephen Exp $
+# $Id: gui.py,v 1.8 2003/03/21 14:35:31 stephen Exp $
 
 import os
 import sys
@@ -15,6 +15,8 @@ import netstat
 import rox.Menu
 import rox.applet
 import rox.options
+
+#import gc; gc.set_debug(gc.DEBUG_LEAK)
 
 if len(sys.argv)>2 and sys.argv[1]=='-a':
     xid=long(sys.argv[2])
@@ -45,6 +47,7 @@ iface='ppp0'
 select_cmd=''
 adjust_cmd=''
 levels=[500, 50, 1, 0]
+wsize=48
 
 pids=[]
 
@@ -78,8 +81,10 @@ connect=rox.options.Option('connect', select_cmd)
 disconnect=rox.options.Option('disconnect', adjust_cmd)
 medium_level=rox.options.Option('medium', levels[1])
 high_level=rox.options.Option('high', levels[0])
+win_size=rox.options.Option('wsize', wsize)
 
 ifdisp=None
+win=None
 
 def options_changed():
     global iface, select_cmd
@@ -97,6 +102,8 @@ def options_changed():
         levels[1]=medium_level.int_value
     if high_level.has_changed:
         levels[0]=high_level.int_value
+    if win_size.has_changed and win:
+        win.set_size_request(win_size.int_value, win_size.int_value)
 
 rox.app_options.add_notify(options_changed)
 
@@ -110,9 +117,8 @@ else:
 #win.connect('destroy', g.mainquit)
 
 # Choose a nice small size for our applet...
-wsize=48
 win.set_size_request(wsize, wsize)
-win.set_border_width(4)
+win.set_border_width(2)
 
 style=win.get_style()
 #print style
@@ -178,7 +184,7 @@ def click(widget, event, data=None):
                     g.timeout_add(10000, reap)
             return 1
     elif event.button==2:
-        if adjust_cmd and len(adkist_cmd)>1:
+        if adjust_cmd and len(adjust_cmd)>1:
             pid=os.spawnl(os.P_NOWAIT, '/bin/sh', 'sh', '-c', adjust_cmd)
             if pid>0:
                 pids.append(pid)
@@ -215,6 +221,8 @@ off=cmap.alloc_color('#000000')
 colours=(high, medium, low, off)
 
 pfd=pango.FontDescription('Sans bold %d' % (wsize-16))
+layout=can.create_pango_layout('?')
+layout.set_font_description(pfd)
 
 def draw_arrow(drawable, gc, pts, act):
     tmp=gc.foreground
@@ -239,7 +247,7 @@ def expose(widget, event):
                                        area,
                                        0, 0, width, height)
     except:
-        print sys.exc_info()[:2]
+        #print sys.exc_info()[:2]
         widget.window.draw_rectangle(gc, 1, 0, 0, width, height)
 
     act=stats.getCurrent(iface)
@@ -267,11 +275,7 @@ def expose(widget, event):
     else:
         tmp=gc.foreground
         gc.foreground=red
-        layout=widget.create_pango_layout('?')
-        #layout.set_text('?', -1)
-        layout.set_font_description(pfd)
         w, h=layout.get_pixel_size()
-        #print w, h, width, mid
         x=(width-w)/2
         y=(height-h)/2
         widget.window.draw_layout(gc, x, y, layout)
