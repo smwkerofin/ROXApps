@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<AppInfo>
+  <About>
+    <Purpose>Manage printers and jobs.</Purpose>
+    <Authors>Stephen Watson</Authors>
+    <License>GNU General Public License</License>
+    <Version>0.1.0 (21 December 2001) </Version>
+    <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
+  </About>
+  <Summary>Manage printers and jobs.</Summary>
+  <AppMenu>
+    <Item label="View printer queue" option="--queue"/>
+    <Item label="View all printer queues" option="--allqueues"/>
+    <Item label="View printer status" option="--status"/>
+  </AppMenu>
+</AppInfo>
