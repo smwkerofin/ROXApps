@@ -289,6 +289,10 @@ The four possible places for a panel, used in rox_filer_panel().
 
 This value means "use value user has selected in options".
 
+char *rox_filer_version(void);
+
+Return the version string for the current filer.   Return value should be 
+passed to g_free when done.
 
 void rox_filer_open_dir(const char *filename);
 
@@ -354,6 +358,10 @@ char *rox_filer_file_type(const char *file);
 Return a string describing the MIME type of the given file (which need not 
 exist!).  Return value should be passed to g_free when done.  If NULL is 
 returned then there was an error in communication.
+
+int rox_filer_have_error(void);
+
+Returns non-zero if an error message is available.
 
 const char *rox_filer_get_last_error(void);
 
