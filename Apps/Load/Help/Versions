@@ -1,6 +1,13 @@
 Load
 ====
 
+1.1.1
+-----
+Create menu early to enable accelerators.
+Time index the history so we can plot it right when the sample rate varies.
+Bars now have slightly different shades.  Colours can be changed.
+No longer check for changed config, not needed because of the applet menu.
+
 1.1.0
 -----
 Switch to using ROX-CLib.  Option to display hostname.
