@@ -1,7 +1,0 @@
-#!/bin/sh
-
-PATH=/usr/games:/usr/local/bin:$PATH export PATH
-
-cd `dirname $0`
-
-exec python nethack.py
