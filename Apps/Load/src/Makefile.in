@@ -1,15 +1,14 @@
-PKG_CONFIG = "@PKG_CONFIG@"
 SHELL = @SHELL@
 srcdir = @srcdir@
 PLATFORM = @with_platform@
 PLATFORM_DIR = ../${PLATFORM}
 .SUFFIXES:
 .SUFFIXES: .c .o
-ROX_CLIB = "@ROX_RUN@" ROX-CLib
+ROX_CLIB = "@ROX_CLIB_PATH@/AppRun"
 
 CC = @CC@
-CFLAGS = @CFLAGS@ `${PKG_CONFIG} --cflags gtk+-2.0 libxml-2.0 libgtop-2.0` -I. `${ROX_CLIB} --cflags`
-LDFLAGS = @LDFLAGS@ `${PKG_CONFIG} --libs gtk+-2.0 libxml-2.0 libgtop-2.0` ${LIBS} `${ROX_CLIB} --libs`
+CFLAGS = @CFLAGS@ -I. `${ROX_CLIB} --cflags`
+LDFLAGS = @LDFLAGS@ ${LIBS} `${ROX_CLIB} --libs`
 EXEC = ${PLATFORM_DIR}/${PROG}
 
 ############ Things to change for different programs
@@ -22,11 +21,15 @@ OBJECTS = load.o
 
 ############ Things to keep the same
 
-${EXEC}: ${PLATFORM_DIR} ${OBJECTS}
-	${CC} -o ${EXEC} ${OBJECTS} ${LDFLAGS}
+${EXEC}: ${PROG}
+	[ -d "${PLATFORM_DIR}" ] || mkdir "${PLATFORM_DIR}"
+	mv "${PROG}" "${EXEC}"
+
+${PROG}: ${OBJECTS}
+	${CC} -o ${PROG} ${OBJECTS} ${LDFLAGS}
 
 ${PLATFORM_DIR}:
-	mkdir ${PLATFORM_DIR}
+	mkdir "${PLATFORM_DIR}"
 
 clean:
 	rm -f *.o Makefile.bak
@@ -44,7 +47,10 @@ config.h: config.h.in
 	./config.status
 
 config.status: configure
-	./configure --with-platform=${PLATFORM}
+	APP_DIR="${srcdir}/.." ./configure --with-platform=${PLATFORM}
 
 configure: configure.in
 	autoconf
+
+${PROG}.po: $(SRCS)
+	xgettext --keyword=_ --keyword=N_ --default-domain=${PROG} $(SRCS)
