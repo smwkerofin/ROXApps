@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.7 2002/08/24 16:39:58 stephen Exp $
+ * $Id: main.c,v 1.8 2002/12/14 15:55:20 stephen Exp $
  */
 #include "config.h"
 
@@ -37,16 +37,8 @@
 #include <gtk/gtk.h>
 #include "infowin.h"
 
-#ifdef HAVE_XML
 #include <libxml/tree.h>
 #include <libxml/parser.h>
-#endif
-
-#if defined(HAVE_XML) && LIBXML_VERSION>=20400
-#define USE_XML 1
-#else
-#define USE_XML 0
-#endif
 
 #include "choices.h"
 #include "rox_debug.h"
@@ -65,11 +57,12 @@ typedef struct diff_window {
   int tag;
   int pid;
   gboolean last_was_nl;
-  GdkColor *colour;
+  GtkTextTag *ctag;
+  GtkTextTag *add, *del, *chn, *ctl;
   gboolean unified;
 } DiffWindow;
 
-static DiffWindow window;
+static DiffWindow *window;
 
 static GdkColormap *cmap;
 static GdkColor col_add={0, 0, 0x8000, 0};
@@ -94,17 +87,16 @@ typedef struct option_widgets {
 } OptionWidgets;
 
 /* Declare functions in advance */
-static void make_window(DiffWindow *win);
-static gint button_press(GtkWidget *window, GdkEventButton *bev,
-			 gpointer win); /* button press on window */
+static DiffWindow *make_window(void);
+static void add_menu_entries(GtkTextView *view, GtkMenu *menu, DiffWindow *);
+static gboolean show_menu(GtkWidget *widget, DiffWindow *window);
 static void show_info_win(void);        /* Show information box */
 static void show_choices_win(void);     /* Show configuration window */
 static void read_config(void);          /* Read configuration */
 static void write_config(void);         /* Write configuration */
-#if USE_XML
 static gboolean read_config_xml(void);
 static void write_config_xml(void);
-#endif
+
 static gboolean load_from_uri(GtkWidget *widget, GSList *uris, gpointer data,
 			      gpointer udata);
 static gboolean load_from_xds(GtkWidget *widget, const char *path,
@@ -134,22 +126,13 @@ static void do_version(void)
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
-  printf("  Using XML... ");
-  if(USE_XML)
-    printf("yes (libxml version %d)\n", LIBXML_VERSION);
-  else {
-    printf("no (");
-    if(HAVE_XML)
-      printf("libxml not found)\n");
-    else
-    printf("libxml version %d)\n", LIBXML_VERSION);
-  }
+  printf("  libxml version %d\n", LIBXML_VERSION);
 }
 
 /* Main.  Here we set up the gui and enter the main loop */
 int main(int argc, char *argv[])
 {
-  gchar *app_dir;
+  const gchar *app_dir;
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
 #endif
@@ -224,10 +207,10 @@ int main(int argc, char *argv[])
   gdk_color_alloc(cmap, &col_ctl);
 
   /* Make a window */
-  make_window(&window);
+  window=make_window();
 
   /* Show our new window */
-  gtk_widget_show(window.win);
+  gtk_widget_show(window->win);
 
   /* Main processing loop */
   gtk_main();
@@ -235,14 +218,18 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-static void make_window(DiffWindow *window)
+static DiffWindow *make_window()
 {
-  GtkWidget *win=NULL;
+  DiffWindow *window;
+  GtkWidget *win;
   GtkWidget *vbox;
   GtkWidget *hbox;
   GtkWidget *label;
   GtkWidget *text;
   GtkWidget *scrw;
+  GtkTextBuffer *buf;
+
+  window=g_new(DiffWindow, 1);
   
   /* Create window */
   win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -252,10 +239,8 @@ static void make_window(DiffWindow *window)
 		     GTK_SIGNAL_FUNC(gtk_main_quit), 
 		     "WM destroy");
 
-  /* We want to pop up a menu on a button press */
-  gtk_signal_connect(GTK_OBJECT(win), "button_press_event",
-		     GTK_SIGNAL_FUNC(button_press), win);
-  gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
+  /* We want to pop up a menu */
+  g_signal_connect(win, "popup-menu", G_CALLBACK(show_menu), window);
 
   window->win=win;
 
@@ -274,16 +259,17 @@ static void make_window(DiffWindow *window)
   gtk_widget_show(scrw);
   gtk_widget_set_usize(scrw, WIN_WIDTH, WIN_HEIGHT);
   gtk_box_pack_start(GTK_BOX(hbox), scrw, TRUE, TRUE, 2);
-  
-  text=gtk_text_new(NULL, NULL);
+
+  text=gtk_text_view_new();
   gtk_widget_set_name(text, "file 1");
-  gtk_text_set_editable(GTK_TEXT(text), FALSE);
-  gtk_text_set_word_wrap(GTK_TEXT(text), FALSE);
-  gtk_text_set_line_wrap(GTK_TEXT(text), FALSE);
+  gtk_text_view_set_editable(GTK_TEXT_VIEW(text), FALSE);
+  gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text), GTK_WRAP_NONE);
   gtk_container_add(GTK_CONTAINER(scrw), text);
   gtk_widget_show(text);
 
   rox_dnd_register_full(text, 0, load_from_uri, load_from_xds, window);
+  g_signal_connect(text, "populate-popup", G_CALLBACK(add_menu_entries),
+		   window);
   window->file[0]=text;
   
   scrw=gtk_scrolled_window_new(NULL, NULL);
@@ -291,15 +277,17 @@ static void make_window(DiffWindow *window)
   gtk_widget_set_usize(scrw, WIN_WIDTH, WIN_HEIGHT);
   gtk_box_pack_start(GTK_BOX(hbox), scrw, TRUE, TRUE, 2);
   
-  text=gtk_text_new(NULL, NULL);
+  text=gtk_text_view_new();
   gtk_widget_set_name(text, "file 2");
-  gtk_text_set_editable(GTK_TEXT(text), FALSE);
-  gtk_text_set_word_wrap(GTK_TEXT(text), FALSE);
-  gtk_text_set_line_wrap(GTK_TEXT(text), FALSE);
+  gtk_text_view_set_editable(GTK_TEXT_VIEW(text), FALSE);
+  gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text), GTK_WRAP_NONE);
   gtk_container_add(GTK_CONTAINER(scrw), text);
   gtk_widget_show(text);
 
   rox_dnd_register_full(text, 0, load_from_uri, load_from_xds, window);
+  rox_dnd_register_full(scrw, 0, load_from_uri, load_from_xds, window);
+  g_signal_connect(text, "populate-popup", G_CALLBACK(add_menu_entries),
+		   window);
   window->file[1]=text;
   
   scrw=gtk_scrolled_window_new(NULL, NULL);
@@ -307,20 +295,33 @@ static void make_window(DiffWindow *window)
   gtk_widget_set_usize(scrw, -1, WIN_HEIGHT);
   gtk_box_pack_start(GTK_BOX(vbox), scrw, TRUE, TRUE, 2);
   
-  text=gtk_text_new(NULL, NULL);
+  text=gtk_text_view_new();
   gtk_widget_set_name(text, "diffs");
-  gtk_text_set_editable(GTK_TEXT(text), FALSE);
-  gtk_text_set_word_wrap(GTK_TEXT(text), FALSE);
-  gtk_text_set_line_wrap(GTK_TEXT(text), FALSE);
+  gtk_text_view_set_editable(GTK_TEXT_VIEW(text), FALSE);
+  gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text), GTK_WRAP_NONE);
   gtk_container_add(GTK_CONTAINER(scrw), text);
   gtk_widget_show(text);
+  g_signal_connect(text, "populate-popup", G_CALLBACK(add_menu_entries),
+		   window);
+  buf=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text));
 
   window->diffs=text;
   window->last_was_nl=TRUE;
   window->unified=FALSE;
+
+  window->ctag=NULL;
+  window->add=gtk_text_buffer_create_tag(buf, "add",
+					 "foreground", "dark green", NULL);
+  window->del=gtk_text_buffer_create_tag(buf, "delete", "foreground", "red",
+					 NULL);
+  window->chn=gtk_text_buffer_create_tag(buf, "change", "foreground", "blue",
+					 NULL);
+  window->ctl=gtk_text_buffer_create_tag(buf, "control",
+					 "foreground", "orange", NULL);
+
+  return window;
 }
 
-#if USE_XML
 /*
  * Write the config to a file. We have no config to save, but you might...
  * This saves in XML mode
@@ -361,45 +362,13 @@ static void write_config_xml(void)
   }
 }
 
-#endif
 
 /* Write the config to a file */
 static void write_config(void)
 {
-#if !USE_XML
-  gchar *fname;
-
-  fname=choices_find_path_save("options", PROJECT, TRUE);
-  dprintf(2, "save to %s", fname? fname: "NULL");
-
-  if(fname) {
-    FILE *out;
-
-    out=fopen(fname, "w");
-    if(out) {
-      time_t now;
-      char buf[80];
-      
-      fprintf(out, _("# Config file for %s %s (%s)\n"), PROJECT, VERSION,
-	      AUTHOR);
-      fprintf(out, _("# Latest version at %s\n"), WEBSITE);
-      time(&now);
-      strftime(buf, 80, "%c", localtime(&now));
-      fprintf(out, _("#\n# Written %s\n\n"), buf);
-
-      fprintf(out, "font=%s\n", options.font_name);
-
-      fclose(out);
-    }
-
-    g_free(fname);
-  }
-#else
   write_config_xml();
-#endif
 }
 
-#if USE_XML
 /* Read in the config.  Again, nothing defined for this demo  */
 static gboolean read_config_xml(void)
 {
@@ -466,17 +435,14 @@ static gboolean read_config_xml(void)
     g_free(fname);
   }
 }
-#endif
 
 /* Read in the config */
 static void read_config(void)
 {
   guchar *fname;
 
-#if USE_XML
   if(read_config_xml())
     return;
-#endif
   
   fname=choices_find_path_load("options", PROJECT);
 
@@ -547,36 +513,36 @@ static void save_menus(void)
 	
   menurc = choices_find_path_save("menus", PROJECT, TRUE);
   if (menurc) {
-    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+    gtk_accel_map_save(menurc);
     g_free(menurc);
   }
 }
 
 /* Create the pop-up menu */
-static GtkWidget *menu_create_menu(GtkWidget *window)
+static GtkWidget *menu_create_menu(GtkWidget *window, const gchar *name)
 {
   GtkWidget *menu;
-  GtkItemFactory	*item_factory;
+  static GtkItemFactory *item_factory;
   GtkAccelGroup	*accel_group;
   gint 		n_items = sizeof(menu_items) / sizeof(*menu_items);
   gchar *menurc;
 
   accel_group = gtk_accel_group_new();
 
-  item_factory = gtk_item_factory_new(GTK_TYPE_MENU, "<system>", 
+  item_factory = gtk_item_factory_new(GTK_TYPE_MENU, name, 
 				      accel_group);
 
   gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
 
   /* Attach the new accelerator group to the window. */
-  gtk_accel_group_attach(accel_group, GTK_OBJECT(window));
+  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
   /* Load any user-defined menu accelerators */
-  menu = gtk_item_factory_get_widget(item_factory, "<system>");
+  menu = gtk_item_factory_get_widget(item_factory, name);
 
   menurc=choices_find_path_load("menus", PROJECT);
   if(menurc) {
-    gtk_item_factory_parse_rc(menurc);
+    gtk_accel_map_load(menurc);
     g_free(menurc);
   }
 
@@ -586,23 +552,61 @@ static GtkWidget *menu_create_menu(GtkWidget *window)
   return menu;
 }
 
-/* Button press on our window */
-static gint button_press(GtkWidget *window, GdkEventButton *bev,
-			 gpointer win)
+static gboolean show_menu(GtkWidget *widget, DiffWindow *window)
 {
-  static GtkWidget *menu=NULL;
+  GdkEvent *event;
+  int button=0;
+  guint32 time=0;
+  static GtkWidget *popup_menu=NULL;
   
-  if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
-    /* Pop up the menu */
-    if(!menu) 
-      menu=menu_create_menu(GTK_WIDGET(win));
-    
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-				bev->button, bev->time);
-    return TRUE;
+  if(GTK_IS_TEXT_VIEW(widget))
+    return FALSE;
+
+  event=gtk_get_current_event();
+  switch(event->type) {
+  case GDK_BUTTON_PRESS:
+  case GDK_BUTTON_RELEASE:
+    {
+      GdkEventButton *bev=(GdkEventButton *) event;
+
+      button=bev->button;
+      time=bev->time;
+    }
+    break;
+  case GDK_KEY_PRESS:
+    {
+      GdkEventKey *kev=(GdkEventKey *) event;
+      time=kev->time;
+    }
+    break;
   }
 
-  return FALSE;
+  if(!popup_menu) 
+    popup_menu=menu_create_menu(GTK_WIDGET(window->win), "<system>");
+    
+  gtk_menu_popup(GTK_MENU(popup_menu), NULL, NULL, NULL, NULL,
+		 button, time);
+  
+  return TRUE;
+}
+
+static void add_menu_entries(GtkTextView *view, GtkMenu *menu,
+			     DiffWindow *window)
+{
+  GtkWidget *popup_menu;
+  GtkWidget *sep, *item;
+
+  popup_menu=menu_create_menu(window->win, "<text>");
+    
+  sep=gtk_separator_menu_item_new();
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), sep);
+  gtk_widget_show(sep);
+
+  item=gtk_menu_item_new_with_label(_("Diff"));
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), popup_menu);
+  gtk_widget_show(item);
+
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
 }
 
 /* Make a destroy-frame into a close, allowing us to re-use the window */
@@ -634,15 +638,16 @@ static void show_info_win(void)
 static gboolean load_window_from(GtkWidget *widget, const char *fname,
 				 DiffWindow *win)
 {
-  GtkText *text;
+  GtkTextBuffer *text;
   gboolean ok=FALSE;
   FILE *in;
   char buf[BUFSIZ];
   int nb;
   GdkFont *font=NULL;
+  GtkTextIter start, end;
   
   g_return_val_if_fail(widget!=NULL, FALSE);
-  g_return_val_if_fail(GTK_IS_TEXT(widget), FALSE);
+  g_return_val_if_fail(GTK_IS_TEXT_VIEW(widget), FALSE);
   g_return_val_if_fail(fname!=NULL, FALSE);
   g_return_val_if_fail(win!=NULL, FALSE);
 
@@ -654,26 +659,22 @@ static gboolean load_window_from(GtkWidget *widget, const char *fname,
     return FALSE;
   }
 
-  if(options.font_name)
-    font=gdk_font_load(options.font_name);
-  if(!font) 
-    font=widget->style->font;
-  gdk_font_ref(font);
-
-  text=GTK_TEXT(widget);
-  gtk_text_freeze(text);
-  gtk_editable_delete_text(GTK_EDITABLE(text), 0, -1);
+  text=gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
+  gtk_text_buffer_get_start_iter(text, &start);
+  gtk_text_buffer_get_end_iter(text, &end);
+  /*gtk_text_freeze(text);*/
+  gtk_text_buffer_delete(text, &start, &end);
   do {
     nb=fread(buf, 1, sizeof(buf), in);
     if(nb>0) {
-      gtk_text_insert(text, font, NULL, NULL, buf, nb);
+      gtk_text_buffer_get_end_iter(text, &end);
+      gtk_text_buffer_insert(text, &end, buf, nb);
     }
   } while(nb>0);
   if(nb==0)
     ok=TRUE;
-  gtk_text_thaw(text);
+  /*gtk_text_thaw(text);*/
   fclose(in);
-  gdk_font_unref(font);
 
   return ok;
 }
@@ -684,6 +685,8 @@ static gboolean load_from_uri(GtkWidget *widget, GSList *uris, gpointer data,
   DiffWindow *win=(DiffWindow *) udata;
   GSList *files=rox_dnd_filter_local(uris);
   gboolean ok=FALSE;
+
+  dprintf(2, "load_from_uri %p %p", uris, files);
 
   if(!files)
     return FALSE;
@@ -732,26 +735,26 @@ static void clean_up(DiffWindow *win)
 
   gtk_input_remove(win->tag);
   waitpid((pid_t) win->pid, &stat, WNOHANG);
-  gtk_text_thaw(GTK_TEXT(win->diffs));
 }
 
 static void write_window_to(GtkWidget *widget, const char *fname,
 			    DiffWindow *win)
 {
-  GtkText *text;
+  GtkTextBuffer *text;
   FILE *out;
   int nb;
   guint len;
-  gint start;
-  int begin, size;
+  GtkTextIter start, end;
+  gchar *txt;
 
   g_return_if_fail(widget!=NULL);
-  g_return_if_fail(GTK_IS_TEXT(widget));
+  g_return_if_fail(GTK_IS_TEXT_VIEW(widget));
   g_return_if_fail(fname!=NULL);
   g_return_if_fail(win!=NULL);
 
-  text=GTK_TEXT(widget);
-  len=gtk_text_get_length(text);
+  text=gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
+  gtk_text_buffer_get_start_iter(text, &start);
+  gtk_text_buffer_get_end_iter(text, &end);
 
   out=fopen(fname, "w");
   if(!out) {
@@ -759,76 +762,62 @@ static void write_window_to(GtkWidget *widget, const char *fname,
     return;
   }
 
-  for(start=0; start<len; start+=BUFSIZ) {
-    gint end;
-    gchar *txt;
+  txt=gtk_text_buffer_get_text(text, &start, &end, TRUE);
+  len=g_utf8_strlen(txt, -1);
 
-    end=start+BUFSIZ;
-    if(end>len)
-      end=len;
+  do {
+    nb=fwrite(txt, 1, len, out);
+    if(nb<0) {
+      rox_error("Failed to write to %s: %s", fname, g_strerror(errno));
+      fclose(out);
+      g_free(txt);
+      return;
+    }
+    len-=nb;
+  } while(len>0);
 
-    txt=gtk_editable_get_chars(GTK_EDITABLE(text), start, end);
+  g_free(txt);
 
-    do {
-      begin=0;
-      size=end-start;
-      
-      nb=fwrite(txt, 1, size-begin, out);
-      if(nb<0) {
-	rox_error("Failed to write to %s: %s", fname, g_strerror(errno));
-	fclose(out);
-	g_free(txt);
-	return;
-      }
-      begin+=nb;
-    } while(begin<size);
-
-    g_free(txt);
-  }
   fclose(out);
 }
 
 static void select_colour(char *line, DiffWindow *win)
 {
-  win->colour=NULL;
+  win->ctag=NULL;
   if(!win->unified) {
     if(line[0]=='+')
-      win->colour=&col_add;
+      win->ctag=win->add;
     else if(strncmp(line, "- ", 2)==0)
-      win->colour=&col_del;
+      win->ctag=win->del;
     else if(line[0]=='!')
-      win->colour=&col_chn;
+      win->ctag=win->chn;
     else if(line[0]=='*' || strncmp(line, "--", 2)==0)
-      win->colour=&col_ctl;
+      win->ctag=win->ctl;
   } else {
     if(strncmp(line, "--- ", 4)==0 || strncmp(line, "+++ ", 4)==0 ||
        line[0]=='@')
-      win->colour=&col_ctl;
+      win->ctag=win->ctl;
     else if(line[0]=='+')
-      win->colour=&col_add;
+      win->ctag=win->add;
     else if(line[0]=='-')
-      win->colour=&col_del;
+      win->ctag=win->del;
     else if(line[0]=='!')
-      win->colour=&col_chn;
+      win->ctag=win->chn;
   }
 }
 static void process_diff_line(GtkWidget *text, char *line, DiffWindow *win)
 {
-  GdkFont *font=NULL;
+  GtkTextBuffer *buf;
+  GtkTextIter end;
 
   if(win->last_was_nl) {
     select_colour(line, win);
   }
   
-  if(options.font_name)
-    font=gdk_font_load(options.font_name);
-  if(!font) 
-    font=text->style->font;
-  gdk_font_ref(font);
-
-  gtk_text_insert(GTK_TEXT(text), font, win->colour, NULL, line, strlen(line));
-  
-  gdk_font_unref(font);
+  buf=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text));
+  gtk_text_buffer_get_end_iter(buf, &end);
+  gtk_text_buffer_insert_with_tags(buf, &end, line, strlen(line),
+				   win->ctag, NULL);
 }
 
 static void diff_reader(gpointer data, gint fd, GdkInputCondition condition)
@@ -880,6 +869,8 @@ static void show_diffs(DiffWindow *win)
   int p[2];
   int pid;
   gchar *cmd;
+  GtkTextIter start, end;
+  GtkTextBuffer *buf;
 
   win->unified=options.use_unified;
 
@@ -913,8 +904,12 @@ static void show_diffs(DiffWindow *win)
   win->pid=pid;
   close(p[1]);
 
-  gtk_text_freeze(GTK_TEXT(win->diffs));
-  gtk_editable_delete_text(GTK_EDITABLE(win->diffs), 0, -1);
+  /*gtk_text_freeze(GTK_TEXT(win->diffs));*/
+  buf=gtk_text_view_get_buffer(GTK_TEXT_VIEW(win->diffs));
+  gtk_text_buffer_get_start_iter(buf, &start);
+  gtk_text_buffer_get_end_iter(buf, &end);
+  gtk_text_buffer_delete(buf, &start, &end);
+
   win->last_was_nl=TRUE;
   win->tag=gdk_input_add(p[0], GDK_INPUT_READ, diff_reader,
 		    win);
@@ -1097,6 +1092,9 @@ static void show_choices_win(void)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.8  2002/12/14 15:55:20  stephen
+ * Added support for unified diffs and running from paths with spaces.
+ *
  * Revision 1.7  2002/08/24 16:39:58  stephen
  * Fix compilation problem with libxml2.
  *

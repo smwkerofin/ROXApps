@@ -1,6 +1,10 @@
 Versions of Diff
 ================
 
+1.1.1
+-----
+Gtk+ 2.0.
+
 1.1.0
 -----
 Can process unified diffs as well as context diffs.

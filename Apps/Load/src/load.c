@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.16 2002/08/24 16:45:04 stephen Exp $
+ * $Id: load.c,v 1.17 2002/10/19 14:33:36 stephen Exp $
  *
  * Log at end of file
  */
@@ -14,7 +14,7 @@
 
 #define DEBUG              1
 #define INLINE_FONT_SEL    0
-#define TRY_SERVER         1
+#define TRY_SERVER         0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,18 +40,12 @@
 #include <glibtop/cpu.h>
 #include <glibtop/loadavg.h>
 
-#ifdef HAVE_XML
 #include <libxml/tree.h>
 #include <libxml/parser.h>
-#endif
 
-#if defined(HAVE_XML) && LIBXML_VERSION>=20400
 #define USE_XML 1
-#else
-#define USE_XML 0
-#endif
 
-#if USE_XML && TRY_SERVER && ROX_CLIB_VERSION>=201
+#if TRY_SERVER && ROX_CLIB_VERSION>=201
 #define USE_SERVER 1
 #else
 #define USE_SERVER 0
@@ -143,12 +137,9 @@ typedef struct option_widgets {
   GtkWidget *colour_menu;
   GtkWidget *colour_show;
   GtkWidget *colour_dialog;
-#if INLINE_FONT_SEL
-  GtkWidget *font_sel;
-#else
   GtkWidget *font_window;
   GtkWidget *font_name;
-#endif
+
   struct load_window *lwin;
 } OptionWidgets;
 
@@ -211,10 +202,8 @@ static gboolean open_remote(guint32 xid);
 
 static void read_config(void);
 static void write_config(const Options *);
-#if USE_XML
 static gboolean read_config_xml(void);
 static void write_config_xml(const Options *);
-#endif
 
 static void usage(const char *argv0)
 {
@@ -252,16 +241,11 @@ static void do_version(void)
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
-  printf("  Inline font selection... %s\n", INLINE_FONT_SEL? "yes": "no");
   printf("  Using XML... ");
   if(USE_XML)
     printf("yes (libxml version %d)\n", LIBXML_VERSION);
   else {
-    printf("no (");
-    if(HAVE_XML)
-      printf("libxml not found)\n");
-    else
-    printf("libxml version %d)\n", LIBXML_VERSION);
+    printf("no (libxml version %d)\n", LIBXML_VERSION);
   }
   printf("  Using SOAP server... ");
   if(USE_SERVER)
@@ -638,7 +622,7 @@ static gboolean window_update(LoadWindow *lwin)
     font=gdk_font_load(lwin->options.font_name);
   }
   if(!font) 
-    font=lwin->canvas->style->font;
+    font=gtk_style_get_font(gtk_widget_get_style(lwin->canvas));
   gdk_font_ref(font);
   
   style=gtk_widget_get_style(lwin->canvas);
@@ -952,7 +936,6 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
   return TRUE;
 }
 
-#if USE_XML
 static void write_config_xml(const Options *opt)
 {
   gchar *fname;
@@ -1013,58 +996,12 @@ static void write_config_xml(const Options *opt)
     g_free(fname);
   }
 }
-#endif
 
 static void write_config(const Options *opt)
 {
-#if !USE_XML
-  gchar *fname;
-
-  fname=choices_find_path_save("config", PROJECT, TRUE);
-  dprintf(1, "save to %s", fname? fname: "NULL");
-
-  if(fname) {
-    FILE *out;
-
-    out=fopen(fname, "w");
-    if(out) {
-      time_t now;
-      char buf[80];
-      int i;
-      
-      fprintf(out, "# Config file for %s %s (%s)\n", PROJECT, VERSION, AUTHOR);
-      fprintf(out, "# Latest version at %s\n", WEBSITE);
-      time(&now);
-      strftime(buf, 80, "%c", localtime(&now));
-      fprintf(out, "#\n# Written %s\n\n", buf);
-
-      fprintf(out, "update_ms=%d\n", opt->update_ms);
-      fprintf(out, "show_max=%d\n", opt->show_max);
-      fprintf(out, "show_vals=%d\n", opt->show_vals);
-      fprintf(out, "show_host=%d\n", opt->show_host);
-      fprintf(out, "multiple_chart=%d\n", opt->multiple_chart);
-      fprintf(out, "init_size=%d\n", (int) opt->init_size);
-      if(opt->font_name)
-	fprintf(out, "font_name=%s\n", opt->font_name);
-
-      for(i=0; colour_info[i].colour>=0; i++) {
-	GdkColor *col=colours+colour_info[i].colour;
-	
-	fprintf(out, "%s=0x%04x 0x%04x 0x%04x\n", colour_info[i].vname,
-		col->red, col->green, col->blue);
-      }
-
-      fclose(out);
-    }
-
-    g_free(fname);
-  }
-#else
   write_config_xml(opt);
-#endif
 }
 
-#if USE_XML
 static gboolean read_config_xml(void)
 {
   guchar *fname;
@@ -1206,16 +1143,13 @@ static gboolean read_config_xml(void)
 
   return FALSE;
 }
-#endif
 
 static void read_config(void)
 {
   guchar *fname;
 
-#if USE_XML
   if(read_config_xml())
     return;
-#endif
 
   fname=choices_find_path_load("config", PROJECT);
 
@@ -1383,13 +1317,8 @@ static void set_config(GtkWidget *widget, gpointer data)
 
   if(opts->font_name)
     g_free(opts->font_name);
-#if INLINE_FONT_SEL
-  opts->font_name=
-    gtk_font_selection_get_font_name(GTK_FONT_SELECTION(ow->font_sel));
-#else
   gtk_label_get(GTK_LABEL(ow->font_name), &text);
   opts->font_name=g_strdup(text);
-#endif
   
   cmap=gdk_rgb_get_cmap();
   for(i=0; colour_info[i].colour>=0; i++) {
@@ -1411,7 +1340,6 @@ static void save_config(GtkWidget *widget, gpointer data)
   write_config(current_window? &current_window->options: &default_options);
 }
 
-#if !INLINE_FONT_SEL
 static void set_font(GtkWidget *widget, gpointer data)
 {
   OptionWidgets *ow=(OptionWidgets *) data;
@@ -1444,11 +1372,9 @@ static void hide_font_window(GtkWidget *widget, gpointer data)
   gtk_widget_hide(ow->font_window);
 }
 
-#endif
-
 static void append_option_menu_item(GtkWidget *base, GtkWidget *optmen,
 				    const char *label, int index,
-				    GtkSignalFunc func,
+				    GCallback func,
 				    int *mw, int *mh)
 {
   GtkWidget *optitem;
@@ -1467,8 +1393,7 @@ static void append_option_menu_item(GtkWidget *base, GtkWidget *optmen,
     *mh=req.height;
   gtk_object_set_data(GTK_OBJECT(base), "signal-func", (gpointer) func);
   if(func)
-    gtk_signal_connect(GTK_OBJECT(optitem), "activate",
-		       GTK_SIGNAL_FUNC(func), base);
+    g_signal_connect(G_OBJECT(optitem), "activate", func, base);
   gtk_menu_append(GTK_MENU(optmen), optitem);
   dprintf(3, "appended %p(%p) to %p", optitem, GTK_BIN(optitem)->child,
 	  optmen);
@@ -1476,7 +1401,7 @@ static void append_option_menu_item(GtkWidget *base, GtkWidget *optmen,
 
 static GtkWidget *make_option_menu_item(const char *lbl, GtkWidget *hbox,
 					GList *items,
-					GtkSignalFunc func, int def)
+					GCallback func, int def)
 {
   GtkWidget *label;
   GtkWidget *optmenu;
@@ -1718,7 +1643,7 @@ static void show_config_win(void)
       cols=g_list_append(cols, (gpointer) colour_info[i].use);
     }
     ow.colour_menu=make_option_menu_item("Colour", hbox, cols,
-					 colour_select, 0);
+					 G_CALLBACK(colour_select), 0);
     gtk_widget_show(ow.colour_menu);
     gtk_object_set_data(GTK_OBJECT(ow.colour_menu), "options", (gpointer) &ow);
 
@@ -1751,14 +1676,7 @@ static void show_config_win(void)
     gtk_widget_show(label);
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
 
-#if INLINE_FONT_SEL
-    ow.font_sel=gtk_font_selection_new();
-    gtk_font_selection_set_preview_text(GTK_FONT_SELECTION(ow.font_sel),
-					"0.123 Max 2 localhost");
-    gtk_widget_show(ow.font_sel);
-    gtk_box_pack_start(GTK_BOX(hbox), ow.font_sel, FALSE, FALSE, 2);
-#else
-    ow.font_name=gtk_label_new(current_window->options.font_name?
+   ow.font_name=gtk_label_new(current_window->options.font_name?
 			       current_window->options.font_name: "");
     gtk_widget_show(ow.font_name);
     gtk_box_pack_start(GTK_BOX(hbox), ow.font_name, FALSE, FALSE, 2);
@@ -1776,8 +1694,6 @@ static void show_config_win(void)
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked",
 		       GTK_SIGNAL_FUNC(show_font_window), &ow);
-
-#endif
     
     hbox=GTK_DIALOG(confwin)->action_area;
 
@@ -1820,18 +1736,13 @@ static void show_config_win(void)
 
     gtk_widget_hide(ow.colour_dialog);
   }
-#if INLINE_FONT_SEL
-  if(current_window->options.font_name)
-    gtk_font_selection_set_font_name(GTK_FONT_SELECTION(ow.font_sel),
-				     current_window->options.font_name);
-#else
   if(current_window->options.font_name) {
     gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(ow.font_window),
 				     current_window->options.font_name);
     gtk_label_set_text(GTK_LABEL(ow.font_name),
 		       current_window->options.font_name);
   }
-#endif
+
   gtk_widget_show(confwin);
 }
 
@@ -1861,9 +1772,7 @@ static void save_menus(void)
 	
   menurc = choices_find_path_save("menus", PROJECT, TRUE);
   if (menurc) {
-    gboolean	mod = FALSE;
-
-    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+    gtk_accel_map_save(menurc);
     g_free(menurc);
   }
 }
@@ -1884,13 +1793,13 @@ static void menu_create_menu(GtkWidget *window)
   gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
 
   /* Attach the new accelerator group to the window. */
-  gtk_accel_group_attach(accel_group, GTK_OBJECT(window));
+  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
 
   menurc=choices_find_path_load("menus", PROJECT);
   if(menurc) {
-    gtk_item_factory_parse_rc(menurc);
+    gtk_accel_map_load(menurc);
     g_free(menurc);
   }
 
@@ -2009,6 +1918,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.17  2002/10/19 14:33:36  stephen
+ * Fixed missing return statement when creating window.
+ *
  * Revision 1.16  2002/08/24 16:45:04  stephen
  * Fix compilation problem with libxml2.
  *

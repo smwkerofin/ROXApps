@@ -1,3 +1,4 @@
+PKG_CONFIG = @PKG_CONFIG@
 SHELL = @SHELL@
 srcdir = @srcdir@
 PLATFORM = @with_platform@
@@ -7,8 +8,8 @@ PLATFORM_DIR = ../${PLATFORM}
 ROX_CLIB = "@ROX_RUN@" ROX-CLib
 
 CC = @CC@
-CFLAGS = @CFLAGS@ `gtk-config --cflags` -I. `${ROX_CLIB} --cflags`
-LDFLAGS = @LDFLAGS@ `gtk-config --libs` `${ROX_CLIB} --libs`
+CFLAGS = @CFLAGS@ `${PKG_CONFIG} --cflags gtk+-2.0` -I. `${ROX_CLIB} --cflags`
+LDFLAGS = @LDFLAGS@ `${PKG_CONFIG} --libs gtk+-2.0` ${LIBS} `${ROX_CLIB} --libs`
 EXEC = ${PLATFORM_DIR}/${PROG}
 
 ############ Things to change for different programs
@@ -40,7 +41,7 @@ config.h: config.h.in
 	./config.status
 
 config.status: configure
-	./configure --bindir=${PLATFORM_DIR}
+	./configure --with-platform=${PLATFORM}
 
 configure: configure.in
 	autoconf

@@ -1,19 +1,17 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.12 2002/01/30 10:24:39 stephen Exp $
+ * $Id: tail.c,v 1.13 2002/03/04 11:54:26 stephen Exp $
  */
 
 #include "config.h"
 
 #define DEBUG         1
-#define USE_MENUBAR   0
-#define USE_FILE_OPEN 0
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
+#include <time.h>
 #include <errno.h>
 
 #include <unistd.h>
@@ -25,6 +23,14 @@
 #include <sys/filio.h>
 #endif
 #include <fcntl.h>
+
+/* These next two are for internationalization */
+#ifdef HAVE_LOCALE_H
+#include <locale.h>
+#endif
+#ifdef HAVE_LIBINTL_H
+#include <libintl.h>
+#endif
 
 #include <gtk/gtk.h>
 #include <gtk/gtkdnd.h>
@@ -54,47 +60,21 @@ static gint check_file(gpointer unused);
 static void set_file(const char *);
 static void set_fd(int nfd);
 static void show_info_win(void);
-static void show_error(const char *fmt, ...);
 static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 					gpointer data, gpointer udata);
 static void window_updated(time_t when);
 
-#if USE_FILE_OPEN
-static void file_open_proc(void);
-#endif
 static void file_saveas_proc(void);
-#if !USE_MENU_BAR
+/*
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win);
-#endif
+*/
+static void add_menu_entries(GtkTextView *view, GtkMenu *menu, gpointer);
+static gboolean show_menu(GtkWidget *widget, gpointer);
 
-#if USE_MENU_BAR
-static GtkItemFactoryEntry menu_items[] = {
-  {"/_File", NULL, NULL, 0, "<Branch>"},
-#if USE_FILE_OPEN
-  {"/File/_Open file...", "<control>O", file_open_proc, 0, NULL},
-#endif
-  {"/File/_Save text...", "<control>S", file_saveas_proc, 0, NULL},
-  {"/File/sep",     NULL,         NULL, 0, "<Separator>" },
-  {"/File/E_xit","<control>X",  gtk_main_quit, 0, NULL },
-  {"/_Help", NULL, NULL, 0, "<LastBranch>"},
-  {"/Help/_About", "<control>A", show_info_win, 0, NULL},
-};
-
-#define MENU_TYPE GTK_TYPE_MENU_BAR
-#define MENU_NAME "<main>"
-#define MENU_FNAME "menus"
-
-#else
 static GtkItemFactoryEntry menu_items[] = {
   {"/_Info", "<control>I", show_info_win, 0, NULL},
-#if USE_FILE_OPEN
-  {"/_File", NULL, NULL, 0, "<Branch>"},
-  {"/File/_Open file...", "<control>O", file_open_proc, 0, NULL},
-  {"/File/_Save text...", "<control>S", file_saveas_proc, 0, NULL},
-#else
   {"/_Save text...", "<control>S", file_saveas_proc, 0, NULL},
-#endif
   {"/_Quit","<control>Q",  gtk_main_quit, 0, NULL },
 };
 
@@ -102,20 +82,18 @@ static GtkItemFactoryEntry menu_items[] = {
 #define MENU_NAME "<popup>"
 #define MENU_FNAME "popup_menus"
 
-#endif
-
 static void save_menus(void)
 {
   char	*menurc;
 	
   menurc = choices_find_path_save(MENU_FNAME, PROJECT, TRUE);
   if (menurc) {
-    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+    gtk_accel_map_save(menurc);
     g_free(menurc);
   }
 }
 
-static GtkWidget *get_main_menu(GtkWidget *window)
+static GtkWidget *get_main_menu(GtkWidget *window, const gchar *name)
 {
   GtkItemFactory *item_factory;
   GtkAccelGroup *accel_group;
@@ -132,20 +110,20 @@ static GtkWidget *get_main_menu(GtkWidget *window)
      Param 3: A pointer to a gtk_accel_group.  The item factory sets up
               the accelerator table while generating menus.
   */
-  item_factory = gtk_item_factory_new (MENU_TYPE, MENU_NAME, accel_group);
+  item_factory = gtk_item_factory_new (MENU_TYPE, name, accel_group);
   /* This function generates the menu items. Pass the item factory,
      the number of items in the array, the array itself, and any
      callback data for the the menu items. */
   gtk_item_factory_create_items (item_factory, nmenu_items, menu_items, NULL);
 
   /* Attach the new accelerator group to the window. */
-  gtk_accel_group_attach (accel_group, GTK_OBJECT (window));
+  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
-  menu=gtk_item_factory_get_widget (item_factory, MENU_NAME);
+  menu=gtk_item_factory_get_widget (item_factory, name);
   
   menurc=choices_find_path_load(MENU_FNAME, PROJECT);
   if(menurc) {
-    gtk_item_factory_parse_rc(menurc);
+    gtk_accel_map_load(menurc);
     g_free(menurc);
   }
 
@@ -185,9 +163,6 @@ static void do_version(void)
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
-  printf("  Use a menu bar... %s\n", USE_MENUBAR? "yes": "no, use pop-ups");
-  printf("  Have a \"File=>Open\" menu entry... %s\n",
-	 USE_FILE_OPEN? "yes": "no, use drag and drop");
 }
 
 int main(int argc, char *argv[])
@@ -199,6 +174,10 @@ int main(int argc, char *argv[])
   gchar *rcfile;
   gboolean show_change_time=TRUE;
   int c, do_exit, nerr;
+  const gchar *app_dir;
+#ifdef HAVE_BINDTEXTDOMAIN
+  gchar *localedir;
+#endif
 
   /* Check for this argument by itself */
   if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
@@ -208,6 +187,21 @@ int main(int argc, char *argv[])
   
   gtk_init(&argc, &argv);
   rox_debug_init(PROJECT);
+  
+#ifdef HAVE_SETLOCALE
+  setlocale(LC_TIME, "");
+  setlocale (LC_ALL, "");
+#endif
+  /* What is the directory where our resources are? (set by AppRun) */
+  app_dir=g_getenv("APP_DIR");
+#ifdef HAVE_BINDTEXTDOMAIN
+  /* More (untested) i18n support */
+  localedir=g_strconcat(app_dir, "/Messages", NULL);
+  bindtextdomain(PROJECT, localedir);
+  textdomain(PROJECT);
+  g_free(localedir);
+#endif
+
   choices_init();
   rox_dnd_init();
 
@@ -255,23 +249,12 @@ int main(int argc, char *argv[])
   gtk_window_set_title(GTK_WINDOW(win), fixed_title? fixed_title: "Tail");
   gtk_window_set_wmclass(GTK_WINDOW(win), "Tail", PROJECT);
   rox_dnd_register_uris(win, 0, got_uri_list, NULL);
-#if !USE_MENU_BAR
-  /* We want to pop up a menu on a button press */
-  gtk_signal_connect(GTK_OBJECT(win), "button_press_event",
-		     GTK_SIGNAL_FUNC(button_press), win);
-  gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
-#endif
+  g_signal_connect(win, "popup-menu", G_CALLBACK(show_menu), win);
   
   vbox=gtk_vbox_new(FALSE, 1);
   gtk_container_add(GTK_CONTAINER(win), vbox);
   gtk_widget_show(vbox);
 
-#if USE_MENU_BAR
-  mbar=get_main_menu(win);
-  gtk_box_pack_start(GTK_BOX(vbox), mbar, FALSE, FALSE, 2);
-  gtk_widget_show(mbar);
-#endif
-  
   scr=gtk_scrolled_window_new(NULL, NULL);
   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scr),
 				 GTK_POLICY_AUTOMATIC,
@@ -280,11 +263,14 @@ int main(int argc, char *argv[])
   gtk_widget_set_usize(scr, 640, 480/2);
   gtk_box_pack_start(GTK_BOX(vbox), scr, TRUE, TRUE, 2);
   
-  text=gtk_text_new(NULL, NULL);
+  text=gtk_text_view_new();
   gtk_widget_set_name(text, "tail text");
-  gtk_text_set_editable(GTK_TEXT(text), FALSE);
+  gtk_text_view_set_editable(GTK_TEXT_VIEW(text), FALSE);
   gtk_container_add(GTK_CONTAINER(scr), text);
   gtk_widget_show(text);
+  rox_dnd_register_uris(text, 0, got_uri_list, NULL);
+  g_signal_connect(text, "populate-popup", G_CALLBACK(add_menu_entries),
+		   win);
 
   if(show_change_time) {
     changed=gtk_label_new("Last change:");
@@ -301,10 +287,8 @@ int main(int argc, char *argv[])
   
   update_tag=gtk_timeout_add(500, (GtkFunction) check_file, NULL);
 
-#if !USE_MENU_BAR
   /* Create the pop-up menu now so the menu accelerators are loaded */
-  menu=get_main_menu(GTK_WIDGET(win));
-#endif
+  menu=get_main_menu(GTK_WIDGET(win), MENU_NAME);
 
   gtk_main();
 
@@ -331,12 +315,15 @@ static void window_updated(time_t when)
 
 static void append_text_from_file(int fd, gboolean scroll)
 {
+  GtkTextBuffer *tbuf;
   char buf[BUFSIZ];
   size_t m=sizeof(buf)-1;
   ssize_t nr;
   gint pos;
   int ready;
+  GtkTextIter start, end;
 
+  tbuf=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text));
   do {
     if(ioctl(fd, FIONREAD, &ready)<0)
       break;
@@ -353,20 +340,14 @@ static void append_text_from_file(int fd, gboolean scroll)
     buf[nr]=0;
     dprintf(4, "%d, %s", nr, buf);
 
-    gtk_text_insert(GTK_TEXT(text), NULL, NULL, NULL, buf, nr);
+    gtk_text_buffer_get_end_iter(tbuf, &end);
+    gtk_text_buffer_insert(tbuf, &end, buf, nr);
   } while(TRUE);
 
-  gtk_text_set_point(GTK_TEXT(text), gtk_text_get_length(GTK_TEXT(text)));
-
   if(scroll) {
-    GtkWidget *scr;
-    GtkAdjustment *adj;
-    
-    scr=text->parent;
-    adj=gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scr));
-    dprintf(3, "scr=%p, adj=%p", scr, adj);
-    if(adj)
-      gtk_adjustment_set_value(adj, adj->upper);
+    gtk_text_buffer_get_end_iter(tbuf, &end);
+    gtk_text_view_scroll_to_iter(GTK_TEXT_VIEW(text), &end, 0.0, FALSE,
+				 0.5, 1.0);
   }
     
 }
@@ -389,10 +370,7 @@ static gint check_file(gpointer unused)
     return TRUE;
 
   if(statb.st_size>size) {
-    gtk_text_freeze(GTK_TEXT(text));
     append_text_from_file(fd, TRUE);
-    gtk_text_thaw(GTK_TEXT(text));
-    window_updated(statb.st_mtime);
     
     pos=lseek(fd, (off_t) 0, SEEK_END);
     size=statb.st_size;
@@ -412,33 +390,36 @@ static gint check_file(gpointer unused)
 
 static void set_file(const char *name)
 {
+  GtkTextBuffer *tbuf;
   struct stat statb;
   gchar *title, *tmp;
   int nfd;
   int npos;
+  GtkTextIter start, end;
 
   dprintf(1, "Set file to %s", name);
 
   nfd=open(name, O_RDONLY);
   if(nfd<0) {
-    show_error("Failed to open\n%s\nfor reading", name);
+    rox_error("Failed to open\n%s\nfor reading", name);
     return;
   }
 
   if(fstat(nfd, &statb)<0) {
-    show_error("Failed to scan\n%s", name);
+    rox_error("Failed to scan\n%s", name);
     return;
   }
 
   dprintf(2, "file is on %d and %d long", nfd, statb.st_size);
   
-  gtk_text_freeze(GTK_TEXT(text));
-  gtk_editable_delete_text(GTK_EDITABLE(text), 0, -1);
+  tbuf=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text));
+  gtk_text_buffer_get_start_iter(tbuf, &start);
+  gtk_text_buffer_get_end_iter(tbuf, &end);
+  gtk_text_buffer_delete(tbuf, &start, &end);
 
   append_text_from_file(nfd, FALSE);
   npos=lseek(nfd, (off_t) 0, SEEK_END);
 
-  gtk_text_thaw(GTK_TEXT(text));
   window_updated(statb.st_mtime);
 
   if(!fixed_title) {
@@ -504,117 +485,45 @@ static void hide_window(GtkWidget *widget, gpointer data)
   gtk_widget_hide(errwin);
 }
 
-static void show_error(const char *fmt, ...)
-{
-  va_list list;
-  gchar *mess;
-
-  if(!errwin) {
-    /* Need to create it first */
-    GtkWidget *vbox;
-    GtkWidget *hbox;
-    GtkWidget *but;
-    
-    errwin=gtk_dialog_new();
-    gtk_signal_connect(GTK_OBJECT(errwin), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     errwin);
-    gtk_window_set_title(GTK_WINDOW(errwin), "Error!");
-    gtk_window_set_position(GTK_WINDOW(errwin), GTK_WIN_POS_CENTER);
-    gtk_window_set_wmclass(GTK_WINDOW(errwin), "Error", PROGRAM);
-
-    vbox=GTK_DIALOG(errwin)->vbox;
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 2);
-
-    errmess=gtk_label_new("");
-    gtk_widget_show(errmess);
-    gtk_box_pack_start(GTK_BOX(hbox), errmess, TRUE, TRUE, 2);
-    
-    hbox=GTK_DIALOG(errwin)->action_area;
-
-    but=gtk_button_new_with_label("Ok");
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, TRUE, TRUE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(hide_window), errwin);
-  }
-  
-  va_start(list, fmt);
-  mess=g_strdup_vprintf(fmt, list);
-  va_end(list);
-
-  gtk_label_set_text(GTK_LABEL(errmess), mess);
-  gtk_widget_show(errwin);
-  g_free(mess);
-}
-
-#if USE_FILE_OPEN
-static void choose_file(GtkWidget *widget, GtkFileSelection *fs)
-{
-  const gchar *path=gtk_file_selection_get_filename(GTK_FILE_SELECTION(fs));
-
-  set_file(path);
-  
-  gtk_widget_hide(GTK_WIDGET(fs));
-}
-
-static void close_filesel(GtkWidget *widget, GtkFileSelection *fs)
-{
-  gtk_widget_hide(GTK_WIDGET(fs));
-}
-
-static void file_open_proc(void)
-{
-  static GtkWidget *fs=NULL;
-
-  if(!fs) {
-    fs=gtk_file_selection_new("Select file to monitor");
-    gtk_signal_connect (GTK_OBJECT (GTK_FILE_SELECTION (fs)->ok_button),
-			"clicked", (GtkSignalFunc) choose_file, fs);
-    gtk_signal_connect(GTK_OBJECT(GTK_FILE_SELECTION(fs)->
-				  cancel_button),
-		       "clicked", (GtkSignalFunc) close_filesel,fs);
-    /*gtk_file_selection_hide_fileop_buttons (GTK_FILE_SELECTION(fs));*/
-  }
-
-  gtk_widget_show(fs);
-}
-#endif
 
 static gint save_to_file(GtkSavebox *savebox, gchar *pathname)
 {
+  GtkTextBuffer *tbuf;
   FILE *out;
   gint state=GTK_XDS_SAVED;
+  guint len;
+  GtkTextIter start, end;
+  gchar *txt;
+
+  tbuf=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text));
+  gtk_text_buffer_get_start_iter(tbuf, &start);
+  gtk_text_buffer_get_end_iter(tbuf, &end);
 
   errno=0;
   out=fopen(pathname, "w");
   if(out) {
-    gchar *txt;
-    guint len;
     size_t nb;
 
-    txt=gtk_editable_get_chars(GTK_EDITABLE(text), 0, -1);
-    len=gtk_text_get_length(GTK_TEXT(text));
+    txt=gtk_text_buffer_get_text(tbuf, &start, &end, TRUE);
+
     if(txt) {
+      len=g_utf8_strlen(txt, -1);
       nb=fwrite(txt, 1, len, out);
 
       if(nb<len) {
-	show_error("Error writing to %s\n%s", pathname, strerror(errno));
+	rox_error("Error writing to %s\n%s", pathname, strerror(errno));
 	state=GTK_XDS_SAVE_ERROR;
       }
       
     } else {
-      show_error("Failed to get text!");
+      rox_error("Failed to get text!");
       state=GTK_XDS_SAVE_ERROR;
     }
 
     fclose(out);
     
   } else {
-    show_error("Failed to open %s for writing", pathname);
+    rox_error("Failed to open %s for writing", pathname);
     state=GTK_XDS_SAVE_ERROR;
   }
 
@@ -638,11 +547,11 @@ static void file_saveas_proc(void)
   static GtkWidget *savebox=NULL;
 
   if(!savebox) {
-    GdkPixmap *pixmap;
-    GdkPixmap *mask;
+    GdkPixbuf *pixbuf=NULL;
     gchar *ipath;
+    GError *err=NULL;
     
-    savebox=gtk_savebox_new();
+    savebox=gtk_savebox_new(_("Save"));
     gtk_signal_connect(GTK_OBJECT(savebox), "delete_event", 
 		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
 		     savebox);
@@ -661,14 +570,13 @@ static void file_saveas_proc(void)
     if(!ipath)
       ipath=choices_find_path_load("text.xpm", "MIME-icons");
     if(ipath) {
-      pixmap=gdk_pixmap_create_from_xpm(savebox->window, &mask, NULL,
-					ipath);
+      pixbuf=gdk_pixbuf_new_from_file(ipath, &err);
       g_free(ipath);
-    } else {
-      pixmap=gdk_pixmap_create_from_xpm_d(savebox->window, &mask, NULL,
-					  default_xpm);
     }
-    gtk_savebox_set_icon(GTK_SAVEBOX(savebox), pixmap, mask);
+    if(!pixbuf) {
+      pixbuf=gdk_pixbuf_new_from_xpm_data(default_xpm);
+    }
+    gtk_savebox_set_icon(GTK_SAVEBOX(savebox), pixbuf);
 
     
   }
@@ -676,7 +584,6 @@ static void file_saveas_proc(void)
   gtk_widget_show(savebox);
 }
 
-#if !USER_MENU_BAR
 /* Button press in window */
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win)
@@ -684,7 +591,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
     /* Pop up the menu */
     if(!menu) 
-      menu=get_main_menu(GTK_WIDGET(win));
+      menu=get_main_menu(GTK_WIDGET(win), MENU_NAME);
     
     gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 				bev->button, bev->time);
@@ -693,8 +600,68 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 
   return FALSE;
 }
-#endif
 
+static gboolean show_menu(GtkWidget *widget, gpointer data)
+{
+  GtkWidget *win=GTK_WIDGET(data);
+  GdkEvent *event;
+  int button=0;
+  guint32 time=0;
+  static GtkWidget *popup_menu=NULL;
+
+  /*printf("show_menu(%p, %p), is text view=%d\n", widget, data,
+    GTK_IS_TEXT_VIEW(widget));*/
+  
+  if(GTK_IS_TEXT_VIEW(widget))
+    return FALSE;
+
+  event=gtk_get_current_event();
+  switch(event->type) {
+  case GDK_BUTTON_PRESS:
+  case GDK_BUTTON_RELEASE:
+    {
+      GdkEventButton *bev=(GdkEventButton *) event;
+
+      button=bev->button;
+      time=bev->time;
+    }
+    break;
+  case GDK_KEY_PRESS:
+    {
+      GdkEventKey *kev=(GdkEventKey *) event;
+      time=kev->time;
+    }
+    break;
+  }
+
+  if(!popup_menu) 
+    popup_menu=get_main_menu(GTK_WIDGET(win), MENU_NAME);
+    
+  gtk_menu_popup(GTK_MENU(popup_menu), NULL, NULL, NULL, NULL,
+		 button, time);
+  
+  return TRUE;
+}
+
+static void add_menu_entries(GtkTextView *view, GtkMenu *menu,
+			     gpointer data)
+{
+  GtkWidget *win=GTK_WIDGET(data);
+  GtkWidget *popup_menu;
+  GtkWidget *sep, *item;
+
+  popup_menu=get_main_menu(win, "<text>");
+    
+  sep=gtk_separator_menu_item_new();
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), sep);
+  gtk_widget_show(sep);
+
+  item=gtk_menu_item_new_with_label(_("Tail"));
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), popup_menu);
+  gtk_widget_show(item);
+
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+}
 
 /* We've got a list of URIs from somewhere (probably a filer window). */
 static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
@@ -715,6 +682,9 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.13  2002/03/04 11:54:26  stephen
+ * Stable release.
+ *
  * Revision 1.12  2002/01/30 10:24:39  stephen
  * Add -h and -v options.
  *

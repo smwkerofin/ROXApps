@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id$
+ * $Id: main.c,v 1.1 2002/12/07 14:12:03 stephen Exp $
  */
 #include "config.h"
 
@@ -66,7 +66,7 @@ static void do_version(void)
   printf("%s %s\n", PROJECT, VERSION);
   printf("%s\n", PURPOSE);
   printf("%s\n", WEBSITE);
-  printf("Copyright 2002 %s\n", AUTHOR);
+  printf("Copyright 2003 %s\n", AUTHOR);
   printf("Distributed under the terms of the GNU General Public License.\n");
   printf("(See the file COPYING in the Help directory).\n");
   printf("%s last compiled %s\n", __FILE__, __DATE__);
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
 
   /* Create window */
   win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_widget_set_name(win, "iamge viewer");
+  gtk_widget_set_name(win, "image viewer");
   gtk_window_set_title(GTK_WINDOW(win), _("ImageViewer"));
   gtk_signal_connect(GTK_OBJECT(win), "destroy", 
 		     GTK_SIGNAL_FUNC(gtk_main_quit), 
@@ -330,7 +330,7 @@ static void save_menus(void)
 	
   menurc = choices_find_path_save("menus", PROJECT, TRUE);
   if (menurc) {
-    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+    gtk_accel_map_save(menurc);
     g_free(menurc);
   }
 }
@@ -352,14 +352,14 @@ static GtkWidget *menu_create_menu(GtkWidget *window)
   gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
 
   /* Attach the new accelerator group to the window. */
-  gtk_accel_group_attach(accel_group, GTK_OBJECT(window));
+  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
   /* Load any user-defined menu accelerators */
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
 
   menurc=choices_find_path_load("menus", PROJECT);
   if(menurc) {
-    gtk_item_factory_parse_rc(menurc);
+    gtk_accel_map_load(menurc);
     g_free(menurc);
   }
 
@@ -417,14 +417,15 @@ static void show_info_win(void)
 static void show_image_file(const char *fname, GtkWidget *win)
 {
   GdkPixbuf *im;
-  GdkPixmap *pmap;
-  GdkBitmap *mask;
+  /*GdkPixmap *pmap;
+    GdkBitmap *mask;*/
   GtkWidget *wd;
+  GError *err=NULL;
   
   /* Load the image specified as the first argument */
-  im=gdk_pixbuf_new_from_file(fname);
+  im=gdk_pixbuf_new_from_file(fname, &err);
   if(!im) {
-    rox_error("Failed to load %s", fname);
+    rox_error("Failed to load %s: %s", fname, err->message);
     return;
   }
 
@@ -436,8 +437,8 @@ static void show_image_file(const char *fname, GtkWidget *win)
 			gdk_pixbuf_get_height(im));*/
   /*gtk_widget_queue_draw(canvas);*/
 
-  gdk_pixbuf_render_pixmap_and_mask(image, &pmap, &mask, 50);
-  wd=gtk_pixmap_new(pmap, mask);
+  /*gdk_pixbuf_render_pixmap_and_mask(image, &pmap, &mask, 50);*/
+  wd=gtk_image_new_from_pixbuf(image);
   if(GTK_BIN(win)->child)
     gtk_container_remove(GTK_CONTAINER(win), GTK_BIN(win)->child);
   gtk_container_add(GTK_CONTAINER(win), wd);
@@ -480,5 +481,8 @@ static void redraw(GtkWidget *widget, GdkEventExpose *event,
 */
 
 /*
- * $Log$
+ * $Log: main.c,v $
+ * Revision 1.1  2002/12/07 14:12:03  stephen
+ * First version of ImageViewer
+ *
  */

@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.12 2002/04/12 10:18:46 stephen Exp $
+ * $Id: alarm.c,v 1.13 2002/08/24 16:39:51 stephen Exp $
  */
 #include "config.h"
 
@@ -22,12 +22,10 @@
 
 #include <gtk/gtk.h>
 
-#ifdef HAVE_XML
 #include <libxml/tree.h>
 #include <libxml/parser.h>
-#endif
 
-#if defined(HAVE_XML) && LIBXML_VERSION>=20400
+#if LIBXML_VERSION>=20400
 #define USE_XML 1
 #else
 #define USE_XML 0
@@ -69,6 +67,13 @@ typedef struct alarm {
 static GList *alarms=NULL;
 
 static time_t alarms_saved=(time_t) 0;
+
+/* For the alarm list */
+enum alarm_list_cols {
+  ALARM_LIST_WHEN, ALARM_LIST_MESSAGE, ALARM_LIST_REPEAT,
+  ALARM_LIST_DATA,
+  ALARM_LIST_SIZE
+};
 
 int alarm_have_active(void)
 {
@@ -708,7 +713,7 @@ static void set_alarm(GtkWidget *wid, gpointer data)
   RepeatMode repeat;
   GtkWidget *menu;
   GtkWidget *item;
-  gchar *mess;
+  const gchar *mess;
   guint flags;
 
   tms.tm_sec=0;
@@ -844,7 +849,7 @@ static GtkWidget *make_alarm_window(void)
   gtk_widget_show(hbox);
   gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
 
-  label=gtk_label_new(_("Date (dd/mm/yy)"));
+  label=gtk_label_new(_("Date (dd/mm/yyyy)"));
   gtk_widget_show(label);
   gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
 
@@ -946,7 +951,9 @@ static GtkWidget *make_alarm_window(void)
   gtk_widget_show(follow_tzone);
   gtk_box_pack_start(GTK_BOX(hbox), follow_tzone, FALSE, FALSE, 2);
 
-  hbox=GTK_DIALOG(win)->action_area;
+  hbox=gtk_hbox_new(FALSE, 0);
+  gtk_widget_show(hbox);
+  gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
 
   but=gtk_button_new_with_label(_("Set alarm"));
   gtk_widget_show(but);
@@ -961,11 +968,13 @@ static GtkWidget *make_alarm_window(void)
 		     GTK_SIGNAL_FUNC(delete_alarm), win);
   delalarm=but;
 
-  but=gtk_button_new_with_label(_("Dismiss"));
+  /*but=gtk_button_new_with_label(_("Dismiss"));
   gtk_widget_show(but);
   gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
   gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		     GTK_SIGNAL_FUNC(dismiss), win);
+  GTK_SIGNAL_FUNC(dismiss), win);*/
+  gtk_dialog_add_buttons(GTK_DIALOG(win), GTK_STOCK_CLOSE,
+			 GTK_RESPONSE_CLOSE);
 
   return win;
 }
@@ -1014,12 +1023,17 @@ void alarm_show_window(void)
 
   update_alarm_window(al_win);
 
-  gtk_widget_show(al_win);
+  /*gtk_widget_show(al_win);*/
+  gtk_dialog_run(GTK_DIALOG(al_win));
+  gtk_widget_hide(al_win);
 }
 
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.13  2002/08/24 16:39:51  stephen
+ * Fix compilation problem with libxml2.
+ *
  * Revision 1.12  2002/04/12 10:18:46  stephen
  * Another attempt at fixing the bug when time zone changes.
  *

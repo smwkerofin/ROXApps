@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.8 2002/03/04 11:18:23 stephen Exp $
+ * $Id: main.c,v 1.9 2002/08/24 16:39:43 stephen Exp $
  */
 #include "config.h"
 
@@ -32,16 +32,8 @@
 #include <gtk/gtk.h>
 #include "infowin.h"
 
-#ifdef HAVE_XML
 #include <libxml/tree.h>
 #include <libxml/parser.h>
-#endif
-
-#if defined(HAVE_XML) && LIBXML_VERSION>=20400
-#define USE_XML 1
-#else
-#define USE_XML 0
-#endif
 
 #include "choices.h"
 #define DEBUG              1   /* Allow debug output */
@@ -57,11 +49,8 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win); /* button press on window */
 static void show_info_win(void);        /* Show information box */
 static void read_config(void);          /* Read configuration */
-static void write_config(void);         /* Write configuration */
-#if USE_XML
 static gboolean read_config_xml(void);  /* Read XML configuration */
 static void write_config_xml(void);     /* Write XML configuration */
-#endif
 
 static gboolean app_dropped(GtkWidget *, GSList *uris, gpointer data,
 			    gpointer udata);
@@ -116,23 +105,10 @@ static void do_version(void)
   printf("(See the file COPYING in the Help directory).\n");
   printf("%s last compiled %s\n", __FILE__, __DATE__);
   printf("ROX-CLib version %s\n", rox_clib_version_string());
+  printf("libxml version %d\n", LIBXML_VERSION);
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
-  printf("  Using XML... ");
-  if(USE_XML)
-    printf("yes (libxml version %d)\n", LIBXML_VERSION);
-  else {
-    printf("no (");
-    if(HAVE_XML)
-      printf("libxml not found)\n");
-    else
-#ifdef LIBXML_VERSION
-      printf("libxml version %d)\n", LIBXML_VERSION);
-#else
-      printf("unknown libxml version)\n");
-#endif
-  }
 }
 
 /* Main.  Here we set up the gui and enter the main loop */
@@ -141,7 +117,7 @@ int main(int argc, char *argv[])
   GtkWidget *vbox, *vbox2;
   GtkWidget *hbox;
   GtkWidget *label;
-  gchar *app_dir;
+  const gchar *app_dir;
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
 #endif
@@ -176,7 +152,7 @@ int main(int argc, char *argv[])
   g_free(localedir);
 #endif
 
-  options.author=g_get_real_name();
+  options.author=g_strdup(g_get_real_name());
   options.homepage=g_strdup("");
   
   /* Initialise X/GDK/GTK */
@@ -252,6 +228,7 @@ int main(int argc, char *argv[])
   gtk_widget_show(prog_name);
 
   rox_dnd_register_uris(hbox, 0, app_dropped, prog_name);
+  rox_dnd_register_uris(prog_name, 0, app_dropped, prog_name);
 
   hbox=gtk_hbox_new(FALSE, 4);
   gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
@@ -266,9 +243,8 @@ int main(int argc, char *argv[])
   if(!icon_path)
     icon_path=g_strconcat(app_dir, "/pixmaps/application.xpm", NULL);
   dprintf(3, "icon_path=%s", icon_path);
-  pixmap = gdk_pixmap_create_from_xpm(GTK_WIDGET(win)->window,  &mask,
-				      NULL, icon_path);
-  prog_icon=gtk_pixmap_new(pixmap, mask);
+
+  prog_icon=gtk_image_new_from_file(icon_path);
   gtk_box_pack_start(GTK_BOX(hbox), prog_icon, TRUE, TRUE, 0);
   gtk_widget_show(prog_icon);
   gtk_object_set_data(GTK_OBJECT(prog_icon), "path", icon_path);
@@ -288,6 +264,7 @@ int main(int argc, char *argv[])
   gtk_widget_show(prog_help);
 
   rox_dnd_register_uris(hbox, 0, help_dropped, prog_help);
+  rox_dnd_register_uris(prog_help, 0, help_dropped, prog_help);
 
   frame=gtk_frame_new("Options");
   gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 0);
@@ -329,6 +306,8 @@ static gboolean app_dropped(GtkWidget *widget, GSList *uris, gpointer data,
 {
   GtkWidget *entry;
   GSList *local, *tmp;
+
+  dprintf(2, "app_dropped %p", uris);
 
   g_return_val_if_fail(GTK_IS_ENTRY(udata), FALSE);
 
@@ -395,7 +374,7 @@ static gboolean icon_dropped(GtkWidget *widget, GSList *uris, gpointer data,
   GSList *local, *tmp;
   GtkWidget *icon;
 
-  g_return_val_if_fail(GTK_IS_PIXMAP(udata), FALSE);
+  g_return_val_if_fail(GTK_IS_IMAGE(udata), FALSE);
 
   icon=GTK_WIDGET(udata);
 
@@ -404,15 +383,14 @@ static gboolean icon_dropped(GtkWidget *widget, GSList *uris, gpointer data,
   if(local) {
     const gchar *path=(const gchar *) local->data;
     gchar *oldpath;
-    GdkPixmap *pixmap;
-    GdkBitmap *mask;
+    GdkPixbuf *pixbuf;
+    GError *err=NULL;
 
     oldpath=gtk_object_get_data(GTK_OBJECT(icon), "path");
 
-    pixmap=gdk_pixmap_create_from_xpm(GTK_WIDGET(win)->window,  &mask,
-				      NULL, path);
-    if(pixmap) {
-      gtk_pixmap_set(GTK_PIXMAP(icon), pixmap, mask);
+    pixbuf=gdk_pixbuf_new_from_file(path, &err);
+    if(!err) {
+      gtk_image_set_from_pixbuf(GTK_IMAGE(icon), pixbuf);
       g_free(oldpath);
       gtk_object_set_data(GTK_OBJECT(icon), "path", g_strdup(path));
     } else {
@@ -451,17 +429,15 @@ static gboolean on_path(const gchar *prog)
 static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
 {
   FILE *out;
-  gchar *cmd, *acmd;
-  gchar *mleaf;
+  gchar *cmd;
+  const gchar *mleaf, *acmd;
   gchar *leaf;
   gchar *fname;
   gchar *src;
   gboolean prompt;
-#if USE_XML
-    xmlDocPtr doc;
-    xmlNodePtr tree, subtree;
-    char buf[1024];
-#endif
+  xmlDocPtr doc;
+  xmlNodePtr tree, subtree;
+  char buf[1024];
   
   prompt=gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(prompt_args));
   mleaf=g_basename(pathname);
@@ -517,7 +493,6 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   dprintf(2, "Making AppInfo.xml");
   fname=g_strconcat(pathname, "/AppInfo.xml", NULL);
     
-#if USE_XML
   doc = xmlNewDoc("1.0");
   doc->children=xmlNewDocNode(doc, NULL, "AppInfo", NULL);
     
@@ -540,31 +515,6 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
     
   xmlSaveFormatFileEnc(fname, doc, NULL, 1);
   xmlFreeDoc(doc);
-#else
-  out=fopen(fname, "w");
-  if(!out) {
-    rox_error("Failed to make %s\n%s", fname, strerror(errno));
-  } else {
-    fprintf(out, "<?xml version=\"1.0\"?>\n<AppInfo>\n");
-    fprintf(out, "  <Summary>ROX wrapper for %s</Summary>\n", mleaf);
-    fprintf(out, "  <About>\n");
-    fprintf(out, "    <Purpose>Wrapper for %s</Purpose>\n", mleaf);
-    fprintf(out, "    <Version>0.1.0 by AppFactory %s</Version>\n", VERSION);
-    if(options.author && options.author[0]) 
-      fprintf(out,
-	      "    <Authors>AppFactory by %s, wrapper by %s</Authors>\n",
-	      AUTHOR, options.author);
-    else
-      fprintf(out, "    <Authors>AppFactory by %s</Authors>\n", AUTHOR);
-    fprintf(out, "    <License>GNU General Public License</License>\n");
-    if(options.homepage && options.homepage[0])
-      fprintf(out, "    <Homepage>%s</Homepage>\n", options.homepage);
-    fprintf(out, "  </About>\n");
-    fprintf(out, "</AppInfo>\n");
-    
-    fclose(out);
-  }
-#endif
   g_free(fname);
 
   src=gtk_editable_get_chars(GTK_EDITABLE(prog_help), 0, -1);
@@ -627,13 +577,12 @@ static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
 
 static void begin_save(GtkWidget *widget, gpointer data)
 {
-  GdkPixmap *pixmap;
-  GdkBitmap *mask;
+  GdkPixbuf *pixbuf;
   gchar *path;
   gchar *leaf;
   
   if(!save) {
-    save=gtk_savebox_new();
+    save=gtk_savebox_new(_("Save"));
 
     gtk_signal_connect(GTK_OBJECT(save), "delete_event", 
 		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
@@ -646,11 +595,11 @@ static void begin_save(GtkWidget *widget, gpointer data)
 		       GTK_SIGNAL_FUNC(save_done), NULL);
   }
 
-  gtk_pixmap_get(GTK_PIXMAP(prog_icon), &pixmap, &mask);
-  gtk_savebox_set_icon(GTK_SAVEBOX(save), pixmap, mask);
+  pixbuf=gtk_image_get_pixbuf(GTK_IMAGE(prog_icon));
+  gtk_savebox_set_icon(GTK_SAVEBOX(save), pixbuf);
 
   path=gtk_editable_get_chars(GTK_EDITABLE(prog_name), 0, -1);
-  leaf=g_basename(path);
+  leaf=(gchar *) g_basename(path);
   leaf[0]=toupper(leaf[0]);
   gtk_savebox_set_pathname(GTK_SAVEBOX(save), leaf);
   g_free(path);
@@ -658,7 +607,6 @@ static void begin_save(GtkWidget *widget, gpointer data)
   gtk_widget_show(save);
 }
 
-#if USE_XML
 static void write_config_xml(void)
 {
   gchar *fname;
@@ -687,48 +635,8 @@ static void write_config_xml(void)
     g_free(fname);
   }
 }
-#endif
 
-/* Write the config to a file.  */
-static void write_config(void)
-{
-#if !USE_XML
-  gchar *fname;
 
-  /* Use the choices system to get the name to save to */
-  fname=choices_find_path_save("options", PROJECT, TRUE);
-  dprintf(2, "save to %s", fname? fname: "NULL");
-
-  if(fname) {
-    FILE *out;
-
-    out=fopen(fname, "w");
-    if(out) {
-      time_t now;
-      char buf[80];
-      
-      fprintf(out, _("# Config file for %s %s (%s)\n"), PROJECT, VERSION,
-	      AUTHOR);
-      fprintf(out, _("# Latest version at %s\n"), WEBSITE);
-      time(&now);
-      strftime(buf, 80, "%c", localtime(&now));
-      fprintf(out, _("#\n# Written %s\n\n"), buf);
-
-      /* Write config here... */
-      fprintf(out, "author=%s\n", options.author);
-      fprintf(out, "homepage=%s\n", options.homepage);
-      
-      fclose(out);
-    }
-
-    g_free(fname);
-  }
-#else
-  write_config_xml();
-#endif
-}
-
-#if USE_XML
 static gboolean read_config_xml(void)
 {
   guchar *fname;
@@ -792,17 +700,14 @@ static gboolean read_config_xml(void)
 
   return FALSE;
 }
-#endif
 
 /* Read in the config. */
 static void read_config(void)
 {
   guchar *fname;
 
-#if USE_XML
   if(read_config_xml())
     return;
-#endif
   
   /* Use the choices system to locate the file to read */
   fname=choices_find_path_load("options", PROJECT);
@@ -888,7 +793,7 @@ static void set_config(GtkWidget *widget, gpointer data)
 static void save_config(GtkWidget *widget, gpointer data)
 {
   set_config(widget, data);
-  write_config();
+  write_config_xml();
 }
 
 static void show_config_win(void)
@@ -986,7 +891,7 @@ static void save_menus(void)
 	
   menurc = choices_find_path_save("menus", PROJECT, TRUE);
   if (menurc) {
-    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+    gtk_accel_map_save(menurc);
     g_free(menurc);
   }
 }
@@ -1008,14 +913,14 @@ static GtkWidget *menu_create_menu(GtkWidget *window)
   gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
 
   /* Attach the new accelerator group to the window. */
-  gtk_accel_group_attach(accel_group, GTK_OBJECT(window));
+  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
   /* Load any user-defined menu accelerators */
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
 
   menurc=choices_find_path_load("menus", PROJECT);
   if(menurc) {
-    gtk_item_factory_parse_rc(menurc);
+    gtk_accel_map_load(menurc);
     g_free(menurc);
   }
 

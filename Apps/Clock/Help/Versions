@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+1.5.0
+-----
+New version for GTK+ 2.0 and ROX-CLib 1.1.0
+
 1.4.1
 -----
 Fix for being installed in paths with spaces in.

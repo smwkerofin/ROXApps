@@ -1,6 +1,10 @@
 Versions of FreeFS
 ==================
 
+1.5.0
+-----
+Gtk+ 2.0.
+
 1.4.1
 -----
 Fix compilation problems when path has spaces.

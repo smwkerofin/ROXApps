@@ -5,13 +5,13 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.10 2002/04/29 08:58:31 stephen Exp $
+ * $Id: mem.c,v 1.11 2002/08/24 16:45:56 stephen Exp $
  */
 #include "config.h"
 
 /* Select compilation options */
 #define DEBUG              1     /* Set to 1 for debug messages */
-#define TRY_SERVER         1     /* Use SOAP to open windows on request */
+#define TRY_SERVER         0     /* Use SOAP to open windows on request */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,18 +39,12 @@
 #include <glibtop/mem.h>
 #include <glibtop/swap.h>
 
-#ifdef HAVE_XML
 #include <libxml/tree.h>
 #include <libxml/parser.h>
-#endif
 
-#if defined(HAVE_XML) && LIBXML_VERSION>=20400
 #define USE_XML 1
-#else
-#define USE_XML 0
-#endif
 
-#if USE_XML && TRY_SERVER && ROX_CLIB_VERSION>=201
+#if TRY_SERVER && ROX_CLIB_VERSION>=201
 #define USE_SERVER 1
 #else
 #define USE_SERVER 0
@@ -211,11 +205,7 @@ static void do_version(void)
   if(USE_XML)
     printf("yes (libxml version %d)\n", LIBXML_VERSION);
   else {
-    printf("no (");
-    if(HAVE_XML)
-      printf("libxml not found)\n");
-    else
-    printf("libxml version %d)\n", LIBXML_VERSION);
+    printf("no (libxml version %d)\n", LIBXML_VERSION);
   }
   printf("  Use libgtop for swap... %s\n",
 	 SWAP_SUPPORTED_LIBGTOP? "yes": "no");
@@ -228,14 +218,13 @@ static void do_version(void)
     printf("    Broken on Solaris up to version %d\n",
 	   SOLARIS_SWAP_BROKEN_UP_TO);
   }
+  printf("  Using SOAP server... ");
   if(USE_SERVER)
     printf("yes\n");
   else {
     printf("no");
     if(!TRY_SERVER)
       printf(", disabled");
-    if(!USE_XML)
-      printf(", XML not available");
     if(ROX_CLIB_VERSION<201)
       printf(", ROX-CLib %d.%d.%d does not support it",
 	     ROX_CLIB_VERSION/10000, (ROX_CLIB_VERSION%10000)/100,
@@ -1511,9 +1500,7 @@ static void save_menus(void)
 	
   menurc = choices_find_path_save("menus", PROJECT, TRUE);
   if (menurc) {
-    gboolean	mod = FALSE;
-
-    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+    gtk_accel_map_save(menurc);
     g_free(menurc);
   }
 }
@@ -1534,11 +1521,11 @@ static void menu_create_menu(GtkWidget *window)
   gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
 
 	/* Attach the new accelerator group to the window. */
-  gtk_accel_group_attach(accel_group, GTK_OBJECT(window));
+  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
   menurc=choices_find_path_load("menus", PROJECT);
   if(menurc) {
-    gtk_item_factory_parse_rc(menurc);
+    gtk_accel_map_load(menurc);
     g_free(menurc);
   }
 
@@ -1761,6 +1748,10 @@ static gboolean update_swap(gpointer unused)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.11  2002/08/24 16:45:56  stephen
+ * Fix compilation problem with libxml2.
+ * Removed [] from if in configure.in
+ *
  * Revision 1.10  2002/04/29 08:58:31  stephen
  * Use replacement applet menu positioning code (from ROX-CLib).
  *

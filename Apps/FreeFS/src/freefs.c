@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.20 2002/08/24 16:40:31 stephen Exp $
+ * $Id: freefs.c,v 1.21 2002/10/19 14:32:05 stephen Exp $
  */
 #include "config.h"
 
@@ -40,22 +40,11 @@
 #include <glibtop/mountlist.h>
 #include <glibtop/fsusage.h>
 
-#ifdef HAVE_XML
 #include <libxml/tree.h>
 #include <libxml/parser.h>
-#endif
 
-#if defined(HAVE_XML) && LIBXML_VERSION>=20400
 #define USE_XML 1
-#else
-#define USE_XML 0
-#endif
-
-#if USE_XML && TRY_SERVER
-#define USE_SERVER 1
-#else
 #define USE_SERVER 0
-#endif
 
 #include "rox.h"
 #include "choices.h"
@@ -125,10 +114,8 @@ static gboolean update_fs_values(FreeWindow *);
 static void do_update(void);
 static void read_choices(void);
 static void write_choices(const Options *);
-#if USE_XML
 static gboolean read_choices_xml(void);
 static void write_choices_xml(const Options *);
-#endif
 static void menu_create_menu(GtkWidget *);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
@@ -186,16 +173,8 @@ static void do_version(void)
 	 gtk_micro_version);
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
   printf("  Support drag & drop to applet... %s\n", APPLET_DND? "yes": "no");
-  printf("  Using XML... ");
-  if(USE_XML)
-    printf("yes (libxml version %d)\n", LIBXML_VERSION);
-  else {
-    printf("no (");
-    if(HAVE_XML)
-      printf("libxml not found)\n");
-    else
-    printf("libxml version %d)\n", LIBXML_VERSION);
-  }
+  printf("  Using XML... libxml version %d)\n", LIBXML_VERSION);
+  
   printf("  Using SOAP server... ");
   if(USE_SERVER)
     printf("yes\n");
@@ -203,8 +182,6 @@ static void do_version(void)
     printf("no");
     if(!TRY_SERVER)
       printf(", disabled");
-    if(!USE_XML)
-      printf(", XML not available");
     printf("\n");
   }
 }
@@ -859,7 +836,6 @@ static void do_update(void)
 #define SHOW_DIR    "AppletShowDir"
 #define EXCLUDE_FS  "ExcludeFS"
 
-#if USE_XML
 static gboolean read_choices_xml(void)
 {
   guchar *fname;
@@ -945,16 +921,13 @@ static gboolean read_choices_xml(void)
 
   return FALSE;
 }
-#endif
 
 static void read_choices(void)
 {
   guchar *fname;
   
-#if USE_XML
   if(read_choices_xml())
     return;
-#endif
   
   fname=choices_find_path_load("Config", "FreeFS");
   if(fname) {
@@ -1001,7 +974,6 @@ static void read_choices(void)
   }
 }
 
-#if USE_XML
 static void write_choices_xml(const Options *opts)
 {
   gchar *fname;
@@ -1044,30 +1016,10 @@ static void write_choices_xml(const Options *opts)
     xmlFreeDoc(doc);
   }
 }
-#endif
 
 static void write_choices(const Options *opts)
 {
-#if !USE_XML
-  FILE *out;
-  gchar *fname;
-    
-  fname=choices_find_path_save("Config", "FreeFS", TRUE);
-  if(!fname)
-    return;
-  out=fopen(fname, "w");
-  g_free(fname);
-  if(!out)
-    return;
-  
-  fprintf(out, _("# Config file for FreeFS\n"));
-  fprintf(out, "%s: %d\n", UPDATE_RATE, opts->update_sec);
-  fprintf(out, "%s: %d\n", INIT_SIZE, opts->applet_init_size);
-  fprintf(out, "%s: %d\n", SHOW_DIR, opts->applet_show_dir);
-  fclose(out);
-#else
   write_choices_xml(opts);
-#endif
 }
 
 static void show_info_win(void)
@@ -1095,12 +1047,14 @@ static void hide_window(GtkWidget *widget, gpointer data)
   gtk_widget_hide(GTK_WIDGET(data));
 }
 
+/*
 static void cancel_config(GtkWidget *widget, gpointer data)
 {
   GtkWidget *confwin=GTK_WIDGET(data);
   
   gtk_widget_hide(confwin);
 }
+*/
 
 static void set_config(GtkWidget *widget, gpointer data)
 {
@@ -1139,7 +1093,6 @@ static void save_config(GtkWidget *widget, gpointer data)
   write_choices(&current_window->options);
 }
 
-#ifdef GTK2
 #define RESPONSE_SAVE 1
 
 static void config_response(GtkWidget *dialog, gint response, gpointer data)
@@ -1152,9 +1105,12 @@ static void config_response(GtkWidget *dialog, gint response, gpointer data)
     set_config(dialog, data);
     break;
   case GTK_RESPONSE_REJECT:
-    cancel_config(dialog, data);
+    /*dprintf(3, "calling cancel_config(%p, %p)", dialog, data);
+      cancel_config(dialog, data);*/
+    gtk_widget_hide(dialog);
     break;
   case GTK_RESPONSE_NONE:
+    dprintf(3, "calling gtk_widget_hide(%p)", dialog);
     gtk_widget_hide(dialog);
     break;
   default:
@@ -1163,7 +1119,6 @@ static void config_response(GtkWidget *dialog, gint response, gpointer data)
     break;
   }
 }
-#endif
 
 static void show_config_win(void)
 {
@@ -1184,28 +1139,19 @@ static void show_config_win(void)
     GtkWidget *check;
     GtkWidget *frame;
 
-#ifdef GTK2
     confwin=gtk_dialog_new_with_buttons("Configuration",
-					ow.fwin? ow.fwin->win: NULL,
+					ow.fwin? GTK_WINDOW(ow.fwin->win): NULL,
 					0,
 					GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT,
 					GTK_STOCK_SAVE, RESPONSE_SAVE,
 					GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
 					NULL);
     g_signal_connect(confwin, "response", 
-		     G_CALLBACK(dialog_response), 
+		     G_CALLBACK(config_response), 
 		     &ow);
     g_signal_connect(confwin, "delete_event", 
 		     G_CALLBACK(trap_frame_destroy), 
 		     confwin);
-#else
-    confwin=gtk_dialog_new();
-    gtk_signal_connect(GTK_OBJECT(confwin), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     confwin);
-    gtk_window_set_title(GTK_WINDOW(confwin), "Configuration");
-    gtk_window_set_position(GTK_WINDOW(confwin), GTK_WIN_POS_MOUSE);
-#endif
     ow.window=confwin;
 
     vbox=GTK_DIALOG(confwin)->vbox;
@@ -1266,27 +1212,6 @@ static void show_config_win(void)
 				 opts->applet_show_dir);
     ow.show_dir=check;
 
-#ifndef GTK2
-    hbox=GTK_DIALOG(confwin)->action_area;
-
-    but=gtk_button_new_with_label(_("Save"));
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(save_config), &ow);
-
-    but=gtk_button_new_with_label(_("Set"));
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
-		       &ow);
-
-    but=gtk_button_new_with_label(_("Cancel"));
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(cancel_config), confwin);
-#endif
   } else {
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.update_s),
 			      (gfloat)(opts->update_sec));
@@ -1342,13 +1267,7 @@ static void save_menus(void)
 	
   menurc = choices_find_path_save("menus", PROJECT, TRUE);
   if (menurc) {
-    gboolean	mod = FALSE;
-
-#ifdef GTK2
     gtk_accel_map_save(menurc);
-#else
-    gtk_item_factory_dump_rc(menurc, NULL, TRUE);    
-#endif
     g_free(menurc);
   }
 }
@@ -1442,15 +1361,11 @@ static void menu_create_menu(GtkWidget *window)
   gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
 
 	/* Attach the new accelerator group to the window. */
-  gtk_accel_group_attach(accel_group, GTK_OBJECT(window));
+  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
   menurc=choices_find_path_load("menus", PROJECT);
   if(menurc) {
-#ifdef GTK2
     gtk_accel_map_load(menurc);
-#else
-    gtk_item_factory_parse_rc(menurc);
-#endif
     g_free(menurc);
   }
 
@@ -1610,6 +1525,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.21  2002/10/19 14:32:05  stephen
+ * Fixed bug when applet monitors FS mounted as /
+ *
  * Revision 1.20  2002/08/24 16:40:31  stephen
  * Fix compilation problem with libxml2.
  * Remove [] from libgtop test in configure.in

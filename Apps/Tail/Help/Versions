@@ -1,6 +1,10 @@
 Tail
 ====
 
+1.3.0
+-----
+Convert to GTK2.
+
 1.2.2
 -----
 Fix for compilation problems with spaces in paths.

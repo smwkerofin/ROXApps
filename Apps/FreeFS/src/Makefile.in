@@ -1,8 +1,4 @@
-GTK_CONFIG = "@GTK_CONFIG@"
 PKG_CONFIG = "@PKG_CONFIG@"
-GTK_CFLAGS = @GTK_CFLAGS@
-GTK_LIBS = @GTK_LIBS@
-XML_CONFIG = @XML_CONFIG@
 ROX_CLIB = "@ROX_RUN@" ROX-CLib
 SHELL = @SHELL@
 srcdir = @srcdir@
@@ -12,9 +8,8 @@ PLATFORM_DIR = ../${PLATFORM}
 .SUFFIXES: .c .o
 
 CC = @CC@
-CFLAGS = @CFLAGS@ @LIBGTOP_INCS@ `${GTK_CFLAGS}` -I. `${ROX_CLIB} --cflags` `${XML_CONFIG} --cflags`
-LIBS=@LIBGTOP_LIBS@ @LIBGTOP_EXTRA_LIBS@ `${GTK_LIBS}` `${ROX_CLIB} --libs` `${XML_CONFIG} --libs`
-LDFLAGS = @LDFLAGS@ ${LIBS}
+CFLAGS = @CFLAGS@ `${PKG_CONFIG} --cflags gtk+-2.0 libxml-2.0 libgtop-2.0` -I. `${ROX_CLIB} --cflags`
+LDFLAGS = @LDFLAGS@ `${PKG_CONFIG} --libs gtk+-2.0 libxml-2.0 libgtop-2.0` ${LIBS} `${ROX_CLIB} --libs`
 EXEC = ${PLATFORM_DIR}/${PROG}
 
 ############ Things to change for different programs
@@ -46,7 +41,7 @@ config.h: config.h.in
 	./config.status
 
 config.status: configure
-	./configure --bindir=${PLATFORM_DIR}
+	./configure --with-platform=${PLATFORM}
 
 configure: configure.in
 	autoconf

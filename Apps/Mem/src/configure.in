@@ -20,64 +20,49 @@ dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
 
-dnl Forward support for GTK2
-AC_ARG_WITH(gtk2,
-[  --with-gtk2		  Use Gtk+-2.0 API instead of Gtk+-1.2], gtk2=1, gtk2=0)
-
 if test -z "$PKG_CONFIG"; then
   PKG_CONFIG=pkg-config
 fi
 AC_SUBST(PKG_CONFIG)
 
-if test -z "$GTK_CONFIG"; then
-  GTK_CONFIG=gtk-config
-fi
-AC_SUBST(GTK_CONFIG)
-
-if test "$gtk2" = "1"; then
-  AC_MSG_WARN([Using EXPERIMENTAL Gtk+-2.0 API])
-  AC_DEFINE(GTK2)
-  gtk2=1
-  GTK_CFLAGS="$PKG_CONFIG gtk+-2.0 --cflags"
-  GTK_LIBS="$PKG_CONFIG gtk+-2.0 --libs"
+AC_MSG_CHECKING(that pkg-config runs)
+if "$PKG_CONFIG" --version > /dev/null 2>&1 ; then
+  AC_MSG_RESULT(yes)
 else
-  GTK_CFLAGS="$GTK_CONFIG --cflags"
-  GTK_LIBS="$GTK_CONFIG --libs"
+  AC_MSG_RESULT(no)
+  AC_MSG_ERROR([*** $PKG_CONFIG missing ***
+
+\'$PKG_CONFIG --version\' failed to run - make sure it is inside one of the
+directories in your PATH environment variable!
+
+pkg-config comes with the developement packages for GTK+-2.0, available at:
+
+    http://www.gtk.org])
 fi
-AC_SUBST(GTK_CFLAGS)
-AC_SUBST(GTK_LIBS)
+
+AC_DEFUN(ROX_REQUIRE, [
+AC_MSG_CHECKING(that $1 (version >= $2) is installed)
+if "$PKG_CONFIG" --atleast-version=$2 $1 ; then
+  AC_MSG_RESULT(yes)
+else
+  AC_MSG_RESULT(no)
+  if "$PKG_CONFIG" --exists $1 ; then
+    AC_MSG_ERROR(Current version is only `"$PKG_CONFIG" "$1" --modversion`)
+  else
+    AC_MSG_ERROR(Package is not installed)
+  fi
+fi
+])
+
+ROX_REQUIRE(gtk+-2.0, 2.0.1)
+ROX_REQUIRE(glib-2.0, 2.0.3)
+ROX_REQUIRE(libxml-2.0, 2.4.0)
+ROX_REQUIRE(libgtop-2.0, 2.0.0)
 
 if test -z "$ROX_RUN"; then
   AC_CHECK_PROG(ROX_RUN, rox_run, rox_run, "$APP_DIR/rox_run")
 fi
 AC_SUBST(ROX_RUN)
-
-AC_CHECK_PROG(XML_CONFIG, xml2-config, xml2-config, false)
-if test "$XML_CONFIG" != "false"; then
-  AC_DEFINE(HAVE_XML)
-fi
-
-dnl Make sure we have libgtop
-LIBGTOP_LIBS=`echo \`libgtop-config --libs --extra-libs\``
-LIBGTOP_EXTRA_LIBS=`libgtop-config --extra-libs`
-
-AC_MSG_CHECKING(for libgtop library)
-if test -n "$LIBGTOP_LIBS" ; then
-  AC_MSG_RESULT(yes - and with new style config)
-  LIBGTOP_INCS=`libgtop-config --cflags`
-else
-  GTOP_CONFIG=`libgtop-config --config`
-  if test -n "$GTOP_CONFIG" ; then
-    AC_MSG_RESULT(yes - using '$GTOP_CONFIG')
-  else
-    AC_MSG_ERROR(can't run 'libgtop-config --config' - \
-    		make sure it is in your PATH)
-  fi
-  source "$GTOP_CONFIG"
-fi
-AC_SUBST(LIBGTOP_EXTRA_LIBS)
-AC_SUBST(LIBGTOP_LIBS)
-AC_SUBST(LIBGTOP_INCS)
 
 dnl Checks for header files.
 AC_PATH_X
@@ -99,8 +84,8 @@ if "$ROX_RUN" ROX-CLib ; then
   changequote([,])dnl
   AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ROX_CLIB_VERSION)
   AC_MSG_RESULT(version $ver)
-  if test $ROX_CLIB_VERSION -lt 202 ; then
-    AC_MSG_ERROR(ROX-CLib is too old.  Need 0.2.2 or later not $verstr)
+  if test $ROX_CLIB_VERSION -lt 10100 ; then
+    AC_MSG_ERROR(ROX-CLib is too old.  Need 1.1.0 or later not $verstr)
   fi
 else
   AC_MSG_ERROR(can't run ROX-CLib)

@@ -5,13 +5,13 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.23 2002/04/29 08:33:30 stephen Exp $
+ * $Id: clock.c,v 1.24 2002/08/24 16:39:52 stephen Exp $
  */
 #include "config.h"
 
 #define DEBUG              1
 #define INLINE_FONT_SEL    0
-#define TRY_SERVER         1
+#define TRY_SERVER         0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,12 +45,11 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #endif
 
-#ifdef HAVE_XML
+#include <libxml/xmlversion.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
-#endif
 
-#if defined(HAVE_XML) && LIBXML_VERSION>=20400
+#if LIBXML_VERSION>=20400
 #define USE_XML 1
 #else
 #define USE_XML 0
@@ -157,7 +156,7 @@ typedef struct clock_window {
   gboolean applet_mode;
   GtkWidget *digital_out; /* Text below clock face */
   GtkWidget *canvas;      /* Displays clock face */
-  GdkPixmap *pixmap;      /* Draw face here, copy to canvas */
+  /*GdkPixmap *pixmap;      /* Draw face here, copy to canvas */
   guint update_tag;            /* Handle for the timeout */
   Mode mode;
   GdkGC *gc;
@@ -239,11 +238,7 @@ static void do_version(void)
   if(USE_XML)
     printf("yes (libxml version %d)\n", LIBXML_VERSION);
   else {
-    printf("no (");
-    if(HAVE_XML)
-      printf("libxml not found)\n");
-    else
-    printf("libxml version %d)\n", LIBXML_VERSION);
+    printf("no (libxml version %d)\n", LIBXML_VERSION);
   }
   printf("  Using SOAP server... ");
   if(USE_SERVER)
@@ -262,7 +257,7 @@ int main(int argc, char *argv[])
 {
   ClockWindow *cwin;
   int i, c, do_exit, nerr;
-  gchar *app_dir;
+  const gchar *app_dir;
   guint32 xid;
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
@@ -404,7 +399,7 @@ static void remove_window(ClockWindow *win)
   gtk_timeout_remove(win->update_tag);
   if(win->mode.font_name)
     g_free((void *) win->mode.font_name);
-  gdk_pixmap_unref(win->pixmap);
+  /*gdk_pixmap_unref(win->pixmap);*/
   gdk_gc_unref(win->gc);
   g_free(win);
 
@@ -629,7 +624,7 @@ static gboolean do_update(ClockWindow *cwin)
     gtk_label_set_text(GTK_LABEL(cwin->digital_out), buf);
   }
 
-  if(!cwin->gc || !cwin->canvas || !cwin->pixmap)
+  if(!cwin->gc || !cwin->canvas)
     return TRUE;
   
   h=cwin->canvas->allocation.height;
@@ -644,13 +639,13 @@ static gboolean do_update(ClockWindow *cwin)
   if(style && style->bg_gc[GTK_STATE_NORMAL]) {
     /*gdk_draw_rectangle(pixmap, style->bg_gc[GTK_STATE_NORMAL], TRUE,
 		       0, 0, w, h);*/
-    gtk_style_apply_default_background(style, cwin->pixmap, TRUE,
+    gtk_style_apply_default_background(style, cwin->canvas->window, TRUE,
 				       GTK_STATE_NORMAL,
 				       NULL, 0, 0, w, h);
   } else {
     /* Blank out to the background colour */
     gdk_gc_set_foreground(cwin->gc, CL_BACKGROUND);
-    gdk_draw_rectangle(cwin->pixmap, cwin->gc, TRUE, 0, 0, w, h);
+    gdk_draw_rectangle(cwin->canvas->window, cwin->gc, TRUE, 0, 0, w, h);
   }
 
   /* we want a diameter that can fit in our canvas */
@@ -680,19 +675,22 @@ static gboolean do_update(ClockWindow *cwin)
   if(!font && cwin->mode.font_name) {
     font=gdk_font_load(cwin->mode.font_name);
   }
-  if(!font) 
-    font=cwin->canvas->style->font;
+  if(!font) {
+    GtkStyle *style=gtk_widget_get_style(cwin->canvas);
+    if(style)
+      font=gtk_style_get_font(style);
+  }
   gdk_font_ref(font);
   
   /* Draw the clock face, including the hours */
   gdk_gc_set_foreground(cwin->gc, face_fg);
-  gdk_draw_arc(cwin->pixmap, cwin->gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
+  gdk_draw_arc(cwin->canvas->window, cwin->gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
 	       360*64);
   sw-=4;
   sh-=4;
   rad=sw/2;
   gdk_gc_set_foreground(cwin->gc, CL_FACE_BG);
-  gdk_draw_arc(cwin->pixmap, cwin->gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
+  gdk_draw_arc(cwin->canvas->window, cwin->gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
 	       360*64);
   if(cwin->mode.flags & MODE_HOURS) {
     int siz;
@@ -716,7 +714,7 @@ static gboolean do_update(ClockWindow *cwin)
     x1=x0+rad*sin(ang);
     y1=y0-rad*cos(ang);
     gdk_gc_set_foreground(cwin->gc, face_fg);
-    gdk_draw_line(cwin->pixmap, cwin->gc, x2, y2, x1, y1);
+    gdk_draw_line(cwin->canvas->window, cwin->gc, x2, y2, x1, y1);
 
     if(th!=DH_NO && (th==DH_ALL || tick%3==0)) {
       char buf[16];
@@ -728,7 +726,7 @@ static gboolean do_update(ClockWindow *cwin)
       l=strlen(buf);
       xt=x2-gdk_text_width(font, buf, l)/2;
       yt=y2+gdk_text_height(font, buf, l)/2;
-      gdk_draw_string(cwin->pixmap, font, cwin->gc, xt, yt, buf);
+      gdk_draw_string(cwin->canvas->window, font, cwin->gc, xt, yt, buf);
     }
   }
 
@@ -745,7 +743,7 @@ static gboolean do_update(ClockWindow *cwin)
     points[3].x=(gint16)(x0+rad*sin(h_ang-M_PI/2)*0.02);
     points[3].y=(gint16)(y0-rad*cos(h_ang-M_PI/2)*0.02);
     gdk_gc_set_foreground(cwin->gc, CL_HOUR_HAND);
-    gdk_draw_polygon(cwin->pixmap, cwin->gc, TRUE, points, 4);
+    gdk_draw_polygon(cwin->canvas->window, cwin->gc, TRUE, points, 4);
     
   } else {
     x1=x0+rad*sin(h_ang)*0.5;
@@ -753,7 +751,7 @@ static gboolean do_update(ClockWindow *cwin)
     gdk_gc_set_foreground(cwin->gc, CL_HOUR_HAND);
     gdk_gc_set_line_attributes(cwin->gc, 2, GDK_LINE_SOLID, GDK_CAP_ROUND,
 			       GDK_JOIN_MITER);
-    gdk_draw_line(cwin->pixmap, cwin->gc, x0, y0, x1, y1);
+    gdk_draw_line(cwin->canvas->window, cwin->gc, x0, y0, x1, y1);
     
   }
   
@@ -762,7 +760,7 @@ static gboolean do_update(ClockWindow *cwin)
   gdk_gc_set_foreground(cwin->gc, CL_MINUTE_HAND);
   gdk_gc_set_line_attributes(cwin->gc, 2, GDK_LINE_SOLID, GDK_CAP_ROUND,
 			     GDK_JOIN_MITER);
-  gdk_draw_line(cwin->pixmap, cwin->gc, x0, y0, x1, y1);
+  gdk_draw_line(cwin->canvas->window, cwin->gc, x0, y0, x1, y1);
   
   gdk_gc_set_line_attributes(cwin->gc, 0, GDK_LINE_SOLID, GDK_CAP_ROUND,
 			     GDK_JOIN_MITER);
@@ -774,13 +772,13 @@ static gboolean do_update(ClockWindow *cwin)
     x2=x0+rad*sin(s_ang+M_PI)*0.05;
     y2=y0-rad*cos(s_ang+M_PI)*0.05;
     gdk_gc_set_foreground(cwin->gc, CL_SECOND_HAND);
-    gdk_draw_line(cwin->pixmap, cwin->gc, x2, y2, x1, y1);
+    gdk_draw_line(cwin->canvas->window, cwin->gc, x2, y2, x1, y1);
   }
   gdk_gc_set_foreground(cwin->gc, CL_HOUR_HAND);
   rad=sw/10;
   if(rad>8)
     rad=8;
-  gdk_draw_arc(cwin->pixmap, cwin->gc, TRUE, x0-rad/2, y0-rad/2, rad, rad,
+  gdk_draw_arc(cwin->canvas->window, cwin->gc, TRUE, x0-rad/2, y0-rad/2, rad, rad,
 	       0, 360*64);
 
   /* Copy the pixmap to the display canvas */
@@ -792,7 +790,7 @@ static gboolean do_update(ClockWindow *cwin)
 		  0, 0,
 		  w, h);
 		  */
-  gtk_widget_queue_draw(cwin->canvas);
+  /*gtk_widget_queue_draw(cwin->canvas);*/
 
   gdk_font_unref(font);
 
@@ -804,38 +802,20 @@ static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
 {
   int w, h;
   ClockWindow *cwin=(ClockWindow *) data;
-  
-  if(!cwin->gc || !cwin->canvas || !cwin->pixmap)
-    return;
-  
-  h=cwin->canvas->allocation.height;
-  w=cwin->canvas->allocation.width;
 
-  /* Copy the pixmap to the display canvas */
-  gdk_draw_pixmap(cwin->canvas->window,
-		  cwin->canvas->style->fg_gc[GTK_WIDGET_STATE (cwin->canvas)],
-		  cwin->pixmap,
-		  0, 0,
-		  0, 0,
-		  w, h);
+  do_update(cwin);
 
   return TRUE;
 }
 
 /* Create a new backing pixmap of the appropriate size */
+/* NO LONGER NEEDED */
 static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 			 gpointer data)
 {
   ClockWindow *cwin=(ClockWindow *) data;
   
-  if (cwin->pixmap)
-    gdk_pixmap_unref(cwin->pixmap);
-
-  cwin->pixmap = gdk_pixmap_new(widget->window,
-			  widget->allocation.width,
-			  widget->allocation.height,
-			  -1);
-  do_update(cwin);
+  /*do_update(cwin);*/
 
   return TRUE;
 }
@@ -1225,7 +1205,7 @@ static void set_config(GtkWidget *widget, gpointer data)
 {
   GtkWidget *menu;
   GtkWidget *item;
-  gchar *udef;
+  const gchar *udef;
   Mode nmode;
   gfloat sec;
   int i;
@@ -1489,8 +1469,8 @@ static void show_conf_win(void)
     hbox=GTK_DIALOG(confwin)->action_area;
 
     but=gtk_button_new_with_label(_("Set"));
-    GTK_WIDGET_SET_FLAGS(but, GTK_CAN_DEFAULT);
-    gtk_widget_grab_default(but);
+    /*GTK_WIDGET_SET_FLAGS(but, GTK_CAN_DEFAULT);
+      gtk_widget_grab_default(but);*/
     gtk_widget_show(but);
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
@@ -1567,7 +1547,7 @@ static void save_menus(void)
 	
   menurc = choices_find_path_save("menus", PROJECT, TRUE);
   if (menurc) {
-    gtk_item_factory_dump_rc(menurc, NULL, TRUE);
+    gtk_accel_map_save(menurc);
     g_free(menurc);
   }
 }
@@ -1589,13 +1569,14 @@ static void menu_create_menu(GtkWidget *window)
   gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
 
   /* Attach the new accelerator group to the window. */
-  gtk_accel_group_attach(accel_group, GTK_OBJECT(window));
+  /*gtk_accel_group_attach(accel_group, GTK_OBJECT(window));*/
+  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
 
   menurc=choices_find_path_load("menus", PROJECT);
   if(menurc) {
-    gtk_item_factory_parse_rc(menurc);
+    gtk_accel_map_load(menurc);
     g_free(menurc);
   }
 
@@ -1727,6 +1708,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.24  2002/08/24 16:39:52  stephen
+ * Fix compilation problem with libxml2.
+ *
  * Revision 1.23  2002/04/29 08:33:30  stephen
  * Use replacement applet menu positioning code (from ROX-CLib).
  *
