@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.21 2002/02/25 09:48:38 stephen Exp $
+ * $Id: clock.c,v 1.22 2002/03/25 10:34:11 stephen Exp $
  */
 #include "config.h"
 
@@ -541,8 +541,6 @@ static ClockWindow *make_window(guint32 socket)
   if(!(cwin->mode.flags & MODE_NO_TEXT))
     gtk_widget_show(cwin->digital_out);
 
-  if(cwin->applet_mode);
-    applet_get_panel_location(cwin->win);
   if(cwin->win)
     gtk_widget_show(cwin->win);
 
@@ -1626,7 +1624,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
     }
 
     if(cwin->applet_mode)
-      applet_show_menu(menu, bev);
+      applet_popup_menu(cwin->win, menu, bev);
     else
       gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		     bev->button, bev->time);
@@ -1728,6 +1726,10 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.22  2002/03/25 10:34:11  stephen
+ * Use ROX-CLib's SOAP server code to have one instance run multiple windows.
+ * Set an icon for the window. (Doesn't quite work properly...)
+ *
  * Revision 1.21  2002/02/25 09:48:38  stephen
  * Fix compilation problems.
  *
