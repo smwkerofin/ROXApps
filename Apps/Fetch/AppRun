@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.7 2004/06/26 15:00:37 stephen Exp $
+# $Id: AppRun,v 1.8 2004/08/05 17:26:20 stephen Exp $
 
 import os, sys
 import time
 
 import findrox; findrox.version(1, 9, 14)
-import rox, rox.choices, rox.options
-import gobject
+import rox, rox.choices, rox.options, rox.processes
 
-import urllib, urlparse
-
-import xml.dom, xml.dom.minidom
+import urlparse
 
 _=rox._
 
@@ -24,13 +21,6 @@ rox.app_options.notify()
 
 bsize=4096
 stimeo=5*60
-
-import socket
-try:
-    socket.setdefaulttimeout(stimeo)
-    set_to=True
-except:
-    set_to=False
 
 def run_main():
     while rox.g.events_pending():
@@ -54,42 +44,17 @@ def get_filename(url):
         
     return fname
 
-class ROXURLopener(urllib.FancyURLopener):
-    def prompt_user_passwd(self, host, realm):
-        #print host
-        #print realm
-        try:
-            pwds=get_passwords()
-            if pwds.has_key((host, realm)):
-                user, password=pwds[host, realm]
-            else:
-                user=None
-                password=None
-
-            if user and password and not allow_pw_change.int_value:
-                return user, password
-            ouser=user
-            opass=password
-            pd=PasswordWindow(host, realm, user, password)
-            res=pd.run()
-            if res==rox.g.RESPONSE_OK:
-                user, password=pd.get_login()
-                #print user, password
-                if pd.get_save() and (user!=ouser or password!=opass):
-                    add_password(pwds, host, realm, user, password)
-                return user, password
-        except:
-            rox.report_exception()
-        return None, None
-
 class FetchWindow(rox.Dialog):
     def __init__(self, url, target=None):
         self.url=url
         if not target:
             target=get_filename(url)
         self.target=target
+
+        self.count=None
         self.start_time=None
-        self.bsize=bsize
+        self.tsize=None
+        self.con=None
         
         rox.Dialog.__init__(self)
         self.set_title(self.url)
@@ -175,11 +140,18 @@ class FetchWindow(rox.Dialog):
 
         self.connect('delete_event', self.delete_event)
 
+        self.proc=None
         self.show_all()
-        self.opener=ROXURLopener()
-        self.open_server()
+        self.start()
 
     def do_response(self, *unused):
+        if self.proc:
+            self.proc.kill()
+        msg='Fetch of %s cancelled' % self.url
+        if self.count:
+            msg+=', %d bytes in %s' % (self.count, self.target)
+        msg+='.'
+        rox.info(msg)
         sys.exit(0)
 
     def delete_event(self, *unused):
@@ -238,14 +210,12 @@ class FetchWindow(rox.Dialog):
 
     def close(self):
         #print 'close'
-        try:
-            self.con.close()
-        except:
-            pass
-        try:
-            self.outf.close()
-        except:
-            pass
+        if self.proc:
+            try:
+                self.proc.kill()
+            except:
+                pass
+            self.proc=None
         self.hide()
         self.destroy()
         self.prog=None
@@ -253,62 +223,54 @@ class FetchWindow(rox.Dialog):
 
     def read_some(self, source, condition, *unused):
         #print source, condition, unused
+        #print self.con
 
-        data=self.con.read(self.bsize)
-        self.count+=len(data)
+        data=''
+        while True:
+            c=self.con.read(1)
+            data+=c
+            if c=='\n':
+                break
+        #print data,
+        #self.count+=len(data)
         if data:
-            self.report(self.count, self.size)
-            self.outf.write(data)
+            code, arg=data.split('=')
+            if code=='m':
+                self.message(arg.strip())
+            elif code=='t':
+                self.type_l.set_text(arg.strip())
+            elif code=='s':
+                self.size = int(arg)
+                self.report(0, self.size)
+            elif code=='n':
+                self.count=int(arg)
+                if self.count==0:
+                    self.start_time=time.time()
+                self.report(self.count, self.size)
+            elif code=='c':
+                self.finished()
+                return False
             
             return True
 
         self.finished()
         return False
         
-    def open_server(self):
-        self.message(_('Connecting'))
-        self.start_time=time.time()
-        self.con=self.opener.open(self.url)
-        self.message(_('Connected'))
+    def start(self):
+        r, w=os.pipe()
+        self.con=os.fdopen(r, 'r', 1)
+        self.proc=rox.processes.PipeThroughCommand(
+            ('python', rox.app_dir+'/fetch.py', self.url, self.target),
+            None, os.fdopen(w, 'w', 1))
 
-        headers=self.con.info()
-        #print headers
-        if headers and headers.has_key('Content-Type'):
-            self.type_l.set_text(headers['Content-Type'])
-        if headers.has_key("content-length"):
-            self.size = int(headers["Content-Length"])
-        else:
-            self.size=0
-        #print self.con, dir(self.con)
-        #print self.con.fp, dir(self.con.fp)
-            
-        self.outf=file(self.target, 'w')
-
-        self.message(_('Downloading'))
-        self.count=0
-        self.report(0, self.size)
-        #rox.g.timeout_add(100, self.update)
-        #rox.g.idle_add(self.update)
         rox.g.input_add(self.con.fileno(), rox.g.gdk.INPUT_READ,
                         self.read_some)
+
+        self.proc.wait()
+        #print 'done waiting'
+        self.proc=None
+        #self.finished()
         
-        #print message
-        #print dir(message)
-        #self.finished(message)
-
-    def update(self, args=None):
-        #print 'in update'
-        data=self.con.read(self.bsize)
-        self.count+=len(data)
-        if data:
-            self.report(self.count, self.size)
-            self.outf.write(data)
-            
-            return True
-
-        self.finished()
-        return False
-
     def report(self, nb, tsize):
         #print 'report', self, nb, tsize
         if tsize>0:
@@ -326,131 +288,11 @@ class FetchWindow(rox.Dialog):
 
     def finished(self):
         self.con.close()
-        self.outf.close()
         self.message(_('Done'))
+        run_main()
         rox.g.timeout_add(wait_for.int_value*1000, self.close)
         #rox.mainloop()
         
-class PasswordWindow(rox.Dialog):
-    def __init__(self, host, realm, user=None, password=None):
-        self.host=host
-        self.realm=realm
-        
-        rox.Dialog.__init__(self)
-        self.set_title(_('Password for %s' % host))
-        self.add_button(rox.g.STOCK_CANCEL, rox.g.RESPONSE_CANCEL)
-        self.add_button(rox.g.STOCK_OK, rox.g.RESPONSE_OK)
-        self.connect('response', self.do_response)
-
-        vbox=self.vbox
-
-        table=rox.g.Table(4, 2)
-        vbox.pack_start(table, padding=4)
-        line=0
-        
-        l=rox.g.Label(_('Enter username and password for %s at %s') %
-                      (realm, host))
-        l.set_line_wrap(True)
-        l.set_alignment(0., 0.5)
-        table.attach(l, 0, 2, line, line+1, xpadding=2)
-
-        line+=1
-        l=rox.g.Label(_('<b>Username</b>'))
-        l.set_use_markup(True)
-        l.set_alignment(1., 0.5)
-        table.attach(l, 0, 1, line, line+1, xpadding=2)
-        self.user=rox.g.Entry(0)
-        if user:
-            self.user.set_text(user)
-        table.attach(self.user, 1, 2, line, line+1, xpadding=2)
-
-        line+=1
-        l=rox.g.Label(_('<b>Password</b>'))
-        l.set_use_markup(True)
-        l.set_alignment(1., 0.5)
-        table.attach(l, 0, 1, line, line+1, xpadding=2)
-        self.password=rox.g.Entry(0)
-        self.password.set_visibility(False)
-        if password:
-            self.password.set_text(password)
-        table.attach(self.password, 1, 2, line, line+1, xpadding=2)
-
-        line+=1
-        self.can_save=rox.g.CheckButton(_('Remember for next time'))
-        self.can_save.set_active(True)
-        table.attach(self.can_save, 0, 2, line, line+1, xpadding=2)
-
-        vbox.show_all()
-
-    def do_response(self, *unused):
-        self.hide()
-
-    def get_login(self):
-        return self.user.get_text(), self.password.get_text()
-
-    def get_save(self):
-        return self.can_save.get_active()
-
-def _data(node):
-	"""Return all the text directly inside this DOM Node."""
-	return ''.join([text.nodeValue for text in node.childNodes
-			if text.nodeType == xml.dom.Node.TEXT_NODE])
-
-def get_passwords():
-    fname=rox.choices.load('Fetch', 'passwords.xml')
-    if not fname:
-        return {}
-
-    pwds={}
-    doc=xml.dom.minidom.parse(fname)
-    #print doc.getElementsByTagName('Entry')
-    for entry in doc.getElementsByTagName('Entry'):
-        host=entry.getAttribute('host')
-        realm=entry.getAttribute('realm')
-
-        node=entry.getElementsByTagName('User')[0]
-        user=_data(node)
-        node=entry.getElementsByTagName('Password')[0]
-        password=_data(node)
-
-        pwds[host, realm]=(user, password)
-
-    return pwds
-
-def save_passwords(pwds):
-    fname=rox.choices.save('Fetch', 'passwords.xml')
-
-    doc=xml.dom.minidom.Document()
-    root=doc.createElement('Passwords')
-    doc.appendChild(root)
-
-    for key, value in pwds.iteritems():
-        host, realm=key
-        user, password=value
-
-        node=doc.createElement('Entry')
-        node.setAttribute('host', host)
-        node.setAttribute('realm', realm)
-        
-        snode=doc.createElement('User')
-        snode.appendChild(doc.createTextNode(user))
-        node.appendChild(snode)
-        snode=doc.createElement('Password')
-        snode.appendChild(doc.createTextNode(password))
-        node.appendChild(snode)
-        
-        root.appendChild(node)
-
-    f=file(fname+'.tmp', 'w')
-    doc.writexml(f)
-    f.close()
-    os.chmod(fname+'.tmp', 0600)
-    os.rename(fname+'.tmp', fname)
-        
-def add_password(pwds, host, realm, user, password):
-    pwds[host, realm]=(user, password)
-    save_passwords(pwds)
-
 def main():
     if len(sys.argv)>1:
         url=sys.argv[1]

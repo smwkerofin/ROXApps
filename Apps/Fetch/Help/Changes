@@ -1,6 +1,11 @@
 Fetch
 =====
 
+21-Aug-2004
+~~~~~~~~~~~
+Split program into two processes: one to run the gui and the other to 
+do the actual fetch.
+
 05-Aug-2004 (0.0.4)
 ~~~~~~~~~~~
 Better code for reading the socket, less chance of blocking.
