@@ -1,6 +1,11 @@
 NetStat
 =======
 
+0.0.10
+------
+Use new InfoWin interface.
+Fix AppRun/AppletRun for Zero Install.
+
 0.0.9
 -----
 Italian translation of AppInfo provided by Yuri Bongiorno.
