@@ -4,8 +4,9 @@ Changes to Clock
 2.1.0
 -----
 Get rid of some legacy code. 
-Use ROX-CLib 2.1.0.
+Use ROX-CLib 2.1.0, including aclocal.m4.
 Stock icons in the menu.
+Open options dialog from command line.
 
 2.0.0
 -----
