@@ -1,6 +1,10 @@
 Changes to Diff
 ===============
 
+23-Nov-2004 (2.1.2)
+~~~~~~~~~~~
+Added missing libdir script.
+
 31 Oct 2004 (2.1.1)
 ~~~~~~~~~~~
 Update to new interfaces for infowin and choices.
