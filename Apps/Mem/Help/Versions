@@ -1,6 +1,11 @@
 Mem
 ===
 
+1.1.0
+-----
+Multiple windows.  Acts as a server, using SOAP, so there only needs to be
+one instance running.
+
 1.0.1
 -----
 Make sure AppRun can find rox_run.
