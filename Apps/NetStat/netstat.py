@@ -1,4 +1,4 @@
-# $Id: netstat.py,v 1.4 2003/02/02 13:11:21 stephen Exp $
+# $Id: netstat.py,v 1.5 2003/06/09 17:29:11 stephen Exp $
 
 """Interface to network statistics, under Linux.  The function stat() returns
 the data."""
@@ -8,7 +8,7 @@ import sys
 import string
 import time
 
-if sys.platform=='linux' or sys.platform=='linux2':
+if sys.platform[:5]=='linux':
     from linux import stat, sockets
 elif sys.platform=='sunos5':
     from solaris import stat, sockets
