@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.9 2001/08/29 13:46:14 stephen Exp $
+ * $Id: freefs.c,v 1.10 2001/10/23 10:50:06 stephen Exp $
  */
 #include "config.h"
 
@@ -41,15 +41,16 @@
 #include <glibtop/mountlist.h>
 #include <glibtop/fsusage.h>
 
+#include <libxml/tree.h>
+#include <libxml/parser.h>
+
 #include "choices.h"
 #include "infowin.h"
 #include "rox_debug.h"
 #if TRY_DND
 #include "rox_dnd.h"
 #endif
-
-/* The icon */
-#include "../pixmaps/freefs.xpm"
+#include "rox_resources.h"
 
 #define TIP_PRIVATE "For more information see the help file"
 
@@ -84,6 +85,8 @@ static gboolean update_fs_values(gchar *mntpt);
 static void do_update(void);
 static void read_choices(void);
 static void write_choices(void);
+static gboolean read_choices_xml(void);
+static void write_choices_xml(void);
 static void menu_create_menu(GtkWidget *);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
@@ -102,7 +105,7 @@ int main(int argc, char *argv[])
   GtkStyle *style;
   GtkTooltips *ttips;
   char tbuf[1024], *home;
-  guchar *fname;
+  gchar *fname;
   int c;
   guint xid=0;
   gchar *app_dir;
@@ -128,7 +131,9 @@ int main(int argc, char *argv[])
   read_choices();
 
   /* Pick the gtkrc file up from CHOICESPATH */
-  fname=choices_find_path_load("gtkrc", "FreeFS");
+  fname=rox_resources_find(PROJECT, "gtkrc", ROX_RESOURCES_DEFAULT_LANG);
+  if(!fname)
+    fname=choices_find_path_load("gtkrc", PROGRAM);
   if(fname) {
     gtk_rc_parse(fname);
     g_free(fname);
@@ -178,10 +183,14 @@ int main(int argc, char *argv[])
 #endif
     /* Set the icon */
     style = gtk_widget_get_style(win);
-    pixmap = gdk_pixmap_create_from_xpm_d(GTK_WIDGET(win)->window,  &mask,
+    fname=rox_resources_find(PROJECT, "freefs.xpm", ROX_RESOURCES_NO_LANG);
+    if(fname) {
+      pixmap = gdk_pixmap_create_from_xpm(GTK_WIDGET(win)->window,  &mask,
 					  &style->bg[GTK_STATE_NORMAL],
-					  (gchar **)freefs_xpm );
-    gdk_window_set_icon(GTK_WIDGET(win)->window, NULL, pixmap, mask);
+					  fname);
+      gdk_window_set_icon(GTK_WIDGET(win)->window, NULL, pixmap, mask);
+      g_free(fname);
+    }
     gtk_tooltips_set_tip(ttips, win,
 			 "FreeFS shows the space usage on a single "
 			 "file system",
@@ -523,11 +532,81 @@ static void do_update(void)
 #define INIT_SIZE   "AppletInitSize"
 #define SHOW_DIR    "AppletShowDir"
 
+static gboolean read_choices_xml(void)
+{
+  guchar *fname;
+
+  fname=choices_find_path_load("Config.xml", PROJECT);
+
+  if(fname) {
+    xmlDocPtr doc;
+    xmlNodePtr node, root;
+    const xmlChar *string;
+    
+    doc=xmlParseFile(fname);
+    if(!doc) {
+      g_free(fname);
+      return FALSE;
+    }
+
+    root=xmlDocGetRootElement(doc);
+    if(!root) {
+      g_free(fname);
+      xmlFreeDoc(doc);
+      return FALSE;
+    }
+
+    if(strcmp(root->name, "FreeFS")!=0) {
+      g_free(fname);
+      xmlFreeDoc(doc);
+      return FALSE;
+    }
+
+    for(node=root->xmlChildrenNode; node; node=node->next) {
+      const xmlChar *string;
+      
+      if(node->type!=XML_ELEMENT_NODE)
+	continue;
+
+      /* Process data here */
+      if(strcmp(node->name, UPDATE_RATE)==0) {
+ 	string=xmlGetProp(node, "value");
+	if(!string)
+	  continue;
+	options.update_sec=atoi(string);
+	free(string);
+	
+      } else if(strcmp(node->name, "Applet")==0) {
+ 	string=xmlGetProp(node, "initial-size");
+	if(string) {
+	  options.applet_init_size=atoi(string);
+	  free(string);
+	}
+ 	string=xmlGetProp(node, "show-dir");
+	if(string) {
+	  options.applet_show_dir=atoi(string);
+	  free(string);
+	}
+	
+      }
+
+    }
+    
+    g_free(fname);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
 static void read_choices(void)
 {
   guchar *fname;
   
   choices_init();
+
+  if(read_choices_xml())
+    return;
 
   fname=choices_find_path_load("Config", "FreeFS");
   if(fname) {
@@ -580,8 +659,56 @@ static void read_choices(void)
   }
 }
 
+static void write_choices_xml(void)
+{
+  gchar *fname;
+  gboolean ok;
+
+  fname=choices_find_path_save("Config.xml", PROJECT, TRUE);
+  dprintf(2, "save to %s", fname? fname: "NULL");
+
+  if(fname) {
+    xmlDocPtr doc;
+    xmlNodePtr tree;
+    FILE *out;
+    char buf[80];
+
+    doc = xmlNewDoc("1.0");
+    doc->children=xmlNewDocNode(doc, NULL, PROJECT, NULL);
+    xmlSetProp(doc->children, "version", VERSION);
+
+    /* Insert data here */
+    tree=xmlNewChild(doc->children, NULL, UPDATE_RATE, NULL);
+    sprintf(buf, "%d", options.update_sec);
+    xmlSetProp(tree, "value", buf);
+  
+    tree=xmlNewChild(doc->children, NULL, "Applet", NULL);
+    sprintf(buf, "%d", options.applet_init_size);
+    xmlSetProp(tree, "initial-size", buf);
+    sprintf(buf, "%d", options.applet_show_dir);
+    xmlSetProp(tree, "show-dir", buf);
+  
+#if LIBXML_VERSION >= 20400
+    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
+#else
+    out=fopen(fname, "w");
+    if(out) {
+      xmlDocDump(out, doc);
+            
+      fclose(out);
+      ok=TRUE;
+    } else {
+      ok=FALSE;
+    }
+#endif
+
+    g_free(fname);
+  }
+}
+
 static void write_choices(void)
 {
+#if 0
   FILE *out;
   gchar *fname;
     
@@ -598,6 +725,9 @@ static void write_choices(void)
   fprintf(out, "%s: %d\n", INIT_SIZE, options.applet_init_size);
   fprintf(out, "%s: %d\n", SHOW_DIR, options.applet_show_dir);
   fclose(out);
+#else
+  write_choices_xml();
+#endif
 }
 
 static void show_info_win(void)
@@ -884,6 +1014,10 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.10  2001/10/23 10:50:06  stephen
+ * Another compilation fix: run autoconf if configure script missing.
+ * Can now choose what is shown in applet mode.
+ *
  * Revision 1.9  2001/08/29 13:46:14  stephen
  * Fixed up the debug output.
  *

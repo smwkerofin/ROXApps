@@ -16,6 +16,11 @@ if test -z "$ROX_RUN"; then
 fi
 AC_SUBST(ROX_RUN)
 
+if test -z "$XML_CONFIG"; then
+  AC_CHECK_PROG(XML_CONFIG, xml2-config, xml2-config, xml-config)
+fi
+AC_SUBST(XML_CONFIG)
+
 dnl Make sure we have libgtop
 changequote(,)dnl
 LIBGTOP_LIBS=`echo \`libgtop-config --libs --extra-libs\``

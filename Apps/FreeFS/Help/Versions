@@ -1,6 +1,11 @@
 Versions of FreeFS
 ==================
 
+1.1.3
+-----
+Pick up window icon from rox_resources_find.
+Config file now in XML.
+
 1.1.2
 -----
 Another compilation fix: run autoconf if configure script missing.
