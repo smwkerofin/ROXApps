@@ -1,6 +1,14 @@
 Fetch
 =====
 
+19-Jun-2004
+~~~~~~~~~~~
+Prompt for and store passwords. Mark strings as translatable.
+
+18-Jun-2004
+~~~~~~~~~~~
+Figure out type name when we start downloading.
+
 12-Jun-2004
 ~~~~~~~~~~~
 Expanded the display.  Start work towards password handling.

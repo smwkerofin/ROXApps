@@ -1,15 +1,19 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.3 2004/06/05 12:13:38 stephen Exp $
+# $Id: AppRun,v 1.4 2004/06/12 16:04:28 stephen Exp $
 
 import os, sys
 import time
 
 import findrox; findrox.version(1, 9, 14)
-import rox
+import rox, rox.choices
 import gobject
 
 import urllib, urlparse
+
+import xml.dom, xml.dom.minidom
+
+_=rox._
 
 def run_main():
     while rox.g.events_pending():
@@ -35,9 +39,82 @@ def get_filename(url):
 
 class ROXURLopener(urllib.FancyURLopener):
     def prompt_user_passwd(self, host, realm):
-        print host
-        print realm
+        #print host
+        #print realm
+        try:
+            pwds=get_passwords()
+            if pwds.has_key((host, realm)):
+                user, password=pwds[host, realm]
+            else:
+                user=None
+                password=None
+            ouser=user
+            opass=password
+            pd=PasswordWindow(host, realm, user, password)
+            res=pd.run()
+            if res==rox.g.RESPONSE_OK:
+                user, password=pd.get_login()
+                #print user, password
+                if pd.get_save() and (user!=ouser or password!=opass):
+                    add_password(pwds, host, realm, user, password)
+                return user, password
+        except:
+            rox.report_exception()
         return None, None
+    
+    # Changed from urllib.FancyURLopener to pass extra arg
+    def retrieve(self, url, filename=None, reporthook=None, data=None):
+        """retrieve(url) returns (filename, None) for a local object
+        or (tempfilename, headers) for a remote object."""
+        url = urllib.unwrap(urllib.toBytes(url))
+        if self.tempcache and self.tempcache.has_key(url):
+            return self.tempcache[url]
+        type, url1 = urllib.splittype(url)
+        if not filename and (not type or type == 'file'):
+            try:
+                fp = self.open_local_file(url1)
+                hdrs = fp.info()
+                del fp
+                return urllib.url2pathname(urllib.splithost(url1)[1]), hdrs
+            except IOError, msg:
+                pass
+        fp = self.open(url, data)
+        headers = fp.info()
+        if not filename:
+            import tempfile
+            garbage, path = urllib.splittype(url)
+            garbage, path = urllib.splithost(path or "")
+            path, garbage = urllib.splitquery(path or "")
+            path, garbage = urllib.splitattr(path or "")
+            suffix = os.path.splitext(path)[1]
+            filename = tempfile.mktemp(suffix)
+            self.__tempfiles.append(filename)
+        result = filename, headers
+        if self.tempcache is not None:
+            self.tempcache[url] = result
+        tfp = open(filename, 'wb')
+        bs = 1024*8
+        size = -1
+        blocknum = 1
+        if reporthook:
+            if headers.has_key("content-length"):
+                size = int(headers["Content-Length"])
+            reporthook(0, bs, size, headers)
+        block = fp.read(bs)
+        if reporthook:
+            reporthook(1, bs, size)
+        while block:
+            tfp.write(block)
+            block = fp.read(bs)
+            blocknum = blocknum + 1
+            if reporthook:
+                reporthook(blocknum, bs, size)
+        fp.close()
+        tfp.close()
+        del fp
+        del tfp
+        return result
+
 
 class FetchWindow(rox.Dialog):
     def __init__(self, url, target=None):
@@ -58,7 +135,7 @@ class FetchWindow(rox.Dialog):
         vbox.pack_start(table, padding=4)
 
         line=0
-        l=rox.g.Label('<b>Source</b>')
+        l=rox.g.Label(_('<b>Source</b>'))
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
@@ -68,7 +145,7 @@ class FetchWindow(rox.Dialog):
         table.attach(l, 1, 2, line, line+1, xpadding=2)
 
         line+=1
-        l=rox.g.Label('<b>Size</b>')
+        l=rox.g.Label(_('<b>Size</b>'))
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
@@ -78,7 +155,7 @@ class FetchWindow(rox.Dialog):
         self.size_l=l
 
         line+=1
-        l=rox.g.Label('<b>Type</b>')
+        l=rox.g.Label(_('<b>Type</b>'))
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
@@ -88,7 +165,7 @@ class FetchWindow(rox.Dialog):
         self.type_l=l
 
         line+=1
-        l=rox.g.Label('<b>Download to</b>')
+        l=rox.g.Label(_('<b>Download to</b>'))
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
@@ -110,7 +187,7 @@ class FetchWindow(rox.Dialog):
         table.attach(self.prog, 0, 2, line, line+1)
 
         line+=1
-        l=rox.g.Label('<b>Estimated time</b>')
+        l=rox.g.Label(_('<b>Estimated time</b>'))
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
@@ -149,6 +226,7 @@ class FetchWindow(rox.Dialog):
             return
         self.prog.set_fraction(val)
         self.prog.set_text('%d%%' % (val*100))
+        self.set_title('%d%% %s' % (val*100, self.target))
 
         if self.start_time and total>0 and size>0:
             now=time.time()
@@ -161,7 +239,9 @@ class FetchWindow(rox.Dialog):
             secs-=hours*3600
             mins=int(secs/60)
             secs-=mins*60
-            if hours>0:
+            if eleft<=0:
+                tstr=_('Done')
+            elif hours>0:
                 tstr='%d:%02d:%02d' % (hours, mins, secs)
             else:
                 tstr='%02d:%02d' % (mins, secs)
@@ -182,15 +262,17 @@ class FetchWindow(rox.Dialog):
         rox.g.main_quit()
 
     def open_server(self):
-        self.message('Downloading')
+        self.message(_('Downloading'))
         self.start_time=time.time()
         fname, message=self.opener.retrieve(self.url, self.target, self.report)
         #print message
         #print dir(message)
         self.finished(message)
 
-    def report(self, nblock, bsize, tsize):
+    def report(self, nblock, bsize, tsize, headers=None):
         #print 'report', self, nblock, bsize, tsize
+        if headers and headers.has_key('Content-Type'):
+            self.type_l.set_text(headers['Content-Type'])
         nb=nblock*bsize
         if tsize>0:
             self.percent_done(nb, tsize)
@@ -206,6 +288,126 @@ class FetchWindow(rox.Dialog):
         rox.g.timeout_add(3*1000, self.close)
         rox.g.main()
         
+class PasswordWindow(rox.Dialog):
+    def __init__(self, host, realm, user=None, password=None):
+        self.host=host
+        self.realm=realm
+        
+        rox.Dialog.__init__(self)
+        self.set_title(_('Password for %s' % host))
+        self.add_button(rox.g.STOCK_CANCEL, rox.g.RESPONSE_CANCEL)
+        self.add_button(rox.g.STOCK_OK, rox.g.RESPONSE_OK)
+        self.connect('response', self.do_response)
+
+        vbox=self.vbox
+
+        table=rox.g.Table(4, 2)
+        vbox.pack_start(table, padding=4)
+        line=0
+        
+        l=rox.g.Label(_('Enter username and password for %s at %s') %
+                      (realm, host))
+        l.set_line_wrap(True)
+        l.set_alignment(0., 0.5)
+        table.attach(l, 0, 2, line, line+1, xpadding=2)
+
+        line+=1
+        l=rox.g.Label(_('<b>Username</b>'))
+        l.set_use_markup(True)
+        l.set_alignment(1., 0.5)
+        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        self.user=rox.g.Entry(0)
+        if user:
+            self.user.set_text(user)
+        table.attach(self.user, 1, 2, line, line+1, xpadding=2)
+
+        line+=1
+        l=rox.g.Label(_('<b>Password</b>'))
+        l.set_use_markup(True)
+        l.set_alignment(1., 0.5)
+        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        self.password=rox.g.Entry(0)
+        self.password.set_visibility(False)
+        if password:
+            self.password.set_text(password)
+        table.attach(self.password, 1, 2, line, line+1, xpadding=2)
+
+        line+=1
+        self.can_save=rox.g.CheckButton(_('Remember for next time'))
+        self.can_save.set_active(True)
+        table.attach(self.can_save, 0, 2, line, line+1, xpadding=2)
+
+        vbox.show_all()
+
+    def do_response(self, *unused):
+        self.hide()
+
+    def get_login(self):
+        return self.user.get_text(), self.password.get_text()
+
+    def get_save(self):
+        return self.can_save.get_active()
+
+def _data(node):
+	"""Return all the text directly inside this DOM Node."""
+	return ''.join([text.nodeValue for text in node.childNodes
+			if text.nodeType == xml.dom.Node.TEXT_NODE])
+
+def get_passwords():
+    fname=rox.choices.load('Fetch', 'passwords.xml')
+    if not fname:
+        return {}
+
+    pwds={}
+    doc=xml.dom.minidom.parse(fname)
+    #print doc.getElementsByTagName('Entry')
+    for entry in doc.getElementsByTagName('Entry'):
+        host=entry.getAttribute('host')
+        realm=entry.getAttribute('realm')
+
+        node=entry.getElementsByTagName('User')[0]
+        user=_data(node)
+        node=entry.getElementsByTagName('Password')[0]
+        password=_data(node)
+
+        pwds[host, realm]=(user, password)
+
+    return pwds
+
+def save_passwords(pwds):
+    fname=rox.choices.save('Fetch', 'passwords.xml')
+
+    doc=xml.dom.minidom.Document()
+    root=doc.createElement('Passwords')
+    doc.appendChild(root)
+
+    for key, value in pwds.iteritems():
+        host, realm=key
+        user, password=value
+
+        node=doc.createElement('Entry')
+        node.setAttribute('host', host)
+        node.setAttribute('realm', realm)
+        
+        snode=doc.createElement('User')
+        snode.appendChild(doc.createTextNode(user))
+        node.appendChild(snode)
+        snode=doc.createElement('Password')
+        snode.appendChild(doc.createTextNode(password))
+        node.appendChild(snode)
+        
+        root.appendChild(node)
+
+    f=file(fname+'.tmp', 'w')
+    doc.writexml(f)
+    f.close()
+    os.chmod(fname+'.tmp', 0600)
+    os.rename(fname+'.tmp', fname)
+        
+def add_password(pwds, host, realm, user, password):
+    pwds[host, realm]=(user, password)
+    save_passwords(pwds)
+
 def main():
     if len(sys.argv)>1:
         url=sys.argv[1]
