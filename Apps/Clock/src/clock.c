@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.15 2001/11/06 12:23:05 stephen Exp $
+ * $Id: clock.c,v 1.16 2001/11/08 14:10:04 stephen Exp $
  */
 #include "config.h"
 
@@ -674,6 +674,7 @@ static void write_config_xml(void)
     if(ok) 
       time(&config_time);
 
+    xmlFreeDoc(doc);
     g_free(fname);
   }
 }
@@ -828,6 +829,7 @@ static gboolean read_config_xml(void)
     set_mode(&nmode);
     
     g_free(fname);
+    xmlFreeDoc(doc);
     return TRUE;
   }
 }
@@ -1460,6 +1462,11 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.16  2001/11/08 14:10:04  stephen
+ * Can set font for the hour numbers. Can use a tiled background if you
+ * set up your gtkrc. Fixed bug in new XML format config (interval was
+ * incorrect).
+ *
  * Revision 1.15  2001/11/06 12:23:05  stephen
  * Use XML for alarms and config file
  *
