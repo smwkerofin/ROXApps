@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id$
+# $Id: AppRun,v 1.1.1.1 2004/05/31 11:51:42 stephen Exp $
 
 import os, sys
 
@@ -72,9 +72,9 @@ class FetchWindow(rox.Window):
         if self.prog is None:
             return
         if size>total:
-            val=1
+            val=1.
         elif total>0:
-            val=size/total
+            val=float(size)/total
         else:
             self.active()
             return
