@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.8 2004/08/05 17:26:20 stephen Exp $
+# $Id: AppRun,v 1.9 2004/08/28 15:09:35 stephen Exp $
 
 import os, sys
 import time
 
 import findrox; findrox.version(1, 9, 14)
-import rox, rox.choices, rox.options, rox.processes
+import rox, rox.choices, rox.options, rox.processes, rox.mime
 
 import urlparse
 
@@ -53,7 +53,7 @@ class FetchWindow(rox.Dialog):
 
         self.count=None
         self.start_time=None
-        self.tsize=None
+        self.size=0
         self.con=None
         
         rox.Dialog.__init__(self)
@@ -87,7 +87,7 @@ class FetchWindow(rox.Dialog):
         self.size_l=l
 
         line+=1
-        l=rox.g.Label(_('<b>Type</b>'))
+        l=rox.g.Label(_('<b>Server Type</b>'))
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
@@ -95,6 +95,17 @@ class FetchWindow(rox.Dialog):
         l.set_alignment(0., 0.5)
         table.attach(l, 1, 2, line, line+1, xpadding=2)
         self.type_l=l
+
+        line+=1
+        l=rox.g.Label(_('<b>Local Type</b>'))
+        l.set_use_markup(True)
+        l.set_alignment(1., 0.5)
+        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        ltype=rox.mime.get_type_by_name(self.target)
+        l=rox.g.Label(str(ltype))
+        l.set_alignment(0., 0.5)
+        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        self.ltype_l=l
 
         line+=1
         l=rox.g.Label(_('<b>Download to</b>'))
@@ -149,7 +160,10 @@ class FetchWindow(rox.Dialog):
             self.proc.kill()
         msg='Fetch of %s cancelled' % self.url
         if self.count:
-            msg+=', %d bytes in %s' % (self.count, self.target)
+            msg+=', %d bytes ' % self.count
+            if self.size:
+                msg+='(%d%%) ' % int(100.*self.count/self.size)
+            msg+='in %s' % self.target
         msg+='.'
         rox.info(msg)
         sys.exit(0)
@@ -234,7 +248,7 @@ class FetchWindow(rox.Dialog):
         #print data,
         #self.count+=len(data)
         if data:
-            code, arg=data.split('=')
+            code, arg=data.split('=', 1)
             if code=='m':
                 self.message(arg.strip())
             elif code=='t':
@@ -248,6 +262,10 @@ class FetchWindow(rox.Dialog):
                     self.start_time=time.time()
                 self.report(self.count, self.size)
             elif code=='c':
+                self.finished()
+                return False
+            elif code=='x':
+                self.message('Helper process crashed: %s' % arg.strip())
                 self.finished()
                 return False
             
