@@ -89,6 +89,7 @@ ${LIBDIR}:  ${PLATFORM_DIR}
 	-mkdir ${LIBDIR}
 
 ${INCLUDEDIR}:  ${PLATFORM_DIR} ${INCLUDES}
+	mkdir ${INCLUDEDIR}
 	for f in ${INCLUDES}; do ${INSTALL_DATA} $$f ${INCLUDEDIR}; done
 
 ${LIBFILE.a}: ${LIBDIR} ${LIBOBJECTS}
