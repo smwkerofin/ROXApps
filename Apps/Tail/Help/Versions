@@ -1,6 +1,12 @@
 Tail
 ====
 
+1.1.0
+-----
+Switch over to ROX-CLib.
+Can specify a title with -t option.
+Add a status line giving time & date of last update, suppress with -c.
+
 1.0.0
 -----
 Stable version.  (No changes from 0.1.7).
