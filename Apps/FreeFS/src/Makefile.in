@@ -6,7 +6,7 @@ XML_CONFIG = @XML_CONFIG@
 ROX_CLIB = "@ROX_RUN@" ROX-CLib
 SHELL = @SHELL@
 srcdir = @srcdir@
-PLATFORM = @with_platform
+PLATFORM = @with_platform@
 PLATFORM_DIR = ../${PLATFORM}
 .SUFFIXES:
 .SUFFIXES: .c .o
