@@ -1,0 +1,15 @@
+<?xml version='1.0'?>
+<options>
+<section title="Types">
+<button name="install" label="Install handlers">Click here to install the handlers for the supported MIME-types</button>
+</section>
+<section title="Image">
+<numentry name='tsize' label='Thumbnail size' min='16' max='256'>
+Size of the generated thumbnails (normally overriden by the filer).
+</numentry>
+<toggle name='sprocket' label='Draw sprocket effect'>If selected, draw the film sprocket effect on the sides</toggle>
+<numentry name='ssize' label='Sprocket size' min='4' max='16'>
+Size of the sprocket effect.
+</numentry>
+</section>
+</options>
