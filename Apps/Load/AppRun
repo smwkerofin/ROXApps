@@ -5,12 +5,14 @@ PROG=Load
 APP_DIR=`dirname "$0"`
 APP_DIR=`cd "$APP_DIR";pwd`; export APP_DIR
 
-ARCH=`uname -m`
-case $ARCH in
+if [ "$PLATFORM" = "" ] ; then
+    ARCH=`uname -m`
+    case $ARCH in
 	i?86) ARCH=ix86 ;;
-esac
+    esac
 
-PLATFORM=`uname -s`-$ARCH export PLATFORM
+    PLATFORM=`uname -s`-$ARCH export PLATFORM
+fi
 
 if [ ! -x "$APP_DIR/AppletRun" ]; then
   (cd "$APP_DIR" ; ln -s AppRun AppletRun)
