@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.14 2001/12/12 10:18:22 stephen Exp $
+ * $Id: freefs.c,v 1.15 2002/01/10 15:16:20 stephen Exp $
  */
 #include "config.h"
 
@@ -105,6 +105,44 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 static gboolean handle_uris(GtkWidget *widget, GSList *uris, gpointer data,
 			   gpointer udata);
 
+static void usage(const char *argv0)
+{
+  printf("Usage: %s [X-options] [gtk-options] [-vh] [-a XID] [dir]\n", argv0);
+  printf("where:\n\n");
+  printf("  X-options\tstandard Xlib options\n");
+  printf("  gtk-options\tstandard GTK+ options\n");
+  printf("  -h\tprint this help message\n");
+  printf("  -v\tdisplay version information\n");
+  printf("  -a XID\tX id of window to use in applet mode\n");
+  printf("  dir\tdirectory on file sustem to monitor\n");
+}
+
+static void do_version(void)
+{
+  printf("%s %s\n", PROJECT, VERSION);
+  printf("%s\n", PURPOSE);
+  printf("%s\n", WEBSITE);
+  printf("Copyright 2002 %s\n", AUTHOR);
+  printf("Distributed under the terms of the GNU General Public License.\n");
+  printf("(See the file COPYING in the Help directory).\n");
+  printf("%s last compiled %s\n", __FILE__, __DATE__);
+
+  printf("\nCompile time options:\n");
+  printf("  Debug output... %s\n", DEBUG? "yes": "no");
+  printf("  Support drag & drop to change FS... %s\n", TRY_DND? "yes": "no");
+  printf("  Support drag & drop to applet... %s\n", APPLET_DND? "yes": "no");
+  printf("  Using XML... ");
+  if(USE_XML)
+    printf("yes (libxml version %d)\n", LIBXML_VERSION);
+  else {
+    printf("no (");
+    if(HAVE_XML)
+      printf("libxml not found)\n");
+    else
+    printf("libxml version %d)\n", LIBXML_VERSION);
+  }
+}
+
 int main(int argc, char *argv[])
 {
   GtkWidget *vbox, *hbox;
@@ -118,12 +156,12 @@ int main(int argc, char *argv[])
   GtkTooltips *ttips;
   char tbuf[1024], *home;
   gchar *fname;
-  int c;
   guint xid=0;
   gchar *app_dir;
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
 #endif
+  int c, do_exit, nerr;
 
   rox_debug_init(PROJECT);
 
@@ -135,10 +173,44 @@ int main(int argc, char *argv[])
   g_free(localedir);
 #endif
   
+  /* Check for this argument by itself */
+  if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
+    do_version();
+    exit(0);
+  }
+  
   dprintf(5, "%d %s -> %s", argc, argv[1]? argv[1]: "NULL", argv[argc-1]);
   gtk_init(&argc, &argv);
   dprintf(5, "%d %s -> %s", argc, argv[1]? argv[1]: "NULL", argv[argc-1]);
   ttips=gtk_tooltips_new();
+
+  /* Process remaining arguments */
+  nerr=0;
+  do_exit=FALSE;
+  while((c=getopt(argc, argv, "vha:"))!=EOF)
+    switch(c) {
+    case 'a':
+      xid=atol(optarg);
+      break;
+    case 'h':
+      usage(argv[0]);
+      do_exit=TRUE;
+      break;
+    case 'v':
+      do_version();
+      do_exit=TRUE;
+      break;
+    default:
+      nerr++;
+      break;
+    }
+  if(nerr) {
+    fprintf(stderr, "%s: invalid options\n", argv[0]);
+    usage(argv[0]);
+    exit(10);
+  }
+  if(do_exit)
+    exit(0);
 
   read_choices();
 
@@ -149,15 +221,6 @@ int main(int argc, char *argv[])
   if(fname) {
     gtk_rc_parse(fname);
     g_free(fname);
-  }
-
-  while((c=getopt(argc, argv, "a:"))!=EOF) {
-    dprintf(5, " %2d -%c %s", c, c, optarg? optarg: "NULL");
-    switch(c) {
-    case 'a':
-      xid=atol(optarg);
-      break;
-    }
   }
 
   /* Figure out which directory we should be monitoring */
@@ -1034,6 +1097,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.15  2002/01/10 15:16:20  stephen
+ * New applet menu positioning code (from ROX-CLib).
+ *
  * Revision 1.14  2001/12/12 10:18:22  stephen
  * Added option to open a viewer for the root of the FS being monitored
  *

@@ -1,6 +1,10 @@
 Versions of FreeFS
 ==================
 
+1.1.8
+-----
+Add -h and -v options.
+
 1.1.7
 -----
 New applet menu positioning code (from ROX-CLib).

@@ -1,6 +1,10 @@
 Tail
 ====
 
+1.1.2
+-----
+Added -h and -v options.
+
 1.1.1
 -----
 Small changes to compilation system.

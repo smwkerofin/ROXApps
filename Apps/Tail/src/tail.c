@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.10 2001/08/29 13:43:04 stephen Exp $
+ * $Id: tail.c,v 1.11 2001/10/04 13:39:18 stephen Exp $
  */
 
 #include "config.h"
@@ -159,6 +159,36 @@ static void detach(GtkWidget *widget, GtkMenu *menu)
   dprintf(4, "detach");
 }
 
+static void usage(const char *argv0)
+{
+  printf("Usage: %s [X-options] [gtk-options] [-vhc] [-t title] file\n", argv0);
+  printf("where:\n\n");
+  printf("  X-options\tstandard Xlib options\n");
+  printf("  gtk-options\tstandard GTK+ options\n");
+  printf("  -h\tprint this help message\n");
+  printf("  -v\tdisplay version information\n");
+  printf("  -c\tdon't show last change time\n");
+  printf("  -t title\ttitle string for window\n");
+  printf("  file\tfile to monitor\n");
+}
+
+static void do_version(void)
+{
+  printf("%s %s\n", PROJECT, VERSION);
+  printf("%s\n", PURPOSE);
+  printf("%s\n", WEBSITE);
+  printf("Copyright 2002 %s\n", AUTHOR);
+  printf("Distributed under the terms of the GNU General Public License.\n");
+  printf("(See the file COPYING in the Help directory).\n");
+  printf("%s last compiled %s\n", __FILE__, __DATE__);
+
+  printf("\nCompile time options:\n");
+  printf("  Debug output... %s\n", DEBUG? "yes": "no");
+  printf("  Use a menu bar... %s\n", USE_MENUBAR? "yes": "no, use pop-ups");
+  printf("  Have a \"File=>Open\" menu entry... %s\n",
+	 USE_FILE_OPEN? "yes": "no, use drag and drop");
+}
+
 int main(int argc, char *argv[])
 {
   GtkWidget *vbox;
@@ -166,23 +196,50 @@ int main(int argc, char *argv[])
   GtkWidget *scr;
   GtkWidget *mbar;
   gchar *rcfile;
-  int c;
   gboolean show_change_time=TRUE;
+  int c, do_exit, nerr;
 
+  /* Check for this argument by itself */
+  if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
+    do_version();
+    exit(0);
+  }
+  
   gtk_init(&argc, &argv);
   rox_debug_init(PROJECT);
   choices_init();
   rox_dnd_init();
 
-  while((c=getopt(argc, argv, "ct:"))!=EOF)
+  /* Process remaining arguments */
+  nerr=0;
+  do_exit=FALSE;
+  while((c=getopt(argc, argv, "vhct:"))!=EOF)
     switch(c) {
+    case 'h':
+      usage(argv[0]);
+      do_exit=TRUE;
+      break;
+    case 'v':
+      do_version();
+      do_exit=TRUE;
+      break;
     case 't':
       fixed_title=g_strdup(optarg);
       break;
     case 'c':
       show_change_time=FALSE;
       break;
+    default:
+      nerr++;
+      break;
     }
+  if(nerr) {
+    fprintf(stderr, "%s: invalid options\n", argv[0]);
+    usage(argv[0]);
+    exit(10);
+  }
+  if(do_exit)
+    exit(0);
 
   rcfile=choices_find_path_load("gtkrc", PROJECT);
   if(rcfile) {
@@ -657,6 +714,11 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.11  2001/10/04 13:39:18  stephen
+ * Switch over to ROX-CLib.
+ * Can specify a title with -t option.
+ * Add a status line giving time & date of last update, suppress with -c.
+ *
  * Revision 1.10  2001/08/29 13:43:04  stephen
  * Fix drag & drop code to avoid double drops.
  *
