@@ -1,4 +1,4 @@
-# $Id$
+# $Id: thumb.py,v 1.1 2003/12/22 11:30:45 stephen Exp $
 
 
 """Template for a thumbnail generation program.  This provides a Python
@@ -146,6 +146,7 @@ class Thumbnailler:
         """Report an exception (if debug enabled)"""
         if self.debug<1:
             return
-        exc=sys.exc_info()[:2]
-        sys.stderr.write('%s: %s %s\n' % (sys.argv[0], exc[0], exc[1]))
+        #exc=sys.exc_info()[:2]
+        #sys.stderr.write('%s: %s %s\n' % (sys.argv[0], exc[0], exc[1]))
+        rox.report_exception()
         
