@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.3 2001/05/09 10:22:49 stephen Exp $
+ * $Id: freefs.c,v 1.4 2001/05/25 07:53:44 stephen Exp $
  */
 
 #include <stdio.h>
@@ -13,6 +13,12 @@
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
+
+#ifdef HAVE_UNISTD_H
+/* Sometimes getopt is in stdlib.h, sometimes in here.  And sometimes both
+   and stdio.h */
+#include <unistd.h>
+#endif
 
 #include <fcntl.h>
 #include <sys/statvfs.h>
@@ -31,9 +37,10 @@
 /* The icon */
 #include "../pixmaps/freefs.xpm"
 
-
+/* Select compilation options */
 #define TRY_DND            1     /* Enable the drag and drop stuff */
 #define APPLET_MENU        1     /* Use a menu for the applet version */
+#define APPLET_DND         0     /* Support drag & drop to the applet */
 
 /* GTK+ objects */
 static GtkWidget *win=NULL;
@@ -70,7 +77,7 @@ static void menu_create_menu(void);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
 
-#ifdef TRY_DND
+#if TRY_DND
 static void make_drop_target(GtkWidget *widget);
 static void dnd_init(void);
 
@@ -98,8 +105,10 @@ int main(int argc, char *argv[])
   guchar *fname;
   int c;
   guint xid=0;
-  
+
+  /*fprintf(stderr, "%d %s -> %s\n", argc, argv[1], argv[argc-1]);*/
   gtk_init(&argc, &argv);
+  /*fprintf(stderr, "%d %s -> %s\n", argc, argv[1], argv[argc-1]);*/
 
   read_choices();
 
@@ -110,15 +119,17 @@ int main(int argc, char *argv[])
     g_free(fname);
   }
 
-  while((c=getopt(argc, argv, "a:"))!=EOF)
+  while((c=getopt(argc, argv, "a:"))!=EOF) {
+    /*fprintf(stderr, " %2d -%c %s\n", c, c, optarg? optarg: "NULL");*/
     switch(c) {
     case 'a':
       xid=atol(optarg);
       break;
     }
+  }
 
   /* Figure out which directory we should be monitoring */
-  if(argv[optind])
+  if(optind<argc && argv[optind])
     df_dir=g_strdup(argv[optind]);
   else
     df_dir=g_dirname(argv[0]);
@@ -132,7 +143,7 @@ int main(int argc, char *argv[])
 
   if(!xid) {
     /* Full window mode */
-#ifdef TRY_DND
+#if TRY_DND
     dnd_init();
 #endif
 
@@ -147,7 +158,7 @@ int main(int argc, char *argv[])
 		       GTK_SIGNAL_FUNC(button_press), NULL);
     gtk_widget_realize(win);
     gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
-#ifdef TRY_DND
+#if TRY_DND
     make_drop_target(win);
 #endif
     /* Set the icon */
@@ -165,7 +176,7 @@ int main(int argc, char *argv[])
     gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
     gtk_widget_show(hbox);
 
-    label=gtk_label_new("Mounted on");
+    label=gtk_label_new(_("Mounted on"));
     gtk_widget_set_name(label, "simple label");
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
     gtk_widget_show(label);
@@ -176,7 +187,7 @@ int main(int argc, char *argv[])
     gtk_box_pack_start(GTK_BOX(hbox), fs_name, TRUE, TRUE, 2);
     gtk_widget_show(fs_name);
   
-    label=gtk_label_new("Total:");
+    label=gtk_label_new(_("Total:"));
     gtk_widget_set_name(label, "simple label");
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
     gtk_widget_show(label);
@@ -222,16 +233,23 @@ int main(int argc, char *argv[])
 		       "WM destroy");
     gtk_widget_set_usize(plug, options.applet_init_size,
 			 options.applet_init_size);
-#if APPLET_MENU
+    /*fprintf(stderr, "set_usize %d\n", options.applet_init_size);*/
+    
     gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), NULL);
     gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
+
+#if TRY_DND && APPLET_DND
+    /*fprintf(stderr, "make drop target for plug\n");*/
+    make_drop_target(plug);
 #endif
-    
+
+    /*fprintf(stderr, "vbox new\n");*/
     vbox=gtk_vbox_new(FALSE, 1);
     gtk_container_add(GTK_CONTAINER(plug), vbox);
     gtk_widget_show(vbox);
   
+    /*fprintf(stderr, "progress bar new\n");*/
     fs_per=gtk_progress_bar_new();
     gtk_widget_set_name(fs_per, "gauge");
     gtk_progress_bar_set_bar_style(GTK_PROGRESS_BAR(fs_per),
@@ -241,31 +259,41 @@ int main(int argc, char *argv[])
     gtk_widget_show(fs_per);
     gtk_box_pack_start(GTK_BOX(vbox), fs_per, TRUE, TRUE, 2);
 
+    /*fprintf(stderr, "alignment new\n");*/
     align=gtk_alignment_new(1, 0.5, 1, 0);
     gtk_box_pack_start(GTK_BOX(vbox), align, FALSE, FALSE, 2);
     gtk_widget_show(align);
 
+    /* fprintf(stderr, "label new\n");*/
     fs_name=gtk_label_new("");
     gtk_label_set_justify(GTK_LABEL(fs_name), GTK_JUSTIFY_RIGHT);
     gtk_widget_set_name(fs_name, "text display");
     gtk_container_add(GTK_CONTAINER(align), fs_name);
     if(options.applet_show_dir)
       gtk_widget_show(fs_name);
-    
+
+    /*fprintf(stderr, "show plug\n");*/
     gtk_widget_show(plug);
+    /*fprintf(stderr, "made applet\n");*/
   }
 
   /* Set up glibtop and check now */
+  /*fprintf(stderr, "set up glibtop\n");*/
   glibtop_init_r(&glibtop_global_server,
 		 (1<<GLIBTOP_SYSDEPS_FSUSAGE)|(1<<GLIBTOP_SYSDEPS_MOUNTLIST),
 		 0);
+  /*fprintf(stderr, "update_fs_values(%s)\n", df_dir);*/
   update_fs_values(df_dir);
 
+  /*fprintf(stderr, "show %p (%ld)\n", win, xid);*/
   if(!xid)
     gtk_widget_show(win);
+  /*fprintf(stderr, "timeout %ds, %p, %s\n", options.update_sec,
+	  (GtkFunction) update_fs_values, df_dir);*/
   update_tag=gtk_timeout_add(options.update_sec*1000,
 			 (GtkFunction) update_fs_values, df_dir);
-  /*printf("update_sec=%d, update_tag=%u\n", update_sec, update_tag);*/
+  /*fprintf(stderr, "update_sec=%d, update_tag=%u\n", options.update_sec,
+	  update_tag);*/
 
   gtk_main();
 
@@ -306,7 +334,7 @@ static const char *fmt_size(unsigned long long bytes)
 static const char *find_mount_point(const char *fname)
 {
   static char wnm[PATH_MAX];
-  static const char *failed="(unknown)";
+  static const char *failed=N_("(unknown)");
   static gchar *prev=NULL;
   static const gchar *prev_ans=NULL;
   
@@ -317,9 +345,11 @@ static const char *find_mount_point(const char *fname)
   glibtop_mountlist list;
   int i;
 
+#ifdef HAVE_REALPATH
   if(!realpath(fname, name))
-    return failed;
-
+    return _(failed);
+#endif
+  
   if(prev && strcmp(prev, name)==0 && prev_ans)
     return prev_ans;
 
@@ -360,8 +390,9 @@ static gboolean update_fs_values(gchar *mntpt)
   int ok=FALSE;
 
   /*
-  printf("update_sec=%d, update_tag=%u\n", update_sec, update_tag);
-  printf("update_fs_values(\"%s\")\n", mntpt);
+  fprintf(stderr, "update_sec=%d, update_tag=%u\n", options.update_sec,
+	  update_tag);
+  fprintf(stderr, "update_fs_values(\"%s\")\n", mntpt);
   */
   
   if(mntpt) {
@@ -393,7 +424,7 @@ static gboolean update_fs_values(gchar *mntpt)
       } else {
 	fused=0.f;
       }
-      /*printf("%2.0f %%\n", fused);*/
+      /*fprintf(stderr, "%2.0f %%\n", fused);*/
 
       if(win) {
 	/*printf("mount point=%s\n", find_mount_point(mntpt));*/
@@ -403,17 +434,20 @@ static gboolean update_fs_values(gchar *mntpt)
 	gtk_label_set_text(GTK_LABEL(fs_free), fmt_size(avail));
 
       } else {
+	/*fprintf(stderr, "set text\n");*/
 	gtk_label_set_text(GTK_LABEL(fs_name),
 			   g_basename(find_mount_point(mntpt)));
 	/*gtk_label_set_text(GTK_LABEL(fs_name), find_mount_point(mntpt));*/
       }
+      /*fprintf(stderr, "set progress\n");*/
       gtk_progress_set_value(GTK_PROGRESS(fs_per), fused);
 
     }
   }
-  /*
-  printf("update_fs_values(%s), ok=%d, update_sec=%d\n", mntpt, ok, update_sec);
-  */
+  
+  /*fprintf(stderr, "update_fs_values(%s), ok=%d, update_sec=%d\n", mntpt, ok,
+	  options.update_sec);*/
+  
   if(!ok && win) {
     gtk_label_set_text(GTK_LABEL(fs_name), "?");
     gtk_label_set_text(GTK_LABEL(fs_total), "?");
@@ -505,7 +539,7 @@ static void write_choices(void)
   if(!out)
     return;
   
-  fprintf(out, "# Config file for FreeFS\n");
+  fprintf(out, _("# Config file for FreeFS\n"));
   fprintf(out, "%s: %d\n", UPDATE_RATE, options.update_sec);
   fprintf(out, "%s: %d\n", INIT_SIZE, options.applet_init_size);
   fprintf(out, "%s: %d\n", SHOW_DIR, options.applet_show_dir);
@@ -602,23 +636,23 @@ static void show_config_win(void)
 
     hbox=gtk_hbox_new(FALSE, 0);
     gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 4);
 
-    label=gtk_label_new("Update rate (s)");
+    label=gtk_label_new(_("Update rate (s)"));
     gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
 
     range=gtk_adjustment_new((gfloat) options.update_sec,
 			     1, 60., 1., 10., 10.);
     spin=gtk_spin_button_new(GTK_ADJUSTMENT(range), 1, 0);
     gtk_widget_set_name(spin, "update_s");
     gtk_widget_show(spin);
-    gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 4);
     ow.update_s=spin;
 
-    frame=gtk_frame_new("Applet configuration");
+    frame=gtk_frame_new(_("Applet configuration"));
     gtk_widget_show(frame);
-    gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, FALSE, 6);
 
     vbox=gtk_vbox_new(FALSE, 0);
     gtk_widget_show(vbox);
@@ -626,51 +660,51 @@ static void show_config_win(void)
 
     hbox=gtk_hbox_new(FALSE, 0);
     gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 6);
 
-    label=gtk_label_new("Initial size");
+    label=gtk_label_new(_("Initial size"));
     gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
 
     range=gtk_adjustment_new((gfloat) options.applet_init_size,
 			     16, 128, 2, 16, 16);
     spin=gtk_spin_button_new(GTK_ADJUSTMENT(range), 1, 0);
     gtk_widget_set_name(spin, "init_size");
     gtk_widget_show(spin);
-    gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 4);
     ow.init_size=spin;
 
     hbox=gtk_hbox_new(FALSE, 0);
     gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 4);
 
-    label=gtk_label_new("Display");
+    label=gtk_label_new(_("Display"));
     gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
 
-    check=gtk_check_button_new_with_label("Show directory");
+    check=gtk_check_button_new_with_label(_("Show directory"));
     gtk_widget_set_name(check, "show_dir");
     gtk_widget_show(check);
-    gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 2);
+    gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 4);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check),
 				 options.applet_show_dir);
     ow.show_dir=check;
 
     hbox=GTK_DIALOG(confwin)->action_area;
 
-    but=gtk_button_new_with_label("Save");
+    but=gtk_button_new_with_label(_("Save"));
     gtk_widget_show(but);
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked",
 		       GTK_SIGNAL_FUNC(save_config), &ow);
 
-    but=gtk_button_new_with_label("Set");
+    but=gtk_button_new_with_label(_("Set"));
     gtk_widget_show(but);
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
 		       &ow);
 
-    but=gtk_button_new_with_label("Cancel");
+    but=gtk_button_new_with_label(_("Cancel"));
     gtk_widget_show(but);
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked",
@@ -690,10 +724,10 @@ static void show_config_win(void)
 
 /* Pop-up menu */
 static GtkItemFactoryEntry menu_items[] = {
-  { "/Info",		NULL, show_info_win, 0, NULL },
-  { "/Configure",	NULL, show_config_win, 0, NULL},
-  { "/Update Now",	NULL, do_update, 0, NULL },
-  { "/Quit",	NULL, gtk_main_quit, 0, NULL },
+  { N_("/Info"),		NULL, show_info_win, 0, NULL },
+  { N_("/Configure..."),	NULL, show_config_win, 0, NULL},
+  { N_("/Update Now"),	NULL, do_update, 0, NULL },
+  { N_("/Quit"), 	NULL, gtk_main_quit, 0, NULL },
 };
 
 
@@ -720,19 +754,36 @@ static void menu_create_menu(void)
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused)
 {
-  if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
-    if(!menu)
-      menu_create_menu();
+  gboolean are_applet=(win==0);
+  
+  if(bev->type==GDK_BUTTON_PRESS) {
+    if(bev->button==3
+#if !APPLET_MENU
+       && !are_applet
+#endif
+       ) {
+      if(!menu)
+	menu_create_menu();
 
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-				bev->button, bev->time);
-    return TRUE;
+      gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
+		     bev->button, bev->time);
+      return TRUE;
+    } else if(bev->button==1 && are_applet) {
+      gchar *cmd;
+
+      cmd=g_strdup_printf("%s/AppRun %s", getenv("APP_DIR"),
+			  df_dir);
+      system(cmd);
+      g_free(cmd);
+
+      return TRUE;
+    }
   }
 
   return FALSE;
 }
 
-#ifdef TRY_DND
+#if TRY_DND
 
 /* Implement drag & drop to change directory monitored.
    "Borrowed" from ROX-Filer.
@@ -832,8 +883,8 @@ GSList *uri_list_to_gslist(char *uri_list)
     linebreak = strchr(uri_list, 13);
 
     if (!linebreak || linebreak[1] != 10) {
-      fprintf(stderr, "uri_list_to_gslist: Incorrect or missing line "
-		      "break in text/uri-list data\n");
+      fprintf(stderr, _("uri_list_to_gslist: Incorrect or missing line "
+		      "break in text/uri-list data\n"));
       return list;
     }
     
@@ -978,7 +1029,7 @@ static void got_uri_list(GtkWidget 		*widget,
   uri_list = uri_list_to_gslist(selection_data->data);
 
   if (!uri_list)
-    error = "No URIs in the text/uri-list (nothing to do!)";
+    error = _("No URIs in the text/uri-list (nothing to do!)");
   else {
     /*
     for(next_uri=uri_list; next_uri; next_uri=next_uri->next)
@@ -1048,7 +1099,7 @@ static void drag_data_received(GtkWidget      	*widget,
     got_uri_list(widget, context, selection_data, time);
     break;
   default:
-    fprintf(stderr, "drag_data_received: unknown target\n");
+    fprintf(stderr, _("drag_data_received: unknown target\n"));
     gtk_drag_finish(context, FALSE, FALSE, time);
     break;
   }
@@ -1058,6 +1109,11 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.4  2001/05/25 07:53:44  stephen
+ * Expanded configuration, which meant moving it off the menu and into a
+ * window.  Applet supports a menu.  Initial size of applet now
+ * configurable.
+ *
  * Revision 1.3  2001/05/09 10:22:49  stephen
  * Version number now stored in AppInfo.xml
  *
