@@ -1,6 +1,10 @@
 Load
 ====
 
+0.1.7
+-----
+If the display is wide enough, provide a strip chart.
+
 0.1.6
 -----
 Use new AppInfo.xml file.

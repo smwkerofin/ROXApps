@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id$
+ * $Id: load.c,v 1.2 2001/04/24 07:52:33 stephen Exp $
  *
  * Log at end of file
  */
@@ -50,8 +50,9 @@ enum {COL_WHITE, COL_HIGH, COL_NORMAL, COL_BLUE, COL_BG, COL_FG};
 #define BAR_GAP    4
 #define BOTTOM_MARGIN 12
 #define TOP_MARGIN 10
-#define MIN_WIDTH 48
-#define MIN_HEIGHT 48
+#define MIN_WIDTH 36
+#define MIN_HEIGHT 36
+#define MAX_BAR_WIDTH 32
 
 typedef struct options {
   guint32 update_ms;
@@ -73,8 +74,12 @@ typedef struct option_widgets {
 static glibtop *server=NULL;
 static double max_load=1.0;
 static double red_line=1.0;
+static int reduce_delay=10;
 static guint update=0;
 static time_t config_time=0;
+static double *history=NULL;
+static int nhistory=0;
+static int ihistory=0;
 
 static void do_update(void);
 static gint configure_event(GtkWidget *widget, GdkEventConfigure *event);
@@ -173,7 +178,7 @@ static void do_update(void)
 {
   int w, h;
   int bw, mbh, bh, bm=BOTTOM_MARGIN, tm=TOP_MARGIN;
-  int bx, by, x;
+  int bx, by, x, sbx;
   int cpu, other;
   double ld;
   GdkFont *font;
@@ -220,19 +225,30 @@ static void do_update(void)
   mbh=by-tm;
   if(mbh<48)
     mbh=by-2;
+  if(bw>MAX_BAR_WIDTH) {
+    bw=MAX_BAR_WIDTH;
+    bx=w-2-3*bw-3*BAR_GAP-1;
+  }
   /*printf("w=%d bw=%d\n", w, bw);*/
+  sbx=bx;
 
   glibtop_get_loadavg_l(server, &load);
+  if(history && nhistory>0)
+    history[(ihistory++)%nhistory]=load.loadavg[0];
 
   reduce=TRUE;
   for(i=0; i<3; i++) {
     if(load.loadavg[i]>max_load/2)
       reduce=FALSE;
-    while(max_load<load.loadavg[i])
+    while(max_load<load.loadavg[i]) {
       max_load*=2;
+      reduce_delay=10;
+    }
   }
-  if(reduce && max_load>=2.0)
-    max_load/=2;
+  if(reduce && max_load>=2.0) {
+    if(reduce_delay--<1)
+      max_load/=2;
+  }
   /* Correct for FP inaccuracy, if needed */
   if(max_load<1.0)
     max_load=1.0;
@@ -268,6 +284,21 @@ static void do_update(void)
     bx+=bw+BAR_GAP;
   }
 
+  if(history && ihistory>0) {
+    bx=sbx-BAR_GAP;
+    for(i=0; i<nhistory && i<ihistory && bx>=BAR_GAP; i++, bx-=2) {
+      ld=history[(ihistory-i-1)%nhistory];
+      bh=mbh*ld/max_load;
+      gdk_gc_set_foreground(gc, colours+COL_NORMAL);
+      gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, 2, bh);
+      if(ld>red_line) {
+	int bhred=mbh*(ld-red_line)/max_load;
+	gdk_gc_set_foreground(gc, colours+COL_HIGH);
+	gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, 2, bhred);
+      }
+    }
+  }
+
   if(options.show_max) {
     sprintf(buf, "Max %2d", (int) max_load);
     gdk_gc_set_foreground(gc, colours+COL_FG);
@@ -293,6 +324,51 @@ static void do_update(void)
 		  w, h);
 }
 
+static void resize_history(int width)
+{
+  int nrec;
+  double *tmp;
+  int i;
+
+  nrec=(width-2-3*MAX_BAR_WIDTH-3*BAR_GAP-2-1)/2;
+
+  if(nrec<=nhistory)
+    return;
+
+  if(ihistory<nhistory) {
+    tmp=g_realloc(history, nrec*sizeof(double));
+    if(!tmp)
+      return;
+
+    history=tmp;
+    nhistory=nrec;
+    
+    for(i=ihistory; i<nhistory; i++)
+      history[i]=0.;
+    
+    return;
+  }
+
+  if(!nhistory) {
+    history=g_new(double, nrec);
+    nhistory=nrec;
+    ihistory=0;
+    return;
+  }
+
+  tmp=g_new(double, nrec);
+  i=nhistory-(ihistory%nhistory);
+  if(i==nhistory)
+    i=0;
+  g_memmove(tmp, history+(ihistory%nhistory), i*sizeof(double));
+  g_memmove(tmp+i, history, (nhistory-i)*sizeof(double));
+
+  g_free(history);
+  history=tmp;
+  ihistory=nhistory;
+  nhistory=nrec;
+}
+
 /* Create a new backing pixmap of the appropriate size */
 static gint configure_event(GtkWidget *widget, GdkEventConfigure *event)
 {
@@ -303,6 +379,7 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event)
 			  widget->allocation.width,
 			  widget->allocation.height,
 			  -1);
+  resize_history(widget->allocation.width);
   do_update();
 
   return TRUE;
@@ -624,5 +701,8 @@ static void show_info_win(void)
 }
 
 /*
- * $Log$
+ * $Log: load.c,v $
+ * Revision 1.2  2001/04/24 07:52:33  stephen
+ * Display tweaks
+ *
  */

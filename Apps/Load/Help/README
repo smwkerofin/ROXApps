@@ -12,6 +12,9 @@ Three bars are plotted (for 1, 5 and 15 minute average).  Values up to
 1 are plotted in green, above that in red.  Optionally the maximum
 scale of the graph may be shown, also the individual values.
 
+The display scales to the size of its window.  If the width of the
+window is sufficient then a strip chart of the 1 minute average is plotted.
+
 The latest version is at http://www.kerofin.demon.co.uk/rox/
 
 -- 
