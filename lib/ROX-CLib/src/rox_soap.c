@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.7 2003/03/05 15:31:23 stephen Exp $
+ * $Id: rox_soap.c,v 1.8 2003/03/25 14:31:34 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -330,23 +330,6 @@ static gboolean get_ipc_property(GdkWindow *window, GdkAtom atom,
 	}
 
 	return retval;
-}
-
-static GdkWindow *new_ipc_window(GdkAtom atom)
-{
-  Window		xid, xid_confirm;
-  GdkWindow	*window;
-
-  dprintf(3, "gdk_window_foreign_new %p", xid);
-  window = gdk_window_foreign_new(xid);
-  if (!window)
-    return NULL;
-  
-  dprintf(3, "get_ipc_property %p %p %p", window, atom, xid);
-  if (!get_ipc_property(window, atom, &xid_confirm) || xid_confirm!=xid)
-    return NULL;
-  
-  return window;
 }
 
 /* Get the remote IPC window of the already-running server if there
@@ -712,6 +695,9 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.8  2003/03/25 14:31:34  stephen
+ * New attempt at working SOAP code.
+ *
  * Revision 1.7  2003/03/05 15:31:23  stephen
  * First pass a conversion to GTK 2
  * Known problems in SOAP code.
