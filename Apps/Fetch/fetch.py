@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.2 2004/09/25 10:42:01 stephen Exp $
+# $Id: fetch.py,v 1.3 2004/11/21 13:16:41 stephen Exp $
 
 import os, sys
 import time
@@ -18,11 +18,11 @@ rox.setup_app_options('Fetch')
 
 allow_pw_change=rox.options.Option('allow_pw_change', True)
 wait_for=rox.options.Option('wait_for', 3)
+use_dl_manager=rox.options.Option('use_dl_manager', False)
+block_size=rox.options.Option('block_size', 8192)
 
 rox.app_options.notify()
 
-bsize=4096*2 # The bigger this number, the lighter the CPU load.  But we get
-             # fewer updates to the GUI
 stimeo=5*60
 
 # This won't work in Python 2.2
@@ -85,11 +85,12 @@ class Fetcher:
 
         self.start_time=None
         self.con=None
-        self.bsize=bsize
+        self.bsize=block_size.int_value
 
         self.opener=ROXURLopener()
         self.open_server()
         self.run()
+        self.to_parent('c','')
         
     def to_parent(self, type, message):
         print '%s=%s' % (type, message)
@@ -132,6 +133,7 @@ class Fetcher:
 
     def close(self):
         #print 'close'
+        self.to_parent('c','')
         try:
             self.con.close()
         except:
@@ -140,7 +142,6 @@ class Fetcher:
             self.outf.close()
         except:
             pass
-        self.to_parent('c','')
 
     def read_some(self, source, condition, *unused):
         #print source, condition, unused
@@ -154,6 +155,8 @@ class Fetcher:
                 rsz=left
         if nready>-1 and rsz>nready:
             rsz=nready
+
+        # override
         rsz=self.bsize
 
         if rsz>0:
@@ -161,10 +164,12 @@ class Fetcher:
             #self.message('%d bytes read' % len(data))
             self.count+=len(data)
             if data:
-                self.report(self.count, self.size)
                 self.outf.write(data)
-            
-                return True
+                self.report(self.count, self.size)
+
+                #self.message('size=%d count=%d' % (self.size, self.count))
+                if self.size==0 or self.count<self.size:
+                    return True
 
         self.finished()
         return False
@@ -178,7 +183,7 @@ class Fetcher:
         self.to_parent('n', str(nb))
 
     def finished(self):
-        self.message(_('Done'))
+        #self.message(_('Done'))
         self.close()
         rox.g.main_quit()
         
@@ -302,12 +307,11 @@ def add_password(pwds, host, realm, user, password):
     pwds[host, realm]=(user, password)
     save_passwords(pwds)
 
-def run(url, fname):
-    fetcher=Fetcher(url, fname)
-
 def main():
     try:
-        run(sys.argv[1], sys.argv[2])
+        Fetcher(sys.argv[1], sys.argv[2])
+        print 'm=goodbye'
+        time.sleep(1)
     except:
         ex, msg=sys.exc_info()[:2]
         print 'x=%s' % msg
