@@ -1,6 +1,10 @@
 Tail
 ====
 
+1.2.2
+-----
+Fix for compilation problems with spaces in paths.
+
 1.2.1
 -----
 Make sure AppRun can find rox_run.
