@@ -22,6 +22,7 @@
 #undef HAVE_GETTEXT
 
 #undef HAVE_XML
+#undef HAVE_UNIFIED_DIFF
 
 /* I18n support */
 #if defined(HAVE_GETTEXT)

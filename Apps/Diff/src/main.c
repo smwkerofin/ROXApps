@@ -1,14 +1,11 @@
 /*
- * Demo - a demonstration of coding a ROX application in C
- *
- * To adapt this as your own program, first replace all occurances of "Demo" or
- * "DEMO" with your app name.
+ * Diff - show the difference between 2 files in some windows
  *
  * Stephen Watson <stephen@kerofin.demon.co.uk>
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.6 2002/05/14 10:35:08 stephen Exp $
+ * $Id: main.c,v 1.7 2002/08/24 16:39:58 stephen Exp $
  */
 #include "config.h"
 
@@ -69,6 +66,7 @@ typedef struct diff_window {
   int pid;
   gboolean last_was_nl;
   GdkColor *colour;
+  gboolean unified;
 } DiffWindow;
 
 static DiffWindow window;
@@ -81,17 +79,26 @@ static GdkColor col_ctl={0, 0xffff, 0, 0xffff};
 
 typedef struct options {
   gchar *font_name;
+  gboolean use_unified;
 } Options;
 
 static Options options={
-  "fixed"
+  "fixed", FALSE
 };
+
+typedef struct option_widgets {
+  GtkWidget *win;
+  GtkWidget *font_name;
+  GtkWidget *font_window;
+  GtkWidget *context, *unified;
+} OptionWidgets;
 
 /* Declare functions in advance */
 static void make_window(DiffWindow *win);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win); /* button press on window */
 static void show_info_win(void);        /* Show information box */
+static void show_choices_win(void);     /* Show configuration window */
 static void read_config(void);          /* Read configuration */
 static void write_config(void);         /* Write configuration */
 #if USE_XML
@@ -310,6 +317,7 @@ static void make_window(DiffWindow *window)
 
   window->diffs=text;
   window->last_was_nl=TRUE;
+  window->unified=FALSE;
 }
 
 #if USE_XML
@@ -338,6 +346,8 @@ static void write_config_xml(void)
 
     /* Insert data here, e.g. */
     tree=xmlNewChild(doc->children, NULL, "font", options.font_name);
+    tree=xmlNewChild(doc->children, NULL, "unified", 
+		     options.use_unified? "yes": "no");
     /*
     tree=xmlNewChild(doc->children, NULL, "flags", NULL);
     sprintf(buf, "%u", (unsigned int) mode.flags);
@@ -438,14 +448,15 @@ static gboolean read_config_xml(void)
 	options.font_name=g_strdup(string);
 	free(string);
 
-	/*
-      } else if(strcmp(node->name, "flags")==0) {
- 	string=xmlGetProp(node, "value");
+      } else if(strcmp(node->name, "unified")==0) {
+	string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 	if(!string)
 	  continue;
-	nmode.flags=atoi(string);
+	if(strcmp(string, "yes")==0)
+	  options.use_unified=TRUE;
+	else if(strcmp(string, "no")==0)
+	  options.use_unified=FALSE;
 	free(string);
-      */
 
       }
     }
@@ -525,6 +536,7 @@ static void read_config(void)
  */
 static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),		NULL, show_info_win, 0, NULL },
+  { N_("/Choices..."),		NULL, show_choices_win, 0, NULL },
   { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
 };
 
@@ -776,12 +788,10 @@ static void write_window_to(GtkWidget *widget, const char *fname,
   fclose(out);
 }
 
-static void process_diff_line(GtkWidget *text, char *line, DiffWindow *win)
+static void select_colour(char *line, DiffWindow *win)
 {
-  GdkFont *font=NULL;
-
-  if(win->last_was_nl) {
-    win->colour=NULL;
+  win->colour=NULL;
+  if(!win->unified) {
     if(line[0]=='+')
       win->colour=&col_add;
     else if(strncmp(line, "- ", 2)==0)
@@ -790,6 +800,24 @@ static void process_diff_line(GtkWidget *text, char *line, DiffWindow *win)
       win->colour=&col_chn;
     else if(line[0]=='*' || strncmp(line, "--", 2)==0)
       win->colour=&col_ctl;
+  } else {
+    if(strncmp(line, "--- ", 4)==0 || strncmp(line, "+++ ", 4)==0 ||
+       line[0]=='@')
+      win->colour=&col_ctl;
+    else if(line[0]=='+')
+      win->colour=&col_add;
+    else if(line[0]=='-')
+      win->colour=&col_del;
+    else if(line[0]=='!')
+      win->colour=&col_chn;
+  }
+}
+static void process_diff_line(GtkWidget *text, char *line, DiffWindow *win)
+{
+  GdkFont *font=NULL;
+
+  if(win->last_was_nl) {
+    select_colour(line, win);
   }
   
   if(options.font_name)
@@ -853,6 +881,8 @@ static void show_diffs(DiffWindow *win)
   int pid;
   gchar *cmd;
 
+  win->unified=options.use_unified;
+
   win->fname[0]=g_strdup(tmpnam(NULL));
   write_window_to(win->file[0], win->fname[0], win);
 
@@ -869,7 +899,14 @@ static void show_diffs(DiffWindow *win)
   if(!pid) {
     dup2(p[1], 1);
 
+#ifdef HAVE_UNIFIED_DIFF
+    if(win->unified)
+      cmd=g_strdup_printf("diff -u %s %s", win->fname[0], win->fname[1]);
+    else
+      cmd=g_strdup_printf("diff -c %s %s", win->fname[0], win->fname[1]);
+#else
     cmd=g_strdup_printf("diff -c %s %s", win->fname[0], win->fname[1]);
+#endif
    execlp("/bin/sh", "sh", "-c", cmd, NULL);
     _exit(1);
   }
@@ -878,12 +915,191 @@ static void show_diffs(DiffWindow *win)
 
   gtk_text_freeze(GTK_TEXT(win->diffs));
   gtk_editable_delete_text(GTK_EDITABLE(win->diffs), 0, -1);
+  win->last_was_nl=TRUE;
   win->tag=gdk_input_add(p[0], GDK_INPUT_READ, diff_reader,
 		    win);
 }
 
+static void hide_window(GtkWidget *widget, gpointer data)
+{
+  gtk_widget_hide(GTK_WIDGET(data));
+}
+
+static void cancel_config(GtkWidget *widget, gpointer data)
+{
+  GtkWidget *confwin=GTK_WIDGET(data);
+  
+  gtk_widget_hide(confwin);
+}
+
+static void set_config(GtkWidget *widget, gpointer data)
+{
+  OptionWidgets *ow=(OptionWidgets *) data;
+  gchar *text;
+  Options *opts;
+
+  opts=&options;
+
+#ifdef HAVE_UNIFIED_DIFF
+  opts->use_unified=gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->unified));
+#else
+  opts->use_unified=FALSE;
+#endif
+
+  if(opts->font_name)
+    g_free(opts->font_name);
+  gtk_label_get(GTK_LABEL(ow->font_name), &text);
+  opts->font_name=g_strdup(text);
+  
+  gtk_widget_hide(ow->win);
+}
+
+static void save_config(GtkWidget *widget, gpointer data)
+{
+  set_config(widget, data);
+  write_config();
+}
+
+static void set_font(GtkWidget *widget, gpointer data)
+{
+  OptionWidgets *ow=(OptionWidgets *) data;
+  gchar *name;
+
+  name=gtk_font_selection_dialog_get_font_name(GTK_FONT_SELECTION_DIALOG(ow->font_window));
+  if(name) {
+    gtk_label_set_text(GTK_LABEL(ow->font_name), name);
+    g_free(name);
+    gtk_widget_hide(ow->font_window);
+  }
+}
+
+static void show_font_window(GtkWidget *widget, gpointer data)
+{
+  OptionWidgets *ow=(OptionWidgets *) data;
+  gchar *name;
+
+  gtk_label_get(GTK_LABEL(ow->font_name), &name);
+  gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(ow->font_window),
+					  name);
+
+  gtk_widget_show(ow->font_window);
+}
+
+static void hide_font_window(GtkWidget *widget, gpointer data)
+{
+  OptionWidgets *ow=(OptionWidgets *) data;
+  
+  gtk_widget_hide(ow->font_window);
+}
+
+static void show_choices_win(void)
+{
+  static OptionWidgets ow={NULL};
+
+  if(!ow.win) {
+    /* Need to create it first */
+    GtkWidget *vbox;
+    GtkWidget *hbox;
+    GtkWidget *but;
+    GtkWidget *label;
+    GtkWidget *item;
+    GSList *group;
+
+    ow.win=gtk_dialog_new();
+    gtk_signal_connect(GTK_OBJECT(ow.win), "delete_event", 
+		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
+		     ow.win);
+    gtk_window_set_title(GTK_WINDOW(ow.win), _("Configuration"));
+    gtk_window_set_position(GTK_WINDOW(ow.win), GTK_WIN_POS_MOUSE);
+
+    vbox=GTK_DIALOG(ow.win)->vbox;
+
+    hbox=gtk_hbox_new(FALSE, 0);
+    gtk_widget_show(hbox);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+
+    label=gtk_label_new(_("diff style"));
+    gtk_widget_show(label);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+
+    group=NULL;
+    ow.context=gtk_radio_button_new_with_label(NULL, "context");
+    gtk_widget_show(ow.context);
+    group=gtk_radio_button_group(GTK_RADIO_BUTTON(ow.context));
+    gtk_box_pack_start(GTK_BOX(hbox), ow.context, FALSE, FALSE, 2);
+
+    ow.unified=gtk_radio_button_new_with_label(group, "unified");
+    gtk_widget_show(ow.unified);
+#ifndef HAVE_UNIFIED_DIFF
+    gkt_widget_set_sensitive(ow.unified, FALSE);
+#endif
+    gtk_box_pack_start(GTK_BOX(hbox), ow.unified, FALSE, FALSE, 2);
+    
+    hbox=gtk_hbox_new(FALSE, 0);
+    gtk_widget_show(hbox);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+
+    label=gtk_label_new(_("Display font"));
+    gtk_widget_show(label);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+
+    ow.font_name=gtk_label_new(options.font_name?
+			       options.font_name: "");
+    gtk_widget_show(ow.font_name);
+    gtk_box_pack_start(GTK_BOX(hbox), ow.font_name, FALSE, FALSE, 2);
+
+    ow.font_window=gtk_font_selection_dialog_new("Choose display font");
+    gtk_font_selection_dialog_set_preview_text(GTK_FONT_SELECTION_DIALOG(ow.font_window),
+					"So here I am once more");
+    gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(ow.font_window)->ok_button), 
+		       "clicked", GTK_SIGNAL_FUNC(set_font), &ow);
+
+    gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(ow.font_window)->cancel_button), 
+		       "clicked", GTK_SIGNAL_FUNC(hide_font_window), &ow);
+    but=gtk_button_new_with_label("Change");
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked",
+		       GTK_SIGNAL_FUNC(show_font_window), &ow);
+
+    hbox=GTK_DIALOG(ow.win)->action_area;
+
+    but=gtk_button_new_with_label("Save");
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked",
+		       GTK_SIGNAL_FUNC(save_config), &ow);
+
+    but=gtk_button_new_with_label("Set");
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
+		       &ow);
+
+    but=gtk_button_new_with_label("Cancel");
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked",
+		       GTK_SIGNAL_FUNC(cancel_config), ow.win);
+  }
+
+  if(options.font_name)
+    gtk_label_set_text(GTK_LABEL(ow.font_name), options.font_name);
+#ifdef HAVE_UNIFIED_DIFF
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.unified),
+			       options.use_unified);
+#else
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.context), TRUE);
+#endif
+
+  gtk_widget_show(ow.win);
+}
+
 /*
  * $Log: main.c,v $
+ * Revision 1.7  2002/08/24 16:39:58  stephen
+ * Fix compilation problem with libxml2.
+ *
  * Revision 1.6  2002/05/14 10:35:08  stephen
  * Fix for getting incomplete lines because of buffering
  *
