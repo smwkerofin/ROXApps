@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.6 2004/06/21 20:59:59 stephen Exp $
+# $Id: AppRun,v 1.7 2004/06/26 15:00:37 stephen Exp $
 
 import os, sys
 import time
@@ -21,6 +21,16 @@ allow_pw_change=rox.options.Option('allow_pw_change', True)
 wait_for=rox.options.Option('wait_for', 3)
 
 rox.app_options.notify()
+
+bsize=4096
+stimeo=5*60
+
+import socket
+try:
+    socket.setdefaulttimeout(stimeo)
+    set_to=True
+except:
+    set_to=False
 
 def run_main():
     while rox.g.events_pending():
@@ -71,60 +81,6 @@ class ROXURLopener(urllib.FancyURLopener):
         except:
             rox.report_exception()
         return None, None
-    
-    # Changed from urllib.FancyURLopener to pass extra arg
-    def retrieve(self, url, filename=None, reporthook=None, data=None):
-        """retrieve(url) returns (filename, None) for a local object
-        or (tempfilename, headers) for a remote object."""
-        url = urllib.unwrap(urllib.toBytes(url))
-        if self.tempcache and self.tempcache.has_key(url):
-            return self.tempcache[url]
-        type, url1 = urllib.splittype(url)
-        if not filename and (not type or type == 'file'):
-            try:
-                fp = self.open_local_file(url1)
-                hdrs = fp.info()
-                del fp
-                return urllib.url2pathname(urllib.splithost(url1)[1]), hdrs
-            except IOError, msg:
-                pass
-        fp = self.open(url, data)
-        headers = fp.info()
-        if not filename:
-            import tempfile
-            garbage, path = urllib.splittype(url)
-            garbage, path = urllib.splithost(path or "")
-            path, garbage = urllib.splitquery(path or "")
-            path, garbage = urllib.splitattr(path or "")
-            suffix = os.path.splitext(path)[1]
-            filename = tempfile.mktemp(suffix)
-            self.__tempfiles.append(filename)
-        result = filename, headers
-        if self.tempcache is not None:
-            self.tempcache[url] = result
-        tfp = open(filename, 'wb')
-        bs = 1024*8
-        size = -1
-        blocknum = 1
-        if reporthook:
-            if headers.has_key("content-length"):
-                size = int(headers["Content-Length"])
-            reporthook(0, bs, size, headers)
-        block = fp.read(bs)
-        if reporthook:
-            reporthook(1, bs, size)
-        while block:
-            tfp.write(block)
-            block = fp.read(bs)
-            blocknum = blocknum + 1
-            if reporthook:
-                reporthook(blocknum, bs, size)
-        fp.close()
-        tfp.close()
-        del fp
-        del tfp
-        return result
-
 
 class FetchWindow(rox.Dialog):
     def __init__(self, url, target=None):
@@ -133,6 +89,7 @@ class FetchWindow(rox.Dialog):
             target=get_filename(url)
         self.target=target
         self.start_time=None
+        self.bsize=bsize
         
         rox.Dialog.__init__(self)
         self.set_title(self.url)
@@ -141,7 +98,7 @@ class FetchWindow(rox.Dialog):
 
         vbox=self.vbox
 
-        table=rox.g.Table(8, 2)
+        table=rox.g.Table(9, 2)
         vbox.pack_start(table, padding=4)
 
         line=0
@@ -179,7 +136,7 @@ class FetchWindow(rox.Dialog):
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
-        l=rox.g.Label(os.getcwd())
+        l=rox.g.Label(os.getcwd()+'/')
         l.set_alignment(0., 0.5)
         table.attach(l, 1, 2, line, line+1, xpadding=2)
         line+=1
@@ -206,6 +163,16 @@ class FetchWindow(rox.Dialog):
         table.attach(l, 1, 2, line, line+1, xpadding=2)
         self.etime=l
 
+        line+=1
+        l=rox.g.Label(_('<b>Speed</b>'))
+        l.set_use_markup(True)
+        l.set_alignment(1., 0.5)
+        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        l=rox.g.Label('')
+        l.set_alignment(0., 0.5)
+        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        self.speed=l
+
         self.connect('delete_event', self.delete_event)
 
         self.show_all()
@@ -223,6 +190,7 @@ class FetchWindow(rox.Dialog):
         
     def message(self, text):
         self.msg1.set_text(text)
+        run_main()
 
     def percent_done(self, size, total):
         if self.prog is None:
@@ -256,6 +224,10 @@ class FetchWindow(rox.Dialog):
             else:
                 tstr='%02d:%02d' % (mins, secs)
             self.etime.set_text(tstr)
+
+            if elapsed>0:
+                speed=size/elapsed/1024
+                self.speed.set_text('%2.1f KB/s' % speed)
             
         run_main()
 
@@ -266,37 +238,98 @@ class FetchWindow(rox.Dialog):
 
     def close(self):
         #print 'close'
+        try:
+            self.con.close()
+        except:
+            pass
+        try:
+            self.outf.close()
+        except:
+            pass
         self.hide()
         self.destroy()
         self.prog=None
         rox.g.main_quit()
 
-    def open_server(self):
-        self.message(_('Downloading'))
-        self.start_time=time.time()
-        fname, message=self.opener.retrieve(self.url, self.target, self.report)
-        #print message
-        #print dir(message)
-        self.finished(message)
+    def read_some(self, source, condition, *unused):
+        #print source, condition, unused
 
-    def report(self, nblock, bsize, tsize, headers=None):
-        #print 'report', self, nblock, bsize, tsize
+        data=self.con.read(self.bsize)
+        self.count+=len(data)
+        if data:
+            self.report(self.count, self.size)
+            self.outf.write(data)
+            
+            return True
+
+        self.finished()
+        return False
+        
+    def open_server(self):
+        self.message(_('Connecting'))
+        self.start_time=time.time()
+        self.con=self.opener.open(self.url)
+        self.message(_('Connected'))
+
+        headers=self.con.info()
+        #print headers
         if headers and headers.has_key('Content-Type'):
             self.type_l.set_text(headers['Content-Type'])
-        nb=nblock*bsize
+        if headers.has_key("content-length"):
+            self.size = int(headers["Content-Length"])
+        else:
+            self.size=0
+        #print self.con, dir(self.con)
+        #print self.con.fp, dir(self.con.fp)
+            
+        self.outf=file(self.target, 'w')
+
+        self.message(_('Downloading'))
+        self.count=0
+        self.report(0, self.size)
+        #rox.g.timeout_add(100, self.update)
+        #rox.g.idle_add(self.update)
+        rox.g.input_add(self.con.fileno(), rox.g.gdk.INPUT_READ,
+                        self.read_some)
+        
+        #print message
+        #print dir(message)
+        #self.finished(message)
+
+    def update(self, args=None):
+        #print 'in update'
+        data=self.con.read(self.bsize)
+        self.count+=len(data)
+        if data:
+            self.report(self.count, self.size)
+            self.outf.write(data)
+            
+            return True
+
+        self.finished()
+        return False
+
+    def report(self, nb, tsize):
+        #print 'report', self, nb, tsize
         if tsize>0:
             self.percent_done(nb, tsize)
-            self.size_l.set_text('%d bytes' % tsize)
+            if tsize>4<<20:
+                tstr='%d bytes (%d MB)' % (tsize, tsize>>20)
+            elif tsize>4<<10:
+                tstr='%d bytes (%d KB)' % (tsize, tsize>>10)
+            else:
+                tstr='%d bytes' % tsize
+            self.size_l.set_text(tstr)
         else:
             self.active()
         run_main()
 
-    def finished(self, header):
-        if header.has_key('Content-Type'):
-            self.type_l.set_text(header['Content-Type'])
-        self.message('Done')
+    def finished(self):
+        self.con.close()
+        self.outf.close()
+        self.message(_('Done'))
         rox.g.timeout_add(wait_for.int_value*1000, self.close)
-        rox.g.main()
+        #rox.mainloop()
         
 class PasswordWindow(rox.Dialog):
     def __init__(self, host, realm, user=None, password=None):
@@ -427,7 +460,7 @@ def main():
         try:
             win=FetchWindow(url, local)
             #rox.g.timeout_add(2*1000, win.update)
-            #rox.g.main()
+            rox.mainloop()
         except:
             rox.report_exception()
     else:
