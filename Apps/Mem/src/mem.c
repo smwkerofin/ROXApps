@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.4 2001/09/06 09:53:31 stephen Exp $
+ * $Id: mem.c,v 1.5 2001/11/12 14:45:27 stephen Exp $
  */
 #include "config.h"
 
@@ -100,6 +100,7 @@ typedef struct options {
   guint update_sec;          /* How often to update */
   guint applet_init_size;    /* Initial size of applet */
   guint show_host;
+  guint gauge_width;
   AppletDisplay mem_disp;
   AppletDisplay swap_disp;
 } Options;
@@ -108,6 +109,7 @@ static Options options={
   5,
   36,
   FALSE,
+  120,
   AD_PER,
   AD_PER
 };
@@ -285,7 +287,7 @@ int main(int argc, char *argv[])
 				   GTK_PROGRESS_CONTINUOUS);
     gtk_progress_set_format_string(GTK_PROGRESS(mem_per), "%p%%");
     gtk_progress_set_show_text(GTK_PROGRESS(mem_per), TRUE);
-    gtk_widget_set_usize(mem_per, 240, 24);
+    gtk_widget_set_usize(mem_per, 120, -1);
     gtk_widget_show(mem_per);
     gtk_box_pack_start(GTK_BOX(hbox), mem_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, mem_per,
@@ -345,7 +347,7 @@ int main(int argc, char *argv[])
 				   GTK_PROGRESS_CONTINUOUS);
     gtk_progress_set_format_string(GTK_PROGRESS(swap_per), "%p%%");
     gtk_progress_set_show_text(GTK_PROGRESS(swap_per), TRUE);
-    gtk_widget_set_usize(swap_per, 240, 24);
+    gtk_widget_set_usize(swap_per, 120, -1);
     gtk_widget_show(swap_per);
     gtk_box_pack_start(GTK_BOX(hbox), swap_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, swap_per,
@@ -680,13 +682,14 @@ static void do_update(void)
 #define INIT_SIZE   "AppletInitSize"
 #define SWAP_NUM    "ShowSwapNumbers"
 #define SHOW_HOST   "ShowHostName"
+#define GAUGE_WIDTH "GaugeWidth"
 #define MEM_DISP    "MemoryAppletDisplay"
 #define SWAP_DISP   "SwapAppletDisplay"
 
 #if USE_XML
 static gboolean read_choices_xml()
 {
-  guchar *fname;
+  gchar *fname;
 
   fname=choices_find_path_load("Config.xml", PROJECT);
 
@@ -751,6 +754,11 @@ static gboolean read_choices_xml()
 	  options.show_host=atoi(string);
 	  free(string);
 	}
+ 	string=xmlGetProp(node, "gauge-width");
+	if(string) {
+	  options.gauge_width=atoi(string);
+	  free(string);
+	}
       }
     }
     
@@ -765,7 +773,7 @@ static gboolean read_choices_xml()
 
 static void read_choices(void)
 {
-  guchar *fname;
+  gchar *fname;
   
   choices_init();
 
@@ -812,6 +820,9 @@ static void read_choices(void)
 	      
 	    } else if(strncmp(line, SHOW_HOST, sep-line)==0) {
 	      options.show_host=(guint) atoi(sep+1);
+	      
+	    } else if(strncmp(line, GAUGE_WIDTH, sep-line)==0) {
+	      options.gauge_width=(guint) atoi(sep+1);
 	      
 	    } else if(strncmp(line, MEM_DISP, sep-line)==0) {
 	      options.mem_disp=(guint) atoi(sep+1);
@@ -869,6 +880,8 @@ static void write_choices_xml(void)
     tree=xmlNewChild(doc->children, NULL, "Window", NULL);
     sprintf(buf, "%d", options.show_host);
     xmlSetProp(tree, "show-host", buf);
+    sprintf(buf, "%d", options.gauge_width);
+    xmlSetProp(tree, "gauge-width", buf);
 
     ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
 
@@ -898,6 +911,7 @@ static void write_choices(void)
   fprintf(out, "%s: %d\n", UPDATE_RATE, options.update_sec);
   fprintf(out, "%s: %d\n", INIT_SIZE, options.applet_init_size);
   fprintf(out, "%s: %d\n", SHOW_HOST, options.show_host);
+  fprintf(out, "%s: %d\n", GAUGE_WIDTH, options.gauge_width);
   fprintf(out, "%s: %d\n", MEM_DISP, options.mem_disp);
   fprintf(out, "%s: %d\n", SWAP_DISP, options.swap_disp);
   fclose(out);
@@ -1420,6 +1434,9 @@ static gboolean update_swap(gpointer unused)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.5  2001/11/12 14:45:27  stephen
+ * Use XML for config file, if XML version >=2.4
+ *
  * Revision 1.4  2001/09/06 09:53:31  stephen
  * Add some display options.
  *
