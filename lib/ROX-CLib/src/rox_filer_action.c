@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.5 2002/02/21 11:56:48 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.6 2002/02/27 16:28:16 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -47,10 +47,6 @@ typedef xmlDoc *xmlDocPtr;
 
 #include "rox_filer_action.h"
 
-#define ENV_NAMESPACE_URL "http://www.w3.org/2001/12/soap-envelope"
-#define SOAP_NAMESPACE_URL "http://www.w3.org/2001/12/soap-rpc"
-#define ROX_NAMESPACE_URL "http://rox.sourceforge.net/SOAP/ROX-Filer"
-
 static gboolean doneinit=FALSE;
 static ROXSOAP *filer=NULL;
 static char *last_error=NULL;
@@ -74,26 +70,7 @@ void rox_filer_action_init(void)
 
 static void make_soap(const char *action, xmlDocPtr *rpc, xmlNodePtr *act)
 {
-  xmlDocPtr doc;
-  xmlNodePtr tree;
-  xmlNsPtr env_ns=NULL;
-  xmlNsPtr rox_ns=NULL;
-
-  doc=xmlNewDoc("1.0");
-  if(!doc) {
-    last_error="XML document creation failed";
-    return;
-  }
-  
-  doc->children=xmlNewDocNode(doc, env_ns, "Envelope", NULL);
-  env_ns=xmlNewNs(doc->children, ENV_NAMESPACE_URL, "env");
-  xmlSetNs(doc->children, env_ns);
-  
-  tree=xmlNewChild(doc->children, env_ns, "Body", NULL);
-  rox_ns=xmlNewNs(tree, ROX_NAMESPACE_URL, NULL);
-  *act=xmlNewChild(tree, rox_ns, action, NULL);
-
-  *rpc=doc;
+  *rpc=rox_soap_build_xml(action, ROX_NAMESPACE_URL, act);
 }
 
 static void expect_no_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
@@ -508,6 +485,10 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.6  2002/02/27 16:28:16  stephen
+ * Add support for PanelAdd and PinboardAdd (assuming they get into the
+ * filer)
+ *
  * Revision 1.5  2002/02/21 11:56:48  stephen
  * Fix typo which causes rox_filer_pinboard() to fail.
  *

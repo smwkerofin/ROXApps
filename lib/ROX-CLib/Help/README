@@ -248,9 +248,7 @@ rox_soap.h
 ----------
 
 Communicating with the filer via SOAP.  Note that using SOAP requires
-libxml2.  (This is in a state of flux.  It may be that this will
-implement a generic SOAP interface to any program and a wrapper to
-contact ROX-Filer.)
+libxml2. 
 
 typedef struct rox_soap_filer ROXSOAP;
 
@@ -267,15 +265,42 @@ void rox_soap_init(void);
 
 Initializes the data.
 
+void rox_soap_define_program(const char *name, const char *atom_fmt,
+				    const char *command);
+
+Define how to connect to the named program.
+name     - name of program as passed to rox_soap_connect
+atom_fmt - format of atom name to use to connect, %e is effective UID,
+           %h is FQDN of display
+command  - command that may be fed the SOAP document on stdin if
+           connecting via the atom fails, may be NULL
+
+An entry for ROX-Filer is pre-defined. ("ROX-Filer", "_ROX_FILER_%e_%h",
+"rox -R").
+
+char *rox_soap_atom_name_for_program(const char *name);
+
+Returns the name of the atom which will be used to locate the given program.
+It uses the format given in the rox_soap_define_program() call, with the
+defined substitutions.  Pass to g_free() when done.
+
+gboolean rox_soap_ping(const char *prog);
+
+Returns TRUE if the named program is contactable via SOAP.
+
+ROXSOAP *rox_soap_connect(const char *prog_name);
+
+Initialise the connection to the named program.
+
 ROXSOAP *rox_soap_connect_to_filer(void);
 
 Initialise the connection to the filer.
 
-gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
+gboolean rox_soap_send(ROXSOAP *program, xmlDocPtr doc, gboolean run_prog,
 			      rox_soap_callback callback, gpointer udata);
 
-Send the XML document to filer using SOAP.  If run_filer is TRUE
-and there is no filer to talk to, use rox_soap_send_via_pipe().
+Send the XML document to program using SOAP.  If run_prog is TRUE
+and there is no program to talk to, use rox_soap_send_via_pipe().
 Returns TRUE if comms succeeded, when complete callback is called with
 the status and reply.
 
@@ -283,13 +308,21 @@ gboolean rox_soap_send_via_pipe(ROXSOAP *filer, xmlDocPtr doc,
 				   rox_soap_callback callback, gpointer udata);
 
 
-Send the XML document to ROX-Filer using the -R option.  When complete
-callback is called with the status and reply.
+Send the XML document to the program, using the command defined by
+rox_soap_define_program().  When complete callback is called with the
+status and reply.
 
 void rox_soap_set_timeout(ROXSOAP *filer, guint ms);
 
 Set the timeout when contacting ROX-Filer (in ms, defaults to 10000).  If
 filer is NULL it sets the timeout for all new connections.
+
+xmlDocPtr rox_soap_build_xml(const char *action, const char *ns_url,
+				    xmlNodePtr *act);
+
+Build part of XML document to send.  The action to perform is in name
+space ns_url.  Add arguments to the node act, then call rox_soap_send
+with the return value.
 
 const char *rox_soap_get_last_error(void);
 
@@ -437,3 +470,51 @@ Shows a pop-up menu in a suitable place for the applet.  It is assumed that
 this will be called in a button_press handler which is passed a
 GdkEventButton *.  To place it correctly with respect to the panel the 
 function applet_get_panel_location() must have been called first.
+
+rox_soap_server.h
+-----------------
+
+Provides a ROX-Filer like SOAP server.
+
+typedef struct rox_soap_server ROXSOAPServer;
+
+This is an opaque object representing the server.
+
+typedef xmlNodePtr (*rox_soap_server_action)(ROXSOAPServer *server,
+				       const char *action_name,
+				       GList *args, gpointer udata);
+
+This represents the type of the function called when a SOAP method is
+executed.  Any reply should be returned as an XML node.  args is a
+list of the arguments passed as XML nodes, in the order they were
+defined in rox_soap_server_add_action() (required, then optional).
+Optional arguments may be NULL.
+
+void rox_soap_server_init(void);
+
+Initialise the server routines.
+
+ROXSOAPServer *rox_soap_server_new(const char *program_name,
+					  const char *ns_url);
+
+Create a new server object and advertise it via the root window.  program_name
+is the name of the program (see rox_soap_define_program()).  ns_url is the
+name space URL.
+
+void rox_soap_server_add_action(ROXSOAPServer *server,
+				       const char *action_name,
+				       const char *args,
+				       const char *optional_args,
+				       rox_soap_server_action action,
+				       gpointer udata);
+
+Define a new method (or action) supported by this server.  action_name
+is the name of the action.  args is a string of a comma seperated list
+of arguments, or NULL if there are no required arguments.
+optional_args is a string of a comma seperated list of arguments, or
+NULL if there are no optional arguments.  action is the function to
+call when a correctly formatted SOAP message is received.
+
+void rox_soap_server_delete(ROXSOAPServer *server);
+
+Shutdown the server and release its memory.

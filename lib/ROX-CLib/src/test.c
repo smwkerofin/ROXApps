@@ -1,6 +1,8 @@
 /*
- * $Id: test.c,v 1.2 2001/12/07 11:25:02 stephen Exp $
+ * $Id: test.c,v 1.3 2002/01/07 15:37:09 stephen Exp $
  */
+
+#include "rox-clib.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,22 +10,34 @@
 
 #include <gtk/gtk.h>
 
+#ifdef HAVE_XML
+#include <parser.h>
+#endif
+
 #define DEBUG 1
-#include "rox-clib.h"
-#include "rox_debug.h"
+#include "rox.h"
+#include "rox_soap.h"
 #include "rox_filer_action.h"
 
 #define TEST_FILE "tmp/tmp/rm.me"
+
+static void clock_open_callback(ROXSOAP *clock, gboolean status,
+				xmlDocPtr reply, gpointer udata);
 
 int main(int argc, char *argv[])
 {
   char *type, *ver;
   char *home=g_getenv("HOME");
   char buf[256];
+  ROXSOAP *prog;
+  xmlDocPtr doc;
+  xmlNodePtr act;
   
   gtk_init(&argc, &argv);
   rox_debug_init("test");
   rox_soap_set_timeout(NULL, 5000);
+
+  printf("ROX-CLib version %s\n\n", rox_clib_version_string());
 
   printf("Version()=");
   ver=rox_filer_version();
@@ -31,6 +45,7 @@ int main(int argc, char *argv[])
   printf("error=%s\n", rox_filer_get_last_error());
   sleep(5);
 
+#if 0
   printf("OpenDir(/tmp)\n");
   rox_filer_open_dir("/tmp");
   printf("error=%s\n", rox_filer_get_last_error());
@@ -70,6 +85,7 @@ int main(int argc, char *argv[])
   rox_filer_copy(buf, "/tmp",
 		 "rm.me", ROX_FILER_DEFAULT);
   printf("error=%s\n", rox_filer_get_last_error());
+#endif
   
   sprintf(buf, "%s/%s", home, TEST_FILE);
   printf("FileType(%s)=", buf);
@@ -78,6 +94,29 @@ int main(int argc, char *argv[])
   if(type)
     g_free(type);
   printf("error=%s\n", rox_filer_get_last_error());
+
+  printf("\nConnect to Clock... ");
+  prog=rox_soap_connect("Clock");
+  printf("%p\n", prog);
+  printf("error=%s\n", rox_soap_get_last_error());
+  printf("Build action %s\n", "Open");
+  doc=rox_soap_build_xml("Open", "http://www.kerofin.demon.co.uk/rox/Clock",
+			 &act);
+  printf("error=%s\n", rox_soap_get_last_error());
+  printf("Send action %s\n", "Open");
+  rox_soap_send(prog, doc, FALSE, clock_open_callback, NULL);
+  printf("error=%s\n", rox_soap_get_last_error());
+  xmlFreeDoc(doc);
+  gtk_main();
+  rox_soap_close(prog);
   
   return 0;
+}
+
+static void clock_open_callback(ROXSOAP *clock, gboolean status,
+				xmlDocPtr reply, gpointer udata)
+{
+  printf("In clock_open_callback(%p, %d, %p, %p)\n", clock, status, reply,
+	 udata);
+  gtk_main_quit();
 }

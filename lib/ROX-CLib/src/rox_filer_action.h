@@ -1,11 +1,13 @@
 /*
- * $Id: rox_filer_action.h,v 1.2 2002/01/07 15:37:59 stephen Exp $
+ * $Id: rox_filer_action.h,v 1.3 2002/02/27 16:28:09 stephen Exp $
  *
  * rox_filer_action.h - drive the filer via SOAP
  */
 
 #ifndef _rox_filer_action_h
 #define _rox_filer_action_h
+
+#define ROX_NAMESPACE_URL "http://rox.sourceforge.net/SOAP/ROX-Filer"
 
 typedef enum panel_side {
   ROXPS_TOP,ROXPS_BOTTOM,ROXPS_LEFT,ROXPS_RIGHT
@@ -46,6 +48,10 @@ extern void rox_filer_clear_error(void);
 
 /*
  * $Log: rox_filer_action.h,v $
+ * Revision 1.3  2002/02/27 16:28:09  stephen
+ * Add support for PanelAdd and PinboardAdd (assuming they get into the
+ * filer)
+ *
  * Revision 1.2  2002/01/07 15:37:59  stephen
  * added rox_filer_version() and rox_filer_have_error()
  *

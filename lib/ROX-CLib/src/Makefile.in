@@ -13,7 +13,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 ROXCLIB_VERSION_NUM = @ROXCLIB_VERSION_NUM@
-LIB_VERSION=0:1:0
+LIB_VERSION=1:0:1
 .SUFFIXES:
 .SUFFIXES: .c .o .sh .lo
 
@@ -27,7 +27,7 @@ INCLUDEDIR = ${PLATFORM_DIR}/include
 LIBFILE.a = ${LIBDIR}/lib${LIBNAME}.a
 LIBFILE.la = ${LIBDIR}/lib${LIBNAME}.la
 LTCOMPILE = ${LIBTOOL} --mode=compile ${CC} ${CFLAGS} -c
-LINK = $(LIBTOOL) --mode=link ${CC} ${CFLAGS} ${LDFLAGS} --version-info ${LIB_VERSION}
+LINK = $(LIBTOOL) --mode=link ${CC} ${CFLAGS} ${LDFLAGS} -version-info ${LIB_VERSION}
 
 ############ Things to change for different programs
 
@@ -35,21 +35,21 @@ PROG = pkg
 
 SRCS = pkg.c error.c choices.c infowin.c rox_debug.c rox_dnd.c
 SRCS += gtksavebox.c rox_path.c rox_resources.c rox_soap.c test.c
-SRCS += rox_filer_action.c applet.c rox.c
+SRCS += rox_filer_action.c applet.c rox.c rox_soap_server.c
 
 OBJECTS = pkg.o 
 
 LIBOBJECTS = error.o choices.o infowin.o rox_debug.o rox_dnd.o
 LIBOBJECTS += gtksavebox.o rox_path.o rox_resources.o rox_soap.o
-LIBOBJECTS += rox_filer_action.o applet.o rox.o
+LIBOBJECTS += rox_filer_action.o applet.o rox.o rox_soap_server.o
 
 SLIBOBJECTS = error.lo choices.lo infowin.lo rox_debug.lo rox_dnd.lo
 SLIBOBJECTS += gtksavebox.lo rox_path.lo rox_resources.lo rox_soap.lo
-SLIBOBJECTS += rox_filer_action.lo applet.lo rox.lo
+SLIBOBJECTS += rox_filer_action.lo applet.lo rox.lo rox_soap_server.lo
 
 INCLUDES = rox-clib.h error.h choices.h infowin.h rox_debug.h rox_dnd.h
 INCLUDES += gtksavebox.h rox_path.h rox_resources.h rox_soap.h
-INCLUDES += rox_filer_action.h applet.h rox.h
+INCLUDES += rox_filer_action.h applet.h rox.h rox_soap_server.h
 
 ############ Things to keep the same
 
@@ -80,7 +80,7 @@ ${PLATFORM_DIR}/bin/install_on_path: install_on_path.sh
 	chmod +x $@
 
 ${PLATFORM_DIR}:
-	mkdir ${PLATFORM_DIR}
+	-mkdir ${PLATFORM_DIR}
 
 ${PLATFORM_DIR}/bin: ${PLATFORM_DIR}
 	-mkdir ${PLATFORM_DIR}/bin
@@ -89,7 +89,7 @@ ${LIBDIR}:  ${PLATFORM_DIR}
 	-mkdir ${LIBDIR}
 
 ${INCLUDEDIR}:  ${PLATFORM_DIR} ${INCLUDES}
-	mkdir ${INCLUDEDIR}
+	-mkdir ${INCLUDEDIR}
 	for f in ${INCLUDES}; do ${INSTALL_DATA} $$f ${INCLUDEDIR}; done
 
 ${LIBFILE.a}: ${LIBDIR} ${LIBOBJECTS}

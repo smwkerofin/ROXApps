@@ -1,6 +1,11 @@
 Changes to ROX-CLib by Version
 ==============================
 
+0.2.1
+-----
+Added SOAP server (rox_soap_server.h).  SOAP client can connect to programs 
+other than ROX-Filer.
+
 0.2.0
 -----
 Now builds a shared library!  
