@@ -4,6 +4,10 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+31-Mar-2004
+~~~~~~~~~~~
+Added rox_soap_server_add_actions() to make setting multiple actions simpler.
+
 25-Mar-2004
 ~~~~~~~~~~~
 Added Shared MIME database interface (rox/mime.h)
@@ -135,4 +139,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.1 2004/03/10 22:45:17 stephen Exp $
+$Id: Changes,v 1.2 2004/03/25 13:10:40 stephen Exp $

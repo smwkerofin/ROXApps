@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.5 2004/03/10 22:45:18 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.6 2004/03/25 13:10:40 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -16,6 +16,11 @@
     <p>Copy to a suitable place, such as <samp>~/lib</samp>, 
       and make sure it is on 
       your <samp>$LIBDIRPATH</samp>.
+  If you use 
+<a href="http://rox.sourceforge.net/phpwiki/index.php/Archive">Archive</a>
+to extract it from then downloaded archive then make sure you rename
+	it
+to <code>ROX-CLib</code>.
 
     <p>Compile using <samp>ROX-CLib/AppRun --compile</samp>
 
@@ -760,7 +765,7 @@ plus an error condition.</p>
 	  GtkWidget *<var>menu</var>, 
 	  GdkEventButton *<var>evbut</var>);</code>
 
-<p>Shows a pop-up menu in a suitable place for the applet.  It is
+<dd><p>Shows a pop-up menu in a suitable place for the applet.  It is
 assumed that this will be called in a <code>button_press</code>
 handler which is passed a <code>GdkEventButton *</code>.
 <var>plug</var> is the GtkPlug object which is the applets window.</p>
@@ -787,7 +792,22 @@ method is executed.  Any reply should be returned as an XML node.
 <var>args</var> is a list of the arguments passed as XML nodes, in the
 order they were defined in <code>rox_soap_server_add_action()</code>
 (required, then optional).  Optional arguments may be
-<code>NULL</code>.</p>
+<code>NULL</code>.</p></dd>
+
+<dt><code>typedef struct rox_soap_server_actions ROXSOAPServerActions;</code>
+<dd><p>This type is used for an array of SOAP server actions to be 
+passed to <code>rox_soap_server_add_actions()</code>.  It is
+defined as:</p>
+<code><pre>
+typedef struct rox_soap_server_actions {
+  const char *action_name;
+  const char *args;
+  const char *optional_args;
+  rox_soap_server_action action;
+  gpointer udata;
+} ROXSOAPServerActions;
+</pre></code>
+</dd>
 
 <dt><code>void rox_soap_server_init(void);</code>
 
@@ -818,6 +838,15 @@ order they were defined in <code>rox_soap_server_add_action()</code>
       seperated list of arguments, or <code>NULL</code> if there are
       no optional arguments.  <var>action</var> is the function to
       call when a correctly formatted SOAP message is received.</p>
+
+      <dt><code>void rox_soap_server_add_action(
+	  ROXSOAPServer *<var>server</var>,
+	  ROXSOAPServerActions *<var>actiona</var>);</code>
+
+      <dd><p>Define a group of new methods (or actions) supported by this server.
+      <var>actions</var> is the array of action definitions,
+										      terminated by an entry with a 
+										      <code>NULL</code> <var>action_name</var>.</p>
 
       <dt><code>void rox_soap_server_delete(
 	  ROXSOAPServer *<var>server</var>);</code>
@@ -1285,7 +1314,7 @@ of the file to determine the type.  This is the default.</p>
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Thu Mar 25 13:09:05 GMT 2004
+Last modified: Sat Apr  3 11:44:50 BST 2004
 <!-- hhmts end -->
   </body>
 </html>

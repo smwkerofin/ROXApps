@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap_server.c,v 1.5 2003/03/25 14:31:34 stephen Exp $
+ * $Id: rox_soap_server.c,v 1.6 2003/10/22 17:16:00 stephen Exp $
  *
  * rox_soap_server.c - Provide ROX-Filer like SOAP server
  *
@@ -112,6 +112,17 @@ void rox_soap_server_add_action(ROXSOAPServer *server,
     g_strsplit(optional_args, ",", 0) : NULL;
 
   g_hash_table_insert(server->actions, g_strdup(action_name), act);
+}
+
+void rox_soap_server_add_actions(ROXSOAPServer *server,
+				 ROXSOAPServerActions *actions)
+{
+  int i;
+
+  for(i=0; actions[i].action_name; i++)
+    rox_soap_server_add_action(server, actions[i].action_name,
+			       actions[i].args, actions[i].optional_args,
+			       actions[i].action, actions[i].udata);
 }
 
 static void action_table_free(gpointer key, gpointer value, gpointer udata)
