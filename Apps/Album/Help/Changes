@@ -1,11 +1,15 @@
 Album
 =====
 
-09-June-2004
-~~~~~~~~~~~~
+30-Aug-2004
+~~~~~~~~~~~
+Support MusicBox.
+
+09-Jun-2004
+~~~~~~~~~~~
 Also handle .ogg files.  Can re-order tracks.  Some feedback when copying 
 the files.
 
-05-June-2004 (0.0.1)
-~~~~~~~~~~~~
+05-Jun-2004 (0.0.1)
+~~~~~~~~~~~
 First release.

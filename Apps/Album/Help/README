@@ -6,7 +6,7 @@ Overview
 ========
 Album creates application directories containing digital audio files
 (MP3 or Ogg/Vorbis).  When you run the created application, it loads
-the audio into xmms.
+the audio into MusicBox or xmms.
 
 Installation
 ============
@@ -18,10 +18,6 @@ Updates
 This program is available at http://www.kerofin.demon.co.uk/rox/album.html
 or via Zero Install at
 /uri/0install/www.kerofin.demon.co.uk/apps/Album
-
-Future plans
-============
-I hope to add support for MusicBox as an alternative to xmms.  
 
 -- 
 Stephen Watson 
