@@ -5,13 +5,17 @@ Mem - display memory and swap space usage.
 
 This program, which can function as a ROX applet or a standalone program, 
 displays the current real memory usage and the current swap space usage.
-It obtains these values by using the libgtop library.
+It obtains these values by using the libgtop library.  If libgtop is
+not available then alternative means are used.  These work on Linux
+and Solaris, but may not on other systems.
 
 Bugs
 ----
 
-The swap space display is broken under Solaris, apparently a bug in libgtop.
-This is disabled until a fixed libgtop is available.
+A bug in libgtop means that it cannot calculate the swap space values
+under Solaris.  The alternate method is used.  These values do not
+match those shown by the swap command because that shows the overall
+virtual memory usage not just the swap usage.
 
 Sometimes the values aren't available.  This shows as the guages droppping
 to zero momentarily.
