@@ -6,7 +6,7 @@ by ROX-Filer.  It requires:
 
 * ROX-Filer CVS 2003-10-13 or later, or verson 2.1.1
 
-* ROX-Lib2 CVS 2003-10-05 or later, or version 1.9.12
+* ROX-Lib2 CVS 2003-11-08 or later, or version 1.9.12
 
 * MPlayer 0.90 or later.
 
@@ -25,6 +25,8 @@ Version 0.0.1 supports the following MIME types:
 * video/mpeg
 * video/quicktime
 * video/x-msvideo
+* video/x-ms-wmv
+* video/x-ms-asf
 * audio/x-pn-realaudio (which can be a video format)
 
 It can also (in theory) support any file type that MPlayer can.  If

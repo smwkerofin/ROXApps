@@ -3,7 +3,7 @@
   <Summary>Generate thumbnail images for video files</Summary>
   <About>
     <Purpose>Generate thumbnail images for video files</Purpose>
-    <Version>0.0.1 (19th October 2003)</Version>
+    <Version>0.0.1 (8th November 2003)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
@@ -17,6 +17,8 @@
     <smi:mime-type type="video/mpeg"/>
     <smi:mime-type type="video/quicktime"/>
     <smi:mime-type type="video/x-msvideo"/>
+    <smi:mime-type type="video/x-ms-wmv"/>
+    <smi:mime-type type="video/x-ms-asf"/>
     <smi:mime-type type="audio/x-pn-realaudio"/>
   </CanThumbnail>
 </AppInfo>
