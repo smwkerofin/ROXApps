@@ -1,0 +1,29 @@
+/* The configure script will auto-generate config.h from config.h.in */
+
+/* This defines your application.  Version is set (by configure) from your 
+   AppInfo.xml file */
+#define PROJECT "ImageViewer"
+#define PURPOSE "Show an image file"
+#define VERSION "Unknown"
+#define AUTHOR  "Stephen Watson"
+#define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
+
+#include <sys/types.h>
+
+#undef STDC_HEADERS
+#undef HAVE_LOCALE_H
+#undef HAVE_SYS_STAT_H
+#undef HAVE_LIBINTL_H
+#undef HAVE_SETLOCALE
+#undef HAVE_FSTAT
+#undef HAVE_STAT
+#undef HAVE_BINDTEXTDOMAIN
+#undef HAVE_GETTEXT
+
+/* I18n support */
+#if defined(HAVE_GETTEXT)
+#define _(String) gettext(String)
+#else
+#define _(String) (String)
+#endif
+#define N_(String) (String)
