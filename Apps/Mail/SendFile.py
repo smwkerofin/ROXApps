@@ -12,7 +12,7 @@ from GDK import *
 
 #import SendFile
 from my_support import run_prog
-from read_mailers import *
+from mailers import Mailer
 
 child_pid = None
 
@@ -65,8 +65,12 @@ class SendFile(GtkWindow):
         go.connect('clicked', self.send_it)
 
     def send_it(self, widget):
-        mailers=read_mailers_from(rox.choices.load('Mail', 'mailers.xml'))
-        mailer=mailers[0]
+        fname=rox.choices.load('Mail', 'mailers.xml')
+        if fname is None:
+            mailer=Mailer('mailx', '/usr/bin/mailx')
+        else:
+            mailers=Mailer.read_from(Mailer('dummy', ''), fname)
+            mailer=mailers[0]
         
         if self.uuencode.get_active():
             cmd="uuencode "+self.path+" "+os.path.basename(self.path)

@@ -14,8 +14,6 @@ import string
 from InfoWin import InfoWin
 from mailers import Mailer
 from selmailer import SelectMailer
-#from read_mailers import *
-#from write_mailers import *
 from my_support import *
 
 def mail_file():
@@ -122,7 +120,7 @@ def select_mailer(widget, mailer):
         except:
             i=-1
         if i>0:
-            print i, len(mailers)
+            #print i, len(mailers)
             if i==len(mailers)-1:
                 mailers=[mailer]+mailers[:i]
             else:
