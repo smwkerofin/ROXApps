@@ -3,6 +3,22 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+08-May-2004
+-----------
+Error reporting controlled by options, defaults to silent.
+
+30-Apr-2004
+-----------
+Can put length of clip in upper left corner.
+
+04-Mar-2004
+-----------
+Fix reporting of exceptions.
+
+23-Jan-2004
+-----------
+Use fixed findrox.py
+
 11-Jan-2004 (0.1.1)
 -----------
 Now use mime_handler module to install handlers.
