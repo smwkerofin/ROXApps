@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.7 2001/07/18 10:52:18 stephen Exp $
+ * $Id: tail.c,v 1.8 2001/07/31 07:44:48 stephen Exp $
  */
 
 #include <stdio.h>
@@ -75,7 +75,12 @@ static GtkItemFactoryEntry menu_items[] = {
   {"/File/E_xit","<control>X",  gtk_main_quit, 0, NULL },
   {"/_Help", NULL, NULL, 0, "<LastBranch>"},
   {"/Help/_About", "<control>A", show_info_win, 0, NULL},
-}
+};
+
+#define MENU_TYPE GTK_TYPE_MENU_BAR
+#define MENU_NAME "<main>"
+#define MENU_FNAME "menus"
+
 #else
 static GtkItemFactoryEntry menu_items[] = {
   {"/_Info", "<control>I", show_info_win, 0, NULL},
@@ -88,13 +93,18 @@ static GtkItemFactoryEntry menu_items[] = {
 #endif
   {"/_Quit","<control>Q",  gtk_main_quit, 0, NULL },
 };
+
+#define MENU_TYPE GTK_TYPE_MENU
+#define MENU_NAME "<popup>"
+#define MENU_FNAME "popup_menus"
+
 #endif
 
 static void save_menus(void)
 {
   char	*menurc;
 	
-  menurc = choices_find_path_save("menus", PROJECT, TRUE);
+  menurc = choices_find_path_save(MENU_FNAME, PROJECT, TRUE);
   if (menurc) {
     gtk_item_factory_dump_rc(menurc, NULL, TRUE);
     g_free(menurc);
@@ -118,13 +128,7 @@ static GtkWidget *get_main_menu(GtkWidget *window)
      Param 3: A pointer to a gtk_accel_group.  The item factory sets up
               the accelerator table while generating menus.
   */
-  item_factory = gtk_item_factory_new (
-#if USE_MENU_BAR
-				       GTK_TYPE_MENU_BAR,
-#else
-				       GTK_TYPE_MENU,
-#endif
-				       "<main>", accel_group);
+  item_factory = gtk_item_factory_new (MENU_TYPE, MENU_NAME, accel_group);
   /* This function generates the menu items. Pass the item factory,
      the number of items in the array, the array itself, and any
      callback data for the the menu items. */
@@ -133,9 +137,9 @@ static GtkWidget *get_main_menu(GtkWidget *window)
   /* Attach the new accelerator group to the window. */
   gtk_accel_group_attach (accel_group, GTK_OBJECT (window));
 
-  menu=gtk_item_factory_get_widget (item_factory, "<main>");
+  menu=gtk_item_factory_get_widget (item_factory, MENU_NAME);
   
-  menurc=choices_find_path_load("menus", PROJECT);
+  menurc=choices_find_path_load(MENU_FNAME, PROJECT);
   if(menurc) {
     gtk_item_factory_parse_rc(menurc);
     g_free(menurc);
@@ -157,10 +161,17 @@ int main(int argc, char *argv[])
   GtkWidget *hbox;
   GtkWidget *scr;
   GtkWidget *mbar;
+  gchar *rcfile;
 
   gtk_init(&argc, &argv);
   choices_init();
   dnd_init();
+
+  rcfile=choices_find_path_load("gtkrc", PROJECT);
+  if(rcfile) {
+    gtk_rc_parse(rcfile);
+    g_free(rcfile);
+  }
 
   win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_signal_connect(GTK_OBJECT(win), "destroy", 
@@ -200,6 +211,7 @@ int main(int argc, char *argv[])
   gtk_box_pack_start(GTK_BOX(vbox), scr, TRUE, TRUE, 2);
   
   text=gtk_text_new(NULL, NULL);
+  gtk_widget_set_name(text, "tail text");
   gtk_text_set_editable(GTK_TEXT(text), FALSE);
   gtk_container_add(GTK_CONTAINER(scr), text);
   gtk_widget_show(text);
@@ -212,6 +224,11 @@ int main(int argc, char *argv[])
     set_fd(fileno(stdin));
   
   update_tag=gtk_timeout_add(500, (GtkFunction) check_file, NULL);
+
+#if !USE_MENU_BAR
+  /* Create the pop-up menu now so the menu accelerators are loaded */
+  menu=get_main_menu(GTK_WIDGET(win));
+#endif
 
   gtk_main();
 
@@ -924,6 +941,10 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.8  2001/07/31 07:44:48  stephen
+ * Better debug output.  Save menu accelerators.  Scrolling to end of
+ * window back in, unless truncated.
+ *
  * Revision 1.7  2001/07/18 10:52:18  stephen
  * Better debug system, use show_error more
  *
