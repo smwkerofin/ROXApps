@@ -1,6 +1,10 @@
 Versions of FreeFS
 ==================
 
+1.1.5
+-----
+Change to XML handling: requires 2.4 or later.  Use old style config otherwise.
+
 1.1.4
 -----
 Fix leak in read/write XML config.

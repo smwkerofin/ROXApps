@@ -17,7 +17,9 @@
 #undef HAVE_STAT
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
+
 #undef USE_GDK_PIXBUF
+#undef HAVE_XML
 
 #define EXTRA_FUN USE_GDK_PIXBUF
 

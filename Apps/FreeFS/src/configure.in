@@ -16,10 +16,10 @@ if test -z "$ROX_RUN"; then
 fi
 AC_SUBST(ROX_RUN)
 
-if test -z "$XML_CONFIG"; then
-  AC_CHECK_PROG(XML_CONFIG, xml2-config, xml2-config, xml-config)
+AC_CHECK_PROG(XML_CONFIG, xml2-config, xml2-config, false)
+if test "$XML_CONFIG" != "false"; then
+  AC_DEFINE(HAVE_XML)
 fi
-AC_SUBST(XML_CONFIG)
 
 dnl Make sure we have libgtop
 changequote(,)dnl

@@ -20,6 +20,8 @@
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
 
+#undef HAVE_XML
+
 /* I18n support */
 #if defined(HAVE_GETTEXT)
 #define _(String) gettext(String)

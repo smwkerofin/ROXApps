@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.16 2001/11/08 14:10:04 stephen Exp $
+ * $Id: clock.c,v 1.17 2001/11/08 15:10:57 stephen Exp $
  */
 #include "config.h"
 
@@ -38,8 +38,16 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #endif
 
-#include <libxml/tree.h>
-#include <libxml/parser.h>
+#ifdef HAVE_XML
+#include <tree.h>
+#include <parser.h>
+#endif
+
+#if defined(HAVE_XML) && LIBXML_VERSION>=20400
+#define USE_XML 1
+#else
+#define USE_XML 0
+#endif
 
 #include "choices.h"
 #include "rox_debug.h"
@@ -163,8 +171,10 @@ static void show_conf_win(void);
 
 static void read_config(void);
 static void write_config(void);
+#if USE_XML
 static gboolean read_config_xml(void);
 static void write_config_xml(void);
+#endif
 static void check_config(void);
 
 int main(int argc, char *argv[])
@@ -625,6 +635,7 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event)
   return TRUE;
 }
 
+#if USE_XML
 static void write_config_xml(void)
 {
   gchar *fname;
@@ -658,19 +669,7 @@ static void write_config_xml(void)
     sprintf(buf, "%d", (int) mode.init_size);
     xmlSetProp(tree, "initial-size", buf);
   
-#if LIBXML_VERSION > 20400
     ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
-#else
-    out=fopen(fname, "w");
-    if(out) {
-      xmlDocDump(out, doc);
-      
-      fclose(out);
-      ok=TRUE;
-    } else {
-      ok=FALSE;
-    }
-#endif
     if(ok) 
       time(&config_time);
 
@@ -678,11 +677,12 @@ static void write_config_xml(void)
     g_free(fname);
   }
 }
+#endif
 
 /* Write the config to a file */
 static void write_config(void)
 {
-#if 0
+#if !USE_XML
   gchar *fname;
 
   fname=choices_find_path_save("options", PROJECT, TRUE);
@@ -709,6 +709,8 @@ static void write_config(void)
       fprintf(out, "interval=%ld\n", (long) mode.interval);
       fprintf(out, "user_format=%s\n", user_defined);
       fprintf(out, "init_size=%d\n", (int) mode.init_size);
+      if(mode.font_name)
+	fprintf(out, "font_name=%s\n", mode.font_name);
 
       fclose(out);
 
@@ -722,6 +724,7 @@ static void write_config(void)
 #endif
 }
 
+#if USE_XML
 static gboolean read_config_xml(void)
 {
   guchar *fname;
@@ -832,16 +835,21 @@ static gboolean read_config_xml(void)
     xmlFreeDoc(doc);
     return TRUE;
   }
+
+  return FALSE;
 }
+#endif
 
 /* Read in the config */
 static void read_config(void)
 {
   guchar *fname;
 
+#if USE_XML
   if(read_config_xml())
     return;
-
+#endif
+  
   fname=choices_find_path_load("options", PROJECT);
 
   if(fname) {
@@ -917,6 +925,9 @@ static void read_config(void)
 	    } else if(strcmp(var, "init_size")==0) {
 	      nmode.init_size=(guint) atoi(val);
 	      
+	    } else if(strcmp(var, "font_name")==0) {
+	      nmode.font_name=g_strdup(val);
+	      
 	    }
 	  }
 	}
@@ -944,9 +955,11 @@ static void check_config(void)
     read_config();
     return;
   }
-  
+
+#if USE_XML
   fname=choices_find_path_load("options.xml", PROJECT);
   if(!fname)
+#endif
     fname=choices_find_path_load("options", PROJECT);
   dprintf(5, "%p: %s", fname, fname? fname: "NULL");
 
@@ -1462,6 +1475,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.17  2001/11/08 15:10:57  stephen
+ * Fix memory leak in xml routines
+ *
  * Revision 1.16  2001/11/08 14:10:04  stephen
  * Can set font for the hour numbers. Can use a tiled background if you
  * set up your gtkrc. Fixed bug in new XML format config (interval was

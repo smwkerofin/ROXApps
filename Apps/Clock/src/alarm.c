@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.8 2001/11/06 12:23:05 stephen Exp $
+ * $Id: alarm.c,v 1.9 2001/11/08 15:10:39 stephen Exp $
  */
 #include "config.h"
 
@@ -21,8 +21,17 @@
 #endif
 
 #include <gtk/gtk.h>
-#include <libxml/tree.h>
-#include <libxml/parser.h>
+
+#ifdef HAVE_XML
+#include <tree.h>
+#include <parser.h>
+#endif
+
+#if defined(HAVE_XML) && LIBXML_VERSION>=20400
+#define USE_XML 1
+#else
+#define USE_XML 0
+#endif
 
 #include "choices.h"
 #include "rox_debug.h"
@@ -80,6 +89,7 @@ static void alarm_delete(Alarm *alarm)
   g_free(alarm);
 }
 
+#if USE_XML
 int alarm_load_xml(const gchar *fname)
 {
 #ifdef HAVE_SYS_STAT_H
@@ -161,6 +171,7 @@ int alarm_load_xml(const gchar *fname)
   xmlFreeDoc(doc);
   return TRUE;
 }
+#endif
 
 void alarm_load(void)
 {
@@ -169,6 +180,7 @@ void alarm_load(void)
     struct stat statb;
 #endif
 
+#if USE_XML
   fname=choices_find_path_load("alarms.xml", PROJECT);
   if(fname) {
     if(alarm_load_xml(fname)) {
@@ -177,6 +189,7 @@ void alarm_load(void)
     }
     g_free(fname);
   }
+#endif
   fname=choices_find_path_load("alarms", PROJECT);
 
   if(fname) {
@@ -335,9 +348,13 @@ static gint find_alarm(gconstpointer el, gconstpointer udat)
 
 static void check_alarms_file(void)
 {
-  gchar *fname;
-  
-  fname=choices_find_path_load("alarms", PROJECT);
+  gchar *fname=NULL;
+
+#if USE_XML
+  fname=choices_find_path_load("alarms.xml", PROJECT);
+#endif
+  if(!fname)
+    fname=choices_find_path_load("alarms", PROJECT);
   dprintf(5, "%p: %s", fname, fname? fname: "NULL");
 
   if(fname) {
@@ -377,6 +394,7 @@ static void check_alarms_file(void)
   }
 }
 
+#if USE_XML
 void alarm_save_xml(void)
 {
   gchar *fname;
@@ -410,18 +428,7 @@ void alarm_save_xml(void)
       xmlSetProp(tree, "flags", buf);
     }
 
-#if LIBXML_VERSION > 20400
     ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
-#else
-    out=fopen(fname, "w");
-    if(out) {
-      xmlDocDump(out, doc);
-      fclose(out);
-      ok=TRUE;
-    } else {
-      ok=FALSE;
-    }
-#endif
     if(ok) {
 #ifdef HAVE_STAT
       if(stat(fname, &statb)==0)
@@ -437,10 +444,11 @@ void alarm_save_xml(void)
     g_free(fname);
   }
 }
+#endif
 
 void alarm_save(void)
 {
-#if 0
+#if !USE_XML
   gchar *fname;
 #ifdef HAVE_SYS_STAT_H
   struct stat statb;
@@ -933,6 +941,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.9  2001/11/08 15:10:39  stephen
+ * Fix compilation warning
+ *
  * Revision 1.8  2001/11/06 12:23:05  stephen
  * Use XML for alarms and config file
  *

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.3 2001/11/05 15:55:25 stephen Exp $
+ * $Id: main.c,v 1.4 2001/11/08 15:16:53 stephen Exp $
  */
 #include "config.h"
 
@@ -30,8 +30,16 @@
 #include <gtk/gtk.h>
 #include "infowin.h"
 
-#include <libxml/tree.h>
-#include <libxml/parser.h>
+#ifdef HAVE_XML
+#include <tree.h>
+#include <parser.h>
+#endif
+
+#if defined(HAVE_XML) && LIBXML_VERSION>=20400
+#define USE_XML 1
+#else
+#define USE_XML 0
+#endif
 
 #include "choices.h"
 #define DEBUG              1   /* Allow debug output */
@@ -48,8 +56,10 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 static void show_info_win(void);        /* Show information box */
 static void read_config(void);          /* Read configuration */
 static void write_config(void);         /* Write configuration */
+#if USE_XML
 static gboolean read_config_xml(void);  /* Read XML configuration */
 static void write_config_xml(void);     /* Write XML configuration */
+#endif
 
 static gboolean app_dropped(GtkWidget *, GSList *uris, gpointer data,
 			    gpointer udata);
@@ -520,6 +530,7 @@ static void begin_save(GtkWidget *widget, gpointer data)
   gtk_widget_show(save);
 }
 
+#if USE_XML
 static void write_config_xml(void)
 {
   gchar *fname;
@@ -540,29 +551,18 @@ static void write_config_xml(void)
 
     /* Insert data here */
   
-#if LIBXML_VERSION > 20400
     ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
-#else
-    out=fopen(fname, "w");
-    if(out) {
-      xmlDocDump(out, doc);
-            
-      fclose(out);
-      ok=TRUE;
-    } else {
-      ok=FALSE;
-    }
-#endif
 
     xmlFreeDoc(doc);
     g_free(fname);
   }
 }
+#endif
 
 /* Write the config to a file. We have no config to save, but you might...  */
 static void write_config(void)
 {
-#if 0
+#if !USE_XML
   gchar *fname;
 
   /* Use the choices system to get the name to save to */
@@ -595,6 +595,7 @@ static void write_config(void)
 #endif
 }
 
+#if USE_XML
 static gboolean read_config_xml(void)
 {
   guchar *fname;
@@ -638,16 +639,21 @@ static gboolean read_config_xml(void)
     g_free(fname);
     return TRUE;
   }
+
+  return FALSE;
 }
+#endif
 
 /* Read in the config.  Again, nothing defined for this demo  */
 static void read_config(void)
 {
   guchar *fname;
 
+#if USE_XML
   if(read_config_xml())
     return;
-
+#endif
+  
   /* Use the choices system to locate the file to read */
   fname=choices_find_path_load("options", PROJECT);
 

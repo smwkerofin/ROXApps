@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.11 2001/11/06 16:31:53 stephen Exp $
+ * $Id: freefs.c,v 1.12 2001/11/08 15:12:23 stephen Exp $
  */
 #include "config.h"
 
@@ -41,8 +41,16 @@
 #include <glibtop/mountlist.h>
 #include <glibtop/fsusage.h>
 
-#include <libxml/tree.h>
-#include <libxml/parser.h>
+#ifdef HAVE_XML
+#include <tree.h>
+#include <parser.h>
+#endif
+
+#if defined(HAVE_XML) && LIBXML_VERSION>=20400
+#define USE_XML 1
+#else
+#define USE_XML 0
+#endif
 
 #include "choices.h"
 #include "infowin.h"
@@ -85,8 +93,10 @@ static gboolean update_fs_values(gchar *mntpt);
 static void do_update(void);
 static void read_choices(void);
 static void write_choices(void);
+#if USE_XML
 static gboolean read_choices_xml(void);
 static void write_choices_xml(void);
+#endif
 static void menu_create_menu(GtkWidget *);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
@@ -532,6 +542,7 @@ static void do_update(void)
 #define INIT_SIZE   "AppletInitSize"
 #define SHOW_DIR    "AppletShowDir"
 
+#if USE_XML
 static gboolean read_choices_xml(void)
 {
   guchar *fname;
@@ -563,7 +574,7 @@ static gboolean read_choices_xml(void)
     }
 
     for(node=root->xmlChildrenNode; node; node=node->next) {
-      const xmlChar *string;
+      xmlChar *string;
       
       if(node->type!=XML_ELEMENT_NODE)
 	continue;
@@ -599,6 +610,7 @@ static gboolean read_choices_xml(void)
 
   return FALSE;
 }
+#endif
 
 static void read_choices(void)
 {
@@ -606,9 +618,11 @@ static void read_choices(void)
   
   choices_init();
 
+#if USE_XML
   if(read_choices_xml())
     return;
-
+#endif
+  
   fname=choices_find_path_load("Config", "FreeFS");
   if(fname) {
     FILE *in=fopen(fname, "r");
@@ -660,6 +674,7 @@ static void read_choices(void)
   }
 }
 
+#if USE_XML
 static void write_choices_xml(void)
 {
   gchar *fname;
@@ -689,28 +704,17 @@ static void write_choices_xml(void)
     sprintf(buf, "%d", options.applet_show_dir);
     xmlSetProp(tree, "show-dir", buf);
   
-#if LIBXML_VERSION >= 20400
     ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
-#else
-    out=fopen(fname, "w");
-    if(out) {
-      xmlDocDump(out, doc);
-            
-      fclose(out);
-      ok=TRUE;
-    } else {
-      ok=FALSE;
-    }
-#endif
 
     g_free(fname);
     xmlFreeDoc(doc);
   }
 }
+#endif
 
 static void write_choices(void)
 {
-#if 0
+#if !USE_XML
   FILE *out;
   gchar *fname;
     
@@ -1016,6 +1020,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.12  2001/11/08 15:12:23  stephen
+ * Fix leak in read/write XML config.
+ *
  * Revision 1.11  2001/11/06 16:31:53  stephen
  * Pick up window icon from rox_resources_find. Config file now in XML.
  *

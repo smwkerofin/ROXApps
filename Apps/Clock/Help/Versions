@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+1.1.5
+-----
+Change to XML handling: requires 2.4 or later.  Use old style config otherwise.
+
 1.1.4
 -----
 Fix memory leak in XML routines.
