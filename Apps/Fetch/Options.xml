@@ -1,0 +1,8 @@
+<?xml version='1.0'?>
+<options>
+<section title="Passwords">
+<toggle name="allow_pw_change" label="Prompt for password even when known">Should Fetch prompt for a username and password even when
+previously saved</toggle>
+
+</section>
+</options>

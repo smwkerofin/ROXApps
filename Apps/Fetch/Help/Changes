@@ -1,6 +1,10 @@
 Fetch
 =====
 
+20-Jun-2004
+~~~~~~~~~~~
+Added options (well, one so far).
+
 19-Jun-2004
 ~~~~~~~~~~~
 Prompt for and store passwords. Mark strings as translatable.

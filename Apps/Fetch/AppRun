@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.4 2004/06/12 16:04:28 stephen Exp $
+# $Id: AppRun,v 1.5 2004/06/19 11:31:03 stephen Exp $
 
 import os, sys
 import time
 
 import findrox; findrox.version(1, 9, 14)
-import rox, rox.choices
+import rox, rox.choices, rox.options
 import gobject
 
 import urllib, urlparse
@@ -14,6 +14,12 @@ import urllib, urlparse
 import xml.dom, xml.dom.minidom
 
 _=rox._
+
+rox.setup_app_options('Fetch')
+
+allow_pw_change=rox.options.Option('allow_pw_change', True)
+
+rox.app_options.notify()
 
 def run_main():
     while rox.g.events_pending():
@@ -48,6 +54,9 @@ class ROXURLopener(urllib.FancyURLopener):
             else:
                 user=None
                 password=None
+
+            if user and password and not allow_pw_change.int_value():
+                return user, password
             ouser=user
             opass=password
             pd=PasswordWindow(host, realm, user, password)
@@ -420,6 +429,9 @@ def main():
             #rox.g.main()
         except:
             rox.report_exception()
+    else:
+         rox.edit_options()
+         rox.mainloop()
 
 if __name__=='__main__':
     main()
