@@ -1,4 +1,4 @@
-# $Id: DesktopFile.py,v 1.1.1.1 2002/11/02 19:01:32 stephen Exp $
+# $Id: DesktopFile.py,v 1.2 2003/09/15 11:37:03 stephen Exp $
 
 """Scan .desktop files and generate rox wrappers for programs"""
 
@@ -34,7 +34,7 @@ class DesktopEntry:
         kde_pixmap_dir='share/icons'
         for prefix in ('/usr/local/kde2', '/opt/kde2', '/usr/local/kde3',
                        '/opt/kde3', '/usr/kde'):
-            for col in ('hicolor', 'locolor'):
+            for col in ('default.kde', 'hicolor', 'locolor'):
                 for size in ('48x48', '64x64', '32x32', '22x22', '16x16'):
                     self.ipath.append(os.path.join(prefix, kde_pixmap_dir,
                                                    col, size, 'apps'))
