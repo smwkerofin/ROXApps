@@ -4,6 +4,7 @@
 #define PURPOSE "Tell the time"
 #define VERSION "Unknown"
 #define AUTHOR  "Stephen Watson"
+#define AUTHOR_DOMAIN  "kerofin.demon.co.uk"
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 
 #include <sys/types.h>

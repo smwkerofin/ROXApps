@@ -3,7 +3,8 @@ Changes to Clock
 
 23-Oct-2004
 ~~~~~~~~~~~
-Window counting now handled by ROX-CLib.
+Window counting now handled by ROX-CLib.  Use new rox_choices_load/save() 
+interface.
 
 07-Oct-2004
 ~~~~~~~~~~~

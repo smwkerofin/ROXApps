@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.15 2003/06/21 13:09:10 stephen Exp $
+ * $Id: alarm.c,v 1.16 2004/08/05 22:18:02 stephen Exp $
  */
 #include "config.h"
 
@@ -24,12 +24,6 @@
 
 #include <libxml/tree.h>
 #include <libxml/parser.h>
-
-#if LIBXML_VERSION>=20400
-#define USE_XML 1
-#else
-#define USE_XML 0
-#endif
 
 #ifndef HAVE_ALTZONE
 #define altzone (timezone+3600)
@@ -101,7 +95,6 @@ static void alarm_delete(Alarm *alarm)
   g_free(alarm);
 }
 
-#if USE_XML
 int alarm_load_xml(const gchar *fname)
 {
 #ifdef HAVE_SYS_STAT_H
@@ -231,7 +224,6 @@ int alarm_load_xml(const gchar *fname)
   xmlFreeDoc(doc);
   return TRUE;
 }
-#endif
 
 void alarm_load(void)
 {
@@ -240,8 +232,7 @@ void alarm_load(void)
     struct stat statb;
 #endif
 
-#if USE_XML
-  fname=choices_find_path_load("alarms.xml", PROJECT);
+  fname=rox_choices_load("alarms.xml", PROJECT, AUTHOR_DOMAIN);
   if(fname) {
     if(alarm_load_xml(fname)) {
       g_free(fname);
@@ -249,8 +240,8 @@ void alarm_load(void)
     }
     g_free(fname);
   }
-#endif
-  fname=choices_find_path_load("alarms", PROJECT);
+
+  fname=rox_choices_load("alarms", PROJECT, AUTHOR_DOMAIN);
 
   if(fname) {
     FILE *in;
@@ -427,11 +418,9 @@ static void check_alarms_file(void)
 {
   gchar *fname=NULL;
 
-#if USE_XML
-  fname=choices_find_path_load("alarms.xml", PROJECT);
-#endif
+  fname=rox_choices_load("alarms.xml", PROJECT, AUTHOR_DOMAIN);
   if(!fname)
-    fname=choices_find_path_load("alarms", PROJECT);
+    fname=rox_choices_load("alarms", PROJECT, AUTHOR_DOMAIN);
   dprintf(5, "%p: %s", fname, fname? fname: "NULL");
 
   if(fname) {
@@ -471,8 +460,7 @@ static void check_alarms_file(void)
   }
 }
 
-#if USE_XML
-void alarm_save_xml(void)
+void alarm_save(void)
 {
   gchar *fname;
 #ifdef HAVE_SYS_STAT_H
@@ -480,7 +468,7 @@ void alarm_save_xml(void)
 #endif
   gboolean ok;
 
-  fname=choices_find_path_save("alarms.xml", PROJECT, TRUE);
+  fname=rox_choices_save("alarms.xml", PROJECT, AUTHOR_DOMAIN);
   dprintf(2, "Save alarms to %s", fname? fname: "NULL");
 
   if(fname) {
@@ -527,62 +515,6 @@ void alarm_save_xml(void)
     xmlFreeDoc(doc);
     g_free(fname);
   }
-}
-#endif
-
-void alarm_save(void)
-{
-#if !USE_XML
-  gchar *fname;
-#ifdef HAVE_SYS_STAT_H
-  struct stat statb;
-#endif
-
-  fname=choices_find_path_save("alarms", PROJECT, TRUE);
-  dprintf(2, "Save alarms to %s", fname? fname: "NULL");
-
-  if(fname) {
-    FILE *out;
-
-    out=fopen(fname, "w");
-    if(out) {
-      time_t now;
-      char buf[80];
-      GList *rover;
-      
-      fprintf(out, _("# Alarms file for %s %s (%s)\n"), PROJECT, VERSION,
-	      AUTHOR);
-      fprintf(out, _("# Latest version at %s\n"), WEBSITE);
-      time(&now);
-      strftime(buf, 80, "%c", localtime(&now));
-      fprintf(out, _("#\n# Written %s\n\n"), buf);
-      dprintf(3, "version %s, write at %s", VERSION, buf);
-
-      for(rover=alarms; rover; rover=g_list_next(rover)) {
-	Alarm *alarm=(Alarm *) rover->data;
-	fprintf(out, "%ld:%u:%s\n", alarm->when,
-		(alarm->repeat|(alarm->flags<<8)),
-		alarm->message);
-	dprintf(3, "wrote %s %ld %d", alarm->message, alarm->when,
-		alarm->repeat);
-      }
-
-      fclose(out);
-#ifdef HAVE_STAT
-      if(stat(fname, &statb)==0)
-	alarms_saved=statb.st_mtime;
-      else
-	time(&alarms_saved);
-#else
-      time(&alarms_saved);
-#endif
-      dprintf(3, "wrote %s at %ld", fname, alarms_saved);
-    }
-    g_free(fname);
-  }
-#else
-  alarm_save_xml();
-#endif
 }
 
 static void dismiss(GtkWidget *wid, gpointer data)
@@ -1031,6 +963,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.16  2004/08/05 22:18:02  stephen
+ * Fix problem compiling alarm.c
+ *
  * Revision 1.15  2003/06/21 13:09:10  stephen
  * Convert to new options system.  Use pango for fonts.
  * New option for no-face.

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.31 2004/08/19 19:26:14 stephen Exp $
+ * $Id: clock.c,v 1.32 2004/10/23 11:32:05 stephen Exp $
  */
 #include "config.h"
 
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
     exit(0);
   }
   
-  rox_init("Clock", &argc, &argv);
+  rox_init_with_domain("Clock", AUTHOR_DOMAIN, &argc, &argv);
   dprintf(1, "ROX system inited");
 
   
@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
   }
   
   dprintf(2, "into main, %d windows.", rox_get_n_windows());
-  rox_mainloop();
+  rox_main_loop();
   dprintf(2, "out of main, %d windows.", rox_get_n_windows());
 
   if(save_alarms)
@@ -928,7 +928,7 @@ static gboolean read_config_xml(void)
 {
   guchar *fname;
 
-  fname=choices_find_path_load("options.xml", PROJECT);
+  fname=rox_choices_load("options.xml", PROJECT, AUTHOR_DOMAIN);
 
   if(fname) {
     xmlDocPtr doc;
@@ -1036,7 +1036,7 @@ static void read_config(void)
   if(read_config_xml())
     return;
   
-  fname=choices_find_path_load("options", PROJECT);
+  fname=rox_choices_load("options", PROJECT, AUTHOR_DOMAIN);
 
   if(fname) {
     FILE *in;
@@ -1151,7 +1151,7 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Close"), 	        NULL, close_window, 0, "<StockItem>",
                                 GTK_STOCK_CLOSE},
   { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
-  { N_("/Quit"), 	        NULL, gtk_main_quit, 0, "<StockItem>",
+  { N_("/Quit"), 	        NULL, rox_main_quit, 0, "<StockItem>",
                                 GTK_STOCK_QUIT},
 };
 
@@ -1159,7 +1159,7 @@ static void save_menus(void)
 {
   char	*menurc;
 	
-  menurc = choices_find_path_save("menus", PROJECT, TRUE);
+  menurc = rox_choices_save("menus", PROJECT, AUTHOR_DOMAIN);
   if (menurc) {
     gtk_accel_map_save(menurc);
     g_free(menurc);
@@ -1188,7 +1188,7 @@ static void menu_create_menu(GtkWidget *window)
 
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
 
-  menurc=choices_find_path_load("menus", PROJECT);
+  menurc=rox_choices_load("menus", PROJECT, AUTHOR_DOMAIN);
   if(menurc) {
     gtk_accel_map_load(menurc);
     g_free(menurc);
@@ -1382,6 +1382,10 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.32  2004/10/23 11:32:05  stephen
+ * digital readout named for theming
+ * Use new window counting stuff in ROX-CLib
+ *
  * Revision 1.31  2004/08/19 19:26:14  stephen
  * React to change of font. Icon to indicate if alarms are set.
  *
