@@ -1,7 +1,7 @@
 /*
  * rox_path.c - utilities for path handling, support for drag & drop
  *
- * $Id: rox_path.c,v 1.2 2001/08/20 15:27:46 stephen Exp $
+ * $Id: rox_path.c,v 1.3 2001/08/29 13:35:01 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -27,6 +27,7 @@ char *rox_path_get_local(const char *uri)
   const char *orig=uri;
 #ifdef HAVE_GETHOSTNAME
   struct hostent *hp;
+  struct hostent *lhp;
 #endif
   
   if(strncmp(uri, "file:", 5)==0)
@@ -62,9 +63,23 @@ char *rox_path_get_local(const char *uri)
 #ifdef HAVE_GETHOSTNAME
     hp=gethostbyname(host);
     if(hp) {
+      char **alias;
       if(strcmp(hp->h_name, hostn)==0) {
 	g_free(host);
 	return g_strdup(end);
+      }
+      for(alias=hp->h_aliases; *alias; alias**)
+	if(strcmp(*alias, hostn)==0) {
+	  g_free(host);
+	  return g_strdup(end);
+	}
+
+      lhp=gethostbyname(hostn);
+      if(lhp) {
+	if(strcmp(hp->h_name, lhp->h_name)==0) {
+	  g_free(host);
+	  return g_strdup(end);
+	}
       }
     }
 #endif
@@ -124,6 +139,9 @@ char *rox_path_get_path(const char *uri)
 
 /*
  * $Log: rox_path.c,v $
+ * Revision 1.3  2001/08/29 13:35:01  stephen
+ * Added extra test for local host name using gethostbyname
+ *
  * Revision 1.2  2001/08/20 15:27:46  stephen
  * Improved matching of hostname
  *
