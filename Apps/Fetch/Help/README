@@ -17,8 +17,22 @@ you stored the Fetch application.
 The program is then run automatically when a file dragged to a
 ROX-Filer window is to be fetched from the net.
 
-If you run the program independantly it will show the options window
+If you run the program independently it will show the options window
 to allow you to configure it manually.
+
+Display
+=======
+Fetch displays a number of pieces of information about the current download.
+Some of these require that the web server it connects to volunteers the data, 
+such as the size of the file to be downloaded.  
+
+The server can also disagree with ROX about what MIME type the data
+is.  If the server claims the type is text/plain when the local type
+is something different then this usually means the server has not been
+properly configured for that type.  However if the server sends the
+text/html type when ROX is expecting something else this usually means
+that it has actually sent an error document and that the fetch has in
+fact failed.  Fetch may warn you of this.
 
 Updates
 =======
