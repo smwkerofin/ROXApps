@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.8 2002/12/14 15:55:20 stephen Exp $
+ * $Id: main.c,v 1.9 2003/03/05 15:30:40 stephen Exp $
  */
 #include "config.h"
 
@@ -41,6 +41,7 @@
 #include <libxml/parser.h>
 
 #include "choices.h"
+#include "options.h"
 #include "rox_debug.h"
 #include "infowin.h"
 #include "rox_dnd.h"
@@ -62,6 +63,7 @@ typedef struct diff_window {
   gboolean unified;
 } DiffWindow;
 
+/* Currently only support one window at a time */
 static DiffWindow *window;
 
 static GdkColormap *cmap;
@@ -79,23 +81,18 @@ static Options options={
   "fixed", FALSE
 };
 
-typedef struct option_widgets {
-  GtkWidget *win;
-  GtkWidget *font_name;
-  GtkWidget *font_window;
-  GtkWidget *context, *unified;
-} OptionWidgets;
+static Option o_font_name;
+static Option o_use_unified;
 
 /* Declare functions in advance */
 static DiffWindow *make_window(void);
 static void add_menu_entries(GtkTextView *view, GtkMenu *menu, DiffWindow *);
 static gboolean show_menu(GtkWidget *widget, DiffWindow *window);
+static void setup_config(void);
 static void show_info_win(void);        /* Show information box */
 static void show_choices_win(void);     /* Show configuration window */
 static void read_config(void);          /* Read configuration */
-static void write_config(void);         /* Write configuration */
 static gboolean read_config_xml(void);
-static void write_config_xml(void);
 
 static gboolean load_from_uri(GtkWidget *widget, GSList *uris, gpointer data,
 			      gpointer udata);
@@ -195,8 +192,8 @@ int main(int argc, char *argv[])
   /* Init choices and read them in */
   rox_debug_init(PROJECT);
   choices_init();
-  options.font_name=g_strdup(options.font_name);
-  read_config();
+  options_init(PROJECT);
+  setup_config();
 
   rox_dnd_init();
 
@@ -216,6 +213,31 @@ int main(int argc, char *argv[])
   gtk_main();
 
   return 0;
+}
+
+static void opts_changed(void)
+{
+  if(o_font_name.has_changed) {
+    PangoFontDescription *pfd;
+    
+    pfd=pango_font_description_from_string(o_font_name.value);
+    gtk_widget_modify_font(window->file[0], pfd);
+    gtk_widget_modify_font(window->file[1], pfd);
+    gtk_widget_modify_font(window->diffs, pfd);
+    pango_font_description_free(pfd);
+  }
+}
+
+static void setup_config(void)
+{
+  options.font_name=g_strdup(options.font_name);
+  
+  read_config();
+
+  option_add_string(&o_font_name, "font", options.font_name);
+  option_add_int(&o_use_unified, "unified", options.use_unified);
+
+  option_add_notify(opts_changed);
 }
 
 static DiffWindow *make_window()
@@ -319,57 +341,21 @@ static DiffWindow *make_window()
   window->ctl=gtk_text_buffer_create_tag(buf, "control",
 					 "foreground", "orange", NULL);
 
-  return window;
-}
-
-/*
- * Write the config to a file. We have no config to save, but you might...
- * This saves in XML mode
- */
-static void write_config_xml(void)
-{
-  gchar *fname;
-
-  /* Use the choices system to get the name to save to */
-  fname=choices_find_path_save("options.xml", PROJECT, TRUE);
-  dprintf(2, "save to %s", fname? fname: "NULL");
-
-  if(fname) {
-    xmlDocPtr doc;
-    xmlNodePtr tree;
-    FILE *out;
-    char buf[80];
-    gboolean ok;
-
-    doc = xmlNewDoc("1.0");
-    doc->children=xmlNewDocNode(doc, NULL, PROJECT, NULL);
-    xmlSetProp(doc->children, "version", VERSION);
-
-    /* Insert data here, e.g. */
-    tree=xmlNewChild(doc->children, NULL, "font", options.font_name);
-    tree=xmlNewChild(doc->children, NULL, "unified", 
-		     options.use_unified? "yes": "no");
-    /*
-    tree=xmlNewChild(doc->children, NULL, "flags", NULL);
-    sprintf(buf, "%u", (unsigned int) mode.flags);
-    xmlSetProp(tree, "value", buf);
-    */
-  
-    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
-
-    xmlFreeDoc(doc);
-    g_free(fname);
+  if(o_font_name.value) {
+    PangoFontDescription *pfd;
+    
+    pfd=pango_font_description_from_string(o_font_name.value);
+    gtk_widget_modify_font(window->file[0], pfd);
+    gtk_widget_modify_font(window->file[1], pfd);
+    gtk_widget_modify_font(window->diffs, pfd);
+    pango_font_description_free(pfd);
   }
+    
+   return window;
 }
 
 
-/* Write the config to a file */
-static void write_config(void)
-{
-  write_config_xml();
-}
-
-/* Read in the config.  Again, nothing defined for this demo  */
+/* Read in the config.  */
 static gboolean read_config_xml(void)
 {
   guchar *fname;
@@ -429,7 +415,6 @@ static gboolean read_config_xml(void)
 
       }
     }
-    
 
     xmlFreeDoc(doc);
     g_free(fname);
@@ -493,7 +478,6 @@ static void read_config(void)
     g_free(fname);
   }
 }
-
 
 /*
  * Pop-up menu
@@ -920,178 +904,17 @@ static void hide_window(GtkWidget *widget, gpointer data)
   gtk_widget_hide(GTK_WIDGET(data));
 }
 
-static void cancel_config(GtkWidget *widget, gpointer data)
-{
-  GtkWidget *confwin=GTK_WIDGET(data);
-  
-  gtk_widget_hide(confwin);
-}
-
-static void set_config(GtkWidget *widget, gpointer data)
-{
-  OptionWidgets *ow=(OptionWidgets *) data;
-  gchar *text;
-  Options *opts;
-
-  opts=&options;
-
-#ifdef HAVE_UNIFIED_DIFF
-  opts->use_unified=gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->unified));
-#else
-  opts->use_unified=FALSE;
-#endif
-
-  if(opts->font_name)
-    g_free(opts->font_name);
-  gtk_label_get(GTK_LABEL(ow->font_name), &text);
-  opts->font_name=g_strdup(text);
-  
-  gtk_widget_hide(ow->win);
-}
-
-static void save_config(GtkWidget *widget, gpointer data)
-{
-  set_config(widget, data);
-  write_config();
-}
-
-static void set_font(GtkWidget *widget, gpointer data)
-{
-  OptionWidgets *ow=(OptionWidgets *) data;
-  gchar *name;
-
-  name=gtk_font_selection_dialog_get_font_name(GTK_FONT_SELECTION_DIALOG(ow->font_window));
-  if(name) {
-    gtk_label_set_text(GTK_LABEL(ow->font_name), name);
-    g_free(name);
-    gtk_widget_hide(ow->font_window);
-  }
-}
-
-static void show_font_window(GtkWidget *widget, gpointer data)
-{
-  OptionWidgets *ow=(OptionWidgets *) data;
-  gchar *name;
-
-  gtk_label_get(GTK_LABEL(ow->font_name), &name);
-  gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(ow->font_window),
-					  name);
-
-  gtk_widget_show(ow->font_window);
-}
-
-static void hide_font_window(GtkWidget *widget, gpointer data)
-{
-  OptionWidgets *ow=(OptionWidgets *) data;
-  
-  gtk_widget_hide(ow->font_window);
-}
 
 static void show_choices_win(void)
 {
-  static OptionWidgets ow={NULL};
-
-  if(!ow.win) {
-    /* Need to create it first */
-    GtkWidget *vbox;
-    GtkWidget *hbox;
-    GtkWidget *but;
-    GtkWidget *label;
-    GtkWidget *item;
-    GSList *group;
-
-    ow.win=gtk_dialog_new();
-    gtk_signal_connect(GTK_OBJECT(ow.win), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     ow.win);
-    gtk_window_set_title(GTK_WINDOW(ow.win), _("Configuration"));
-    gtk_window_set_position(GTK_WINDOW(ow.win), GTK_WIN_POS_MOUSE);
-
-    vbox=GTK_DIALOG(ow.win)->vbox;
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
-
-    label=gtk_label_new(_("diff style"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-
-    group=NULL;
-    ow.context=gtk_radio_button_new_with_label(NULL, "context");
-    gtk_widget_show(ow.context);
-    group=gtk_radio_button_group(GTK_RADIO_BUTTON(ow.context));
-    gtk_box_pack_start(GTK_BOX(hbox), ow.context, FALSE, FALSE, 2);
-
-    ow.unified=gtk_radio_button_new_with_label(group, "unified");
-    gtk_widget_show(ow.unified);
-#ifndef HAVE_UNIFIED_DIFF
-    gkt_widget_set_sensitive(ow.unified, FALSE);
-#endif
-    gtk_box_pack_start(GTK_BOX(hbox), ow.unified, FALSE, FALSE, 2);
-    
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
-
-    label=gtk_label_new(_("Display font"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-
-    ow.font_name=gtk_label_new(options.font_name?
-			       options.font_name: "");
-    gtk_widget_show(ow.font_name);
-    gtk_box_pack_start(GTK_BOX(hbox), ow.font_name, FALSE, FALSE, 2);
-
-    ow.font_window=gtk_font_selection_dialog_new("Choose display font");
-    gtk_font_selection_dialog_set_preview_text(GTK_FONT_SELECTION_DIALOG(ow.font_window),
-					"So here I am once more");
-    gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(ow.font_window)->ok_button), 
-		       "clicked", GTK_SIGNAL_FUNC(set_font), &ow);
-
-    gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(ow.font_window)->cancel_button), 
-		       "clicked", GTK_SIGNAL_FUNC(hide_font_window), &ow);
-    but=gtk_button_new_with_label("Change");
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(show_font_window), &ow);
-
-    hbox=GTK_DIALOG(ow.win)->action_area;
-
-    but=gtk_button_new_with_label("Save");
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(save_config), &ow);
-
-    but=gtk_button_new_with_label("Set");
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
-		       &ow);
-
-    but=gtk_button_new_with_label("Cancel");
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(cancel_config), ow.win);
-  }
-
-  if(options.font_name)
-    gtk_label_set_text(GTK_LABEL(ow.font_name), options.font_name);
-#ifdef HAVE_UNIFIED_DIFF
-  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.unified),
-			       options.use_unified);
-#else
-  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.context), TRUE);
-#endif
-
-  gtk_widget_show(ow.win);
+  options_show();
 }
 
 /*
  * $Log: main.c,v $
+ * Revision 1.9  2003/03/05 15:30:40  stephen
+ * First pass at conversion to GTK 2.
+ *
  * Revision 1.8  2002/12/14 15:55:20  stephen
  * Added support for unified diffs and running from paths with spaces.
  *

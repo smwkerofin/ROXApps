@@ -1,6 +1,11 @@
 Versions of Diff
 ================
 
+1.1.2
+-----
+New icon provided by Geoff Youngs.  Use new options system.  Setting font
+for text windows works.
+
 1.1.1
 -----
 Gtk+ 2.0.
