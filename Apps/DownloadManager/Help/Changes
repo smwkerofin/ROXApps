@@ -1,6 +1,10 @@
 DownloadManager
 ===============
 
+14-Mar-2005
+~~~~~~~~~~~
+Added options.
+
 05-Mar-2005
 ~~~~~~~~~~~
 Steal Fetch's icon.
@@ -22,4 +26,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.3 2005/02/19 11:50:53 stephen Exp $
+$Id: Changes,v 1.4 2005/03/10 21:58:39 stephen Exp $

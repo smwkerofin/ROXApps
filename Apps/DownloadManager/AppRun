@@ -72,7 +72,8 @@ class MyObject(dbus.Object, rox.Window):
                                                           self.QueueSize,
                                                           self.Update,
                                                           self.Done,
-                                                          self.Cancel])
+                                                          self.Cancel,
+                                                          self.ShowOptions])
 
         rox.Window.__init__(self)
 
@@ -128,9 +129,15 @@ class MyObject(dbus.Object, rox.Window):
         column = rox.g.TreeViewColumn('Age', cell, text = AGE)
         view.append_column(column)
 
+        optbut=rox.ButtonMixed(rox.g.STOCK_PREFERENCES, 'Options')
+        vbox.pack_start(optbut, False, False, 2)
+        optbut.connect('clicked', self.opt_clicked)
+
         vbox.show_all()
 
         rox.g.timeout_add(2000, self.update)
+
+        rox.app_options.add_notify(self.opts_changed)
 
     def update(self, *unused):
         self.model.clear()
@@ -167,6 +174,9 @@ class MyObject(dbus.Object, rox.Window):
             self.hide()
                 
         return True
+
+    def opts_changed(self):
+        self.update()
         
     def Ping(self, method):
         return 1
@@ -219,6 +229,12 @@ class MyObject(dbus.Object, rox.Window):
         #print client, 'has been cancelled', reason
         self.lose_client(id=id)
 
+    def ShowOptions(self, method):
+        rox.edit_options()
+
+    def opt_clicked(self, *unused):
+        rox.edit_options()
+
     def lose_client(self, id=None, client=None):
         if not id and not client:
             return
@@ -259,22 +275,27 @@ class MyObject(dbus.Object, rox.Window):
     def __str__(self, *args):
         return 'MyObject-%s' % id(self)
 
-bus=dbus.SessionBus()
-#print bus
-server=dbus.Service(service_name, bus)
-#print server
-object=MyObject(server)
-#print object
-#print dir(object)
+def run():
+    try:
+        bus=dbus.SessionBus()
+        server=dbus.Service(service_name, bus)
+        object=MyObject(server)
 
-#object.emit_signal(interface_name, 'Running')
+        rox.mainloop()
+    except:
+        rox.report_exception()
 
-#print 'start main loop'
-try:
-    #print rox._toplevel_windows
-    #print rox._in_mainloops
-    rox.mainloop()
-except:
-    rox.report_exception()
-#print 'end main loop'
+def show_options():
+    import dclient
+    try:
+        server=dclient.connect(False)
+        server.showOptions()
+    except:
+        rox.edit_options()
+        rox.mainloop()
 
+if __name__=='__main__':
+    if len(sys.argv)==2 and sys.argv[1]=='-o':
+        show_options()
+    else:
+        run()

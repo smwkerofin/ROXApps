@@ -12,4 +12,9 @@
     <AppDir><Name>ROX-Lib2</Name><NeedsVersion>1.9.17</NeedsVersion></AppDir>
     <Python><Name>dbus</Name><NeedsVersion>0.22</NeedsVersion></Python>
   </Dependencies>
+  <AppMenu>
+    <Item option="-o">
+      <Label>Options</Label>
+    </Item>
+  </AppMenu>
 </AppInfo>
