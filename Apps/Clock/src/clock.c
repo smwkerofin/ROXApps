@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.30 2004/08/05 17:20:36 stephen Exp $
+ * $Id: clock.c,v 1.31 2004/08/19 19:26:14 stephen Exp $
  */
 #include "config.h"
 
@@ -331,17 +331,19 @@ int main(int argc, char *argv[])
     g_free(aicon);
   }
 
-  cwin=make_window(xid);
+  if(!show_options) {
+    cwin=make_window(xid);
 
-  gtk_widget_show(cwin->win);
+    gtk_widget_show(cwin->win);
 
-  g_timeout_add(30*1000, check_alarms, NULL);
-
-  if(show_options)
+    g_timeout_add(30*1000, check_alarms, NULL);
+  } else {
     show_conf_win();
+  }
   
-  dprintf(2, "into main.");
-  gtk_main();
+  dprintf(2, "into main, %d windows.", rox_get_n_windows());
+  rox_mainloop();
+  dprintf(2, "out of main, %d windows.", rox_get_n_windows());
 
   if(save_alarms)
     alarm_save();
@@ -374,10 +376,7 @@ static void remove_window(ClockWindow *win)
   gdk_gc_unref(win->gc);
   g_free(win);
 
-  dprintf(1, "windows=%p, number of active windows=%d", windows,
-	  g_list_length(windows));
-  if(g_list_length(windows)<1)
-    gtk_main_quit();
+  rox_debug_printf(1, "rox_get_n_windows()=%d", rox_get_n_windows());
 }
 
 static void window_gone(GtkWidget *widget, gpointer data)
@@ -487,6 +486,7 @@ static ClockWindow *make_window(guint32 socket)
 
   /* This is the text below the clock face */
   cwin->digital_out=gtk_label_new(buf);
+  gtk_widget_set_name(cwin->digital_out, "clock digital");
   gtk_box_pack_start(GTK_BOX(vbox), cwin->digital_out, FALSE, FALSE, 2);
   if(o_show_text.int_value)
     gtk_widget_show(cwin->digital_out);
@@ -501,6 +501,9 @@ static ClockWindow *make_window(guint32 socket)
   windows=g_list_append(windows, cwin);
   current_window=cwin;
   gtk_widget_ref(cwin->win);
+
+  rox_add_window(cwin->win);
+  rox_debug_printf(2, "%d windows", rox_get_n_windows());
 
   return cwin;
 }
@@ -1379,6 +1382,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.31  2004/08/19 19:26:14  stephen
+ * React to change of font. Icon to indicate if alarms are set.
+ *
  * Revision 1.30  2004/08/05 17:20:36  stephen
  * Pre-draw the clock face.
  * Reduce flicker
