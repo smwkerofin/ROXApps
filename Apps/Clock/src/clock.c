@@ -5,13 +5,13 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.24 2002/08/24 16:39:52 stephen Exp $
+ * $Id: clock.c,v 1.25 2003/03/05 15:30:39 stephen Exp $
  */
 #include "config.h"
 
 #define DEBUG              1
 #define INLINE_FONT_SEL    0
-#define TRY_SERVER         0
+#define TRY_SERVER         1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1708,6 +1708,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.25  2003/03/05 15:30:39  stephen
+ * First pass at conversion to GTK 2.
+ *
  * Revision 1.24  2002/08/24 16:39:52  stephen
  * Fix compilation problem with libxml2.
  *
