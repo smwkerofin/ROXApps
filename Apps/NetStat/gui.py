@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.16 2005/01/23 11:21:29 stephen Exp $
+# $Id: gui.py,v 1.17 2005/03/17 11:57:54 stephen Exp $
 
 import os
 import sys
@@ -22,8 +22,9 @@ from sockwin import SocketsWindow
 
 #import gc; gc.set_debug(gc.DEBUG_LEAK)
 
-if len(sys.argv)>2 and sys.argv[1]=='-a':
-    xid=long(sys.argv[2])
+#print >>sys.stderr, sys.argv
+if len(sys.argv)>1:
+    xid=long(sys.argv[1])
 else:
     xid=None
 

@@ -1,6 +1,10 @@
 NetStat
 =======
 
+03-Apr-2005
+~~~~~~~~~~~
+Better AppRun/AppletRun as suggested by Thomas Leonard.
+
 17-Mar-2005
 ~~~~~~~~~~~
 Improved selection of font scaling.
