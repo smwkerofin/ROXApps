@@ -17,9 +17,20 @@
 
 #undef HAVE_XML
 
+#undef GTK2
+#define ROX_CLIB_VERSION ""
+
 #if defined(HAVE_GETTEXT)
 #define _(String) gettext(String)
 #else
 #define _(String) (String)
 #endif
 #define N_(String) (String)
+
+#ifdef GTK2
+# define GTK_WINDOW_DIALOG GTK_WINDOW_TOPLEVEL
+# define G_DISABLE_CONST_RETURNS
+#else
+# define gdk_x11_xatom_to_atom(x) (x)
+# define gdk_x11_atom_to_xatom(x) (x)
+#endif
