@@ -11,4 +11,9 @@
   <Dependencies>
     <AppDir><Name>ROX-Lib2</Name><NeedsVersion>1.9.14</NeedsVersion></AppDir>
   </Dependencies>
+  <AppMenu>
+    <Item option="-o">
+      <Label>Options</Label>
+    </Item>
+  </AppMenu>
 </AppInfo>

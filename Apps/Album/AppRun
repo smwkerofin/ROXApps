@@ -12,6 +12,15 @@ import rox, rox.saving, rox.choices, rox.loading
 import rox.Menu
 import rox.AppInfo
 
+try:
+    import ID3
+except:
+    import localID3 as ID3
+
+rox.setup_app_options('Album')
+music_box=rox.options.Option('use_music_box', True)
+rox.app_options.notify()
+
 PATH=0
 NAME=1
 EXT=2
@@ -277,7 +286,6 @@ class AlbumWindow(rox.Window, rox.loading.XDSLoader, rox.saving.Saveable):
 
 def identify(fname):
     try:
-        import ID3
         id=ID3.ID3(fname)
     except:
         return None, None, None
@@ -305,15 +313,19 @@ def resource(leaf):
     return path
       
 def main(argv):
-    win=AlbumWindow()
-    win.show()
-    while rox.g.events_pending():
-        rox.g.main_iteration()
-
-    for fname in argv:
-        win.add_track(fname)
+    if len(argv)>0 and argv[0]=='-o':
+         rox.edit_options()
+        
+    else:
+        win=AlbumWindow()
+        win.show()
         while rox.g.events_pending():
             rox.g.main_iteration()
+
+        for fname in argv:
+            win.add_track(fname)
+            while rox.g.events_pending():
+                rox.g.main_iteration()
 
     try:
         rox.mainloop()
