@@ -10,7 +10,7 @@ AC_MSG_ERROR([
 
 Please do not run 'configure' manually - instead, run the AppRun script with
 the --compile option, like this:
-	$ Clock/AppRun --compile
+	$ ROX-CLib/AppRun --compile
 
 Thank you.
 ])
