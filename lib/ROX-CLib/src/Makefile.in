@@ -68,6 +68,20 @@ ifeq (${SHARED}, yes)
 all: ${LIBFILE.la}
 endif
 
+zero-install: all
+	rm *.o *.lo
+	rm -rf .libs
+	strip ${PLATFORM_DIR}/bin/test
+	strip ${PLATFORM_DIR}/bin/rox_pinboard
+	strip --strip-debug ${LIBFILE.a}
+
+ifeq (${SHARED}, yes)
+zero-install: zero-install-shared
+endif
+
+zero-install-shared: ${LIBFILE.la}
+	strip --strip-debug ${LIBDIR}/lib${LIBNAME}.so
+
 .c.lo:
 	${LTCOMPILE} $<
 
