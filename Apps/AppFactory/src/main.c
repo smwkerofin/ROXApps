@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id$
+ * $Id: main.c,v 1.1.1.1 2001/07/17 14:39:02 stephen Exp $
  */
 #include "config.h"
 
@@ -36,6 +36,8 @@
 #include "rox_dnd.h"
 #include "gtksavebox.h"
 
+#define PROMPT_UTIL "promptArgs.py"
+
 /* Declare functions in advance */
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win); /* button press on window */
@@ -56,13 +58,14 @@ static GtkWidget *win;
 static GtkWidget *prog_name;
 static GtkWidget *prog_icon;
 static GtkWidget *prog_help;
+static GtkWidget *prompt_args;
 
 static GtkWidget *save=NULL;
 
 /* Main.  Here we set up the gui and enter the main loop */
 int main(int argc, char *argv[])
 {
-  GtkWidget *vbox;
+  GtkWidget *vbox, *vbox2;
   GtkWidget *hbox;
   GtkWidget *label;
   gchar *app_dir;
@@ -73,6 +76,7 @@ int main(int argc, char *argv[])
   GdkPixmap *pixmap;
   GdkBitmap *mask;
   GtkWidget *but;
+  GtkWidget *frame;
 
   rox_debug_init("AppFactory");
 
@@ -173,6 +177,22 @@ int main(int argc, char *argv[])
 
   rox_dnd_register_uris(hbox, 0, help_dropped, prog_help);
 
+  frame=gtk_frame_new("Options");
+  gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 0);
+  gtk_widget_show(frame);
+  
+  vbox2=gtk_vbox_new(FALSE, 4);
+  gtk_container_add(GTK_CONTAINER(frame), vbox2);
+  gtk_widget_show(vbox2);
+
+  hbox=gtk_hbox_new(FALSE, 4);
+  gtk_box_pack_start(GTK_BOX(vbox2), hbox, FALSE, FALSE, 0);
+  gtk_widget_show(hbox);
+
+  prompt_args=gtk_check_button_new_with_label("Prompt for program arguments");
+  gtk_box_pack_start(GTK_BOX(hbox), prompt_args, TRUE, TRUE, 0);
+  gtk_widget_show(prompt_args);  
+  
   hbox=gtk_hbox_new(FALSE, 4);
   gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
   gtk_widget_show(hbox);
@@ -189,7 +209,7 @@ int main(int argc, char *argv[])
   /* Main processing loop */
   gtk_main();
 
-  /* We are done, save out config incase it changed */
+  /* We are done, save out config in case it changed */
   write_config();
 
   return 0;
@@ -299,15 +319,37 @@ static gboolean icon_dropped(GtkWidget *widget, GSList *uris, gpointer data,
   }
 }
 
+static gboolean on_path(const gchar *prog)
+{
+  static gchar **path=NULL;
+
+  gchar *progdir=g_dirname(prog);
+  gchar **dir;
+
+  if(!path)
+    path=g_strsplit(g_getenv("PATH"), ":", 0);
+
+  for(dir=path; *dir; dir++)
+    if(strcmp(progdir, *dir)==0) {
+      g_free(progdir);
+      return TRUE;
+    }
+
+  g_free(progdir);
+  return FALSE;
+}
+
 static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
 {
   FILE *out;
-  gchar *cmd;
+  gchar *cmd, *acmd;
   gchar *mleaf;
   gchar *leaf;
   gchar *fname;
   gchar *src;
+  gboolean prompt;
 
+  prompt=gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(prompt_args));
   mleaf=g_basename(pathname);
 
   if(mkdir(pathname, 0777)!=0) {
@@ -336,8 +378,19 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
     return GTK_XDS_SAVE_ERROR;
   }
   fprintf(out, "#!/bin/sh\n\n");
+  fprintf(out, "APP_DIR=`dirname $0` export APP_DIR\n");
   cmd=gtk_editable_get_chars(GTK_EDITABLE(prog_name), 0, -1);
-  fprintf(out, "exec %s \"$@\"\n", cmd);
+  if(on_path(cmd))
+    acmd=g_basename(cmd);
+  else
+    acmd=cmd;
+  if(!prompt) {
+    fprintf(out, "exec %s \"$@\"\n", acmd);
+  } else {
+    fprintf(out, "args=`$APP_DIR/%s -p \"Options for %s\" \"$@\"`\n",
+	    PROMPT_UTIL, mleaf);
+    fprintf(out, "exec %s $args\n", acmd);
+  }
   g_free(cmd);
   fclose(out);
   chmod(fname, 0755);
@@ -372,6 +425,33 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
     g_free(fname);
   }
   g_free(src);
+
+  if(prompt) {
+    gchar *loc;
+
+    loc=choices_find_path_load(PROMPT_UTIL, PROJECT);
+    if(!loc) {
+      gchar *app_dir=getenv("APP_DIR");
+      if(app_dir)
+	loc=g_strconcat(app_dir, "/", PROMPT_UTIL, NULL);
+    }
+    if(loc) {
+      cmd=g_strdup_printf("cp %s %s", loc, pathname);
+      if(system(cmd)!=0) {
+	rox_error("Failed to copy prompt utility\n%s", strerror(errno));
+      }
+      g_free(cmd);
+      g_free(loc);
+
+      fname=g_strconcat(pathname, "/", PROMPT_UTIL, NULL);
+      chmod(fname, 0755);
+      g_free(fname);
+      
+    } else {
+      rox_error("Failed to copy prompt utility\nfailed to find %s",
+		PROMPT_UTIL);
+    }
+  }
 
   return GTK_XDS_SAVED;
 }

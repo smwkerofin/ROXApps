@@ -1,0 +1,8 @@
+AppFactory
+==========
+
+0.1.2
+-----
+Checks to see if the program is on the current PATH, if not it puts the
+full pathname in AppRun.
+Option to have the App prompt for arguments.
