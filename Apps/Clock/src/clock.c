@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.19 2001/11/29 16:16:15 stephen Exp $
+ * $Id: clock.c,v 1.20 2002/01/29 15:24:34 stephen Exp $
  */
 #include "config.h"
 
@@ -19,6 +19,12 @@
 #include <time.h>
 #include <math.h>
 #include <errno.h>
+
+#ifdef HAVE_UNISTD_H
+/* Sometimes getopt is in stdlib.h, sometimes in here.  And sometimes both
+   and stdio.h */
+#include <unistd.h>
+#endif
 
 #ifdef HAVE_LOCALE_H
 #include <locale.h>
@@ -205,6 +211,7 @@ static void do_version(void)
   printf("Distributed under the terms of the GNU General Public License.\n");
   printf("(See the file COPYING in the Help directory).\n");
   printf("%s last compiled %s\n", __FILE__, __DATE__);
+  printf("ROX-CLib version %s\n", rox_clib_version_string());
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
@@ -1629,6 +1636,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.20  2002/01/29 15:24:34  stephen
+ * Use new applet menu positioning code.  Added -h and -v options.
+ *
  * Revision 1.19  2001/11/29 16:16:15  stephen
  * Use font selection dialog instead of widget.
  * Added a monday-thursday repeat.

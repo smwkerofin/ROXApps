@@ -24,7 +24,7 @@ fi
 dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
-AC_CHECK_HEADERS(locale.h sys/stat.h libintl.h)
+AC_CHECK_HEADERS(unistd.h locale.h sys/stat.h libintl.h)
 
 dnl Do we have gdk-pixbuf?  Provide an extra if we do.
 AC_MSG_CHECKING(for gdk-pixbuf library)
@@ -34,7 +34,7 @@ fi
 GDK_PIXBUF_LIBS=`$GDK_PIXBUF_CONFIG --libs`
 changequote(,)dnl
 if [ -n "$GDK_PIXBUF_LIBS" ]; then
-  AC_MSG_RESULT(yes - use '$GDK_PIXBUF_LIBS')
+  AC_MSG_RESULT(yes - use '$GDK_PIXBUF_CONFIG')
   USE_GDK_PIXBUF=1
 else
   AC_MSG_RESULT(no - dont bother)
@@ -42,7 +42,6 @@ else
 fi
 changequote([,])dnl
 AC_SUBST(GDK_PIXBUF_CONFIG)
-AC_SUBST(GDK_PIXBUF_LIBS)
 AC_DEFINE(USE_GDK_PIXBUF)
 
 dnl Checks for typedefs, structures, and compiler characteristics.

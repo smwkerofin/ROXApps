@@ -9,6 +9,7 @@
 #include <sys/types.h>
 
 #undef STDC_HEADERS
+#undef HAVE_UNISTD_H
 #undef HAVE_LOCALE_H
 #undef HAVE_SYS_STAT_H
 #undef HAVE_LIBINTL_H
