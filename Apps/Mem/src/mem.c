@@ -5,13 +5,13 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.11 2002/08/24 16:45:56 stephen Exp $
+ * $Id: mem.c,v 1.12 2003/03/05 15:30:40 stephen Exp $
  */
 #include "config.h"
 
 /* Select compilation options */
 #define DEBUG              1     /* Set to 1 for debug messages */
-#define TRY_SERVER         0     /* Use SOAP to open windows on request */
+#define TRY_SERVER         1     /* Use SOAP to open windows on request */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1748,6 +1748,9 @@ static gboolean update_swap(gpointer unused)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.12  2003/03/05 15:30:40  stephen
+ * First pass at conversion to GTK 2.
+ *
  * Revision 1.11  2002/08/24 16:45:56  stephen
  * Fix compilation problem with libxml2.
  * Removed [] from if in configure.in
