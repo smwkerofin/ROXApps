@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<options>
-  <section title='AppInfo defaults'>
-    <entry name='author' label='Author'>Name to use as author of
-wrapper</entry>
-    <entry name='web' label='Web page'>Home page of app</entry>
-  </section>
-</options>
