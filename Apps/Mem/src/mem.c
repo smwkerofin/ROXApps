@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.16 2004/09/05 11:37:51 stephen Exp $
+ * $Id: mem.c,v 1.17 2004/11/21 13:23:17 stephen Exp $
  */
 #include "config.h"
 
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
   g_free(localedir);
 #endif
 
-  rox_init_with_domain(PROJECT, "kerofin.demon.co.uk", &argc, &argv);
+  rox_init_with_domain(PROJECT, MY_DOMAIN, &argc, &argv);
   
   /* Check for this argument by itself */
   if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
   setup_options();
 
   /* Pick the gtkrc file up from CHOICESPATH */
-  fname=choices_find_path_load("gtkrc", PROJECT);
+  fname=rox_choices_load("gtkrc", PROJECT, MY_DOMAIN);
   if(fname) {
     gtk_rc_parse(fname);
     g_free(fname);
@@ -810,7 +810,7 @@ static gboolean read_choices(void)
 {
   gchar *fname;
 
-  fname=rox_choices_load("Config.xml", PROJECT, "www.kerofin.demon.co.uk");
+  fname=rox_choices_load("Config.xml", PROJECT, MY_DOMAIN);
 
   if(fname) {
     xmlDocPtr doc;
@@ -1073,7 +1073,7 @@ static void save_menus(void)
 {
   char	*menurc;
 	
-  menurc = rox_choices_save("menus", PROJECT, "www.kerofin.demon.co.uk");
+  menurc = rox_choices_save("menus", PROJECT, MY_DOMAIN);
   if (menurc) {
     gtk_accel_map_save(menurc);
     g_free(menurc);
@@ -1098,7 +1098,7 @@ static void menu_create_menu(GtkWidget *window)
 	/* Attach the new accelerator group to the window. */
   gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
-  menurc=rox_choices_load("menus", PROJECT, "www.kerofin.demon.co.uk");
+  menurc=rox_choices_load("menus", PROJECT, MY_DOMAIN);
   if(menurc) {
     gtk_accel_map_load(menurc);
     g_free(menurc);
@@ -1273,6 +1273,9 @@ static gboolean options_remote(void)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.17  2004/11/21 13:23:17  stephen
+ * Use new ROX-CLib features
+ *
  * Revision 1.16  2004/09/05 11:37:51  stephen
  * Change to new build system.
  * Split stats gathering into its own file seperate from GUI.

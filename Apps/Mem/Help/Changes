@@ -1,6 +1,11 @@
 Mem
 ===
 
+10-Jan-2004
+~~~~~~~~~~~
+Had missed one call to the old choices interface.  Made domain consistant
+with other apps.
+
 31-Oct-2004 (2.1.2)
 ~~~~~~~~~~~
 Update to new interfaces for infowin and choices.

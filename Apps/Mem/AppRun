@@ -5,7 +5,7 @@ PROG=Mem
 APP_DIR=`dirname "$0"`
 APP_DIR=`cd "$APP_DIR";pwd`; export APP_DIR
 
-"$APP_DIR/choice_install" $PROG "$APP_DIR"/gtkrc gtkrc
+"$APP_DIR/choice_install" kerofin.demon.co.uk/$PROG "$APP_DIR"/gtkrc gtkrc
 
 if [ x"$PLATFORM" = x ]; then
   ARCH=`uname -m`
