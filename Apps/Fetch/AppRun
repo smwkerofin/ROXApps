@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.12 2004/11/21 13:16:41 stephen Exp $
+# $Id: AppRun,v 1.13 2004/11/22 13:07:41 stephen Exp $
 
 import os, sys
 import time
@@ -8,7 +8,9 @@ import time
 import findrox; findrox.version(1, 9, 14)
 import rox, rox.choices, rox.options, rox.processes, rox.mime
 
-import urlparse
+import urlparse, urllib
+
+import dclient
 
 _=rox._
 
@@ -16,6 +18,8 @@ rox.setup_app_options('Fetch')
 
 allow_pw_change=rox.options.Option('allow_pw_change', True)
 wait_for=rox.options.Option('wait_for', 3)
+use_dl_manager=rox.options.Option('use_dl_manager', False)
+block_size=rox.options.Option('block_size', 4095)
 
 rox.app_options.notify()
 
@@ -29,10 +33,13 @@ html_type=rox.mime.lookup('text/html')
 def run_main():
     while rox.g.events_pending():
         rox.g.main_iteration()
+    print 'done run_main' 
 
 def get_filename(url):
     scheme, location, path, query, fragment=urlparse.urlsplit(url)
     base=os.path.basename(path)
+    if '%' in base:
+        base=urllib.unquote(base)
     if not base:
         base='index.html'
     fname=base
@@ -51,6 +58,8 @@ def get_filename(url):
 class FetchWindow(rox.Dialog):
     def __init__(self, url, target=None):
         self.url=url
+        scheme, location, path, query, fragment=urlparse.urlsplit(url)
+        self.host=location
         if not target:
             target=get_filename(url)
         self.target=target+tsuf
@@ -64,6 +73,7 @@ class FetchWindow(rox.Dialog):
         self.con=None
         self.bad_fetch=0 # 1=maybe, 2=yes
         self.stype=unknown_type
+        self.dl_man=None
         
         rox.Dialog.__init__(self)
         self.set_title(self.url)
@@ -188,6 +198,8 @@ class FetchWindow(rox.Dialog):
         self.start()
 
     def do_response(self, *unused):
+        if self.dl_man:
+            self.dl_man.cancel(_('Cancelled'))
         if self.proc:
             self.proc.kill()
         msg='Fetch of %s cancelled' % self.url
@@ -207,7 +219,9 @@ class FetchWindow(rox.Dialog):
             if now-self.last_time>60:
                 self.message('Stalled? Last update %ds ago' %
                              int(now-self.last_time))
+            #print now, now-self.last_time
 
+        #print 'leaving'
         return True
 
     def delete_event(self, *unused):
@@ -218,7 +232,7 @@ class FetchWindow(rox.Dialog):
         
     def message(self, text):
         self.msg1.set_text(text)
-        run_main()
+        #run_main()
 
     def percent_done(self, size, total):
         if self.prog is None:
@@ -257,15 +271,17 @@ class FetchWindow(rox.Dialog):
                 speed=size/elapsed/1024
                 self.speed.set_text('%2.1f KB/s' % speed)
             
-        run_main()
+        #run_main()
 
     def active(self):
         self.prog.set_text('')
         self.prog.pulse()
-        run_main()
+        #run_main()
 
     def close(self):
         #print 'close'
+        if self.dl_man:
+            self.dl_man.cancel(_('Window closed'))
         if self.proc:
             try:
                 self.proc.kill()
@@ -300,7 +316,7 @@ class FetchWindow(rox.Dialog):
         
 
     def read_some(self, source, condition, *unused):
-        #print source, condition, unused
+        print source, condition, unused
         #print self.con
 
         self.last_time=time.time()
@@ -310,12 +326,19 @@ class FetchWindow(rox.Dialog):
         while True:
             c=self.con.read(1)
             data+=c
+            print 'Read',data
             if c=='\n':
                 break
         #print data,
         #self.count+=len(data)
         if data:
-            code, arg=data.split('=', 1)
+            #print data
+            try:
+                code, arg=data.split('=', 1)
+            except ValueError:
+                code='m'
+                arg=data
+                
             if code=='m':
                 self.message(arg.strip())
             elif code=='t':
@@ -342,6 +365,40 @@ class FetchWindow(rox.Dialog):
         return False
         
     def start(self):
+        if use_dl_manager.int_value:
+            try:
+                self.message(_("Connecting to DownloadManager"))
+                self.dl_man=dclient.connect()
+            except:
+                self.message(_("Could not connect to DownloadManager"))
+
+        if self.dl_man:
+            self.acquire()
+        else:
+            self.real_start()
+
+    def acquire(self):
+        rox.g.timeout_add(2000, self.waiting)
+        #rox.mainloop()
+
+    def waiting(self):
+        if not self.dl_man:
+            #rox.g.main_quit()
+            self.real_start()
+            return False
+
+        if self.dl_man.acquire(self.host, os.path.basename(self.real_target),
+                               block=False):
+            self.real_start()
+            #rox.g.main_quit()
+            return False
+
+        n=self.dl_man.getQueueSize()
+        self.message(_('Waiting, %d in queue') % n)
+
+        return True
+
+    def real_start(self):
         r, w=os.pipe()
         self.con=os.fdopen(r, 'r', 1)
         self.proc=rox.processes.PipeThroughCommand(
@@ -378,15 +435,23 @@ class FetchWindow(rox.Dialog):
             self.size_l.set_text(tstr)
         else:
             self.active()
-        run_main()
+        #run_main()
+
+        if self.dl_man:
+            self.dl_man.update(nb, tsize)
 
     def finished(self):
+        if self.dl_man:
+            self.dl_man.done()
         try:
             os.rename(self.target, self.real_target)
         except OSError:
             rox.info('Rename failed, data left in temporary file %s' %
                      self.target)
-        self.con.close()
+        try:
+            self.con.close()
+        except:
+            pass
         t=wait_for.int_value*1000
         mess=_('Done')
         if self.ltype!=self.stype:
@@ -399,7 +464,7 @@ class FetchWindow(rox.Dialog):
                 mess=_('Done.  Warning: type mismatch')
                 t*=3
         self.message(mess)
-        run_main()
+        #run_main()
         rox.g.timeout_add(t, self.close)
         #rox.mainloop()
         
