@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.14 2003/03/05 15:30:40 stephen Exp $
+ * $Id: tail.c,v 1.15 2003/08/02 17:16:56 stephen Exp $
  */
 
 #include "config.h"
@@ -73,9 +73,9 @@ static void add_menu_entries(GtkTextView *view, GtkMenu *menu, gpointer);
 static gboolean show_menu(GtkWidget *widget, gpointer);
 
 static GtkItemFactoryEntry menu_items[] = {
-  {"/_Info", "<control>I", show_info_win, 0, NULL},
-  {"/_Save text...", "<control>S", file_saveas_proc, 0, NULL},
-  {"/_Quit","<control>Q",  gtk_main_quit, 0, NULL },
+  {N_("/_Info"), "<control>I", show_info_win, 0, NULL},
+  {N_("/_Save text..."), "<control>S", file_saveas_proc, 0, NULL},
+  {N_("/_Quit"),"<control>Q",  gtk_main_quit, 0, NULL },
 };
 
 #define MENU_TYPE GTK_TYPE_MENU
@@ -139,15 +139,15 @@ static void detach(GtkWidget *widget, GtkMenu *menu)
 
 static void usage(const char *argv0)
 {
-  printf("Usage: %s [X-options] [gtk-options] [-vhc] [-t title] file\n", argv0);
-  printf("where:\n\n");
-  printf("  X-options\tstandard Xlib options\n");
-  printf("  gtk-options\tstandard GTK+ options\n");
-  printf("  -h\tprint this help message\n");
-  printf("  -v\tdisplay version information\n");
-  printf("  -c\tdon't show last change time\n");
-  printf("  -t title\ttitle string for window\n");
-  printf("  file\tfile to monitor\n");
+  printf(_("Usage: %s [X-options] [gtk-options] [-vhc] [-t title] file\n"), argv0);
+  printf(_("where:\n\n"));
+  printf(_("  X-options\tstandard Xlib options\n"));
+  printf(_("  gtk-options\tstandard GTK+ options\n"));
+  printf(_("  -h\tprint this help message\n"));
+  printf(_("  -v\tdisplay version information\n"));
+  printf(_("  -c\tdon't show last change time\n"));
+  printf(_("  -t title\ttitle string for window\n"));
+  printf(_("  file\tfile to monitor\n"));
 }
 
 static void do_version(void)
@@ -155,14 +155,14 @@ static void do_version(void)
   printf("%s %s\n", PROJECT, VERSION);
   printf("%s\n", PURPOSE);
   printf("%s\n", WEBSITE);
-  printf("Copyright 2002 %s\n", AUTHOR);
-  printf("Distributed under the terms of the GNU General Public License.\n");
-  printf("(See the file COPYING in the Help directory).\n");
-  printf("%s last compiled %s\n", __FILE__, __DATE__);
-  printf("ROX-CLib version %s\n", rox_clib_version_string());
+  printf(_("Copyright 2002 %s\n"), AUTHOR);
+  printf(_("Distributed under the terms of the GNU General Public License.\n"));
+  printf(_("(See the file COPYING in the Help directory).\n"));
+  printf(_("%s last compiled %s\n"), __FILE__, __DATE__);
+  printf(_("ROX-CLib version %s\n"), rox_clib_version_string());
 
-  printf("\nCompile time options:\n");
-  printf("  Debug output... %s\n", DEBUG? "yes": "no");
+  printf(_("\nCompile time options:\n"));
+  printf(_("  Debug output... %s\n"), DEBUG? "yes": "no");
 }
 
 int main(int argc, char *argv[])
@@ -185,13 +185,8 @@ int main(int argc, char *argv[])
     exit(0);
   }
   
-  gtk_init(&argc, &argv);
-  rox_debug_init(PROJECT);
+  rox_init(PROJECT, &argc, &argv);
   
-#ifdef HAVE_SETLOCALE
-  setlocale(LC_TIME, "");
-  setlocale (LC_ALL, "");
-#endif
   /* What is the directory where our resources are? (set by AppRun) */
   app_dir=g_getenv("APP_DIR");
 #ifdef HAVE_BINDTEXTDOMAIN
@@ -201,9 +196,6 @@ int main(int argc, char *argv[])
   textdomain(PROJECT);
   g_free(localedir);
 #endif
-
-  choices_init();
-  rox_dnd_init();
 
   /* Process remaining arguments */
   nerr=0;
@@ -229,7 +221,7 @@ int main(int argc, char *argv[])
       break;
     }
   if(nerr) {
-    fprintf(stderr, "%s: invalid options\n", argv[0]);
+    fprintf(stderr, _("%s: invalid options\n"), argv[0]);
     usage(argv[0]);
     exit(10);
   }
@@ -273,7 +265,7 @@ int main(int argc, char *argv[])
 		   win);
 
   if(show_change_time) {
-    changed=gtk_label_new("Last change:");
+    changed=gtk_label_new(_("Last change:"));
     gtk_widget_show(changed);
     gtk_box_pack_start(GTK_BOX(vbox), changed, FALSE, FALSE, 2);
   }
@@ -308,7 +300,7 @@ static void window_updated(time_t when)
 
   tim=localtime(&when);
 
-  strftime(buf, sizeof(buf), "Last change: %c", tim);
+  strftime(buf, sizeof(buf), _("Last change: %c"), tim);
 
   gtk_label_set_text(GTK_LABEL(changed), buf);
 }
@@ -401,12 +393,12 @@ static void set_file(const char *name)
 
   nfd=open(name, O_RDONLY);
   if(nfd<0) {
-    rox_error("Failed to open\n%s\nfor reading", name);
+    rox_error(_("Failed to open\n%s\nfor reading"), name);
     return;
   }
 
   if(fstat(nfd, &statb)<0) {
-    rox_error("Failed to scan\n%s", name);
+    rox_error(_("Failed to scan\n%s"), name);
     return;
   }
 
@@ -472,7 +464,7 @@ static void show_info_win(void)
   static GtkWidget *infowin=NULL;
   
   if(!infowin) {
-    infowin=info_win_new(PROGRAM, PURPOSE, VERSION, AUTHOR, WEBSITE);
+    infowin=info_win_new_from_appinfo(PROGRAM);
     gtk_window_set_wmclass(GTK_WINDOW(infowin), "Info", PROGRAM);
   }
 
@@ -511,19 +503,19 @@ static gint save_to_file(GtkSavebox *savebox, gchar *pathname)
       nb=fwrite(txt, 1, len, out);
 
       if(nb<len) {
-	rox_error("Error writing to %s\n%s", pathname, strerror(errno));
+	rox_error(_("Error writing to %s\n%s"), pathname, strerror(errno));
 	state=GTK_XDS_SAVE_ERROR;
       }
       
     } else {
-      rox_error("Failed to get text!");
+      rox_error(_("Failed to get text!"));
       state=GTK_XDS_SAVE_ERROR;
     }
 
     fclose(out);
     
   } else {
-    rox_error("Failed to open %s for writing", pathname);
+    rox_error(_("Failed to open %s for writing"), pathname);
     state=GTK_XDS_SAVE_ERROR;
   }
 
@@ -685,6 +677,9 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.15  2003/08/02 17:16:56  stephen
+ * Add Italian translation of AppInfo by Yuri Bongiorno
+ *
  * Revision 1.14  2003/03/05 15:30:40  stephen
  * First pass at conversion to GTK 2.
  *
