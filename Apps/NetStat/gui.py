@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.9 2003/05/09 14:09:36 stephen Exp $
+# $Id: gui.py,v 1.10 2003/06/09 17:29:11 stephen Exp $
 
 import os
 import sys
@@ -157,6 +157,8 @@ iw.connect('delete_event', lambda iw: iw.hide())
 class MenuHelper:
     def show_info(unused):
         iw.show()
+        #import rox.InfoWin
+        #rox.InfoWin.infowin('NetStat')
     def do_quit(unused):
         rox.toplevel_unref()
     def edit_options(unused):
