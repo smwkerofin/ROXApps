@@ -4,6 +4,11 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+29-Oct-2004
+~~~~~~~~~~~
+Added rox_choices_load() and rox_choices_save().  Also rox_init_with_domain() 
+to make use of the new features.
+
 23-Oct-2004
 ~~~~~~~~~~~
 Added window counting (rox_add_window()) and rox_mainloop() to make use of
@@ -198,4 +203,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.15 2004/09/25 10:58:28 stephen Exp $
+$Id: Changes,v 1.16 2004/10/23 11:49:20 stephen Exp $
