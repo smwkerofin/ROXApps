@@ -1,6 +1,10 @@
 AppFactory
 ==========
 
+0.1.5
+-----
+Fix leak in read/write XML config.
+
 0.1.4
 -----
 Now uses rox_resources_find to locate promptArgs.py and application.xpm

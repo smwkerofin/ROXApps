@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.10 2001/10/23 10:50:06 stephen Exp $
+ * $Id: freefs.c,v 1.11 2001/11/06 16:31:53 stephen Exp $
  */
 #include "config.h"
 
@@ -591,6 +591,7 @@ static gboolean read_choices_xml(void)
       }
 
     }
+    xmlFreeDoc(doc);
     
     g_free(fname);
     return TRUE;
@@ -703,6 +704,7 @@ static void write_choices_xml(void)
 #endif
 
     g_free(fname);
+    xmlFreeDoc(doc);
   }
 }
 
@@ -1014,6 +1016,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.11  2001/11/06 16:31:53  stephen
+ * Pick up window icon from rox_resources_find. Config file now in XML.
+ *
  * Revision 1.10  2001/10/23 10:50:06  stephen
  * Another compilation fix: run autoconf if configure script missing.
  * Can now choose what is shown in applet mode.

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.2 2001/09/12 13:50:44 stephen Exp $
+ * $Id: main.c,v 1.3 2001/11/05 15:55:25 stephen Exp $
  */
 #include "config.h"
 
@@ -554,6 +554,7 @@ static void write_config_xml(void)
     }
 #endif
 
+    xmlFreeDoc(doc);
     g_free(fname);
   }
 }
@@ -603,7 +604,7 @@ static gboolean read_config_xml(void)
   if(fname) {
     xmlDocPtr doc;
     xmlNodePtr node, root;
-    const xmlChar *string;
+    xmlChar *string;
     
     doc=xmlParseFile(fname);
     if(!doc) {
@@ -633,6 +634,7 @@ static gboolean read_config_xml(void)
       /* Process data here */
     }
     
+    xmlFreeDoc(doc);
     g_free(fname);
     return TRUE;
   }

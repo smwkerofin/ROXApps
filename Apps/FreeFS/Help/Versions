@@ -1,6 +1,10 @@
 Versions of FreeFS
 ==================
 
+1.1.4
+-----
+Fix leak in read/write XML config.
+
 1.1.3
 -----
 Pick up window icon from rox_resources_find.
