@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+0.1.14
+------
+Support menu accelerators.  Fix bugs in merging alarm files.
+
 0.1.13
 ------
 Drop old (0.1.6) config sypport.  Save alarms file after one is raised.
