@@ -79,3 +79,42 @@ Leonard.
 The design of the window came from the replacement RISC OS Free
 templates by Bernard Veasey.
 
+Remote mode
+-----------
+
+FreeFS can be driven in remote mode using SOAP messages sent as an X client 
+message sent to one of its windows.  ROX-CLib provides functions for
+this purpose, but a simpler way is provided via the command line.
+
+Run FreeFS with the -R option and pass in a correct SOAP message via
+standard input, similar to the use of -R with the rox command.  An
+example of a SOAP message is:
+
+<?xml version="1.0"?>
+<env:Envelope xmlns:env="http://www.w3.org/2001/12/soap-envelope">
+ <env:Body xmlns="http://www.kerofin.demon.co.uk/rox/FreeFS">
+  <Open>
+   <Path>/home/scratch</Path>
+   <ID>99</ID>
+  </Open>
+ </env:Body>
+</env:Envelope>
+
+The supported messages (and their arguments) are:
+
+Open Path [Parent] [Minimal] [ID]
+Open a new window for Path.  If Parent is given it is an XID for a
+socket and the window will be created in applet mode. If Minimal is
+given and is equal to "yes" then the applet will be in minimal mode
+(much smaller than usual), it has no affect if not a applet.  ID
+designates the window for future reference in a Change call.
+
+Options
+Open the FreeFS options window.
+
+Change Path ID
+Change the directory monitored by the window designated ID to be Path.
+
+-- 
+Stephen Watson
+stephen@kerofin.demon.co.uk
