@@ -1,0 +1,12 @@
+Mem
+===
+
+0.1.2
+-----
+Hack to have a swap display under Solaris (pipes output of "swap -s" 
+periodically).
+
+0.1.1
+-----
+Fix compilation issues with libgtop 1.0.
+Fix bug setting bad label.
