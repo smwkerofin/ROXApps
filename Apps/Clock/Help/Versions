@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+1.1.7
+-----
+Use new applet menu positioning code.
+
 1.1.6
 -----
 Use font selection dialog instead of widget.

@@ -5,12 +5,11 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.18 2001/11/12 14:40:39 stephen Exp $
+ * $Id: clock.c,v 1.19 2001/11/29 16:16:15 stephen Exp $
  */
 #include "config.h"
 
 #define DEBUG              1
-#define APPLET_MENU        1
 #define INLINE_FONT_SEL    0
 
 #include <stdio.h>
@@ -53,6 +52,7 @@
 #include "choices.h"
 #include "rox_debug.h"
 #include "infowin.h"
+#include "applet.h"
 #include "alarm.h"
 
 static gboolean applet_mode=FALSE;
@@ -151,7 +151,9 @@ static enum {
   T_GONE, T_APPEAR, T_SHOW, T_GO
 } sprite_state=T_GONE;
 #define SHOW_FOR 10000
-#define NEXT_SHOW() ((180+(rand()>>7)%120)*1000)
+#define HIDE_FOR 180
+#define HIDE_FOR_PLUS 120
+#define NEXT_SHOW() ((HIDE_FOR+(rand()>>7)%HIDE_FOR_PLUS)*1000)
 /*#define NEXT_SHOW() ((0+(rand()>>7)%30)*1000)*/
 static int sprite_x, sprite_y;
 static int sprite_width, sprite_height;
@@ -183,6 +185,48 @@ static void write_config_xml(void);
 #endif
 static void check_config(void);
 
+static void usage(const char *argv0)
+{
+  printf("Usage: %s [X-options] [gtk-options] [-vh] [XID]\n", argv0);
+  printf("where:\n\n");
+  printf("  X-options\tstandard Xlib options\n");
+  printf("  gtk-options\tstandard GTK+ options\n");
+  printf("  -h\tprint this help message\n");
+  printf("  -v\tdisplay version information\n");
+  printf("  XID\tthe X id of the window to use for applet mode\n");
+}
+
+static void do_version(void)
+{
+  printf("%s %s\n", PROJECT, VERSION);
+  printf("%s\n", PURPOSE);
+  printf("%s\n", WEBSITE);
+  printf("Copyright 2002 %s\n", AUTHOR);
+  printf("Distributed under the terms of the GNU General Public License.\n");
+  printf("(See the file COPYING in the Help directory).\n");
+  printf("%s last compiled %s\n", __FILE__, __DATE__);
+
+  printf("\nCompile time options:\n");
+  printf("  Debug output... %s\n", DEBUG? "yes": "no");
+  printf("  Inline font selection... %s\n", INLINE_FONT_SEL? "yes": "no");
+  printf("  Using XML... ");
+  if(USE_XML)
+    printf("yes (libxml version %d)\n", LIBXML_VERSION);
+  else {
+    printf("no (");
+    if(HAVE_XML)
+      printf("libxml not found)\n");
+    else
+    printf("libxml version %d)\n", LIBXML_VERSION);
+  }
+#if EXTRA_FUN
+  printf("  Time and relative dimensions... in space\n");
+  printf("  Show for %d ms, %d frames of %d ms\n",
+	 SHOW_FOR, NFRAME, CHANGE_FOR);
+  printf("  Hide for %d to %d s\n", HIDE_FOR, HIDE_FOR+HIDE_FOR_PLUS);
+#endif
+}
+
 int main(int argc, char *argv[])
 {
   GtkWidget *win=NULL;
@@ -190,7 +234,7 @@ int main(int argc, char *argv[])
   GtkStyle *style;
   time_t now;
   char buf[80];
-  int i;
+  int i, c, do_exit, nerr;
   gchar *app_dir;
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
@@ -211,21 +255,57 @@ int main(int argc, char *argv[])
 #endif
 
   rox_debug_init("Clock");
+  dprintf(1, "Debug system inited");
+
+  /* Check for this argument by itself */
+  if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
+    do_version();
+    exit(0);
+  }
   
   /* Initialise X/GDK/GTK */
+  dprintf(2, "Initialise X/GDK/GTK");
   gtk_init(&argc, &argv);
   gdk_rgb_init();
   gtk_widget_push_visual(gdk_rgb_get_visual());
   gtk_widget_push_colormap(gdk_rgb_get_cmap());
   
+  /* Process remaining arguments */
+  nerr=0;
+  do_exit=FALSE;
+  while((c=getopt(argc, argv, "vh"))!=EOF)
+    switch(c) {
+    case 'h':
+      usage(argv[0]);
+      do_exit=TRUE;
+      break;
+    case 'v':
+      do_version();
+      do_exit=TRUE;
+      break;
+    default:
+      nerr++;
+      break;
+    }
+  if(nerr) {
+    fprintf(stderr, "%s: invalid options\n", argv[0]);
+    usage(argv[0]);
+    exit(10);
+  }
+  if(do_exit)
+    exit(0);
+
   /* Init choices and read them in */
+  dprintf(2, "Initialise Choices");
   choices_init();
+  dprintf(2, "Read config");
   read_config();
+  dprintf(2, "Read alarms");
   if(load_alarms)
     alarm_load();
 
   dprintf(4, "argc=%d", argc);
-  if(argc<2 || !atol(argv[1])) {
+  if(!argv[optind] || !atol(argv[optind])) {
     /* No arguments, or the first argument was not a (non-zero) number.
        We are not an applet, so create a window */
     win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -247,29 +327,26 @@ int main(int argc, char *argv[])
     /* We are an applet, plug ourselves in */
     GtkWidget *plug;
 
-    dprintf(3, "argv[1]=%s\n", argv[1]);
-    plug=gtk_plug_new(atol(argv[1]));
+    dprintf(3, "argv[%d]=%s", optind, argv[optind]);
+    plug=gtk_plug_new(atol(argv[optind]));
     if(!plug) {
       fprintf(stderr, _("%s: failed to plug into socket %s, not a XID?\n"),
-	      argv[0], argv[1]);
+	      argv[0], argv[optind]);
       exit(1);
     }
     applet_mode=TRUE;
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
 		       "WM destroy");
-    dprintf(3, "initial size=%d\n", mode.init_size);
+    dprintf(3, "initial size=%d", mode.init_size);
     gtk_widget_set_usize(plug, mode.init_size, mode.init_size);
 
-#if APPLET_MENU
     /* We want to pop up a menu on a button press */
     gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), plug);
     gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
-#else
-    save_alarms=FALSE;
-#endif
 
+    
     /* Isn't object oriented code wonderful.  Now that we have done the
        plug specific code, its just a containing widget.  For the rest of the
        program we just pretend it was a window and it all works
@@ -313,6 +390,8 @@ int main(int argc, char *argv[])
   if(!(mode.flags & MODE_NO_TEXT))
     gtk_widget_show(digital_out);
 
+  if(applet_mode);
+    applet_get_panel_location(win);
   if(win)
     gtk_widget_show(win);
 
@@ -1391,9 +1470,12 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
       
       gtk_widget_set_sensitive(alarms, FALSE);
     }
-    
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-				bev->button, bev->time);
+
+    if(applet_mode)
+      applet_show_menu(menu, bev);
+    else
+      gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
+		     bev->button, bev->time);
     return TRUE;
   } else if(bev->button==1 && applet_mode) {
       gchar *cmd;
@@ -1547,6 +1629,11 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.19  2001/11/29 16:16:15  stephen
+ * Use font selection dialog instead of widget.
+ * Added a monday-thursday repeat.
+ * Test for altzone in <time.h>
+ *
  * Revision 1.18  2001/11/12 14:40:39  stephen
  * Change to XML handling: requires 2.4 or later.  Use old style config otherwise.
  *
