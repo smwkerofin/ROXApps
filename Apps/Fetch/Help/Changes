@@ -1,6 +1,11 @@
 Fetch
 =====
 
+25-Sep-2004 (0.0.5)
+~~~~~~~~~~~
+More ways to avoid blocking reads.  Better report of partial download when 
+cancelled.
+
 21-Aug-2004
 ~~~~~~~~~~~
 Split program into two processes: one to run the gui and the other to 

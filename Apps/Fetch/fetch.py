@@ -1,7 +1,8 @@
-# $Id$
+# $Id: fetch.py,v 1.1 2004/08/28 15:09:35 stephen Exp $
 
 import os, sys
 import time
+import fcntl, termios, struct
 
 import findrox; findrox.version(1, 9, 14)
 import rox, rox.choices, rox.options
@@ -23,6 +24,7 @@ rox.app_options.notify()
 bsize=4096
 stimeo=5*60
 
+# This won't work in Python 2.2
 import socket
 try:
     socket.setdefaulttimeout(stimeo)
@@ -33,6 +35,19 @@ except:
 def run_main():
     while rox.g.events_pending():
         rox.g.main_iteration()
+
+# This won't work under Solaris (termios gets built without FIONREAD
+# because it is defined in a different include file)
+def bytes_ready(s):
+    try:
+        d=struct.pack('i', 0)
+        x=fcntl.ioctl(s, termios.FIONREAD, d)
+        n=struct.unpack('i', x)[0]
+        #print 'm=%d on %d %s' % (n, s, x) 
+    except:
+        n=-1
+        print 'm=%s: %s' % tuple(sys.exc_info()[:2])
+    return n
 
 class ROXURLopener(urllib.FancyURLopener):
     def prompt_user_passwd(self, host, realm):
@@ -129,19 +144,25 @@ class Fetcher:
     def read_some(self, source, condition, *unused):
         #print source, condition, unused
 
+        nready=bytes_ready(self.con.fileno())
+        #self.message('%d bytes ready' % nready)
         rsz=self.bsize
         if self.size>0:
             left=self.size-self.count
             if rsz>left:
                 rsz=left
+        if nready>-1 and rsz>nready:
+            rsz=nready
 
-        data=self.con.read(rsz)
-        self.count+=len(data)
-        if data:
-            self.report(self.count, self.size)
-            self.outf.write(data)
+        if rsz>0:
+            data=self.con.read(rsz)
+            #self.message('%d bytes read' % len(data))
+            self.count+=len(data)
+            if data:
+                self.report(self.count, self.size)
+                self.outf.write(data)
             
-            return True
+                return True
 
         self.finished()
         return False
@@ -283,7 +304,11 @@ def run(url, fname):
     fetcher=Fetcher(url, fname)
 
 def main():
-    run(sys.argv[1], sys.argv[2])
+    try:
+        run(sys.argv[1], sys.argv[2])
+    except:
+        ex, msg=sys.exc_info()[:2]
+        print 'x=%s' % msg
 
 if __name__=='__main__':
     main()
