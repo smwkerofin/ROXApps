@@ -1,29 +1,38 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.2 2001/04/12 13:59:02 stephen Exp $
+ * $Id: tail.c,v 1.3 2001/04/13 11:46:09 stephen Exp $
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+
+#include "config.h"
 
 #include <unistd.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#ifdef HAVE_SYS_FILIO_H
 #include <sys/filio.h>
+#endif
 #include <fcntl.h>
 
 #include <gtk/gtk.h>
 #include "infowin.h"
 
-#include "config.h"
 /*#include "choices.h"*/
+
+#define DEBUG 1
+void dprintf(const char *fmt, ...);
 
 static GtkWidget *win;
 static GtkWidget *text;
+static GtkWidget *errwin=NULL;
+static GtkWidget *errmess=NULL;
 
 static int fd=-1;
 static off_t pos;
@@ -35,6 +44,7 @@ static gint check_file(gpointer unused);
 static void set_file(const char *);
 static void set_fd(int nfd);
 static void show_info_win(void);
+static void show_error(const char *fmt, ...);
 
 static void dnd_init(void);
 static void make_drop_target(GtkWidget *widget);
@@ -137,6 +147,17 @@ int main(int argc, char *argv[])
   return 0;
 }
 
+void dprintf(const char *fmt, ...)
+{
+  va_list list;
+
+  va_start(list, fmt);
+#if DEBUG
+  vfprintf(stderr, fmt, list);
+#endif
+  va_end(list);
+}
+
 static void append_text_from_file(int fd)
 {
   char buf[BUFSIZ];
@@ -152,25 +173,27 @@ static void append_text_from_file(int fd)
       break;
 
     m=sizeof(buf)-1;
-    /*printf("%d %d %d\n", fd, m, ready);*/
+    dprintf("%d %d %d\n", fd, m, ready);
     if(ready<m)
       m=ready;
-    /*printf("%d %d %d\n", fd, m, ready);*/
+    dprintf("%d %d %d\n", fd, m, ready);
 
     nr=read(fd, buf, m);
     if(nr<1)
       break;
     buf[nr]=0;
-    /*printf("%d, %s\n", nr, buf);*/
+    dprintf("%d, %s\n", nr, buf);
 
     gtk_text_insert(GTK_TEXT(text), NULL, NULL, NULL, buf, nr);
   } while(TRUE);
 
   gtk_text_set_point(GTK_TEXT(text), gtk_text_get_length(GTK_TEXT(text)));
+  /*
   scr=text->parent;
   adj=gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scr));
   if(adj)
     gtk_adjustment_set_value(adj, adj->upper);
+    */
 }
 
 static gint check_file(gpointer unused)
@@ -180,13 +203,13 @@ static gint check_file(gpointer unused)
   if(fd<0)
     return TRUE;
 
-  /*printf("check %d\n", fd);*/
+  dprintf("check %d\n", fd);
   if(fstat(fd, &statb)<0) {
     perror(fname);
     return TRUE;
   }
 
-  /*printf("size=%d\n", statb.st_size);*/
+  dprintf("size=%d (was %d)\n", statb.st_size, size);
   if(statb.st_size==size)
     return TRUE;
 
@@ -201,8 +224,11 @@ static gint check_file(gpointer unused)
   } else {
     if(fname)
       set_file(fname);
-    else
+    else {
+      /* stdin was truncated?? */
+      dprintf("file shorter and no file name set!\n");
       size=statb.st_size;
+    }
   }
 
   return TRUE;
@@ -215,12 +241,20 @@ static void set_file(const char *name)
   int nfd;
   int npos;
 
-  nfd=open(name, O_RDONLY);
-  if(nfd<0)
-    return;
+  dprintf("Set file to %s\n", name);
 
-  if(fstat(nfd, &statb)<0)
+  nfd=open(name, O_RDONLY);
+  if(nfd<0) {
+    show_error("Failed to open\n%s\nfor reading", name);
     return;
+  }
+
+  if(fstat(nfd, &statb)<0) {
+    show_error("Failed to scan\n%s", name);
+    return;
+  }
+
+  dprintf("file is on %d and %d long\n", nfd, statb.st_size);
   
   gtk_text_freeze(GTK_TEXT(text));
   gtk_editable_delete_text(GTK_EDITABLE(text), 0, -1);
@@ -232,6 +266,7 @@ static void set_file(const char *name)
 
   title=g_strconcat("Tail: ", name, NULL);
   gtk_window_set_title(GTK_WINDOW(win), title);
+  dprintf("set title %s\n", title);
   g_free(title);
 
   if(fd)
@@ -279,6 +314,57 @@ static void show_info_win(void)
 
   gtk_window_set_position(GTK_WINDOW(infowin), GTK_WIN_POS_MOUSE);
   gtk_widget_show(infowin);
+}
+
+static void dismiss_error(GtkWidget *widget, gpointer data)
+{
+  gtk_widget_hide(errwin);
+}
+
+static void show_error(const char *fmt, ...)
+{
+  va_list list;
+  gchar *mess;
+
+  if(!errwin) {
+    /* Need to create it first */
+    GtkWidget *vbox;
+    GtkWidget *hbox;
+    GtkWidget *but;
+    
+    errwin=gtk_dialog_new();
+    gtk_signal_connect(GTK_OBJECT(errwin), "delete_event", 
+		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
+		     errwin);
+    gtk_window_set_title(GTK_WINDOW(errwin), "Error!");
+    gtk_window_set_position(GTK_WINDOW(errwin), GTK_WIN_POS_CENTER);
+
+    vbox=GTK_DIALOG(errwin)->vbox;
+
+    hbox=gtk_hbox_new(FALSE, 0);
+    gtk_widget_show(hbox);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 2);
+
+    errmess=gtk_label_new("");
+    gtk_widget_show(errmess);
+    gtk_box_pack_start(GTK_BOX(hbox), errmess, TRUE, TRUE, 2);
+    
+    hbox=GTK_DIALOG(errwin)->action_area;
+
+    but=gtk_button_new_with_label("Ok");
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, TRUE, TRUE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked",
+		       GTK_SIGNAL_FUNC(dismiss_error), errwin);
+  }
+  
+  va_start(list, fmt);
+  mess=g_strdup_vprintf(fmt, list);
+  va_end(list);
+
+  gtk_label_set_text(GTK_LABEL(errmess), mess);
+  gtk_widget_show(errwin);
+  g_free(mess);
 }
 
 static void choose_file(GtkWidget *widget, GtkFileSelection *fs)
@@ -361,7 +447,7 @@ static void make_drop_target(GtkWidget *widget)
   gtk_signal_connect(GTK_OBJECT(widget), "drag_data_received",
 		     GTK_SIGNAL_FUNC(drag_data_received), NULL);
 
-  /*printf("made %p a drop target\n", widget);*/
+  dprintf("made %p a drop target\n", widget);
 }
 
 /* Is the sender willing to supply this target type? */
@@ -456,7 +542,7 @@ static gboolean drag_drop(GtkWidget 	  *widget,
   if(provides(context, XdndDirectSave0)) {
     leafname = get_xds_prop(context);
     if (leafname) {
-      /*printf("leaf is %s\n", leafname);*/
+      dprintf("leaf is %s\n", leafname);
       target = XdndDirectSave0;
       g_dataset_set_data_full(context, "leafname", leafname, g_free);
     }
@@ -636,6 +722,9 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.3  2001/04/13 11:46:09  stephen
+ * Now works, including at the end of a pipe
+ *
  * Revision 1.2  2001/04/12 13:59:02  stephen
  * Added info window and a load file selection
  *

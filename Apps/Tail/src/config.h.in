@@ -3,8 +3,10 @@
 #define PROJECT "Tail"
 #define PROGRAM PROJECT
 #define PURPOSE "Monitor a file"
-#define VERSION "0.1.0"
+#define VERSION "0.1.1"
 #define AUTHOR  "Stephen Watson"
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 
 #include <sys/types.h>
+
+#undef HAVE_SYS_FILIO_H

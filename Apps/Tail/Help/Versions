@@ -1,0 +1,8 @@
+Tail
+====
+
+0.1.1
+-----
+Don't include sys/filio.h if it isn't there.
+Remove code that scrolled to end of window, because it core dumped.
+Report error if file can't be read.
