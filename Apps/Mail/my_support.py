@@ -1,4 +1,4 @@
-#
+# $Id$
 
 import sys
 import os.path
@@ -41,7 +41,7 @@ def file_size(fname):
 def count_from(fname):
     # print 'count_from(%s)' % fname
     n=0
-    f=file(fname, 'r')
+    f=open(fname, 'r')
     while 1:
         line=f.readline()
         if line is None or len(line)<1:
