@@ -1,6 +1,6 @@
-# $Id$
+# $Id: gui.py,v 1.1 2002/11/28 18:03:21 stephen Exp $
 
-import findrox
+import findrox; findrox.version(1, 9, 14)
 
 import rox
 import rox.choices
