@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.1.1.1 2004/05/26 19:51:13 stephen Exp $
+# $Id: AppRun,v 1.2 2004/06/03 17:51:51 stephen Exp $
 
 import os, sys
 import urlparse
@@ -17,8 +17,13 @@ moz_cmd='mozilla -remote "openURL(%s,new-window)"'
 
 http_cmd=rox.options.Option('http', moz_cmd)
 ftp_cmd=rox.options.Option('ftp', '')
+mailto_cmd=rox.options.Option('mailto', '')
 
 rox.app_options.notify()
+
+scheme_options={'http': http_cmd,
+                'ftp': ftp_cmd,
+                'mailto': mailto_cmd}
 
 def install_button_handler(*args):
     import rox.mime_handler
@@ -51,11 +56,14 @@ def launch_uri(uri):
         rox.filer.spawn_rox((path,))
         return
 
-    cmd=''
-    if scheme=='ftp':
-        cmd=ftp_cmd.value
-    elif scheme=='http' or scheme=='https':
-        cmd=http_cmd.value
+    cscheme=scheme.lower()
+    if cscheme=='https':
+        cscheme='http'
+
+    if scheme_options.has_key(cscheme):
+        cmd=scheme_options[cscheme].value
+    else:
+        cmd=''
 
     if not cmd:
         cmd=http_cmd.value

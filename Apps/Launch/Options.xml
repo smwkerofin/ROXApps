@@ -3,11 +3,14 @@
 <section>
 <install-button label="Install handlers">Click here to install the handlers for the supported MIME-types</install-button>
 
-<entry name='http' label='http'>
+<entry name='http' label='http:' sizegroup="schemes">
 Handler for http and https URI's.
 </entry>
-<entry name='ftp' label='ftp'>
+<entry name='ftp' label='ftp:' sizegroup="schemes">
 Handler for ftp URI's.
+</entry>
+<entry name='mailto' label='mailto:' sizegroup="schemes">
+Handler for mailto URI's.
 </entry>
 </section>
 </options>

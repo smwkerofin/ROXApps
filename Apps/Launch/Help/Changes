@@ -1,6 +1,10 @@
 Launch
 ======
 
+19-Jun-2004
+~~~~~~~~~~~
+Added icon.  Added handler for mailto:.
+
 31-May-2004 (0.1.1)
 ~~~~~~~~~~~
 Handle URL's passed via stdin (argument of '-').
