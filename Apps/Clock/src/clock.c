@@ -183,13 +183,13 @@ static void set_mode(Mode *nmode)
   if(mode==nmode)
     return;
 
-  printf("mode now %s\n", nmode->name);
+  /*printf("mode now %s\n", nmode->name);*/
 
   if(update_tag) {
     gtk_timeout_remove(update_tag);
     update_tag=gtk_timeout_add(nmode->interval,
 			       (GtkFunction) do_update, digital_out);
-    printf("tag now %u (%d)\n", update_tag, nmode->interval);
+    /*printf("tag now %u (%d)\n", update_tag, nmode->interval);*/
   }
 
   if((nmode->flags & MODE_NO_TEXT)!=(mode->flags & MODE_NO_TEXT)) {
