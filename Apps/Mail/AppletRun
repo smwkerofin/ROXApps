@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppletRun,v 1.11 2003/03/18 13:23:40 stephen Exp $
+# $Id: AppletRun,v 1.12 2003/08/02 17:00:18 stephen Exp $
 
 import findrox
 import rox
@@ -76,6 +76,33 @@ for a in about:
             if node.tagName=='Version':
                 version=get_text(node)
 
+def out_queue():
+    try:
+        mailq=os.popen('mailq', 'r')
+    except:
+        return
+
+    lines=mailq.readlines()
+    try:
+        # sendmail
+        fline=lines[0].strip()
+        op=fline.find('(')
+        fline=fline[op+1:]
+        cl=fline.find(' ')
+        return int(fline[:cl])
+    except:
+        pass
+
+    try:
+        # postfix
+        lline=lines[-1].strip()
+        if lline[:3]!='-- ':
+            return
+        words=lline.split()
+        return int(words[-2])
+    except:
+        pass
+    
 # Make our applet
 class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
     def __init__(self, xid, app_dir, mailers, checkers):
@@ -211,15 +238,7 @@ class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
                 self.mail=0      
             nin=0
         if check_out.int_value:
-            try:
-                mailq=os.popen('mailq', 'r').readlines()
-                fline=mailq[0].strip()
-                op=fline.find('(')
-                fline=fline[op+1:]
-                cl=fline.find(' ')
-                nout=int(fline[:cl])
-            except:
-                nout=0
+            nout=out_queue()
         else:
             nout=0
         if nout:

@@ -1,6 +1,10 @@
 Versions of Mail
 ================
 
+0.3.3
+-----
+More work on showing number of messages in outgoing queue.
+
 0.3.2
 -----
 Option to show number of messages in outgoing queue.
