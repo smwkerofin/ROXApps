@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id$
+ * $Id: freefs.c,v 1.2 2001/04/26 13:22:37 stephen Exp $
  */
 
 #include <stdio.h>
@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
 {
   GtkWidget *vbox, *hbox;
   GtkWidget *label;
+  GtkWidget *align;
   GtkAdjustment *adj;
   GtkWidget *pixmapwid;
   GdkPixmap *pixmap;
@@ -152,6 +153,7 @@ int main(int argc, char *argv[])
     gtk_widget_show(label);
 
     fs_name=gtk_label_new("");
+    gtk_label_set_justify(GTK_LABEL(fs_name), GTK_JUSTIFY_LEFT);
     gtk_widget_set_name(fs_name, "text display");
     gtk_box_pack_start(GTK_BOX(hbox), fs_name, TRUE, TRUE, 2);
     gtk_widget_show(fs_name);
@@ -221,9 +223,15 @@ int main(int argc, char *argv[])
     gtk_widget_show(fs_per);
     gtk_box_pack_start(GTK_BOX(vbox), fs_per, TRUE, TRUE, 2);
 
+    align=gtk_alignment_new(1, 0.5, 1, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), align, FALSE, FALSE, 2);
+    gtk_widget_show(align);
+
     fs_name=gtk_label_new("");
+    gtk_label_set_justify(GTK_LABEL(fs_name), GTK_JUSTIFY_RIGHT);
     gtk_widget_set_name(fs_name, "text display");
-    gtk_box_pack_start(GTK_BOX(vbox), fs_name, FALSE, FALSE, 2);
+    /*gtk_box_pack_start(GTK_BOX(vbox), fs_name, FALSE, FALSE, 2);*/
+    gtk_container_add(GTK_CONTAINER(align), fs_name);
     gtk_widget_show(fs_name);
     
     gtk_widget_show(plug);
@@ -379,6 +387,7 @@ static gboolean update_fs_values(gchar *mntpt)
       } else {
 	gtk_label_set_text(GTK_LABEL(fs_name),
 			   g_basename(find_mount_point(mntpt)));
+	/*gtk_label_set_text(GTK_LABEL(fs_name), find_mount_point(mntpt));*/
       }
       gtk_progress_set_value(GTK_PROGRESS(fs_per), fused);
 
@@ -888,5 +897,8 @@ static void drag_data_received(GtkWidget      	*widget,
 #endif
 
 /*
- * $Log$
+ * $Log: freefs.c,v $
+ * Revision 1.2  2001/04/26 13:22:37  stephen
+ * Added an applet front end.
+ *
  */
