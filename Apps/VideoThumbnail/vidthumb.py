@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.4 2003/12/22 11:30:45 stephen Exp $
+# $Id: vidthumb.py,v 1.5 2004/03/26 15:30:17 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -42,24 +42,44 @@ class VidThumb(thumb.Thumbnailler):
 
     def post_process_image(self, img, w, h):
         """Add the optional film strip effect"""
-        if not options.sprocket.int_value:
+
+        if not options.sprocket.int_value and not options.time_label.int_value:
             return img
         
         pixmap, mask=img.render_pixmap_and_mask()
-
-        # Draw the film strip effect
         cmap=pixmap.get_colormap()
-        gc=pixmap.new_gc(foreground=cmap.alloc_color('black'))
         gtk=rox.g
-        pixmap.draw_rectangle(gc, gtk.TRUE, 0, 0, 8, h)
-        pixmap.draw_rectangle(gc, gtk.TRUE, w-8, 0, 8, h)
+        gc=pixmap.new_gc(foreground=cmap.alloc_color('black'))
+            
+        if options.sprocket.int_value:
+            # Draw the film strip effect
+            pixmap.draw_rectangle(gc, gtk.TRUE, 0, 0, 8, h)
+            pixmap.draw_rectangle(gc, gtk.TRUE, w-8, 0, 8, h)
 
-        gc.set_foreground(cmap.alloc_color('#DDD'))
-        for y in range(1, h, 8):
-            pixmap.draw_rectangle(gc, gtk.TRUE, 2, y, 4, 4)
-            pixmap.draw_rectangle(gc, gtk.TRUE, w-8+2, y, 4, 4)
+            gc.set_foreground(cmap.alloc_color('#DDD'))
+            for y in range(1, h, 8):
+                pixmap.draw_rectangle(gc, gtk.TRUE, 2, y, 4, 4)
+                pixmap.draw_rectangle(gc, gtk.TRUE, w-8+2, y, 4, 4)
 
+        if options.time_label.int_value and self.total_time:
+            secs=self.total_time
+            hours=int(secs/3600)
+            if hours>0:
+                secs-=hours*3600
+            mins=int(secs/60)
+            if mins>0:
+                secs-=mins*60
+            tstr='%d:%02d:%02d' % (hours, mins, secs)
+            if debug: print tstr
+            gc.set_foreground(cmap.alloc_color('white'))
+            dummy=gtk.Window()
+            layout=dummy.create_pango_layout(tstr)
+            
+            pixmap.draw_layout(gc, 10, 4, layout)
+            if debug: print layout
+                               
         return img.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
+        
 
     def get_image(self, inname, rsize):
         """Generate the raw image from the file.  We run mplayer (twice)
@@ -108,6 +128,8 @@ class VidThumb(thumb.Thumbnailler):
         except:
             self.report_exception()
             vlen=None
+        self.total_time=vlen
+        if debug: print vlen
     
         if vlen is None:
             sys.exit(2)
@@ -134,6 +156,7 @@ def main(argv):
     """Process command line args.  Although the filer always passes three args,
     let the last two default to something sensible to allow use outside
     the filer."""
+    global rsize
     
     #print argv
     inname=argv[0]
@@ -162,7 +185,7 @@ def main(argv):
         outname=os.path.abspath(outname)
     #print inname, outname, rsize
 
-    thumb=VidThumb(int(debug))
+    thumb=VidThumb(options.report.int_value)
     thumb.run(inname, outname, rsize)
 
 def configure():
