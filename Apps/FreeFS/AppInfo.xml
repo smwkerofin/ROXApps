@@ -3,7 +3,7 @@
   <Summary>Display usage of a file system.</Summary>
   <About>
     <Purpose>Monitor file system usage</Purpose>
-	<Version>1.3.3 (28 September 2002)</Version>
+	<Version>1.4.0 (7 December 2002)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
