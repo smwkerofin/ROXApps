@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.3 2001/11/05 13:59:46 stephen Exp $
+ * $Id: choices.c,v 1.4 2002/02/13 11:00:36 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -33,13 +33,18 @@
 #include <glib.h>
 
 #include "choices.h"
+#include "basedir.h"
+
+/* change to TRUE when we switch to XDG */
+#define ROX_USE_XDG_DIRS_DEFAULT FALSE  
 
 static gboolean saving_disabled = TRUE;
 static gchar **dir_list = NULL;
 
 /* Static prototypes */
 static gboolean exists(char *path);
-
+static void init_basedir(void);
+static void init_choices(void);
 
 /****************************************************************
  *			EXTERNAL INTERFACE			*
@@ -53,38 +58,26 @@ static gboolean exists(char *path);
  */
 void choices_init(void)
 {
-	char	*choices;
+	char	*evar;
+	int      use_xdg=ROX_USE_XDG_DIRS_DEFAULT;
 
 	g_return_if_fail(dir_list == NULL);
 
-	choices = getenv("CHOICESPATH");
-	
-	if (choices)
-	{
-		if (*choices != ':' && *choices != '\0')
-			saving_disabled = FALSE;
+	evar=getenv("ROX_USE_XDG_DIRS");
 
-		while (*choices == ':')
-			choices++;
+	if(evar) {
+	  if(g_ascii_strcasecmp(evar, "yes")==0 ||
+	     g_ascii_strcasecmp(evar, "true")==0 || atoi(evar))
+	    use_xdg=TRUE;
+	  else if(g_ascii_strcasecmp(evar, "no")==0 ||
+		  g_ascii_strcasecmp(evar, "false")==0)
+	    use_xdg=FALSE;
+	} 
 
-		if (*choices == '\0')
-		{
-			dir_list = g_new(char *, 1);
-			dir_list[0] = NULL;
-		}
-		else
-			dir_list = g_strsplit(choices, ":", 0);
-	}
+	if(use_xdg)
+	  init_basedir();
 	else
-	{
-		saving_disabled = FALSE;
-
-		dir_list = g_new(gchar *, 4);
-		dir_list[0] = g_strconcat(getenv("HOME"), "/Choices", NULL);
-		dir_list[1] = g_strdup("/usr/local/share/Choices");
-		dir_list[2] = g_strdup("/usr/share/Choices");
-		dir_list[3] = NULL;
-	}
+	  init_choices();
 
 }
 
@@ -212,4 +205,68 @@ static gboolean exists(char *path)
 	struct stat info;
 
 	return stat(path, &info) == 0;
+}
+
+/* Initialize using old choices system */
+/* Reads in CHOICESPATH and constructs the directory list table.
+ * You must call this before using any other choices_* functions.
+ *
+ * If CHOICESPATH does not exist then a suitable default is used.
+ */
+static void init_choices(void)
+{
+	char	*choices;
+
+	g_return_if_fail(dir_list == NULL);
+
+	choices = getenv("CHOICESPATH");
+	
+	if (choices)
+	{
+		if (*choices != ':' && *choices != '\0')
+			saving_disabled = FALSE;
+
+		while (*choices == ':')
+			choices++;
+
+		if (*choices == '\0')
+		{
+			dir_list = g_new(char *, 1);
+			dir_list[0] = NULL;
+		}
+		else
+			dir_list = g_strsplit(choices, ":", 0);
+	}
+	else
+	{
+		saving_disabled = FALSE;
+
+		dir_list = g_new(gchar *, 4);
+		dir_list[0] = g_strconcat(getenv("HOME"), "/Choices", NULL);
+		dir_list[1] = g_strdup("/usr/local/share/Choices");
+		dir_list[2] = g_strdup("/usr/share/Choices");
+		dir_list[3] = NULL;
+	}
+
+}
+
+/* Initialize using new XDG system */
+static void init_basedir(void)
+{
+  const gchar *home;
+  GList *paths, *p;
+  int i, n;
+
+  home=basedir_get_config_home();
+  saving_disabled=(home!=NULL);
+
+  paths=basedir_get_config_paths();
+  n=g_list_length(paths);
+
+  dir_list=g_new(gchar *, n+1);
+  for(i=0, p=paths; p; p=g_list_next(p), i++)
+    dir_list[i]=g_strdup((const gchar *) p->data);
+  dir_list[n]=NULL;
+
+  g_list_free(paths);
 }

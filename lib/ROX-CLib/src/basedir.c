@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: basedir.c,v 1.1 2004/03/25 13:10:40 stephen Exp $
  *
  * XDG base directory functions for ROX-CLib
  */
@@ -71,6 +71,29 @@ static void init(void)
   if(!tmp || !tmp[0])
     tmp="/etc/xdg";
   xdg_config_dirs=split_path(xdg_config_home, tmp);
+}
+
+const gchar *basedir_get_config_home(void)
+{
+  if(!xdg_config_home)
+    init();
+
+  return xdg_config_home;
+}
+
+GList *basedir_get_config_paths(void)
+{
+  GList *paths=NULL;
+  int i;
+  
+  if(!xdg_config_home)
+    init();
+
+  for(i=0; xdg_config_dirs[i]; i++) {
+    paths=g_list_append(paths, xdg_config_dirs[i]);
+  }
+  
+  return paths;
 }
 
 static gchar *save_path(const gchar *base, const char *resource,
@@ -188,5 +211,8 @@ GList *basedir_load_data_paths(const char *resource, const char *leaf)
 }
 
 /*
- * $Log$
+ * $Log: basedir.c,v $
+ * Revision 1.1  2004/03/25 13:10:40  stephen
+ * Added basedir and mime
+ *
  */

@@ -4,6 +4,11 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+13-Sep-2004
+~~~~~~~~~~~
+Choices system will now use XDG base directories if you set the
+environment variable ROX_USE_XDG_DIRS=1
+
 11-Sep-2004
 ~~~~~~~~~~~
 Fix bug in rox_path.c that broke drag and drop when the URIs contained
@@ -183,4 +188,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.12 2004/08/04 18:36:27 stephen Exp $
+$Id: Changes,v 1.13 2004/09/11 14:09:27 stephen Exp $
