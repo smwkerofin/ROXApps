@@ -1,6 +1,10 @@
 Fetch
 =====
 
+22-Nov-2004
+~~~~~~~~~~~
+Error trap for the rename at end of fetch.
+
 21-Nov-2004
 ~~~~~~~~~~~
 Backend fetcher now just attempts to fetch a full buffer.  GUI can warn
