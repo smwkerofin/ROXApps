@@ -1,6 +1,12 @@
 Changes to ROX-CLib by Version
 ==============================
 
+0.1.6
+-----
+Added rox_soap.c to talk to the filer using SOAP.  Added rox_filer_action.c
+to use rox_soap to drive the filer.
+More tests to see if a URI is a local path.
+
 0.1.5
 -----
 Added rox_resources.c to aid locating resource files.
