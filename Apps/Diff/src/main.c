@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.9 2003/03/05 15:30:40 stephen Exp $
+ * $Id: main.c,v 1.10 2003/06/22 09:04:41 stephen Exp $
  */
 #include "config.h"
 
@@ -35,17 +35,12 @@
 #endif
 
 #include <gtk/gtk.h>
-#include "infowin.h"
 
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
-#include "choices.h"
-#include "options.h"
-#include "rox_debug.h"
-#include "infowin.h"
-#include "rox_dnd.h"
-#include "error.h"
+#include <rox/rox.h>
+#include <rox/rox_dnd.h>
 
 #define WIN_WIDTH  320
 #define WIN_HEIGHT 240
@@ -157,8 +152,8 @@ int main(int argc, char *argv[])
     exit(0);
   }
   
-  /* Initialise X/GDK/GTK */
-  gtk_init(&argc, &argv);
+  /* Initialise ROX and X/GDK/GTK */
+  rox_init(PROJECT, &argc, &argv);
   gdk_rgb_init();
   gtk_widget_push_visual(gdk_rgb_get_visual());
   cmap=gdk_rgb_get_cmap();
@@ -190,12 +185,7 @@ int main(int argc, char *argv[])
     exit(0);
 
   /* Init choices and read them in */
-  rox_debug_init(PROJECT);
-  choices_init();
-  options_init(PROJECT);
   setup_config();
-
-  rox_dnd_init();
 
   /* Set up colours */
   gdk_color_alloc(cmap, &col_add);
@@ -485,9 +475,12 @@ static void read_config(void)
  * applet
  */
 static GtkItemFactoryEntry menu_items[] = {
-  { N_("/Info"),		NULL, show_info_win, 0, NULL },
-  { N_("/Choices..."),		NULL, show_choices_win, 0, NULL },
-  { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
+  { N_("/Info"),       NULL, show_info_win, 0, "<StockItem>",
+                                               GTK_STOCK_INFO_DIALOG },
+  { N_("/Choices..."), NULL, show_choices_win, 0, "<StockItem>",
+                                               GTK_STOCK_PREFERENCES },
+  { N_("/Quit"),       NULL, gtk_main_quit, 0, "<StockItem>",
+                                               GTK_STOCK_QUIT},
 };
 
 /* Save user-defined menu accelerators */
@@ -912,6 +905,9 @@ static void show_choices_win(void)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.10  2003/06/22 09:04:41  stephen
+ * Use new options system.  Can set font for text windows
+ *
  * Revision 1.9  2003/03/05 15:30:40  stephen
  * First pass at conversion to GTK 2.
  *
