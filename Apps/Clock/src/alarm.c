@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.4 2001/06/14 12:29:32 stephen Exp $
+ * $Id: alarm.c,v 1.5 2001/06/29 10:42:48 stephen Exp $
  */
 #include "config.h"
 
@@ -23,7 +23,11 @@
 #include "choices.h"
 #include "alarm.h"
 
-extern void dprintf(const char *fmt, ...);
+extern void dprintf(int level, const char *fmt, ...);
+void debug_free(gpointer p, const char *file, int line);
+#if 0
+#define g_free(p) debug_free((gpointer) p, __FILE__, __LINE__);
+#endif
 
 typedef enum repeat_mode {
   REPEAT_NONE,
@@ -117,7 +121,7 @@ void alarm_load(void)
 	  } else {
 	    nalarm=alarm_new((time_t) atol(line), REPEAT_NONE, rep);
 	  }
-	  dprintf("read alarm: %s at %ld (%d)", nalarm->message,
+	  dprintf(3, "read alarm: %s at %ld (%d)", nalarm->message,
 		  nalarm->when, nalarm->repeat);
 	  alarms=g_list_append(alarms, nalarm);
 	}
@@ -202,13 +206,13 @@ static gint find_alarm(gconstpointer el, gconstpointer udat)
   const Alarm *elem=(const Alarm *) el;
   const Alarm *user=(const Alarm *) udat;
 
-  dprintf("compare: %ld %d %s", elem->when, elem->repeat, elem->message);
-  dprintf("     to: %ld %d %s", user->when, user->repeat, user->message);
+  dprintf(4, "compare: %ld %d %s", elem->when, elem->repeat, elem->message);
+  dprintf(4, "     to: %ld %d %s", user->when, user->repeat, user->message);
 
   if(elem->when==user->when && elem->repeat==user->repeat &&
      strcmp(elem->message, user->message)==0)
     return 0;
-  /*dprintf("nope");*/
+  dprintf(5, " nope");
 
   return -1;
 }
@@ -218,6 +222,7 @@ static void check_alarms_file(void)
   gchar *fname;
   
   fname=choices_find_path_load("alarms", PROJECT);
+  dprintf(5, "%p: %s", fname, fname? fname: "NULL");
 
   if(fname) {
 #ifdef HAVE_SYS_STAT_H
@@ -229,7 +234,7 @@ static void check_alarms_file(void)
       if(statb.st_mtime>alarms_saved) {
 	GList *old, *rover;
 
-	dprintf("re-reading alarm file because %ld>%ld",
+	dprintf(2, "re-reading alarm file because %ld>%ld",
 		statb.st_mtime, alarms_saved);
 	old=alarms;
 	alarms=NULL;
@@ -239,10 +244,10 @@ static void check_alarms_file(void)
 
 	for(rover=old; rover; rover=g_list_next(rover)) {
 	  if(g_list_find_custom(alarms, rover->data, find_alarm)) {
-	    dprintf("delete old %s", ((Alarm *) rover->data)->message);
+	    dprintf(3, "delete old %s", ((Alarm *) rover->data)->message);
 	    alarm_delete((Alarm *) rover->data);
 	  } else {
-	    dprintf("merge in %s", ((Alarm *) rover->data)->message);
+	    dprintf(3, "merge in %s", ((Alarm *) rover->data)->message);
 	    alarms=g_list_append(alarms, rover->data);
 	  }
 	}
@@ -264,6 +269,7 @@ void alarm_save(void)
 #endif
 
   fname=choices_find_path_save("alarms", PROJECT, TRUE);
+  dprintf(2, "Save alarms to %s", fname? fname: "NULL");
 
   if(fname) {
     FILE *out;
@@ -280,11 +286,14 @@ void alarm_save(void)
       time(&now);
       strftime(buf, 80, "%c", localtime(&now));
       fprintf(out, _("#\n# Written %s\n\n"), buf);
+      dprintf(3, "version %s, write at %s", VERSION, buf);
 
       for(rover=alarms; rover; rover=g_list_next(rover)) {
 	Alarm *alarm=(Alarm *) rover->data;
 	fprintf(out, "%ld:%d:%s\n", alarm->when, alarm->repeat,
 		alarm->message);
+	dprintf(3, "wrote %s %ld %d", alarm->message, alarm->when,
+		alarm->repeat);
       }
 
       fclose(out);
@@ -296,7 +305,7 @@ void alarm_save(void)
 #else
       time(&alarms_saved);
 #endif
-      dprintf("wrote %s at %ld", fname, alarms_saved);
+      dprintf(3, "wrote %s at %ld", fname, alarms_saved);
     }
     g_free(fname);
   }
@@ -335,7 +344,7 @@ static void show_message(const Alarm *alarm)
 
   tms=localtime(&alarm->when);
   strftime(buf, 64, "%c", tms);
-  dprintf("show_message(%p): %ld (%d) %s %s", alarm, alarm->when,
+  dprintf(3, "show_message(%p): %ld (%d) %s %s", alarm, alarm->when,
 	  alarm->repeat, buf, alarm->message);
   
   label=gtk_label_new(buf);
@@ -378,16 +387,18 @@ int alarm_check(void)
       nraise++;
 
       alarms=g_list_remove_link(alarms, rover);
-      next=alarm->when;
-      do {
-	next=next_alarm_time(next, alarm->repeat);
-	if(next<=0)
-	  break;
-      } while(next<now);
-      if(next>0) {
-	dprintf("re-schedule %s for %ld", alarm->message, next);
-	alarms=g_list_append(alarms, alarm_new(next, alarm->repeat,
-					       alarm->message));
+      if(alarm->repeat!=REPEAT_NONE) {
+	next=alarm->when;
+	do {
+	  next=next_alarm_time(next, alarm->repeat);
+	  if(next<=0)
+	    break;
+	} while(next<now);
+	if(next>0) {
+	  dprintf(3, "re-schedule %s for %ld", alarm->message, next);
+	  alarms=g_list_append(alarms, alarm_new(next, alarm->repeat,
+						 alarm->message));
+	}
       }
       alarm_delete(alarm);
       rover=alarms;
@@ -426,6 +437,7 @@ static void set_alarm(GtkWidget *wid, gpointer data)
   RepeatMode repeat;
   GtkWidget *menu;
   GtkWidget *item;
+  gchar *mess;
 
   tms.tm_sec=0;
   tms.tm_min=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(minute));
@@ -439,12 +451,17 @@ static void set_alarm(GtkWidget *wid, gpointer data)
   item=gtk_menu_get_active(GTK_MENU(menu));
   repeat=(RepeatMode) gtk_object_get_data(GTK_OBJECT(item), "mode");
 
-  alarms=g_list_append(alarms,
-		       alarm_new(mktime(&tms), repeat, 
-				 gtk_entry_get_text(GTK_ENTRY(message))));
+  mess=gtk_entry_get_text(GTK_ENTRY(message));
+
+  dprintf(3, "New alarm: %s at %d/%d/%d %d:%d repeat %d", mess,
+	  tms.tm_mday, tms.tm_mon+1, tms.tm_year+1900, tms.tm_hour, tms.tm_min,
+	  repeat);
+	  
+  alarms=g_list_append(alarms, alarm_new(mktime(&tms), repeat, mess));
 
   gtk_widget_hide(win);
 
+  dprintf(3, "Save updated alarm file");
   alarm_save();
 }
 
@@ -458,6 +475,8 @@ static void delete_alarm(GtkWidget *wid, gpointer data)
 
   gtk_clist_remove(GTK_CLIST(list), row);
   alarms=g_list_remove(alarms, alarm);
+  dprintf(3, "delete alarm: %s at %d repeat %d", alarm->message, alarm->when,
+	  alarm->repeat);
   alarm_delete(alarm);
 
   alarm_save();
@@ -711,6 +730,10 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.5  2001/06/29 10:42:48  stephen
+ * Added debugging statements, fixed merging in another alarms file
+ * (which was g_free'ing memory twice!) and don't do it so often.
+ *
  * Revision 1.4  2001/06/14 12:29:32  stephen
  * return number of alarms raised so that the caller knows something has
  * changed.
