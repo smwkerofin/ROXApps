@@ -7,6 +7,7 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 
 dnl Checks for libraries.
+AC_CHECK_LIB(nsl, gethostbyname)
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -16,7 +17,7 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(mkdir)
+AC_CHECK_FUNCS(mkdir gethostbyname)
 
 dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(version information)
