@@ -3,6 +3,8 @@
 <section title="General">
 <numentry name="wait_for" label="Wait after download" min='0' max='10'>How long to wait for after download has finished before
 closing window</numentry>
+<numentry name="block_size" label="Block size" min='256' max='16384'>Number of bytes to read in one operation.  Larger is quicker, but fewer updates to the window.</numentry>
+<toggle name="use_dl_manager" label="Use DownloadManager">Coordinate downloads with the DownloadManager</toggle>
 
 </section>
 <section title="Passwords">
