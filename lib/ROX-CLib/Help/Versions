@@ -1,6 +1,11 @@
 Changes to ROX-CLib by Version
 ==============================
 
+0.2.0
+-----
+Now builds a shared library!  
+Added rox_filer_{panel,pinboard}_add().
+
 0.1.12
 ------
 Fixed bug in determining XML config (built using xml2-config but would report

@@ -4,3 +4,7 @@ config.log
 config.cache
 config.status
 rox-clib.h
+*.lo
+.libs
+libtool
+librox-clib.la

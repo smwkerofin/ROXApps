@@ -341,10 +341,20 @@ void rox_filer_panel(const char *name, ROXPanelSide side);
 Open a panel with the given name on the specfied side.  If name is "" then the 
 panel on that side is closed instead.
 
+void rox_filer_panel_add(ROXPanelSide side, const char *path, int after);
+
+Add an object to the panel on the specfied side.  If after is FALSE then the 
+object is placed on the left (top or bottom panels) or top (left or right
+panels), otherwise the other end.
+
 void rox_filer_pinboard(const char *name);
 
 Display pinboard name on the desktop background.  Name can be a name in 
 Choices (eg, `MyPinboard') or a full pathname.
+
+void rox_filer_pinboard_add(const char *path, int x, int y);
+
+Add an object to the pinboard at the specfied co-ordinates.  
 
 void rox_filer_run(const char *filename);
 

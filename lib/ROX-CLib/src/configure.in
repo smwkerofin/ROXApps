@@ -2,10 +2,16 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT(pkg.c)
 AC_CONFIG_HEADER(rox-clib.h)
 
+AC_ARG_ENABLE(shlib, 
+  --enable-shlib  Build shared library (yes),
+ SHLIB=$enable_val, SHLIB=yes)
+AC_SUBST(SHLIB)
+
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
-dnl AC_PROG_LIBTOOL
+AC_PROG_INSTALL
+AC_PROG_LIBTOOL
 
 if test -z "$GTK_CONFIG"; then
   GTK_CONFIG=gtk-config
@@ -36,8 +42,10 @@ dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(version information)
 changequote(,)dnl
 ROXCLIB_VERSION=`sed -n 's/^.*<Version>\([^<]*\)<\/Version>.*$/\1/p' ../AppInfo.xml`
+ROXCLIB_VERSION_NUM=`sed -n 's/^.*<Version>\([.0-9]*\).*<\/Version>.*$/\1/p' ../AppInfo.xml`
 changequote([,])dnl
 AC_DEFINE_UNQUOTED(ROXCLIB_VERSION, "$ROXCLIB_VERSION")
+AC_SUBST(ROXCLIB_VERSION_NUM)
 AC_MSG_RESULT(version $ROXCLIB_VERSION)
 
 LIBNAME=rox-clib

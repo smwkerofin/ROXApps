@@ -1,11 +1,21 @@
+# Makefile for ROX-CLib
+
 GTK_CONFIG = @GTK_CONFIG@
 XML_CONFIG = @XML_CONFIG@
 SHELL = @SHELL@
 srcdir = @srcdir@
 PLATFORM_DIR = @bindir@
+SHARED = @SHLIB@
+top_builddir =  .
 LIBTOOL = @LIBTOOL@
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@ 
+INSTALL_DATA = @INSTALL_DATA@
+INSTALL_SCRIPT = @INSTALL_SCRIPT@
+ROXCLIB_VERSION_NUM = @ROXCLIB_VERSION_NUM@
+LIB_VERSION=0:1:0
 .SUFFIXES:
-.SUFFIXES: .c .o .sh
+.SUFFIXES: .c .o .sh .lo
 
 LIBNAME = @LIBNAME@
 CC = @CC@
@@ -15,7 +25,9 @@ EXEC = ${PLATFORM_DIR}/bin/${PROG}
 LIBDIR = ${PLATFORM_DIR}/lib
 INCLUDEDIR = ${PLATFORM_DIR}/include
 LIBFILE.a = ${LIBDIR}/lib${LIBNAME}.a
-LTCOMPILE = ${LIBTOOL} --mode=compile ${CC} ${CFLAGS} 
+LIBFILE.la = ${LIBDIR}/lib${LIBNAME}.la
+LTCOMPILE = ${LIBTOOL} --mode=compile ${CC} ${CFLAGS} -c
+LINK = $(LIBTOOL) --mode=link ${CC} ${CFLAGS} ${LDFLAGS} --version-info ${LIB_VERSION}
 
 ############ Things to change for different programs
 
@@ -31,6 +43,10 @@ LIBOBJECTS = error.o choices.o infowin.o rox_debug.o rox_dnd.o
 LIBOBJECTS += gtksavebox.o rox_path.o rox_resources.o rox_soap.o
 LIBOBJECTS += rox_filer_action.o applet.o rox.o
 
+SLIBOBJECTS = error.lo choices.lo infowin.lo rox_debug.lo rox_dnd.lo
+SLIBOBJECTS += gtksavebox.lo rox_path.lo rox_resources.lo rox_soap.lo
+SLIBOBJECTS += rox_filer_action.lo applet.lo rox.lo
+
 INCLUDES = rox-clib.h error.h choices.h infowin.h rox_debug.h rox_dnd.h
 INCLUDES += gtksavebox.h rox_path.h rox_resources.h rox_soap.h
 INCLUDES += rox_filer_action.h applet.h rox.h
@@ -39,6 +55,12 @@ INCLUDES += rox_filer_action.h applet.h rox.h
 
 all: ${EXEC} ${PLATFORM_DIR}/bin/rox_run ${PLATFORM_DIR}/bin/install_on_path
 all: ${PLATFORM_DIR}/bin/test ${PLATFORM_DIR}/bin/rox_pinboard
+ifeq (${SHARED}, yes)
+all: ${LIBFILE.la}
+endif
+
+.c.lo:
+	${LTCOMPILE} $<
 
 ${EXEC}: ${PLATFORM_DIR}/bin ${OBJECTS} ${LIBFILE.a} ${INCLUDEDIR}
 	${CC} -o ${EXEC} ${OBJECTS} ${LDFLAGS}
@@ -67,14 +89,18 @@ ${LIBDIR}:  ${PLATFORM_DIR}
 	-mkdir ${LIBDIR}
 
 ${INCLUDEDIR}:  ${PLATFORM_DIR} ${INCLUDES}
-	-mkdir ${INCLUDEDIR}
-	cp ${INCLUDES} ${INCLUDEDIR}
+	for f in ${INCLUDES}; do ${INSTALL_DATA} $$f ${INCLUDEDIR}; done
 
 ${LIBFILE.a}: ${LIBDIR} ${LIBOBJECTS}
-	ar -rc ${LIBFILE.a} ${LIBOBJECTS}
+	${LINK} -o ${LIBFILE.a} ${LIBOBJECTS}
+
+${LIBFILE.la}: ${LIBDIR} ${SLIBOBJECTS}
+	${LINK} -o lib${LIBNAME}.la -rpath ${PLATFORM_DIR}/lib ${SLIBOBJECTS}
+	${LIBTOOL} --mode=install $(INSTALL) lib${LIBNAME}.la ${PLATFORM_DIR}/lib
+	${LIBTOOL} --mode=finish ${PLATFORM_DIR}/lib
 
 clean:
-	rm -f *.o Makefile.bak
+	rm -rf *.o *.lo Makefile.bak .libs
 
 depend:
 	makedepend -- $(CFLAGS) -- $(SRCS)
