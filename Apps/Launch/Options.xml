@@ -4,13 +4,11 @@
 <install-button label="Install handlers">Click here to install the handlers for the supported MIME-types</install-button>
 
 <entry name='http' label='http:' sizegroup="schemes">
-Handler for http and https URI's.
+Handler for http and https URI's.  This is also the default for 
+undefined schemes.
 </entry>
-<entry name='ftp' label='ftp:' sizegroup="schemes">
-Handler for ftp URI's.
-</entry>
-<entry name='mailto' label='mailto:' sizegroup="schemes">
-Handler for mailto URI's.
-</entry>
+<varlist name='schemes' label='Scheme handlers' selection='single' edit='yes' reorder='no' extend='yes'>
+List of schemes and their handlers
+</varlist>
 </section>
 </options>
