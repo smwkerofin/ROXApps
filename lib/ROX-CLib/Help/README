@@ -17,33 +17,55 @@ Compile using ROX-CLib/AppRun --compile
 Compiling and linking against the library
 -----------------------------------------
 
-Add the output of
-   rox_run ROX-CLib --cflags
-to your compile line, e.g.
-   gcc `rox_run ROX-CLib --cflags` -c main.c 
+Compile the library first
+
+Copy the libdir script from ROX-CLib/$PLATFORM/bin/libdir into your app dir.
 
 Add the output of
-   rox_run ROX-CLib --cflags
-   rox_run ROX-CLib --libs
+   `libdir ROX-CLib` --cflags
+to your compile line, e.g.
+   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"
+   gcc `$ROX_CLIB --cflags` -c main.c 
+
+Add the output of
+   `libdir ROX-CLib` --cflags
+   `libdir ROX-CLib` --libs
 to your link line, e.g.
-   gcc `rox_run ROX-CLib --cflags` -o main main.o `rox_run ROX-CLib --libs`
+   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"
+   gcc `$ROX_CLIB --cflags` -o main main.o `$ROX_CLIB --libs`
 
 If you are using autoconf and building a ROX program then:
-In src/configure.in add:
-  if test -z "$ROX_RUN"; then
-    AC_CHECK_PROG(ROX_RUN, rox_run, rox_run, "$APP_DIR/rox_run")
-  fi
-  AC_SUBST(ROX_RUN)
+    * Copy ROX-CLib/Help/aclocal.m4 to your programs src directory.
+    * In src/configure.in add:
 
-In src/Makefile.in add:
-  ROX_CLIB = @ROX_RUN@ ROX-CLib
-and to CFLAGS add: `${ROX_CLIB} --cflags`
-and to LDFLAGS add: `${ROX_CLIB} --libs`
+   ROX_CLIB(2, 0, 0)
 
-In AppRun and AppletRun ensure you have:
-  APP_DIR=`cd $APP_DIR;pwd`; export APP_DIR
+    * In src/Makefile.in add:
 
-Finally put rox_run in the ROX app dir.
+   ROX_CLIB = @ROX_CLIB_PATH@/AppRun
+
+      and to CFLAGS add: 
+   `${ROX_CLIB} --cflags` 
+      and to LDFLAGS add: 
+   `${ROX_CLIB} --libs`
+
+    * In AppRun (and AppletRun if it is an applet) ensure you have:
+
+   APP_DIR=`dirname $0`
+   APP_DIR=`cd $APP_DIR;pwd`; export APP_DIR
+   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"
+   if [ -z "$LD_LIBRARY_PATH" ]; then
+       LD_LIBRARY_PATH=`$ROX_CLIB --runtime`
+   else
+       LD_LIBRARY_PATH=`$ROX_CLIB --runtime`:$LD_LIBRARY_PATH
+   fi
+   export LD_LIBRARY_PATH
+
+Zero Install
+------------
+To use ROX-CLib through Zero Install change the use of libdir to:
+    ROX_CLIB="`$APP_DIR/libdir --0install www.kerofin.demon.co.uk ROX-CLib`/AppRun"
+
 
 Brief listing of functions
 --------------------------

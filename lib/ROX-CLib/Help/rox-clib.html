@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.11 2004/05/31 10:47:06 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.12 2004/06/21 21:08:38 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -28,16 +28,25 @@ to <code>ROX-CLib</code>.
 
     <h3>Compiling and linking against the library</h3>
 
-<p>Add the output of
-    <pre>   rox_run ROX-CLib --cflags</pre>
-to your compile line, e.g.
-    <pre>   gcc `rox_run ROX-CLib --cflags` -c main.c </pre>
+<p>Compile the library first
+
+<p>Copy the <a href="libdir.html">libdir</a> script from 
+<samp>ROX-CLib/<var>$PLATFORM</var>/bin/libdir</samp>
+into your app dir.
+
 
 <p>Add the output of
-<pre>   rox_run ROX-CLib --cflags
-   rox_run ROX-CLib --libs</pre>
+    <pre>   ROX-CLib --cflags</pre>
+to your compile line, e.g.
+<pre>   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"</pre>
+    <pre>   gcc `$ROX_CLIB --cflags` -c main.c </pre>
+
+<p>Add the output of
+<pre>   ROX-CLib --cflags
+   ROX-CLib --libs</pre>
 to your link line, e.g.
-    <pre>   gcc `rox_run ROX-CLib --cflags` -o main main.o `rox_run ROX-CLib --libs`</pre>
+<pre>   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"</pre>
+    <pre>   gcc `$ROX_CLIB --cflags` -o main main.o `$ROX_CLIB --libs`</pre>
 
 <p>If you are using autoconf and building a ROX program then:
 <ul>
@@ -46,7 +55,7 @@ to your link line, e.g.
 <pre>ROX_CLIB(2, 0, 0)</pre>
 
 <li>In src/Makefile.in add:
-<pre>  ROX_CLIB = @ROX_RUN@ ROX-CLib</pre>
+<pre>  ROX_CLIB = @ROX_CLIB_PATH@/AppRun</pre>
     and to CFLAGS add: <samp>`${ROX_CLIB} --cflags`</samp>
     and to LDFLAGS add: <samp>`${ROX_CLIB} --libs`</samp>
 
@@ -55,20 +64,23 @@ to your link line, e.g.
    APP_DIR=`dirname $0`
    APP_DIR=`cd $APP_DIR;pwd`; export APP_DIR
    if [ -z "$LD_LIBRARY_PATH" ]; then
-       LD_LIBRARY_PATH=`$APP_DIR/rox_run ROX-CLib --runtime`
+       LD_LIBRARY_PATH=`$APP_DIR/libdir ROX-CLib --runtime`
    else
-       LD_LIBRARY_PATH=`$APP_DIR/rox_run ROX-CLib --runtime`:$LD_LIBRARY_PATH
+       LD_LIBRARY_PATH=`$APP_DIR/libdir ROX-CLib --runtime`:$LD_LIBRARY_PATH
    fi
    export LD_LIBRARY_PATH
 </pre>
 
-    <li>Finally put <samp>rox_run</samp> in your application
-			    directory. 
 </ul>
+
+<h3>Zero Install</h3>
+
+<p>To use ROX-CLib through Zero Install change the use of <a href="libdir.html">libdir</a> to:
+<pre>    ROX_CLIB="`$APP_DIR/libdir --0install www.kerofin.demon.co.uk ROX-CLib`/AppRun"</pre>
 
     <h3>Library reference</h3>
 
-    <p>Organized by header file.  Last updated for version 2.1.2.
+    <p>Organized by header file.  Last updated for version 2.1.3.
 
     <ul>
       <li><a href="#rox.h">rox.h</a></li>
@@ -1472,7 +1484,7 @@ element are offered as the thumbnail handler.</p></dd>
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Wed Jun  2 21:44:14 BST 2004
+Last modified: Wed Jul  7 20:51:13 BST 2004
 <!-- hhmts end -->
   </body>
 </html>
