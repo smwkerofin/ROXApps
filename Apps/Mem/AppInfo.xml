@@ -3,7 +3,7 @@
   <Summary>Display usage memory and swap space.</Summary>
   <About>
     <Purpose>Monitor memory and swap usage</Purpose>
-	<Version>1.2.0 (7 December 2002)</Version>
+	<Version>1.2.1 (14 December 2002)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>

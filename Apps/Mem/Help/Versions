@@ -1,6 +1,10 @@
 Mem
 ===
 
+1.2.1
+-----
+Fix compilation problems with paths with spaces.
+
 1.2.0
 -----
 New stable release.
