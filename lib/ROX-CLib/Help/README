@@ -217,7 +217,10 @@ appropriate for the selected language.
 rox_soap.h
 ----------
 
-Communicating with the filer via SOAP.  Note that using SOAP requires libxml2.
+Communicating with the filer via SOAP.  Note that using SOAP requires
+libxml2.  (This is in a state of flux.  It may be that this will
+implement a generic SOAP interface to any program and a wrapper to
+contact ROX-Filer.)
 
 typedef struct rox_soap_filer ROXSOAP;
 

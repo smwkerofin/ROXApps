@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: rox_filer_action.c,v 1.1 2001/12/05 16:46:33 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -21,7 +21,8 @@
 
 #include "rox_filer_action.h"
 
-#define SOAP_NAMESPACE_URL "http://www.w3.org/2001/06/soap-envelope"
+#define ENV_NAMESPACE_URL "http://www.w3.org/2001/06/soap-envelope"
+#define SOAP_NAMESPACE_URL "http://www.w3.org/2001/09/soap-rpc"
 #define ROX_NAMESPACE_URL "http://rox.sourceforge.net/SOAP/ROX-Filer"
 
 static gboolean doneinit=FALSE;
@@ -44,16 +45,16 @@ static void make_soap(const char *action, xmlDocPtr *rpc, xmlNodePtr *act)
 {
   xmlDocPtr doc;
   xmlNodePtr tree;
-  xmlNsPtr soap_ns=NULL;
+  xmlNsPtr env_ns=NULL;
   xmlNsPtr rox_ns=NULL;
 
   doc=xmlNewDoc("1.0");
   
-  doc->children=xmlNewDocNode(doc, soap_ns, "Envelope", NULL);
-  soap_ns=xmlNewNs(doc->children, SOAP_NAMESPACE_URL, "env");
-  xmlSetNs(doc->children, soap_ns);
+  doc->children=xmlNewDocNode(doc, env_ns, "Envelope", NULL);
+  env_ns=xmlNewNs(doc->children, ENV_NAMESPACE_URL, "env");
+  xmlSetNs(doc->children, env_ns);
   
-  tree=xmlNewChild(doc->children, soap_ns, "Body", NULL);
+  tree=xmlNewChild(doc->children, env_ns, "Body", NULL);
   rox_ns=xmlNewNs(tree, ROX_NAMESPACE_URL, NULL);
   *act=xmlNewChild(tree, rox_ns, action, NULL);
 
@@ -259,6 +260,9 @@ static xmlNode *get_subnode(xmlNode *node, const char *namespaceURI,
 		if (strcmp(node->name, name))
 			continue;
 
+		dprintf(3, "node->ns=%s namespaceURI=%s",
+			node->ns? node->ns->href: "NULL",
+			namespaceURI? namespaceURI: "NULL");
 		if (node->ns == NULL || namespaceURI == NULL)
 		{
 			if (node->ns == NULL && namespaceURI == NULL)
@@ -289,33 +293,36 @@ static void file_type_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
     xmlNodePtr root;
     
     root = xmlDocGetRootElement(reply);
-    if(root && (root->ns && strcmp(root->ns->href, SOAP_NAMESPACE_URL)==0)) {
+    if(root && (root->ns && strcmp(root->ns->href, ENV_NAMESPACE_URL)==0)) {
       xmlNodePtr node, body, sub;
       
-      body = get_subnode(root, SOAP_NAMESPACE_URL, "Body");
+      body = get_subnode(root, ENV_NAMESPACE_URL, "Body");
       if (body) {
 	for(node = body->xmlChildrenNode; node; node = node->next) {
 	  if (node->type != XML_ELEMENT_NODE)
 	    continue;
 
-	  if(!node->ns || strcmp(node->ns->href, ROX_NAMESPACE_URL)!=0) {
-	    g_warning("Unknown namespace %s",
-		      node->ns ? node->ns->href: (xmlChar *) "(none)");
-	    sprintf(last_error_buffer, "Unknown namespace %s",
-		      node->ns ? node->ns->href: (xmlChar *) "(none)");
+	  if(node->ns && strcmp(node->ns->href, ROX_NAMESPACE_URL)!=0) {
+	    /*g_warning("Unknown namespace %s",
+		      node->ns ? node->ns->href: (xmlChar *) "(none)");*/
+	    sprintf(last_error_buffer, "Unknown namespace %s for %s",
+		      node->ns ? node->ns->href: (xmlChar *) "(none)",
+		    node->name);
 	    last_error=last_error_buffer;
 	    continue;
 	  }
-	  if(strcmp(node->name, "FileTypeReply")!=0)
+	  if(strcmp(node->name, "FileTypeResponse")!=0)
 	    continue;
 
-	  sub=get_subnode(node, ROX_NAMESPACE_URL, "MIMEType");
+	  sub=get_subnode(node, SOAP_NAMESPACE_URL, "result");
 	  if(sub) {
 	    char *type;
 	    type=xmlNodeGetContent(sub);
 	    file_type_reply_str=g_strdup(type);
 	    g_free(type);
 	    break;
+	  } else {
+	    last_error="No valid MIMEType node found";
 	  }
 	}
       } else {
@@ -345,7 +352,7 @@ char *rox_filer_file_type(const char *file)
   check_init();
 
   make_soap("FileType", &rpc, &tree);
-  (void) xmlNewChild(tree, NULL, "File", file);
+  (void) xmlNewChild(tree, NULL, "Filename", file);
 
   file_type_reply_str=NULL;
   send_soap(rpc, file_type_reply);
@@ -372,5 +379,10 @@ void rox_filer_clear_error(void)
 }
 
 /*
- * $Log$
+ * $Log: rox_filer_action.c,v $
+ * Revision 1.1  2001/12/05 16:46:33  stephen
+ * Added rox_soap.c to talk to the filer using SOAP.  Added rox_filer_action.c
+ * to use rox_soap to drive the filer.
+ * Added test.c to try the above routines.
+ *
  */
