@@ -1,6 +1,10 @@
 Versions of Mail
 ================
 
+0.3.5
+-----
+Fix bug which prevented running the reader.
+
 0.3.4
 -----
 Updated to make better use of ROX-Lib, such as the standard InfoWin and

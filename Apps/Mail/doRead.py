@@ -1,4 +1,4 @@
-import findrox
+import findrox; findrox.version(1,9,12)
 import rox.choices
 
 import sys
