@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.h,v 1.1 2001/12/05 16:46:34 stephen Exp $
+ * $Id: rox_soap.h,v 1.2 2001/12/07 11:25:02 stephen Exp $
  *
  * rox_soap.h - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -15,6 +15,12 @@
 
 #ifndef _rox_soap_h
 #define _rox_soap_h
+
+#include "rox-clib.h"
+
+#ifndef HAVE_XML
+#define xmlDocPtr void *
+#endif
 
 struct rox_soap_filer;
 typedef struct rox_soap_filer ROXSOAP;
@@ -67,6 +73,9 @@ extern void rox_soap_close(ROXSOAP *filer);
 
 /*
  * $Log: rox_soap.h,v $
+ * Revision 1.2  2001/12/07 11:25:02  stephen
+ * More work on SOAP, mainly to get rox_filer_file_type() working.
+ *
  * Revision 1.1  2001/12/05 16:46:34  stephen
  * Added rox_soap.c to talk to the filer using SOAP.  Added rox_filer_action.c
  * to use rox_soap to drive the filer.

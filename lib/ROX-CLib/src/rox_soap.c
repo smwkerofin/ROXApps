@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.1 2001/12/05 16:46:34 stephen Exp $
+ * $Id: rox_soap.c,v 1.2 2001/12/07 11:25:01 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -131,10 +131,12 @@ static gboolean get_ipc_property(GdkWindow *window, GdkAtom atom,
 			gdk_x11_xatom_to_atom(XA_WINDOW), 0, 4,
 			FALSE, NULL, &format, &length, &data) && data)
 	{
+	  dprintf(3, "format=%d length=%d", format, length);
 		if (format == 32 && length == 4)
 		{
 			retval = TRUE;
 			*r_xid = *((Window *) data);
+			dprintf(3, "xid=%p", *r_xid);
 		}
 		g_free(data);
 	}
@@ -496,6 +498,9 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.2  2001/12/07 11:25:01  stephen
+ * More work on SOAP, mainly to get rox_filer_file_type() working.
+ *
  * Revision 1.1  2001/12/05 16:46:34  stephen
  * Added rox_soap.c to talk to the filer using SOAP.  Added rox_filer_action.c
  * to use rox_soap to drive the filer.
