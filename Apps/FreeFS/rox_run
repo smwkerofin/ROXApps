@@ -15,7 +15,11 @@ if [ $? -eq 0 ]; then
 fi
 
 if [ -z "$LIBDIRPATH" ]; then
-    LIBDIRPATH=$HOME/lib:/usr/local/lib:/usr/lib export LIBDIRPATH
+    LIBDIRPATH=$HOME/lib:/usr/local/lib:/usr/lib 
+    if [ -d /uri/0install ] ; then
+      LIBDIRPATH=$LIBDIRPATH:/uri/0install/www.kerofin.demon.co.uk/lib
+    fi 
+    export LIBDIRPATH
 fi
 
 if [ -z "$APPPATH" ]; then
