@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.8 2003/03/25 14:31:34 stephen Exp $
+ * $Id: rox_soap.c,v 1.9 2003/08/20 20:57:16 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -56,6 +56,8 @@ typedef struct soap_data {
   GdkAtom prop;
   GtkWidget *widget;
   guint timeout_tag;
+  gulong signal_tag;
+  gint done_called;
 } SoapData;
 
 typedef struct soap_pipe_data {
@@ -405,6 +407,11 @@ static void soap_done(GtkWidget *widget, GdkEventProperty *event,
   if(sdata->prop != event->atom)
     return;
 
+  sdata->done_called++;
+  dprintf(3, "soap_done, done_called %d times", sdata->done_called);
+  if(sdata->done_called<2)
+    return;
+
   dprintf(3, "soap_done, remove %u", sdata->timeout_tag);
   gtk_timeout_remove(sdata->timeout_tag);
   /* Clear the timeout tag, serves as a flag to indicate we were succesful */
@@ -436,8 +443,14 @@ static void soap_done(GtkWidget *widget, GdkEventProperty *event,
   if(reply)
     xmlFreeDoc(reply);
   
+  if(sdata->signal_tag) {
+    g_signal_handler_disconnect(sdata->widget, sdata->signal_tag);
+    sdata->signal_tag=0;
+  }
   /*dprintf(3, "unref %p", sdata->widget);
-  gtk_widget_unref(sdata->widget);*/
+  gtk_widget_unref(sdata->widget);
+  dprintf(3, "done unref");*/
+  
   dead_windows=g_slist_prepend(dead_windows, sdata->widget);
   g_free(sdata);
 }
@@ -455,8 +468,14 @@ gboolean too_slow(gpointer data)
     if(sdata->callback)
       sdata->callback(sdata->filer, FALSE, NULL, sdata->data);
   }
+
+  if(sdata->signal_tag) {
+    g_signal_handler_disconnect(sdata->widget, sdata->signal_tag);
+    sdata->signal_tag=0;
+  }
   
   /*gtk_widget_unref(sdata->widget);*/
+  dead_windows=g_slist_prepend(dead_windows, sdata->widget);
 
   return FALSE;
 }
@@ -531,6 +550,7 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   sdata->data=udata;
   sdata->prop=xsoap;
   sdata->widget=ipc_window;
+  sdata->done_called=0;
   
   event.data.l[0] = GDK_WINDOW_XWINDOW(ipc_window->window);
   event.data.l[1] = gdk_x11_atom_to_xatom(filer->xsoap);
@@ -539,8 +559,8 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   dprintf(3, "event->data.l={%p, %p}", event.data.l[0], event.data.l[1]);
 	
   gtk_widget_add_events(ipc_window, GDK_PROPERTY_CHANGE_MASK);
-  g_signal_connect(ipc_window, "property-notify-event",
-		     G_CALLBACK(soap_done), sdata);
+  sdata->signal_tag=g_signal_connect(ipc_window, "property-notify-event",
+				     G_CALLBACK(soap_done), sdata);
   
   dprintf(2, "sending message %p to %p", event.message_type,
 	  filer->existing_ipc_window);
@@ -552,6 +572,8 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   /*g_signal_connect(ipc_window, "destroy",
     G_CALLBACK(destroy_ipc_window), sdata);*/
   sdata->timeout_tag=gtk_timeout_add(filer->timeout, too_slow, sdata);
+
+  return TRUE;
 }
 
 static void close_pipe(SoapPipeData *sdata, gboolean ok)
@@ -695,6 +717,9 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.9  2003/08/20 20:57:16  stephen
+ * Removed a dead subroutine
+ *
  * Revision 1.8  2003/03/25 14:31:34  stephen
  * New attempt at working SOAP code.
  *

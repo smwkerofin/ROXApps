@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap_server.c,v 1.4 2003/03/05 15:31:23 stephen Exp $
+ * $Id: rox_soap_server.c,v 1.5 2003/03/25 14:31:34 stephen Exp $
  *
  * rox_soap_server.c - Provide ROX-Filer like SOAP server
  *
@@ -340,10 +340,22 @@ static gboolean client_event(GtkWidget *window,
   src_window = gdk_window_foreign_new(event->data.l[0]);
   dprintf(3, "src_window=%p", src_window);
   g_return_val_if_fail(src_window != NULL, FALSE);
+
+  gdk_error_trap_push();
   prop = gdk_x11_xatom_to_atom(event->data.l[1]);
   dprintf(3, "prop=%p", prop);
+  if(gdk_error_trap_pop()) {
+    rox_error("SOAP server is confused (obtaining atom for %lx)",
+	      event->data.l[1]);
+    return TRUE;
+  }
 
+  gdk_error_trap_push();
   data = read_property(src_window, prop, &length);
+  if(gdk_error_trap_pop()) {
+    rox_error("SOAP server is confused (obtaining property)");
+    return TRUE;
+  }
   if (!data)
     return TRUE;
 
@@ -363,12 +375,27 @@ static gboolean client_event(GtkWidget *window,
     xmlDocDumpMemory(reply, &mem, &size);
     g_return_val_if_fail(size > 0, TRUE);
 
+    dprintf(3, "Send reply to %p %ld", src_window, prop);
+    gdk_error_trap_push();
     gdk_property_change(src_window, prop,
 			gdk_x11_xatom_to_atom(XA_STRING), 8,
 			GDK_PROP_MODE_REPLACE, mem, size);
+    gdk_flush();
+    if(gdk_error_trap_pop()) {
+      dprintf(0, "Error sending reply to %p %ld", src_window, prop);
+    }
     g_free(mem);
-  } else
+  } else {
+    dprintf(3, "delete property %p %ld", src_window, prop);
+    gdk_error_trap_push();
     gdk_property_delete(src_window, prop);
+    gdk_flush();
+    if(gdk_error_trap_pop()) {
+      dprintf(0, "Error deleting property %p %ld", src_window, prop);
+    }
+  }
+
+  dprintf(3, "finished client_event()");
 
   return TRUE;
 }
