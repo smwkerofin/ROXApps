@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+2.1.3
+-----
+React to change of font. Icon to indicate if alarms are set.
+
 2.1.2
 -----
 alarm.c would not compile with virgin ROX-CLib.

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.29 2004/04/10 12:07:33 stephen Exp $
+ * $Id: clock.c,v 1.30 2004/08/05 17:20:36 stephen Exp $
  */
 #include "config.h"
 
@@ -97,6 +97,7 @@ static Mode default_mode={
 static GtkWidget *menu=NULL;          /* Popup menu */
 static GtkWidget *infowin=NULL;       /* Information window */
 static GdkColormap *cmap = NULL;
+static GdkPixbuf *alarm_icon=NULL;
 static GdkColor colours[]={
   /* If you change these, change the enums below */
   {0, 0xffff,0xffff,0xffff},
@@ -161,6 +162,7 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
 			    gpointer data);
                                     /* Window needs redrawing */
+static void check_clock_face(ClockWindow *cwin);
 static void menu_create_menu(GtkWidget *window);
                                     /* create the pop-up menu */
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
@@ -224,6 +226,7 @@ int main(int argc, char *argv[])
   ClockWindow *cwin;
   int i, c, do_exit, nerr;
   const gchar *app_dir;
+  gchar *aicon;
   guint32 xid;
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
@@ -317,6 +320,15 @@ int main(int argc, char *argv[])
       dprintf(1, "success in open_remote(%lu), exiting", xid);
       return 0;
     }
+  }
+
+  aicon=rox_resources_find(PROJECT, "alarm.png", ROX_RESOURCES_NO_LANG);
+  if(aicon) {
+    GError *err=NULL;
+    
+    alarm_icon=gdk_pixbuf_new_from_file(aicon, &err);
+
+    g_free(aicon);
   }
 
   cwin=make_window(xid);
@@ -535,6 +547,26 @@ static void opts_changed(void)
       gtk_widget_hide(current_window->canvas);
     }   
   }
+
+  if(o_font.has_changed) {
+    GList *l;
+
+    printf("font changed, now %s\n", o_font.value);
+
+    for(l=windows; l; l=g_list_next(l)) {
+      ClockWindow *c=(ClockWindow *) l->data;
+      printf(" %p %p\n", c, c->clock_face);
+      if(c->clock_face) {
+	gdk_pixbuf_unref(c->clock_face);
+	c->clock_face=NULL;
+      }
+    }
+    printf(" %p\n", clock_face);
+    if(clock_face) {
+      gdk_pixbuf_unref(clock_face);
+      clock_face=NULL;
+    }
+  }
 }
 
 static void setup_options(void)
@@ -690,9 +722,7 @@ static gboolean do_update(ClockWindow *cwin)
   int x0, y0, x1, y1;
   int tick, twidth;
   enum draw_hours th;
-  GdkColor *face_fg=CL_FACE_FG;
   GdkFont *font=NULL;
-  GtkStyle *style;
   PangoLayout *layout;
   PangoFontDescription *pfd;
 
@@ -708,29 +738,15 @@ static gboolean do_update(ClockWindow *cwin)
   if(o_no_face.int_value)
     return;
 
-  if(!cwin->gc || !cwin->canvas || !cwin->clock_face)
+  if(!cwin->gc || !cwin->canvas)
     return TRUE;
   
   h=cwin->canvas->allocation.height;
   w=cwin->canvas->allocation.width;
 
-  if(alarm_have_active())
-    face_fg=CL_FACE_FG_ALRM;
-
-  style=gtk_widget_get_style(cwin->canvas);
-  dprintf(3, "style=%p bg_gc[GTK_STATE_NORMAL]=%p", style,
-	  style->bg_gc[GTK_STATE_NORMAL]);
-#if 0
-  if(style && style->bg_gc[GTK_STATE_NORMAL]) {
-    gtk_style_apply_default_background(style, cwin->canvas->window, TRUE,
-				       GTK_STATE_NORMAL,
-				       NULL, 0, 0, w, h);
-  } else {
-    /* Blank out to the background colour */
-    gdk_gc_set_foreground(cwin->gc, CL_BACKGROUND);
-    gdk_draw_rectangle(cwin->canvas->window, cwin->gc, TRUE, 0, 0, w, h);
+  if(!cwin->clock_face) {
+    check_clock_face(cwin);
   }
-#endif
 
   /* we want a diameter that can fit in our canvas */
   if(h<w)
@@ -763,6 +779,33 @@ static gboolean do_update(ClockWindow *cwin)
 				GDK_RGB_DITHER_NONE,
 				0, 0);
   
+  if(alarm_have_active()) {
+    if(alarm_icon) {
+      gint iwid=gdk_pixbuf_get_width(alarm_icon);
+      gint ihei=gdk_pixbuf_get_height(alarm_icon);
+      GdkPixbuf *icon;
+
+      if(iwid>w/4) {
+	iwid=w/4;
+	ihei=iwid;
+
+	icon=gdk_pixbuf_scale_simple(alarm_icon, iwid, ihei,
+				     GDK_INTERP_BILINEAR);
+      } else {
+	icon=alarm_icon;
+	g_object_ref(icon);
+      }
+      if(icon) {
+	gdk_pixbuf_render_to_drawable(icon,
+				      cwin->canvas->window, cwin->gc,
+				      0, 0, w-iwid, h-ihei, -1, -1,
+				      GDK_RGB_DITHER_NONE,
+				      0, 0);
+	g_object_unref(icon);
+      }
+    }
+  }
+
   sw-=4;
   sh-=4;
   rad=sw/2;
@@ -815,8 +858,8 @@ static gboolean do_update(ClockWindow *cwin)
   rad=sw/10;
   if(rad>8)
     rad=8;
-  gdk_draw_arc(cwin->canvas->window, cwin->gc, TRUE, x0-rad/2, y0-rad/2, rad, rad,
-	       0, 360*64);
+  gdk_draw_arc(cwin->canvas->window, cwin->gc, TRUE,
+	       x0-rad/2, y0-rad/2, rad, rad, 0, 360*64);
 
 
   return TRUE;
@@ -833,19 +876,9 @@ static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
   return TRUE;
 }
 
-/* Create a new backing pixmap of the appropriate size */
-/* NO LONGER NEEDED */
-static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
-			 gpointer data)
+static void check_clock_face(ClockWindow *cwin)
 {
-  ClockWindow *cwin=(ClockWindow *) data;
   int w, h;
-  
-  /*do_update(cwin);*/
-  dprintf(1, "configure_event");
-
-  if(!cwin->canvas || !cwin->canvas->window)
-    return TRUE;
   
   if(!cwin->gc)
     cwin->gc=gdk_gc_new(cwin->canvas->window);
@@ -868,6 +901,22 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
     cwin->clock_face=gdk_pixbuf_scale_simple(clock_face, w, h,
 					     GDK_INTERP_BILINEAR);
   }
+}
+
+/* Create a new backing pixmap of the appropriate size */
+static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
+			 gpointer data)
+{
+  ClockWindow *cwin=(ClockWindow *) data;
+  int w, h;
+  
+  /*do_update(cwin);*/
+  dprintf(1, "configure_event");
+
+  if(!cwin->canvas || !cwin->canvas->window)
+    return TRUE;
+
+  check_clock_face(cwin);
 
   return TRUE;
 }
@@ -1330,6 +1379,11 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.30  2004/08/05 17:20:36  stephen
+ * Pre-draw the clock face.
+ * Reduce flicker
+ * Scale font on clock face.
+ *
  * Revision 1.29  2004/04/10 12:07:33  stephen
  * Remove dead code.  Open options dialog from command line or SOAP message.
  *
