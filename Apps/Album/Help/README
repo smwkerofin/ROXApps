@@ -1,0 +1,28 @@
+		Album
+		Package digital audio files into an application
+		By Stephen Watson
+
+Overview
+========
+Album creates application directories containing digital audio files
+(MP3 or Ogg/Vorbis).  When you run the created application, it loads
+the audio into xmms.
+
+Installation
+============
+Copy the application directory to somewhere useful, usually ~/Apps or 
+/usr/local/apps.  
+
+Updates
+=======
+This program is available at http://www.kerofin.demon.co.uk/rox/album.html
+or via Zero Install at
+/uri/0install/www.kerofin.demon.co.uk/apps/Album
+
+Future plans
+============
+I hope to add support for MusicBox as an alternative to xmms.  
+
+-- 
+Stephen Watson 
+stephen@kerofin.demon.co.uk
