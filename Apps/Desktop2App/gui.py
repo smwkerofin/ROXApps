@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.1 2002/11/28 18:03:21 stephen Exp $
+# $Id: gui.py,v 1.2 2004/11/21 13:05:05 stephen Exp $
 
 import findrox; findrox.version(1, 9, 14)
 
@@ -42,7 +42,7 @@ def do_object(path):
         elif path[-8:]=='.desktop':
             do_file(path)
     except:
-        rox.report_exception()
+        return
 
 def do_dir(path):
     entries=os.listdir(path)
