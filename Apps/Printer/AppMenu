@@ -1,6 +1,0 @@
-<?xml version="1.0"?>
-<AppMenu>
-  <Item label="View printer queue" option="--queue"/>
-  <Item label="View all printer queues" option="--allqueues"/>
-  <Item label="View printer status" option="--status"/>
-</AppMenu>
