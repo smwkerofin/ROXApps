@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.1.1.1 2003/10/11 12:15:26 stephen Exp $
+# $Id: vidthumb.py,v 1.2 2003/10/31 16:46:03 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -91,19 +91,20 @@ def main(argv):
     if pos>60:
         pos=60
     #print pos
-    tmp=write_frame(inname, pos)
-    if tmp is None:
+    frfname=write_frame(inname, pos)
+    if frfname is None:
         try:
             remove_work_dir(work_dir, old_dir)
         except:
             report_exception()
-            sys.exit(2)
+        sys.exit(2)
 
     # Now we load the raw image in, scale it to the required size and resize,
     # with the required tEXt::Thumb data
     gtk=rox.g
 
-    img=gtk.gdk.pixbuf_new_from_file(tmp)
+    #print frfname
+    img=gtk.gdk.pixbuf_new_from_file(frfname)
     #print img
     try:
         remove_work_dir(work_dir, old_dir)
