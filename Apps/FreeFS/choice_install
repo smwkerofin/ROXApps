@@ -21,7 +21,7 @@ if [ ! -d $choices_write/$prog ] ; then
 	echo $choices_write/$prog exists but is not a directory
 	exit 2
     else
-	mkdir $choices_write/$prog
+	mkdir -p $choices_write/$prog
 	cp $source $choices_write/$prog/$leaf
     fi
 

@@ -1,7 +1,11 @@
 Changes to FreeFS
 =================
 
-01-Jan-2004
+23-Jan-2005
+~~~~~~~~~~~
+Update choice_install for XDG basedirs choices.
+
+01-Jan-2005 (2.1.2)
 ~~~~~~~~~~~
 Can now pass SOAP message via -R.
 
