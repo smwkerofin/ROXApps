@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+0.1.11
+------
+Fixed bug in repeating alarms.
+
 0.1.10
 ------
 Fixed bug concealing text label.  Fixed bug in update code.
