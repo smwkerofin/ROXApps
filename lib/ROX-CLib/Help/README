@@ -69,6 +69,15 @@ If you are using autoconf and building a ROX program then:
    fi
    export LD_LIBRARY_PATH
 
+Note that as of version 2.1.2 the only supported way of including files is
+  #include <rox/rox.h>
+  /* etc... */
+
+To update your programs, change all occurances of
+  #include "file.h"
+to:
+  #include <rox/file.h>
+
 Zero Install
 ------------
 To use ROX-CLib through Zero Install change the use of libdir to:
