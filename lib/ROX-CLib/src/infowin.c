@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.c,v 1.6 2003/08/28 18:53:58 stephen Exp $
+ * $Id: infowin.c,v 1.7 2003/10/18 11:46:18 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -234,7 +234,7 @@ static void info_win_init(InfoWin *iw)
 
   hbox=GTK_DIALOG(iw)->action_area;
 
-  button=gtk_button_new_with_label(_("Dismiss"));
+  button=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
   gtk_widget_show(button);
   g_signal_connect(G_OBJECT (button), "clicked",
                         G_CALLBACK(dismiss), iw);
@@ -542,6 +542,9 @@ GtkWidget *info_win_new_from_appinfo(const char *program)
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.7  2003/10/18 11:46:18  stephen
+ * Can parse AppInfo.xml file to supply the values for the window.
+ *
  * Revision 1.6  2003/08/28 18:53:58  stephen
  * Add apps icon to window
  * Avoid SEGV if window closed by window manager
