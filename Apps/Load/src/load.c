@@ -5,14 +5,13 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.9 2001/11/12 14:43:47 stephen Exp $
+ * $Id: load.c,v 1.10 2001/11/30 11:53:15 stephen Exp $
  *
  * Log at end of file
  */
 
 #include "config.h"
 
-#define APPLET_MENU        1
 #define DEBUG              1
 #define INLINE_FONT_SEL    0
 
@@ -110,24 +109,12 @@ typedef struct options {
   gboolean show_vals;
   gboolean show_host;
   guint init_size;
-#if 0
-  /* These aren't used */
-  GdkColor *bar_colour[3];
-  GdkColor *high_colour[3];
-  GdkColor *fore_colour;
-  GdkColor *back_colour;
-#endif
   gchar *font_name;
   gboolean multiple_chart;
 } Options;
 
 static Options options={
   2000, TRUE, FALSE, FALSE, MIN_WIDTH,
-#if 0
-  {colours+COL_NORMAL0, colours+COL_NORMAL1, colours+COL_NORMAL2},
-  {colours+COL_HIGH0, colours+COL_HIGH1, colours+COL_HIGH2},
-  colours+COL_FG, colours+COL_BG,
-#endif
   NULL, TRUE
 };
 
@@ -182,6 +169,42 @@ static gboolean read_config_xml(void);
 static void write_config_xml(void);
 #endif
 
+static void usage(const char *argv0)
+{
+  printf("Usage: %s [X-options] [gtk-options] [-vh] [XID]\n", argv0);
+  printf("where:\n\n");
+  printf("  X-options\tstandard Xlib options\n");
+  printf("  gtk-options\tstandard GTK+ options\n");
+  printf("  -h\tprint this help message\n");
+  printf("  -v\tdisplay version information\n");
+  printf("  XID\tX window to display applet in\n");
+}
+
+static void do_version(void)
+{
+  printf("%s %s\n", PROJECT, VERSION);
+  printf("%s\n", PURPOSE);
+  printf("%s\n", WEBSITE);
+  printf("Copyright 2002 %s\n", AUTHOR);
+  printf("Distributed under the terms of the GNU General Public License.\n");
+  printf("(See the file COPYING in the Help directory).\n");
+  printf("%s last compiled %s\n", __FILE__, __DATE__);
+
+  printf("\nCompile time options:\n");
+  printf("  Debug output... %s\n", DEBUG? "yes": "no");
+  printf("  Inline font selection... %s\n", INLINE_FONT_SEL? "yes": "no");
+  printf("  Using XML... ");
+  if(USE_XML)
+    printf("yes (libxml version %d)\n", LIBXML_VERSION);
+  else {
+    printf("no (");
+    if(HAVE_XML)
+      printf("libxml not found)\n");
+    else
+    printf("libxml version %d)\n", LIBXML_VERSION);
+  }
+}
+
 int main(int argc, char *argv[])
 {
   GtkWidget *win=NULL;
@@ -189,6 +212,7 @@ int main(int argc, char *argv[])
   GtkStyle *style;
   int w=MIN_WIDTH, h=MIN_HEIGHT;
   int i;
+  int c, do_exit, nerr;
 
   rox_debug_init("Load");
 
@@ -202,6 +226,12 @@ int main(int argc, char *argv[])
   }
 #endif
 
+  /* Check for this argument by itself */
+  if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
+    do_version();
+    exit(0);
+  }
+  
   server=glibtop_init_r(&glibtop_global_server,
 			(1<<GLIBTOP_SYSDEPS_CPU)|(1<<GLIBTOP_SYSDEPS_LOADAVG),
 			0);
@@ -215,13 +245,38 @@ int main(int argc, char *argv[])
   cmap=gdk_rgb_get_cmap();
   gtk_widget_push_colormap(cmap);
   
+  /* Process remaining arguments */
+  nerr=0;
+  do_exit=FALSE;
+  while((c=getopt(argc, argv, "vh"))!=EOF)
+    switch(c) {
+    case 'h':
+      usage(argv[0]);
+      do_exit=TRUE;
+      break;
+    case 'v':
+      do_version();
+      do_exit=TRUE;
+      break;
+    default:
+      nerr++;
+      break;
+    }
+  if(nerr) {
+    fprintf(stderr, "%s: invalid options\n", argv[0]);
+    usage(argv[0]);
+    exit(10);
+  }
+  if(do_exit)
+    exit(0);
+
   choices_init();
   dprintf(1, "read config");
   read_config();
   w=options.init_size;
   h=options.init_size;
 
-  if(argc<2 || !atol(argv[1])) {
+  if(optind>=argc || !atol(argv[optind])) {
     dprintf(2, "make window");
     is_applet=FALSE;
     win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -242,8 +297,8 @@ int main(int argc, char *argv[])
   } else {
     GtkWidget *plug;
 
-    dprintf(2, "argv[1]=%s", argv[1]);
-    plug=gtk_plug_new(atol(argv[1]));
+    dprintf(2, "argv[%d]=%s", optind, argv[optind]);
+    plug=gtk_plug_new(atol(argv[optind]));
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
 		       "WM destroy");
@@ -287,9 +342,12 @@ int main(int argc, char *argv[])
   gc=gdk_gc_new(canvas->window);
   gdk_gc_set_background(gc, colours+COL_BG);
 
+  if(is_applet)
+    applet_get_panel_location(win);
   gtk_widget_show(win);
 
   update=gtk_timeout_add(options.update_ms, (GtkFunction) do_update, NULL);
+  dprintf(3, "update tag is %u", update);
   
   gtk_main();
 
@@ -1566,16 +1624,15 @@ static void menu_create_menu(GtkWidget *window)
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win)
 {
-  if(bev->type==GDK_BUTTON_PRESS && bev->button==3
-#if !APPLET_MENU
-     && !is_applet
-#endif
-     ) {
+  if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
     if(!menu)
       menu_create_menu(GTK_WIDGET(win));
 
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-				bev->button, bev->time);
+    if(is_applet)
+      applet_show_menu(menu, bev);
+    else
+      gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
+		     bev->button, bev->time);
     return TRUE;
   } else if(is_applet && bev->type==GDK_BUTTON_PRESS && bev->button==1) {
     gchar *cmd;
@@ -1603,6 +1660,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.10  2001/11/30 11:53:15  stephen
+ * Can show multiple charts (1 min in front, 15min at back)
+ *
  * Revision 1.9  2001/11/12 14:43:47  stephen
  * Uses XML for config, if XML 2.4 or later.
  * Can select a font for display.
