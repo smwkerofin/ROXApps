@@ -230,6 +230,9 @@ class MyObject(dbus.Object, rox.Window):
             self.active.remove(id)
         del self.clients[id]
 
+        self.check_available()
+        #print 'checked for available slot'
+
     def check_expired(self):
         # print 'in check_expired', self.clients
         for c in self.clients:
@@ -239,6 +242,19 @@ class MyObject(dbus.Object, rox.Window):
             if client.expired():
                 #print client, 'has expired'
                 self.lose_client(c)
+
+    def slotAvailable(self):
+        #print 'in slotAvailable'
+        self.emit_signal(interface=interface_name,
+                         signal_name='slot_available')
+        #print 'emitted signal'
+        #print rox._toplevel_windows
+        #print rox._in_mainloops
+
+    def check_available(self):
+        #print 'in check_available', len(self.active), allow_nclient.int_value
+        if len(self.active)<allow_nclient.int_value:
+            self.slotAvailable()
 
     def __str__(self, *args):
         return 'MyObject-%s' % id(self)
@@ -251,9 +267,14 @@ object=MyObject(server)
 #print object
 #print dir(object)
 
-object.emit_signal(interface_name, 'Running')
+#object.emit_signal(interface_name, 'Running')
 
 #print 'start main loop'
-rox.mainloop()
+try:
+    #print rox._toplevel_windows
+    #print rox._in_mainloops
+    rox.mainloop()
+except:
+    rox.report_exception()
 #print 'end main loop'
 

@@ -101,6 +101,13 @@ class Manager:
         except:
             pass
 
+    def register(self, fn):
+        """Register a function to be called when a slot becomes available
+        fn - function to call, passed: interface, signal_name, service, path, message
+        When this is called, you can then call acquire to try and claim
+        this slot."""
+        self.object.connect_to_signal('slot_available', fn)
+
 def connect(start=False):
     """Make connection to DownloadManager.
     start - if True and the DownloadManager is not running attempt to start it
