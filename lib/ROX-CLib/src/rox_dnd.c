@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.2 2001/07/23 12:58:56 stephen Exp $
+ * $Id: rox_dnd.c,v 1.3 2001/08/20 15:28:24 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -91,14 +91,17 @@ void rox_dnd_register_full(GtkWidget *widget,
   check_init();
 
   if(uris && xds) 
-    gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_ALL, target_table, ntarget,
-		      dest_flags);
+    gtk_drag_dest_set(widget,
+		      GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
+		      target_table, ntarget, dest_flags);
   else if(uris)
-    gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_ALL, target_table, 1,
-		      dest_flags);
+    gtk_drag_dest_set(widget,
+		      GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
+		      target_table, 1, dest_flags);
   else if(xds)
-    gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_ALL, target_table+1, 1,
-		      dest_flags);
+    gtk_drag_dest_set(widget,
+		      GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
+		      target_table+1, 1, dest_flags);
 
   rdata=g_new(ROXData, 1);
 
@@ -383,6 +386,9 @@ static void drag_data_received(GtkWidget      	*widget,
 }
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.3  2001/08/20 15:28:24  stephen
+ * Added rox_dnd_local_free
+ *
  * Revision 1.2  2001/07/23 12:58:56  stephen
  * (untested) XDS support
  *
