@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.1 2001/05/10 14:54:27 stephen Exp $
+ * $Id: alarm.c,v 1.2 2001/05/16 11:02:17 stephen Exp $
  */
 #include "config.h"
 
@@ -337,8 +337,9 @@ void alarm_check(void)
       show_message(alarm);
 
       alarms=g_list_remove_link(alarms, rover);
+      next=alarm->when;
       do {
-	next=next_alarm_time(alarm->when, alarm->repeat);
+	next=next_alarm_time(next, alarm->repeat);
 	if(next<=0)
 	  break;
       } while(next<now);
@@ -665,6 +666,10 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.2  2001/05/16 11:02:17  stephen
+ * Added repeating alarms.
+ * Menu supported on applet (compile time option).
+ *
  * Revision 1.1  2001/05/10 14:54:27  stephen
  * Added new alarm feature
  *
