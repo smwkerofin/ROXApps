@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id$
+ * $Id: mem.c,v 1.1.1.1 2001/08/24 11:08:30 stephen Exp $
  */
 #include "config.h"
 
@@ -35,7 +35,6 @@
 #include <gtk/gtk.h>
 
 #include <glibtop.h>
-#include <glibtop-config.h>
 #include <glibtop/mem.h>
 #include <glibtop/swap.h>
 
@@ -64,7 +63,7 @@
 
 /* GTK+ objects */
 static GtkWidget *win=NULL;
-static GtkWidget *mem_total, *mem_used, *mem_free, *mem_per;
+static GtkWidget *mem_total, *mem_used, *mem_free=NULL, *mem_per;
 #if SWAP_SUPPORTED
 static GtkWidget *swap_total, *swap_used, *swap_free, *swap_per,
   *swap_total_label;
@@ -75,15 +74,12 @@ typedef struct option_widgets {
   GtkWidget *window;
   GtkWidget *update_s;
   GtkWidget *init_size;
-#if SWAP_SUPPORTED
-  GtkWidget *swap_nums;
-#endif
 } OptionWidgets;
 
 typedef struct options {
   guint update_sec;          /* How often to update */
   guint applet_init_size;    /* Initial size of applet */
-  guint swap_nums;           /* Show the swap numbers */
+  guint swap_nums;           /* Show the swap numbers - IGNORED */
 } Options;
 
 static Options options={
@@ -309,12 +305,6 @@ int main(int argc, char *argv[])
 			 "This is the swap space available on the host",
 			 TIP_PRIVATE);
 
-    if(!options.swap_nums) {
-      gtk_widget_hide(swap_total);
-      gtk_widget_hide(swap_total_label);
-      gtk_widget_hide(swap_used);
-      gtk_widget_hide(swap_free);
-    }
 #endif
     
     menu_create_menu(win);
@@ -470,7 +460,8 @@ static gboolean update_values(gpointer unused)
       gtk_label_set_text(GTK_LABEL(mem_used), fmt_size(used));
       
     }
-    gtk_label_set_text(GTK_LABEL(mem_free), fmt_size(avail));
+    if(mem_free)
+      gtk_label_set_text(GTK_LABEL(mem_free), fmt_size(avail));
     dprintf(5, "set progress\n");
     gtk_progress_set_value(GTK_PROGRESS(mem_per), fused);
     
@@ -479,7 +470,8 @@ static gboolean update_values(gpointer unused)
       gtk_label_set_text(GTK_LABEL(mem_total), "?");
       gtk_label_set_text(GTK_LABEL(mem_used), "?");
     }
-    gtk_label_set_text(GTK_LABEL(mem_free), "Free?");
+    if(mem_free)
+      gtk_label_set_text(GTK_LABEL(mem_free), "Free?");
     gtk_progress_set_value(GTK_PROGRESS(mem_per), 0.);
   }
 
@@ -650,31 +642,11 @@ static void set_config(GtkWidget *widget, gpointer data)
     gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ow->update_s));
   options.applet_init_size=
     gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ow->init_size));
-#if SWAP_SUPPORTED
-  options.swap_nums=
-    gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->swap_nums));
-#endif
-  
+ 
   gtk_timeout_remove(update_tag);
   update_tag=gtk_timeout_add(options.update_sec*1000,
 				     (GtkFunction) update_values, NULL);
 
-#if SWAP_SUPPORTED
-  if(win) {
-    if(!options.swap_nums) {
-      gtk_widget_hide(swap_total);
-      gtk_widget_hide(swap_total_label);
-      gtk_widget_hide(swap_used);
-      gtk_widget_hide(swap_free);
-    } else {
-      gtk_widget_show(swap_total);
-      gtk_widget_show(swap_total_label);
-      gtk_widget_show(swap_used);
-      gtk_widget_show(swap_free);
-    }
-  }
-#endif
-  
   gtk_widget_hide(ow->window);
 }
 
@@ -725,24 +697,6 @@ static void show_config_win(void)
     gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 4);
     ow.update_s=spin;
 
-#if SWAP_SUPPORTED
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 4);
-
-    label=gtk_label_new(_("Display"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-
-    check=gtk_check_button_new_with_label(_("Show swap numbers"));
-    gtk_widget_set_name(check, "swap_nums");
-    gtk_widget_show(check);
-    gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 4);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check),
-				 options.swap_nums);
-    ow.swap_nums=check;
-#endif
-    
     frame=gtk_frame_new(_("Applet configuration"));
     gtk_widget_show(frame);
     gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, FALSE, 6);
@@ -792,10 +746,6 @@ static void show_config_win(void)
 			      (gfloat)(options.update_sec));
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.init_size),
 			      (gfloat)(options.applet_init_size));
-#if SWAP_SUPPORTED
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.swap_nums),
-				 options.swap_nums);
-#endif
   }
 
   gtk_widget_show(confwin);  
@@ -879,6 +829,9 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 }
 
 /*
- * $Log$
+ * $Log: mem.c,v $
+ * Revision 1.1.1.1  2001/08/24 11:08:30  stephen
+ * Monitor memory and swap
+ *
  *
  */
