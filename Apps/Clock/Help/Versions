@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+0.1.8
+-----
+Rudimentary alarm facility.
+
 0.1.7
 -----
 Support new AppInfo.xml data, debug output off by default.

@@ -2,7 +2,26 @@ Clock
 =====
 
 Clock is an applet for use in a ROX-Filer panel or pinboard.  It
-simply tells the time.  It can also be run as a stand alone program.
+tells the time.  It can also be run as a stand-alone program.
+
+When running stand-alone, click mouse button 3 to access a pop-up
+window.  From this you have four options:
+
+ * Info         - Display information on the program
+
+ * Configure... - Sets up the clock face display options
+
+ * Alarms...    - Simple alarm clock facility
+
+ * Quit         - Quits the program.
+
+The user-defined format for the text below the clock face is in
+strfime(3) format.  Consult the man page for that function to find out
+how to set up various formats.
+
+If you have multiple copies of Clock running (say one in a window and
+one on a panel) and an alarm is due to go off then each copy of Clock
+will display the alarm.
 
 The latest version is at http://www.kerofin.demon.co.uk/rox/
 
