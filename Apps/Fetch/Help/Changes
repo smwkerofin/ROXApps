@@ -1,6 +1,10 @@
 Fetch
 =====
 
+31-Jan-2005
+~~~~~~~~~~~
+Use the signal sent by DownloadManager when a slot becomes available.
+
 24-Jan-2005
 ~~~~~~~~~~~
 Be compatible with pygtk 2.4.
@@ -70,3 +74,6 @@ Let the URL label wrap to avoid the window becoming too wide.
 02-June-2004
 ~~~~~~~~~~~~
 Fixed update of progress bar.
+
+-- 
+$Id$

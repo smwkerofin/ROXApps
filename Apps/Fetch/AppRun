@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.14 2004/12/05 13:20:09 stephen Exp $
+# $Id: AppRun,v 1.15 2005/01/29 11:23:32 stephen Exp $
 
 import os, sys
 import time
@@ -74,6 +74,8 @@ class FetchWindow(rox.Dialog):
         self.bad_fetch=0 # 1=maybe, 2=yes
         self.stype=unknown_type
         self.dl_man=None
+        self.wtag=0
+        self.proc=None
         
         rox.Dialog.__init__(self)
         self.set_title(self.url)
@@ -193,7 +195,6 @@ class FetchWindow(rox.Dialog):
         self.connect('delete_event', self.delete_event)
         rox.g.timeout_add(2000, self.idle_update)
 
-        self.proc=None
         self.show_all()
         self.start()
 
@@ -377,19 +378,43 @@ class FetchWindow(rox.Dialog):
         else:
             self.real_start()
 
+    def on_slot_available(self, interface, signal_name, service, path, message):
+        print interface, signal_name, service, path, message
+        if self.dl_man:
+            if not self.waiting():
+                rox.g.timeout_remove(self.wtag)
+                
+        
     def acquire(self):
-        rox.g.timeout_add(2000, self.waiting)
+        self.dl_man.register(self.on_slot_available)
+        self.wtag=rox.g.timeout_add(2000, self.waiting)
         #rox.mainloop()
 
     def waiting(self):
+        if self.proc:
+            return False
         if not self.dl_man:
             #rox.g.main_quit()
             self.real_start()
             return False
 
-        if self.dl_man.acquire(self.host, os.path.basename(self.real_target),
-                               block=False):
-            self.real_start()
+        try:
+            go=self.dl_man.acquire(self.host,
+                                   os.path.basename(self.real_target),
+                                   block=False)
+        except dclient.DMNotRunning:
+            go=True
+        except dclient.DMNoAnswer:
+            go=True
+        except:
+            go=False
+            
+            
+        if go:
+            try:
+                self.real_start()
+            except:
+                rox.report_exception()
             #rox.g.main_quit()
             return False
 
@@ -443,6 +468,7 @@ class FetchWindow(rox.Dialog):
     def finished(self):
         if self.dl_man:
             self.dl_man.done()
+            self.dl_man=None
         try:
             os.rename(self.target, self.real_target)
         except OSError:
