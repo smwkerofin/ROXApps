@@ -4,6 +4,16 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+23-Oct-2004
+~~~~~~~~~~~
+Added window counting (rox_add_window()) and rox_mainloop() to make use of
+it.
+
+27-Sep-2004
+~~~~~~~~~~~
+Added uri.h and rox_uri_launch() (and moved some stuff from rox_path
+there) to better handle launching URIs.  ROXInfoWin now uses it.
+
 13-Sep-2004
 ~~~~~~~~~~~
 Choices system will now use XDG base directories if you set the
@@ -188,4 +198,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.14 2004/09/13 11:29:30 stephen Exp $
+$Id: Changes,v 1.15 2004/09/25 10:58:28 stephen Exp $
