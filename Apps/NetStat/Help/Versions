@@ -1,6 +1,10 @@
 NetStat
 =======
 
+0.0.4
+-----
+Make better use of ROX-Lib2, including options window.  Support Solaris.
+
 0.0.3
 -----
 Reap the dead processes when we run the connect program.

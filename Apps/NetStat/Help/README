@@ -2,8 +2,9 @@ NetStat
 =======
 
 NetStat is a ROX applet for displaying the level of network activity.
-It does this by monitoring the file /proc/net/dev, which probably
-makes it Linux only.  It certainly won't work under Solaris.
+It does this by monitoring the file /proc/net/dev under Linix, or using the
+netstat command under Solaris.  For other OS's you could try editing 
+netstat.py.
 
 Requirements
 ------------
@@ -11,14 +12,15 @@ ROX-Lib2 <http://rox.sourceforge.net>
 
 Installation
 ------------
-To set up the program, first create the file
-       ~/Choices/NetStat/config
-containing a line such as
-       interface=ppp0
-You should substitute the name of your primary network interface
-instead of ppp0.  If you are on a dial-up connection add a line like
-       connect=xterm -e su -c wvdial
-which is a command which will initiate a connection.
+Copy the program to a useful location.
+
+To set up the program, run it then bring up the menu.  You need to enter the 
+name of your primary network interface (try running ifconfig -a to find it).
+If you are on a dial-up connection you can enter a command which will 
+bring up a connection, such as
+	xterm -e su -c wvdial
+or
+	ping my-isp
 
 Finally drag the NetStat icon to your panel.
 
@@ -49,6 +51,9 @@ Clicking button-3 on the display opens the menu.
 Clicking button-1 on the display executes the connect command, if you
 defined one.
 
+Clicking button-2 on the display executes the disconnect command, if you
+defined one.
+
 To Do
 -----
 Add config window.
@@ -58,5 +63,5 @@ Bugs
 ----
 Please report to Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id$
+$Id: README,v 1.1 2002/11/16 12:31:22 stephen Exp $
 

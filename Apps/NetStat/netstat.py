@@ -1,4 +1,4 @@
-# $Id$
+# $Id: netstat.py,v 1.1 2002/10/19 14:35:21 stephen Exp $
 
 """Interface to network statistics, under Linux.  The function stat() returns
 the data."""
@@ -12,12 +12,15 @@ import time
 # cmd="netstat -i"
 # cmd='date'
 
-def stat():
+def linux_stat():
     """Returns a dict containing the data, indexed by the interface name.
     Each entry is a tuple containg the received packet count and the
     transmitted packet count"""
     res={}
-    handle=open('/proc/net/dev', 'r')
+    try:
+        handle=open('/proc/net/dev', 'r')
+    except:
+        return None
     while 1:
         # print 'reading line from', handle
         line=string.strip(handle.readline())
@@ -49,6 +52,38 @@ def stat():
     if len(res.keys())<1:
         return None
     return res
+
+def solaris_stat():
+    try:
+        netstat=os.popen('netstat -i', 'r')
+    except:
+        return None
+    res={}
+    for line in netstat.readlines():
+        if line[:4]=='Name' or line[0]==' ':
+            continue
+        words=string.split(line)
+        if len(words)>6:
+            iname=words[0]
+            rpkts=int(words[4])
+            tpkts=int(words[6])
+            #print iname, rpkts, tpkts
+
+            res[iname]=(rpkts, tpkts)
+    netstat.close()
+    if len(res.keys())<1:
+        return None
+    return res
+
+def null_stat():
+    return None
+
+if sys.platform=='linux':
+    stat=linux_stat
+elif sys.platform=='sunos5':
+    stat=solaris_stat
+else:
+    stat=null_stat
 
 class IfNetStat:
     def __init__(self, name, rpkt, tpkt):
@@ -97,9 +132,12 @@ def test(iface='lo'):
     stats=NetStat()
     while 1:
         stats.update()
-        (rpkt, tpkt)=stats.getCurrent(iface)
-        # print res
-        print '%4s: %8d  %8d' % (iface, rpkt, tpkt)
+        res=stats.getCurrent(iface)
+        if res:
+            (rpkt, tpkt)=res
+            print '%4s: %8d  %8d' % (iface, rpkt, tpkt)
+        else:
+            print '%4s: not configured' % iface
         time.sleep(2)
 
 if __name__=='__main__':
