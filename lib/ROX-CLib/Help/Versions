@@ -1,6 +1,11 @@
 Changes to ROX-CLib by Version
 ==============================
 
+1.1.1
+-----
+Fixed reference in options.c from error() to rox_error()
+New icon provided by Geoff Youngs.
+
 1.1.0
 -----
 Converted to GTK+ 2.  Added options code from ROX-Filer.
