@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.12 2003/12/05 14:27:17 stephen Exp $
+# $Id: gui.py,v 1.13 2004/03/17 18:51:31 stephen Exp $
 
 import os
 import sys
@@ -71,6 +71,8 @@ connect=rox.options.Option('connect', select_cmd)
 disconnect=rox.options.Option('disconnect', adjust_cmd)
 medium_level=rox.options.Option('medium', levels[1])
 high_level=rox.options.Option('high', levels[0])
+medium_K=rox.options.Option('medium_K', levels2[1])
+high_K=rox.options.Option('high_K', levels2[0])
 win_size=rox.options.Option('wsize', wsize)
 
 ifdisp=None
@@ -92,6 +94,10 @@ def options_changed():
         levels[1]=medium_level.int_value
     if high_level.has_changed:
         levels[0]=high_level.int_value
+    if medium_K.has_changed:
+        levels2[1]=medium_K.int_value
+    if high_K.has_changed:
+        levels2[0]=high_K.int_value
     if win_size.has_changed and win:
         win.set_size_request(win_size.int_value, win_size.int_value)
 
@@ -125,11 +131,13 @@ vbox.pack_start(ifdisp, g.FALSE, g.FALSE)
 # Menu
 rox.Menu.set_save_name('NetStat')
 menu=rox.Menu.Menu('main', [
-    ('/Info', 'show_info', ''),
+    ('/Info', 'show_info', '<StockItem>', '', g.STOCK_DIALOG_INFO),
+    ('/sep', '', '<Separator>'),
     ('/Active sockets...', 'show_active', ''),
     ('/All sockets...', 'show_all', ''),
-    ('/Options...', 'edit_options', ''),
-    ('/Quit', 'do_quit', '')
+    ('/Options...', 'edit_options', '<StockItem>', '', g.STOCK_PREFERENCES),
+    ('/sep', '', '<Separator>'),
+    ('/Quit', 'do_quit', '<StockItem>', '', g.STOCK_QUIT)
     ])
 
 class MenuHelper:
