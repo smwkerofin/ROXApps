@@ -1,0 +1,531 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+import findrox; findrox.version(1, 9, 9)
+#print sys.path
+import rox
+import rox.choices
+import rox.mime
+#import rox.loading
+from xml.dom import Node, minidom, XML_NAMESPACE
+
+def node_text(node):
+        """Return all the text directly inside this DOM Node."""
+        return ''.join([text.nodeValue for text in node.childNodes
+                        if text.nodeType == Node.TEXT_NODE])
+
+if not rox.choices.paths[0]:
+    choices_locked=True
+else:
+    choices_locked=False
+
+def type_name(media, subtype=None):
+    type=rox.mime.lookup(media, subtype)
+    return '%s (%s)' % (type.get_comment(), type)
+
+class Window(rox.Window):
+    def __init__(self, app_dir):
+        rox.Window.__init__(self)
+        self.dir=app_dir
+        self.aname=os.path.basename(app_dir)
+
+        self.set_title('ROX-Register %s' % os.path.basename(app_dir))
+
+        vbox=rox.g.VBox()
+        self.add(vbox)
+        vbox.show()
+
+        l=rox.g.Label(app_dir)
+        vbox.pack_start(l)
+        l.show()
+        
+        s=rox.g.HSeparator()
+        vbox.pack_start(s)
+        s.show()
+
+        self.msg=rox.g.Label('')
+        vbox.pack_start(self.msg)
+        self.msg.set_use_markup(True)
+        self.msg.show()
+        
+        self.question=rox.g.Label('')
+        vbox.pack_start(self.question)
+        self.question.set_use_markup(True)
+        self.question.show()
+        
+        s=rox.g.HSeparator()
+        vbox.pack_start(s)
+        s.show()
+
+        self.buttons=rox.g.HButtonBox()
+        vbox.pack_start(self.buttons)
+
+        self.cancel=rox.g.Button(stock=rox.g.STOCK_CANCEL)
+        self.cancel.connect('clicked', self.do_cancel)
+        self.buttons.pack_end(self.cancel, False, True)
+
+        self.no=rox.g.Button(stock=rox.g.STOCK_NO)
+        self.no.connect('clicked', self.answer_no)
+        self.buttons.pack_end(self.no, False, True)
+        
+        self.yes=rox.g.Button(stock=rox.g.STOCK_YES)
+        self.yes.connect('clicked', self.answer_yes)
+        self.buttons.pack_end(self.yes, False, True)
+        
+        self.ok=rox.g.Button(stock=rox.g.STOCK_OK)
+        self.ok.connect('clicked', self.do_ok)
+        self.buttons.pack_end(self.ok, False, True)
+        
+        self.buttons.set_layout(rox.g.BUTTONBOX_END)
+        self.buttons.show_all()
+
+        self.set_position(rox.g.WIN_POS_CENTER)
+        self.hide_buttons()
+
+        self.actions=[]
+        self.completed=[]
+        self.unresolved=[]
+        self.doc=None
+        self.answer=None
+        self.schedule(self.begin)
+
+    def do_cancel(self, ignored):
+        rox.alert('Registration cancelled, no action taken')
+        self.destroy()
+        rox.g.main_quit()
+
+    def hide_buttons(self):
+        self.ok.hide()
+        self.yes.hide()
+        self.no.hide()
+        #self.cancel.hide()
+
+    def all_done(self, msg):
+        self.message(msg)
+        self.question.hide()
+        self.hide_buttons()
+
+    def ask(self, qs):
+        self.question.set_markup(qs)
+        self.ok.hide()
+        self.yes.show()
+        self.no.show()
+
+        self.answer=None
+        rox.g.main()
+        
+        self.hide_buttons()
+        self.question.set_text('')
+
+        return self.answer
+
+    def answer_yes(self, ignored):
+        self.answer=1
+        rox.g.main_quit()
+
+    def answer_no(self, ignored):
+        self.answer=0
+        rox.g.main_quit()
+
+    def pause(self, msg):
+        self.question.set_text(msg)
+        self.ok.show()
+        self.yes.hide()
+        self.no.hide()
+
+        #print 'do pause'
+        rox.g.main()
+        #print 'done pause'
+        
+        self.hide_buttons()
+        self.question.set_text('')
+
+        return self.answer
+
+    def do_ok(self, ignored):
+        rox.g.main_quit()
+
+    def message(self, msg):
+        self.msg.set_markup(msg)
+
+    def begin(self, ignored):
+        self.message('Checking %s' % self.dir)
+        
+        fname=os.path.join(self.dir, 'AppInfo.xml')
+        if os.access(fname, os.F_OK)!=1:
+            self.all_done('%s has no AppInfo.xml file,\nnothing to do.'
+                          % self.aname)
+            return
+        if os.access(fname, os.R_OK)!=1:
+            self.all_done('%s\'s  AppInfo.xml file is not readable.'
+                          % self.aname)
+            return
+
+        self.schedule(self.read_appinfo)
+
+    def schedule(self, func, arg=None):
+        #print 'schedule %s %s' % (func, arg)
+        rox.g.timeout_add(250, func, arg)
+
+    def read_appinfo(self, ignored):
+        self.message('Checking %s/AppInfo.xml' % self.aname)
+
+        try:
+            fname=os.path.join(self.dir, 'AppInfo.xml')
+            self.doc=minidom.parse(fname)
+        except:
+            self.all_done('Failed to read AppInfo.xml\n%s: %s'
+                          % sys.exc_info()[:2])
+
+        self.schedule(self.scan_appinfo)
+
+    def scan_appinfo(self, ignored):
+        assert self.doc!=None
+
+        self.depend_nodes=self.doc.getElementsByTagName('Depends')
+        self.run_nodes=self.doc.getElementsByTagName('CanRun')
+        self.thumb_nodes=self.doc.getElementsByTagName('CanThumbnail')
+
+        if len(self.depend_nodes)>0:
+            self.schedule(self.check_depends)
+        elif len(self.run_nodes)>0:
+            self.schedule(self.check_run)
+        elif len(self.run_nodes)>0:
+            self.schedule(self.check_thumb)
+        else:
+            self.add_done('%s has declared no dependencies or types' %
+                          self.aname)
+
+    def check_this_depends(self, sub):
+        if sub.localName=='AppDir':
+            finder=find_app_dir
+            type='AppDir'
+        elif sub.localName=='Program':
+            finder=find_program
+            type='Program'
+        elif sub.localName=='Library':
+            finder=find_library
+            type='Library'
+                
+        name=node_text(sub.getElementsByTagName('Name')[0])
+        if finder(name):
+            self.message('Dependency <b>%s</b> OK' % name)
+            self.completed.append('Dependency %s <b>%s</b> OK' % (type, name))
+        else:
+            self.message('%s <b>%s</b> not found' % (type, name))
+            self.pause('<b>%s</b> might not run properly'
+                       % self.aname)
+            self.unresolved.append('Dependency on %s <b>%s</b>' % (type, name))
+        
+    def check_depends(self, ignored):
+        self.message('Checking dependencies')
+        for node in self.depend_nodes:
+            for sub in node.childNodes:
+                if sub.nodeType!=Node.ELEMENT_NODE:
+                    continue
+
+                try:
+                    self.check_this_depends(sub)
+                            
+                except:
+                    rox.report_exception()
+                    
+        if len(self.run_nodes)>0:
+            self.schedule(self.check_run)
+        elif len(self.run_nodes)>0:
+            self.schedule(self.check_thumb)
+        else:
+            #print 'self.schedule(self.final_report)'
+            self.schedule(self.final_report)
+        #print 'done check_depends'
+
+    def ask_change(self, isthumb, type):
+        if isthumb:
+            dir='MIME-thumb'
+            kind='thumbnailer'
+        else:
+            dir='MIME-types'
+            kind='handler'
+        handler=find_handler(dir, type)
+
+        if not handler:
+            state='No %s for this type is currently defined' % kind
+        else:
+            if handler.isUser():
+                state='You already have a %s ' % kind
+            else:
+                state='The system has a %s ' % kind
+                        
+            if handler.isGeneric():
+                state+='for type <b>%s/*</b>' % handler.media
+            else:
+                state+='for type <b>%s</b>' % type_name(handler.media,
+                                                     handler.subtype)
+
+            state+='\n'+str(handler)
+
+        message='%s offers to run files of type <b>%s</b>.\n' % (self.aname,
+                                                                 type_name(type))
+        self.message(message+state)
+        change=self.ask('Do you want to set %s as the handler?' % self.aname)
+        if change and choices_locked:
+            rox.alert('Cannot change, see your system admin')
+            change=False
+        return change
+
+    def check_run(self, ignored):
+        for node in self.run_nodes:
+            for tnode in node.getElementsByTagName('mime-type'):
+                #print tnode
+                type=node_text(tnode)
+                arg=tnode.getAttribute('arg')
+                #print type, arg
+
+                change=self.ask_change(False, type)
+
+                if change:
+                    self.actions.append(Action(self.dir, 'MIME-types',
+                                               type, arg))
+                else:
+                    self.unresolved.append('Run <b>%s</b> files' % type_name(type))
+                
+        if len(self.thumb_nodes)>0:
+            self.schedule(self.check_thumb)
+        else:
+            self.schedule(self.confirm_changes)
+        
+    def check_thumb(self, ignored):
+        for node in self.thumb_nodes:
+            for tnode in node.getElementsByTagName('mime-type'):
+                #print tnode
+                type=node_text(tnode)
+                arg=tnode.getAttribute('arg')
+                #print type, arg
+
+                change=self.ask_change(True, type)
+
+                if change:
+                    self.actions.append(Action(self.dir, 'MIME-thumb',
+                                               type, arg))
+                else:
+                    self.unresolved.append('Thumbnail <b>%s</b> files' % type_name(type))
+                
+                
+        self.schedule(self.confirm_changes)
+
+    def confirm_changes(self, ignored):
+        if len(self.actions)<1:
+            self.schedule(self.final_report)
+            return
+
+        msg='Changes to make\n'
+        for a in self.actions:
+            msg+='  '+str(a)+'\n'
+        self.message(msg)
+
+        if not self.ask('Commit these changes?'):
+            for a in self.actions:
+                self.unresolved.append(str(a))
+
+            self.schedule(self.final_report)
+        else:
+            self.schedule(self.run_actions)
+            
+    def run_actions(self, ignored):
+        for action in self.actions:
+            try:
+                action.perform()
+                self.completed.append(str(action))
+            except:
+                exc=sys.exc_info()[:2]
+                self.unresolved.append('<b>Failed</b> %s: %s %s' %
+                                       action, exc[0], exc[1])
+                
+        self.schedule(self.final_report)
+    
+    def final_report(self, ignored):
+        msg='Finished.\n'
+        if len(self.completed):
+            msg+='The following actions were completed:'
+            for t in self.completed:
+                msg+='\n  '+t
+        if len(self.unresolved):
+            msg+='\nThe following actions were unresolved:'
+            for t in self.unresolved:
+                msg+='\n  '+t
+
+        self.all_done(msg)
+        self.cancel.hide()
+        self.ok.show()
+        def done(button, self):
+            self.destroy()
+        self.ok.connect('clicked', done, self)
+
+def find_app_dir(name, version=None):
+    try:
+        path=os.environ['LIBDIRPATH']
+        paths=path.split(':')
+    except KeyError:
+        paths=[os.environ['HOME']+'/lib', '/usr/local/lib', '/usr/lib']
+
+    for p in paths:
+        p=os.path.join(p, name, 'AppRun')
+        if os.access(p, os.X_OK):
+            return True
+    return False
+
+def find_program(name, version=None):
+    try:
+        path=os.environ['PATH']
+        paths=path.split(':')
+    except KeyError:
+        paths=['/usr/bin']
+
+    for p in paths:
+        p=os.path.join(p, name)
+        if os.access(p, os.X_OK):
+            return True
+    return False
+
+def find_library(name, version=None):
+    try:
+        path=os.environ['LD_LIBRARY_PATH']+':/usr/lib'
+        paths=path.split(':')
+    except KeyError:
+        paths=['/usr/lib', '/lib']
+
+    for p in paths:
+        p=os.path.join(p, 'lib'+name+'.so')
+        if os.access(p, os.X_OK):
+            return True
+    return False
+
+class Handler:
+    def __init__(self, path, media, subtype):
+        self.path=path
+        self.media=media
+        self.subtype=subtype
+
+    def isUser(self):
+        acdir=os.path.dirname(self.path)
+        cdir=os.path.dirname(acdir)
+        #print self.path, acdir
+        #print cdir, rox.choices.paths[0]
+        if os.path.abspath(cdir)==os.path.abspath(rox.choices.paths[0]):
+            return True
+        return False
+
+    def isGeneric(self):
+        return self.subtype is None
+
+    def __str__(self):
+        arun=os.path.join(self.path, 'AppRun')
+        if os.access(arun, os.X_OK)==1:
+            if os.path.islink(self.path):
+                dest=os.readlink(self.path)
+                app=os.path.basename(dest)
+                if app=="":
+                    app=os.path.basename(os.path.dirname(dest))
+                return 'AppDir %s' % app
+            return 'AppDir'
+
+        if os.path.islink(self.path):
+            return 'Symbolic link to %s' % os.readlink(self.path)
+        
+        if os.path.getsize(self.path)<=160 and len(file(self.path).readlines())<=2:
+            return 'Short shell script'
+
+        first=file(self.path).readline()
+        if first and len(first)>2 and first[:2]=='#!':
+            return first[2:]+' shell script'
+        return 'Program'
+        
+        
+def find_handler(dir, tname):
+    media, subtype=tname.split('/', 1)
+    if subtype=='*' or subtype=='':
+        subtype=None
+    path=None
+    if subtype:
+        path=rox.choices.load(dir, '%s_%s' % (media, subtype))
+    if path is None:
+        subtype=None
+        path=rox.choices.load(dir, media)
+    if path:
+        return Handler(path, media, subtype)
+
+class Action:
+    def __init__(self, app, dir, type, arg=None):
+        if type.find('/')>=0:
+            media, subtype=type.split('/', 1)
+            if subtype=='*' or subtype=='':
+                subtype=None
+        else:
+            media=type
+            subtype=None
+        self.app=app
+        #self.dir=dir
+        self.media=media
+        self.subtype=subtype
+        self.arg=arg
+
+        if subtype:
+            leaf='%s_%s' % (media, subtype)
+        else:
+            leaf=media
+        self.path=rox.choices.save(dir, leaf)
+
+        if dir=='MIME-thumb':
+            self.kind='thumbnail'
+        else:
+            self.kind='run'
+
+    def __str__(self):
+        s='Set %s handler for %s to ' % (self.kind, type_name(self.media,
+                                                              self.subtype))
+        #print self.app
+        if self.arg:
+            s+=self.app+' '+self.arg
+        else:
+            s+=self.app
+        return s
+
+    def perform(self):
+        assert self.path is not None
+        assert self.app is not None
+        
+        tmp=self.path+'.register-tmp'
+
+        if self.arg:
+            f=file(tmp, 'w')
+            f.write('#!/bin/sh\n')
+            if self.kind=='run':
+                f.write('exec %s/AppRun %s "$@"\n' % (self.app, self.arg))
+            else:
+                f.write('exec %s/AppRun %s "$1" "$2" "$3"\n' %
+                        (self.app, self.arg))
+            f.close()
+            os.chmod(tmp, 0755)
+            
+        else:
+            os.symlink(self.app, tmp)
+
+        os.rename(tmp, self.path)
+
+try:
+    win=Window(sys.argv[1])
+except IndexError:
+    rox.alert('ROX-Register needs the AppDir as an argument')
+    sys.exit(2)
+except:
+    rox.report_exception()
+    sys.exit(1)
+
+win.show()
+try:
+    rox.mainloop()
+except:
+    rox.report_exception()
+    sys.exit(3)
