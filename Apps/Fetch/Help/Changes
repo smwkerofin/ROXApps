@@ -1,6 +1,11 @@
 Fetch
 =====
 
+14-Mar-2005
+~~~~~~~~~~~
+Standardized options (added app menu entry).  Shorter delays when connecting.
+Updated dclient.py.
+
 05-Mar-2005
 ~~~~~~~~~~~
 Take care when filename has no '.' in it.
@@ -80,4 +85,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.18 2005/02/19 11:49:15 stephen Exp $
+$Id: Changes,v 1.19 2005/03/10 21:56:06 stephen Exp $
