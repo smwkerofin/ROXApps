@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.2 2001/05/16 11:02:17 stephen Exp $
+ * $Id: alarm.c,v 1.3 2001/05/24 09:10:04 stephen Exp $
  */
 #include "config.h"
 
@@ -12,6 +12,10 @@
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
+
+#ifdef HAVE_LIBINTL_H
+#include <libintl.h>
 #endif
 
 #include <gtk/gtk.h>
@@ -319,10 +323,11 @@ static void show_message(const Alarm *alarm)
   gdk_beep();
 }
 
-void alarm_check(void)
+int alarm_check(void)
 {
   GList *rover;
   time_t now;
+  int nraise=0;
 
   check_alarms_file();
 
@@ -335,6 +340,7 @@ void alarm_check(void)
       time_t next;
       
       show_message(alarm);
+      nraise++;
 
       alarms=g_list_remove_link(alarms, rover);
       next=alarm->when;
@@ -351,6 +357,8 @@ void alarm_check(void)
       continue;
     }
   }
+
+  return nraise;
 }
 
 /* Make a destroy-frame into a close */
@@ -468,7 +476,7 @@ static GtkWidget *make_alarm_window(void)
   int mw=0, mh=0;
   int i;
 
-  static gchar *titles[3]={"Time", "Repeat", "Message"};
+  static gchar *titles[3]={N_("Time"), N_("Repeat"), N_("Message")};
   
   win=gtk_dialog_new();
   gtk_signal_connect(GTK_OBJECT(win), "delete_event", 
@@ -543,7 +551,7 @@ static GtkWidget *make_alarm_window(void)
   gtk_widget_show(hour);
   gtk_box_pack_start(GTK_BOX(hbox), hour, FALSE, FALSE, 2);
     
-  label=gtk_label_new(_("/"));
+  label=gtk_label_new(_(":"));
   gtk_widget_show(label);
   gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
     
@@ -666,6 +674,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.3  2001/05/24 09:10:04  stephen
+ * Fixed bug in repeating alarms
+ *
  * Revision 1.2  2001/05/16 11:02:17  stephen
  * Added repeating alarms.
  * Menu supported on applet (compile time option).
