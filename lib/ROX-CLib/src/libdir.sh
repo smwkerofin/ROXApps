@@ -2,7 +2,7 @@
 #
 # Locate a named AppDir in LIBDIRPATH, optionally checking version
 #
-# $Id: libdir.sh,v 1.1 2004/05/31 10:47:35 stephen Exp $
+# $Id: libdir.sh,v 1.2 2004/06/21 21:10:06 stephen Exp $
 
 prog=`basename $0`
 
@@ -19,12 +19,18 @@ fi
 path="@DEFAULT_PATH@"
 
 usage() {
-  echo "$prog [--version x.y.z] [--libdir|--appdir|--path PATH] App" >&2
+  echo "$prog [--version x.y.z] [--libdir|--appdir|--path PATH]" >&2
+  echo " [--0install site] [--append-path dir] [--prepend-path dir] App" >&2
+  echo "where" >&2
   echo "  --version x.y.z    only look for verison x.y.z or later" >&2
   echo "  --libdir           use LIBDIRPATH $LIBDIRPATH" >&2
   echo "  --appdir           use APPDIRPATH $APPDIRPATH" >&2
   echo "  --path PATH        use given PATH" >&2
-  echo "   (default is $path)"
+  echo "  --0install site    look on the Zero Install site, if available" >&2
+  echo "  --append-path dir  append dir onto the current path" >&2
+  echo "  --prepend-path dir prepend dir onto the current path" >&2
+  echo "   (default is $path)" >&2
+  echo "  App                Application or library to find"  >&2
 
   exit 3
 }
@@ -34,6 +40,12 @@ if [ x"$1" = x ]; then
 fi
 
 rver=
+
+if [ "$prog" = "libdir" ]; then
+  zero_dir=lib
+else
+  zero_dir=apps
+fi
 
 case "$1" in 
   --version) 
@@ -49,10 +61,13 @@ case "$1" in
    path="$2"
    shift 2;;
   --append-path)
-   path="$PATH:$2"
+   path="$path:$2"
    shift 2;;
   --prepend-path)
-   path="$2:$PATH"
+   path="$2:$path"
+   shift 2;;
+  --0install)
+   path="$path:/uri/0install/$2/${zero_dir}"
    shift 2;;
 esac
 if [ x"$1" = x ]; then
