@@ -1,6 +1,10 @@
 Changes to ROX-CLib by Version
 ==============================
 
+0.2.3
+-----
+Another fix for libxml.
+
 0.2.2
 -----
 Applet menu positioning code changed, old version made too many assumptions.
