@@ -15,5 +15,9 @@
 #define LIB_WEBSITE ROXCLIB_WEBSITE
 #endif
 
+#undef HAVE_LIBNSL
+#undef HAVE_MKDIR
+#undef HAVE_GETHOSTBYNAME
+
 #define _(String) (String)
 #define N_(String) (String)
