@@ -1,4 +1,4 @@
-# $Id: netstat.py,v 1.1 2002/10/19 14:35:21 stephen Exp $
+# $Id: netstat.py,v 1.2 2002/12/14 17:25:47 stephen Exp $
 
 """Interface to network statistics, under Linux.  The function stat() returns
 the data."""
@@ -78,7 +78,7 @@ def solaris_stat():
 def null_stat():
     return None
 
-if sys.platform=='linux':
+if sys.platform=='linux' or sys.platform=='linux2':
     stat=linux_stat
 elif sys.platform=='sunos5':
     stat=solaris_stat

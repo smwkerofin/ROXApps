@@ -1,6 +1,10 @@
 NetStat
 =======
 
+0.0.5
+-----
+Fix bug that broke Linux support.
+
 0.0.4
 -----
 Make better use of ROX-Lib2, including options window.  Support Solaris.
