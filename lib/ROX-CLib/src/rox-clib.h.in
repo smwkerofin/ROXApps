@@ -15,7 +15,6 @@
 #define LIB_WEBSITE ROXCLIB_WEBSITE
 #endif
 
-#undef GTK_CONFIG
 #undef PKG_CONFIG
 #undef GTK_CFLAGS
 #undef GTK_LIBS
@@ -27,8 +26,10 @@
 #undef HAVE_XML
 #undef GTK2
 
+#ifndef _
 #define _(String) (String)
 #define N_(String) (String)
+#endif
 
 #ifdef GTK2
 # define GTK_WINDOW_DIALOG GTK_WINDOW_TOPLEVEL

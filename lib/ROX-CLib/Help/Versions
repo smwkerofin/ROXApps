@@ -1,6 +1,10 @@
 Changes to ROX-CLib by Version
 ==============================
 
+1.1.0
+-----
+Converted to GTK+ 2.
+
 1.0.0
 -----
 This is the same as 0.2.3, except for the new HTML help file.  The version

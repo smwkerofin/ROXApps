@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.5 2002/04/29 08:17:25 stephen Exp $
+ * $Id: rox_soap.c,v 1.6 2002/07/31 17:17:44 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -25,9 +25,7 @@
 #include <gtk/gtk.h>
 #include <gtk/gtkinvisible.h>
 
-#ifdef HAVE_XML
 #include <libxml/parser.h>
-#endif
 
 #include "rox_soap.h"
 #include "error.h"
@@ -96,7 +94,6 @@ last_error=last_error_buffer;return;}}while(0);
 do{if(!(expr)){sprintf(last_error_buffer,"assertion '%s' failed",#expr); \
 last_error=last_error_buffer;return val;}}while(0);
 
-#ifdef HAVE_XML
 void rox_soap_init(void)
 {
   gchar *id;
@@ -333,6 +330,23 @@ static gboolean get_ipc_property(GdkWindow *window, GdkAtom atom,
 	return retval;
 }
 
+static GdkWindow *new_ipc_window(GdkAtom atom)
+{
+  Window		xid, xid_confirm;
+  GdkWindow	*window;
+
+  dprintf(3, "gdk_window_foreign_new %p", xid);
+  window = gdk_window_foreign_new(xid);
+  if (!window)
+    return NULL;
+  
+  dprintf(3, "get_ipc_property %p %p %p", window, atom, xid);
+  if (!get_ipc_property(window, atom, &xid_confirm) || xid_confirm!=xid)
+    return NULL;
+  
+  return window;
+}
+
 /* Get the remote IPC window of the already-running server if there
  * is one.
  */
@@ -399,14 +413,19 @@ static void soap_done(GtkWidget *widget, GdkEventProperty *event,
   SoapData *sdata=(SoapData *) data;
   xmlDocPtr reply=NULL;
 
+  dprintf(3, "soap_done(%p, %p, %p)", widget, event, data);
+
   dprintf(2, "soap_done %p vs %p", sdata->prop, event->atom);
 
   if(sdata->prop != event->atom)
     return;
 
-  dprintf(2, "soap_done");
-  gtk_timeout_remove(sdata->timeout_tag);
+  /*dprintf(3, "soap_done, remove %u", sdata->timeout_tag);
+    gtk_timeout_remove(sdata->timeout_tag);*/
+  /* Clear the timeout tag, serves as a flag to indicate we were succesful */
+  sdata->timeout_tag=0;
 
+  dprintf(3, "%d==%d?", event->state, GDK_PROPERTY_NEW_VALUE);
   if(event->state==GDK_PROPERTY_NEW_VALUE) {
     gint length;
     gpointer dat;
@@ -417,32 +436,49 @@ static void soap_done(GtkWidget *widget, GdkEventProperty *event,
       dprintf(3, "data=%s", dat);
     reply=xmlParseMemory(dat, length);
     g_free(dat);
+
+    /* Delete the data */
+    dprintf(3, "delete %d", event->atom);
+    gdk_property_delete(event->window, event->atom);
   }
 
+  dprintf(3, "sdata->callback=%p: %p(%p, %d, %p, %p)",
+	  sdata->callback, sdata->callback, sdata->filer, TRUE, reply,
+	  sdata->data);
   if(sdata->callback)
     sdata->callback(sdata->filer, TRUE, reply, sdata->data);
 
   if(reply)
     xmlFreeDoc(reply);
+  
+  dprintf(3, "unref %p", sdata->widget);
   gtk_widget_unref(sdata->widget);
-  g_free(sdata);
+  /*g_free(sdata);*/
 }
 
 gboolean too_slow(gpointer data)
 {
   SoapData *sdata=(SoapData *) data;
 
-  dprintf(2, "too_slow");
-  sprintf(last_error_buffer, "SOAP timed out");
-  last_error=last_error_buffer;
+  if(sdata->timeout_tag) {
+    /* Handler wasn't called */
+    dprintf(2, "too_slow");
+    sprintf(last_error_buffer, "SOAP timed out");
+    last_error=last_error_buffer;
 
-  if(sdata->callback)
-    sdata->callback(sdata->filer, FALSE, NULL, sdata->data);
-
+    if(sdata->callback)
+      sdata->callback(sdata->filer, FALSE, NULL, sdata->data);
+  }
+  
   gtk_widget_unref(sdata->widget);
-  g_free(sdata);
 
   return FALSE;
+}
+
+static void destroy_ipc_window(GtkWidget *ipc_window, SoapData *sdata)
+{
+  dprintf(3, "destroy_ipc_window(%p, %p)", ipc_window, sdata);
+  g_free(sdata);
 }
 
 gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
@@ -463,7 +499,17 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
     rox_soap_init();
 
   ipc_window = gtk_invisible_new();
+  dprintf(2, "ipc_window=%p ref=%d", ipc_window,
+	  G_OBJECT(ipc_window)->ref_count);
   gtk_widget_realize(ipc_window);
+  dprintf(2, "ipc_window=%p ref=%d", ipc_window,
+	  G_OBJECT(ipc_window)->ref_count);
+  /*gtk_widget_ref(ipc_window);
+  dprintf(2, "ipc_window=%p ref=%d", ipc_window,
+	  G_OBJECT(ipc_window)->ref_count);
+  gtk_object_sink(GTK_OBJECT(ipc_window));
+  dprintf(2, "ipc_window=%p ref=%d", ipc_window,
+  G_OBJECT(ipc_window)->ref_count);*/
 
   if(!filer->existing_ipc_window)
     filer->existing_ipc_window=get_existing_ipc_window(filer->atom);
@@ -474,8 +520,10 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
     return FALSE;
   }
 
-  if(!filer->existing_ipc_window)
+  if(!filer->existing_ipc_window) {
+    gtk_widget_unref(ipc_window);
     return rox_soap_send_via_pipe(filer, doc, callback, udata);
+  }
 
   xmlDocDumpMemory(doc, &mem, &size);
   if(size<0) {
@@ -505,13 +553,8 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   dprintf(3, "event->data.l={%p, %p}", event.data.l[0], event.data.l[1]);
 	
   gtk_widget_add_events(ipc_window, GDK_PROPERTY_CHANGE_MASK);
-#ifdef GTK2
   g_signal_connect(ipc_window, "property-notify-event",
 		     G_CALLBACK(soap_done), sdata);
-#else
-  gtk_signal_connect(GTK_OBJECT(ipc_window), "property-notify-event",
-		     GTK_SIGNAL_FUNC(soap_done), sdata);
-#endif
   
   dprintf(2, "sending message %p to %p", event.message_type,
 	  filer->existing_ipc_window);
@@ -520,6 +563,8 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   dprintf(3, "sent message to %p",
 	  GDK_WINDOW_XWINDOW(filer->existing_ipc_window));
 
+  g_signal_connect(ipc_window, "destroy",
+		     G_CALLBACK(destroy_ipc_window), sdata);
   sdata->timeout_tag=gtk_timeout_add(filer->timeout, too_slow, sdata);
 }
 
@@ -648,36 +693,6 @@ void rox_soap_set_timeout(ROXSOAP *filer, guint ms)
   else
     timeout=ms;
 }
-#else /* HAVE_XML */
-void rox_soap_init(void)
-{
-  strcpy(last_error_buffer, "XML not available, SOAP support disabled");
-  last_error=last_error_buffer;
-}
-
-gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
-			      rox_soap_callback callback, gpointer udata)
-{
-  strcpy(last_error_buffer, "XML not available, SOAP support disabled");
-  last_error=last_error_buffer;
-  return FALSE;
-}
-
-void rox_soap_set_timeout(ROXSOAP *filer, guint ms)
-{
-  strcpy(last_error_buffer, "XML not available, SOAP support disabled");
-  last_error=last_error_buffer;
-}
-
-gboolean rox_soap_send_via_pipe(ROXSOAP *filer, xmlDocPtr doc, 
-				rox_soap_callback callback, gpointer udata)
-{
-  strcpy(last_error_buffer, "XML not available, SOAP support disabled");
-  last_error=last_error_buffer;
-  return FALSE;
-}
-
-#endif /* HAVE_XML */
 
 const char *rox_soap_get_last_error(void)
 {
@@ -694,6 +709,9 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.6  2002/07/31 17:17:44  stephen
+ * Use approved method of including libxml headers.
+ *
  * Revision 1.5  2002/04/29 08:17:25  stephen
  * Fixed applet menu positioning (didn't work if program was managing more than
  * one applet window)

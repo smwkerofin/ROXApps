@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.7 2002/03/19 08:29:18 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.8 2002/07/31 17:17:21 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -9,35 +9,7 @@
 #include <stdio.h>
 
 #include <glib.h>
-#ifdef HAVE_XML
 #include <libxml/parser.h>
-#else
-
-/* Fake the XML stuff */
-typedef struct {
-  char *href;
-} xmlNs;
-typedef xmlNs *xmlNsPtr;
-typedef struct {
-  xmlNode *xmlChildrenNode;
-  int type;
-  char *name;
-  xmlNsPtr ns;
-} xmlNode;
-typedef xmlNode *xmlNodePtr;
-typedef struct {
-  xmlNodePtr children;
-} xmlDoc;
-typedef xmlDoc *xmlDocPtr;
-#define xmlNewDoc(ver) (NULL)
-#define xmlNewDocNode(d, ns, root, t) (NULL)
-#define xmlSetNs(node, ns)
-#define xmlNewChild(node, ns, elem, content) (NULL)
-#define xmlFreeDoc(doc)
-#define xmlDocGetRootElement(doc) (NULL)
-#define xmlNodeGetContent(node) ("")
-
-#endif
 
 #include "rox_soap.h"
 #include "error.h"
@@ -92,7 +64,7 @@ static void expect_no_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
 static void send_soap(xmlDocPtr rpc, rox_soap_callback callback,
 		      gpointer udata)
 {
-  struct fa_data data;
+  static struct fa_data data;
   
   data.status=FALSE;
   data.udata=udata;
@@ -100,10 +72,12 @@ static void send_soap(xmlDocPtr rpc, rox_soap_callback callback,
   rox_soap_send(filer, rpc, TRUE, callback, &data);
   dprintf(3, "status=%d", data.status);
 
+  dprintf(2, "Entering gtk_main() for rox_soap_send");
   gtk_main();
   dprintf(3, "status=%d", data.status);
   if(!data.status) {
     rox_soap_send_via_pipe(filer, rpc, callback, &data);
+    dprintf(2, "Entering gtk_main() for rox_soap_send_via_pipe");
     gtk_main();
     dprintf(3, "status=%d", data.status);
   }
@@ -356,6 +330,8 @@ static void string_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
   struct fa_data *data=(struct fa_data *) udata;
   static gchar *resp=NULL;
 
+  g_return_if_fail(data->udata!=NULL);
+  
   if(resp)
     g_free(resp);
   resp=g_strconcat((gchar *) data->udata, "Response", NULL);
@@ -419,7 +395,9 @@ static void string_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
     last_error=last_error_buffer;
   }
 
+  dprintf(2, "calling gtk_main_quit() from string_reply");
   gtk_main_quit();
+  dprintf(2, "returning from string_reply");
 }
 
 char *rox_filer_file_type(const char *file)
@@ -485,6 +463,9 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.8  2002/07/31 17:17:21  stephen
+ * Use approved method of including libxml headers.
+ *
  * Revision 1.7  2002/03/19 08:29:18  stephen
  * Added SOAP server (rox_soap_server.h).  SOAP client can connect to programs
  * other than ROX-Filer.

@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap_server.c,v 1.2 2002/04/29 08:17:25 stephen Exp $
+ * $Id: rox_soap_server.c,v 1.3 2002/07/31 17:17:30 stephen Exp $
  *
  * rox_soap_server.c - Provide ROX-Filer like SOAP server
  *
@@ -25,9 +25,7 @@
 #include <gtk/gtk.h>
 #include <gtk/gtkinvisible.h>
 
-#ifdef HAVE_XML
 #include <libxml/parser.h>
-#endif
 
 #define DEBUG 1
 #include "rox.h"
@@ -87,13 +85,8 @@ ROXSOAPServer *rox_soap_server_new(const char *program_name,
 		      gdk_x11_xatom_to_atom(XA_WINDOW), 32,
 		      GDK_PROP_MODE_REPLACE,
 		      (void *) &xwindow, 1);
-#ifdef GTK2
   g_signal_connect(server->ipc_window, "client-event",
 		     G_CALLBACK(client_event), server);
-#else
-  gtk_signal_connect(GTK_OBJECT(server->ipc_window), "client-event",
-		     GTK_SIGNAL_FUNC(client_event), server);
-#endif
   gdk_property_change(GDK_ROOT_PARENT(), server->atom,
 		      gdk_x11_xatom_to_atom(XA_WINDOW), 32,
 		      GDK_PROP_MODE_REPLACE,

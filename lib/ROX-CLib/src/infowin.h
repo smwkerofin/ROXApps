@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id$
+ * $Id: infowin.h,v 1.1.1.1 2001/05/29 14:09:59 stephen Exp $
  */
 
 #ifndef __INFO_WIN_H__
@@ -45,7 +45,7 @@ struct _InfoWinClass
   GtkDialogClass parent_class;
 };
 
-extern GtkType    info_win_get_type (void);
+extern GType    info_win_get_type (void);
 extern GtkWidget* info_win_new(const gchar *program, const gchar *purpose,
 				const gchar *version, const gchar *author,
 				const gchar *website);
@@ -58,5 +58,8 @@ extern void info_win_add_browser_command(InfoWin *iw, const gchar *cmd);
 #endif
 
 /*
- * $Log$
+ * $Log: infowin.h,v $
+ * Revision 1.1.1.1  2001/05/29 14:09:59  stephen
+ * Initial version of the library
+ *
  */

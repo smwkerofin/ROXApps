@@ -1,12 +1,13 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.4 2001/08/29 13:36:36 stephen Exp $
+ * $Id: rox_dnd.c,v 1.5 2002/04/29 08:17:25 stephen Exp $
  */
 
 #include "rox-clib.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <unistd.h>
 
@@ -16,6 +17,8 @@
 #include "rox_dnd.h"
 #include "rox_path.h"
 #include "error.h"
+#define DEBUG 1
+#include "rox_debug.h"
 
 struct dnd_data {
   GdkDragContext *context;
@@ -47,6 +50,12 @@ enum {
 
 #define MAXURILEN 4096
 
+static gboolean drag_motion(GtkWidget		*widget,
+                            GdkDragContext	*context,
+                            gint		x,
+                            gint		y,
+                            guint		time,
+			    gpointer            data);
 static gboolean drag_drop(GtkWidget *widget, GdkDragContext *context,
 			  gint x, gint y, guint time, gpointer data);
 static void drag_data_received(GtkWidget *widget, GdkDragContext *context,
@@ -87,20 +96,26 @@ void rox_dnd_register_full(GtkWidget *widget,
   
   ROXData *rdata;
   guint dest_flags=GDK_ACTION_COPY|GDK_ACTION_PRIVATE;
-
+  GtkDestDefaults defaults;
+  
   check_init();
+
+  dprintf(3, "register %p for %p,%p", widget, uris, xds);
+
+  /*defaults=0;*/
+  defaults=GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT;
 
   if(uris && xds) 
     gtk_drag_dest_set(widget,
-		      GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
+		      defaults,
 		      target_table, ntarget, dest_flags);
   else if(uris)
     gtk_drag_dest_set(widget,
-		      GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
+		      defaults,
 		      target_table, 1, dest_flags);
   else if(xds)
     gtk_drag_dest_set(widget,
-		      GTK_DEST_DEFAULT_MOTION|GTK_DEST_DEFAULT_HIGHLIGHT,
+		      defaults,
 		      target_table+1, 1, dest_flags);
 
   rdata=g_new(ROXData, 1);
@@ -111,17 +126,12 @@ void rox_dnd_register_full(GtkWidget *widget,
   rdata->udata=udata;
   rdata->uri=NULL;
 
-#if GTK2
   g_signal_connect(widget, "drag_drop",
 		     G_CALLBACK(drag_drop), rdata);
+  g_signal_connect(widget, "drag_motion",
+		     G_CALLBACK(drag_motion), rdata);
   g_signal_connect(widget, "drag_data_received",
 		     G_CALLBACK(drag_data_received), rdata);
-#else
-  gtk_signal_connect(GTK_OBJECT(widget), "drag_drop",
-		     GTK_SIGNAL_FUNC(drag_drop), rdata);
-  gtk_signal_connect(GTK_OBJECT(widget), "drag_data_received",
-		     GTK_SIGNAL_FUNC(drag_data_received), rdata);
-#endif
 }
 
 /* Is the sender willing to supply this target type? */
@@ -218,14 +228,18 @@ static gboolean drag_drop(GtkWidget 	  *widget,
   GdkAtom target = GDK_NONE;
   ROXData *rdata=(ROXData *) data;
 
+  dprintf(3, "drag_drop for %p", widget);
+
   if(provides(context, XdndDirectSave0)) {
     leafname = get_xds_prop(context);
+    dprintf(3, "XDS %p", leafname);
     if (leafname) {
       gchar *uri;
       char host[1025];
 
       gethostname(host, sizeof(host));
       uri=g_strconcat("file://", host, "/tmp/", leafname, NULL);
+      dprintf(3, "%s %s %s", leafname, host, uri);
       set_xds_prop(context, uri);
       if(rdata->uri)
 	g_free(rdata->uri);
@@ -237,7 +251,20 @@ static gboolean drag_drop(GtkWidget 	  *widget,
   } else if(provides(context, text_uri_list))
     target = text_uri_list;
 
+  dprintf(2, "target=%s", gdk_atom_name(target));
   gtk_drag_get_data(widget, context, target, time);
+
+  return TRUE;
+}
+
+static gboolean drag_motion(GtkWidget		*widget,
+                            GdkDragContext	*context,
+                            gint		x,
+                            gint		y,
+                            guint		time,
+			    gpointer		data)
+{
+  dprintf(2, "drag_motion %p", widget);
 
   return TRUE;
 }
@@ -371,6 +398,8 @@ static void drag_data_received(GtkWidget      	*widget,
 			       guint32          time,
 			       gpointer		user_data)
 {
+  dprintf(3, "drag_data_received %p %u", widget, info);
+  
   if (!selection_data->data) {
     /* Timeout? */
     gtk_drag_finish(context, FALSE, FALSE, time);	/* Failure */
@@ -393,6 +422,11 @@ static void drag_data_received(GtkWidget      	*widget,
 }
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.5  2002/04/29 08:17:25  stephen
+ * Fixed applet menu positioning (didn't work if program was managing more than
+ * one applet window)
+ * Some work for GTK+ 2
+ *
  * Revision 1.4  2001/08/29 13:36:36  stephen
  * fixed call to gtk_drag_dest_set so we don't get the drop data twice
  *

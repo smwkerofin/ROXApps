@@ -1,13 +1,14 @@
 # Makefile for ROX-CLib
 
-GTK_CONFIG = @GTK_CONFIG@
 PKG_CONFIG = @PKG_CONFIG@
 GTK_CFLAGS = @GTK_CFLAGS@
 GTK_LIBS = @GTK_LIBS@
 XML_CONFIG = @XML_CONFIG@
 SHELL = @SHELL@
 srcdir = @srcdir@
-PLATFORM_DIR = @bindir@
+PLATFORM = @with_platform@
+PLATFORM_DIR = ../${PLATFORM}
+ABS_PLATFORM_DIR = ${shell pwd}/../${PLATFORM}
 SHARED = @SHLIB@
 top_builddir =  .
 LIBTOOL = @LIBTOOL@
@@ -17,6 +18,7 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 ROXCLIB_VERSION_NUM = @ROXCLIB_VERSION_NUM@
 LIB_VERSION=2:0:2
+# LIB_VERSION=3:0:0
 .SUFFIXES:
 .SUFFIXES: .c .o .sh .lo
 
@@ -26,6 +28,7 @@ CFLAGS = @CFLAGS@ -I. `${GTK_CFLAGS}` `${XML_CONFIG} --cflags` -DLIBNAME=\"${LIB
 LDFLAGS = @LDFLAGS@ `${GTK_LIBS}` `${XML_CONFIG} --libs` @LIBS@
 EXEC = ${PLATFORM_DIR}/bin/${PROG}
 LIBDIR = ${PLATFORM_DIR}/lib
+ABSLIBDIR = ${ABS_PLATFORM_DIR}/lib
 INCLUDEDIR = ${PLATFORM_DIR}/include
 LIBFILE.a = ${LIBDIR}/lib${LIBNAME}.a
 LIBFILE.la = ${LIBDIR}/lib${LIBNAME}.la
@@ -99,9 +102,9 @@ ${LIBFILE.a}: ${LIBDIR} ${LIBOBJECTS}
 	${LINK} -o ${LIBFILE.a} ${LIBOBJECTS}
 
 ${LIBFILE.la}: ${LIBDIR} ${SLIBOBJECTS}
-	${LINK} -o lib${LIBNAME}.la -rpath ${PLATFORM_DIR}/lib ${SLIBOBJECTS}
-	${LIBTOOL} --mode=install $(INSTALL) lib${LIBNAME}.la ${PLATFORM_DIR}/lib
-	${LIBTOOL} --mode=finish ${PLATFORM_DIR}/lib
+	${LINK} -o lib${LIBNAME}.la -rpath ${ABSLIBDIR} ${SLIBOBJECTS}
+	${LIBTOOL} --mode=install $(INSTALL) lib${LIBNAME}.la ${ABSLIBDIR}
+	${LIBTOOL} --mode=finish ${ABSLIBDIR}
 
 clean:
 	rm -rf *.o *.lo Makefile.bak .libs

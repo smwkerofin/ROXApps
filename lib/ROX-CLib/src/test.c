@@ -1,5 +1,5 @@
 /*
- * $Id: test.c,v 1.4 2002/03/19 08:29:24 stephen Exp $
+ * $Id: test.c,v 1.5 2002/07/31 17:17:55 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -10,9 +10,7 @@
 
 #include <gtk/gtk.h>
 
-#ifdef HAVE_XML
 #include <libxml/parser.h>
-#endif
 
 #define DEBUG 1
 #include "rox.h"
@@ -43,28 +41,33 @@ int main(int argc, char *argv[])
   ver=rox_filer_version();
   printf("%s\n", ver);
   printf("error=%s\n", rox_filer_get_last_error());
+  printf("Waiting..\n");
   sleep(5);
 
-#if 0
   printf("OpenDir(/tmp)\n");
   rox_filer_open_dir("/tmp");
   printf("error=%s\n", rox_filer_get_last_error());
+  printf("Waiting..\n");
   sleep(5);
   printf("Examine(/tmp)\n");
   rox_filer_examine("/tmp");
   printf("error=%s\n", rox_filer_get_last_error());
+  printf("Waiting..\n");
   sleep(5);
   printf("CloseDir(/tmp)\n");
   rox_filer_close_dir("/tmp");
   printf("error=%s\n", rox_filer_get_last_error());
+  printf("Waiting..\n");
   sleep(5);
 
+#if 0
   printf("Panel(empty, Top)\n");
   rox_filer_panel("empty", ROXPS_TOP);
   printf("error=%s\n", rox_filer_get_last_error());
   printf("Show(%s, %s)\n", home, "public_html");
   rox_filer_show(home, "public_html");
   printf("error=%s\n", rox_filer_get_last_error());
+  printf("Waiting..\n");
   sleep(5);
   
   sprintf(buf, "%s/text/apf-7a.5.3", home);
@@ -74,6 +77,7 @@ int main(int argc, char *argv[])
   printf("Panel(, Top)\n");
   rox_filer_panel("", ROXPS_TOP);
   printf("error=%s\n", rox_filer_get_last_error());
+  printf("Waiting..\n");
   sleep(5);
 
   sprintf(buf, "%s/tmp/tmp", home);

@@ -24,12 +24,17 @@
  * GTK+ at ftp://ftp.gtk.org/pub/gtk/. 
  */
 
+/*
+ * Now based on the ROX-Filer 1.3.5 version:
+ * gtksavebox.h,v 1.7 2002/05/02 14:46:07 tal197
+ */
+
 #ifndef __GTK_SAVEBOX_H__
 #define __GTK_SAVEBOX_H__
 
 
 #include <gdk/gdk.h>
-#include <gtk/gtkwindow.h>
+#include <gtk/gtkdialog.h>
 #include <gtk/gtkselection.h>
 
 
@@ -70,12 +75,12 @@ enum {
 
 struct _GtkSavebox
 {
-  GtkWindow window;
+  GtkDialog dialog;
 
+  GtkWidget *discard_area;	/* Normally hidden */
   GtkWidget *drag_box;		/* Event box - contains pixmap, or NULL */
   GtkWidget *icon;		/* The pixmap widget */
   GtkWidget *entry;		/* Where the pathname goes */
-  GtkWidget *vbox;		/* Append extra buttons here */
 
   GtkTargetList *targets;	/* Formats that we can save in */
   gboolean  using_xds;		/* Have we sent XDS reply 'S' or 'F' yet? */
@@ -84,19 +89,20 @@ struct _GtkSavebox
 
 struct _GtkSaveboxClass
 {
-  GtkWindowClass parent_class;
+  GtkDialogClass parent_class;
 
   gint (*save_to_file)	(GtkSavebox *savebox, guchar *pathname);
   void (*saved_to_uri)	(GtkSavebox *savebox, guchar *uri);
-  void (*save_done)	(GtkSavebox *savebox);
 };
 
 
-GtkType    gtk_savebox_get_type 	(void);
-GtkWidget* gtk_savebox_new		(void);
+GType	   gtk_savebox_get_type 	(void);
+GtkWidget* gtk_savebox_new		(const gchar *action);
 void	   gtk_savebox_set_icon		(GtkSavebox *savebox,
-					 GdkPixmap *pixmap, GdkPixmap *mask);
-void	   gtk_savebox_set_pathname	(GtkSavebox *savebox, gchar *pathname);
+					 GdkPixbuf *pixbuf);
+void	   gtk_savebox_set_pathname	(GtkSavebox *savebox,
+					 const gchar *pathname);
+void	   gtk_savebox_set_has_discard	(GtkSavebox *savebox, gboolean setting);
 
 
 #ifdef __cplusplus

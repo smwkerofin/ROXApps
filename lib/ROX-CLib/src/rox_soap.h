@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.h,v 1.3 2001/12/21 10:01:46 stephen Exp $
+ * $Id: rox_soap.h,v 1.4 2002/03/19 08:29:20 stephen Exp $
  *
  * rox_soap.h - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -12,11 +12,6 @@
 #define _rox_soap_h
 
 #include "rox-clib.h"
-
-#ifndef HAVE_XML
-#define xmlDocPtr void *
-#define xmlNodePtr void *
-#endif
 
 #define ENV_NAMESPACE_URL "http://www.w3.org/2001/12/soap-envelope"
 #define SOAP_NAMESPACE_URL "http://www.w3.org/2001/12/soap-rpc"
@@ -110,6 +105,10 @@ extern void rox_soap_close(ROXSOAP *filer);
 
 /*
  * $Log: rox_soap.h,v $
+ * Revision 1.4  2002/03/19 08:29:20  stephen
+ * Added SOAP server (rox_soap_server.h).  SOAP client can connect to programs
+ * other than ROX-Filer.
+ *
  * Revision 1.3  2001/12/21 10:01:46  stephen
  * Updated version number, but not yet ready for new release.
  * Added debug to rox_soap (and protect if no XML)

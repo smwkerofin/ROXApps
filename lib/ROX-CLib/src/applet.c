@@ -1,5 +1,5 @@
 /*
- * $Id: applet.c,v 1.1 2002/01/10 15:14:38 stephen Exp $
+ * $Id: applet.c,v 1.2 2002/04/29 08:17:23 stephen Exp $
  *
  * applet.c - Utilities for rox applet.s
  */
@@ -38,6 +38,7 @@ static struct name_loc {
 static gint screen_height=-1;
 static gint screen_width=-1;
 
+#if 0
 /* Parse the property string */
 static void decode_location(const char *prop)
 {
@@ -131,9 +132,7 @@ PanelLocation applet_get_panel_location(GtkWidget *plug)
 
 /* Mostly taken from icon.c panel_position_menu */
 static void position_menu(GtkMenu *menu, gint *x, gint *y,
-#ifdef GTK2
 			  gboolean *push_in,
-#endif
 			  gpointer data)
 {
   int *pos = (int *) data;
@@ -201,6 +200,7 @@ void applet_show_menu(GtkWidget *menu, GdkEventButton *evbut)
 		   evbut->button, evbut->time);
   }
 }
+#endif
 
 typedef struct applet_info {
   PanelLocation loc;
@@ -246,11 +246,7 @@ AppletInfo *get_position(GtkWidget *plug)
 
   /* Get screen size */
   if(screen_width<0) {
-#ifdef GTK2
     gdk_drawable_get_size(GDK_ROOT_PARENT(), &screen_width, &screen_height);
-#else
-    gdk_window_get_size(GDK_ROOT_PARENT(), &screen_width, &screen_height);
-#endif
   }
   dprintf(3, "screen is %d,%d", screen_width, screen_height);
 
@@ -301,9 +297,7 @@ AppletInfo *get_position(GtkWidget *plug)
 }
 
 static void position_menu2(GtkMenu *menu, gint *x, gint *y,
-#ifdef GTK2
 			  gboolean *push_in,
-#endif
 			  gpointer data)
 {
   AppletInfo *ainfo = (AppletInfo *) data;
@@ -342,16 +336,19 @@ void applet_popup_menu(GtkWidget *plug, GtkWidget *menu, GdkEventButton *evbut)
 {
   AppletInfo *pos;
 
-  pos=gtk_object_get_data(GTK_OBJECT(plug), "applet-menu-pos");
+  pos=g_object_get_data(G_OBJECT(plug), "applet-menu-pos");
   if(!pos) {
     pos=get_position(plug);
     if(pos) {
-      gtk_object_set_data(GTK_OBJECT(plug), "applet-menu-pos", pos);
-      gtk_signal_connect_object(GTK_OBJECT(plug), "destroy",
-				GTK_SIGNAL_FUNC(g_free), pos);
+      g_object_set_data(G_OBJECT(plug), "applet-menu-pos", pos);
+      g_signal_connect_swapped(G_OBJECT(plug), "destroy",
+				G_CALLBACK(g_free), pos);
     }
   }
   gtk_menu_popup(GTK_MENU(menu), NULL, NULL, position_menu2, pos,
 		 evbut->button, evbut->time);
 }
 
+/*
+ * $Log$
+ */

@@ -1,7 +1,7 @@
 /*
  * rox_path.c - utilities for path handling, support for drag & drop
  *
- * $Id: rox_path.c,v 1.3 2001/08/29 13:35:01 stephen Exp $
+ * $Id: rox_path.c,v 1.4 2001/12/05 16:45:02 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -19,11 +19,12 @@
 #define DEBUG 1
 #include "rox_debug.h"
 
+static char hostn[256]={0};
+
 char *rox_path_get_local(const char *uri)
 {
   char *host;
   char *end;
-  char hostn[256];
   const char *orig=uri;
 #ifdef HAVE_GETHOSTNAME
   struct hostent *hp;
@@ -48,11 +49,13 @@ char *rox_path_get_local(const char *uri)
       return g_strdup(end);
     }
 
-    if(gethostname(hostn, sizeof(hostn))!=0) {
-      rox_debug_printf(2, "rox_path_get_local(%s) couldn't get hostname!",
-		       orig);
-      g_free(host);
-      return NULL;
+    if(!hostn[0]) {
+      if(gethostname(hostn, sizeof(hostn))!=0) {
+	rox_debug_printf(2, "rox_path_get_local(%s) couldn't get hostname!",
+			 orig);
+	g_free(host);
+	return NULL;
+      }
     }
 
     if(strcmp(host, hostn)==0) {
@@ -139,6 +142,9 @@ char *rox_path_get_path(const char *uri)
 
 /*
  * $Log: rox_path.c,v $
+ * Revision 1.4  2001/12/05 16:45:02  stephen
+ * More tests to see if a URI is a local path
+ *
  * Revision 1.3  2001/08/29 13:35:01  stephen
  * Added extra test for local host name using gethostbyname
  *
