@@ -13,9 +13,9 @@ EXEC = ${PLATFORM_DIR}/${PROG}
 
 PROG = Printer
 
-SRCS = printer.c choices.c infowin.c
+SRCS = printer.c run_task.c choices.c infowin.c
 
-OBJECTS = printer.o choices.o infowin.o
+OBJECTS = printer.o run_task.o choices.o infowin.o
 
 ############ Things to keep the same
 
