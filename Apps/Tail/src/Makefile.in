@@ -13,9 +13,9 @@ EXEC = ${PLATFORM_DIR}/${PROG}
 
 PROG = Tail
 
-SRCS = tail.c infowin.c
+SRCS = tail.c infowin.c gtksavebox.c choices.c
 
-OBJECTS = tail.o infowin.o
+OBJECTS = tail.o infowin.o gtksavebox.o choices.o
 
 ############ Things to keep the same
 
