@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.13 2002/03/25 11:39:19 stephen Exp $
+ * $Id: load.c,v 1.14 2002/04/12 10:24:30 stephen Exp $
  *
  * Log at end of file
  */
@@ -131,6 +131,7 @@ static Options default_options={
   NULL, TRUE
 };
 
+struct load_window;
 typedef struct option_widgets {
   GtkWidget *window;
   GtkWidget *update_s;
@@ -148,6 +149,7 @@ typedef struct option_widgets {
   GtkWidget *font_window;
   GtkWidget *font_name;
 #endif
+  struct load_window *lwin;
 } OptionWidgets;
 
 typedef struct history_data {
@@ -242,7 +244,11 @@ static void do_version(void)
   printf("Distributed under the terms of the GNU General Public License.\n");
   printf("(See the file COPYING in the Help directory).\n");
   printf("%s last compiled %s\n", __FILE__, __DATE__);
-  printf("ROX-CLib version %s\n", rox_clib_version_string());
+  printf("ROX-CLib version %s for GTK+ %s (compiled for %d.%d.%d)\n",
+	 rox_clib_version_string(),
+	 rox_clib_gtk_version_string(),
+         ROX_CLIB_VERSION/10000, (ROX_CLIB_VERSION%10000)/100,
+         ROX_CLIB_VERSION%100);
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
@@ -534,8 +540,6 @@ static LoadWindow *make_window(guint32 xid)
   if(pixmap)
     gdk_window_set_icon(GTK_WIDGET(lwin->win)->window, NULL, pixmap, mask);
     
-  if(lwin->is_applet)
-    applet_get_panel_location(lwin->win);
   gtk_widget_show(lwin->win);
 
   lwin->update=gtk_timeout_add(lwin->options.update_ms,
@@ -1351,7 +1355,7 @@ static void set_config(GtkWidget *widget, gpointer data)
   LoadWindow *lwin;
   Options *opts;
 
-  lwin=gtk_object_get_data(GTK_OBJECT(ow->window), "LoadWindow");
+  lwin=ow->lwin;
   opts=lwin? &lwin->options: &default_options;
 
   s=gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(ow->update_s));
@@ -1598,6 +1602,8 @@ static void show_config_win(void)
 {
   static GtkWidget *confwin=NULL;
   static OptionWidgets ow;
+
+  ow.lwin=current_window;
 
   if(!confwin) {
     GtkWidget *vbox;
@@ -1904,7 +1910,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 
     dprintf(3, "show menu for %s", lwin->is_applet? "applet": "window");
     if(lwin->is_applet)
-      applet_show_menu(menu, bev);
+      applet_popup_menu(lwin->win, menu, bev);
     else
       gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		     bev->button, bev->time);
@@ -2001,6 +2007,10 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.14  2002/04/12 10:24:30  stephen
+ * Moved colour allocation to after read_choices().  Fixed bug in strip chart
+ * if running multiple windows.
+ *
  * Revision 1.13  2002/03/25 11:39:19  stephen
  * Use ROX-CLib's SOAP server code to have one instance run multiple windows.
  * Added an icon.
