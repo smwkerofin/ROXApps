@@ -4,9 +4,15 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+21-Jun-2004
+~~~~~~~~~~~
+Full mime_handler implementation.
+libdir can also be built as appdir using a different default path.
+
 31-May-2004
 ~~~~~~~~~~~
 Added mime_handler.
+Started on a replacement for rox_run, libdir.
 
 22-May-2004
 ~~~~~~~~~~~
@@ -162,4 +168,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.8 2004/05/23 11:46:44 stephen Exp $
+$Id: Changes,v 1.9 2004/05/31 15:34:15 stephen Exp $
