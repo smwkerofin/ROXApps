@@ -1,6 +1,10 @@
 AppFactory
 ==========
 
+0.1.8
+-----
+Added -h and -v options.
+
 0.1.7
 -----
 Added configure option to store Author and Homepage data.
