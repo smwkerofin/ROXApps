@@ -1,6 +1,10 @@
 Load
 ====
 
+1.4.1
+-----
+Fix compilation problems with paths with spaces.
+
 1.4.0
 -----
 Stable release.
