@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.6 2003/03/05 15:31:23 stephen Exp $
+ * $Id: rox_dnd.c,v 1.7 2003/08/20 20:57:44 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -62,8 +62,6 @@ static void drag_data_received(GtkWidget *widget, GdkDragContext *context,
 			       gint x, gint y,
 			       GtkSelectionData *selection_data,
 			       guint info, guint32 time, gpointer user_data);
-static gchar *unescape_uri(const char *uri);
-static gchar *encode_path_as_uri(const guchar *path);
 
 static GdkAtom XdndDirectSave0;
 static GdkAtom xa_text_plain;
@@ -214,16 +212,6 @@ static GSList *uri_list_to_gslist(char *uri_list)
   }
 
   return list;
-}
-
-static const gchar *our_host_name(void)
-{
-  static char host[1025]={0};
-
-  if(!host[0])
-    gethostname(host, sizeof(host));
-
-  return host;
 }
 
 /* User has tried to drop some data on us. Decide what format we would
@@ -434,71 +422,11 @@ static void drag_data_received(GtkWidget      	*widget,
   }
 }
 
-/* handle % escapes in DnD */
-/* Escape path for future use in URI */
-gchar *escape_uri_path(const char *path)
-{
-  const char *safe = "-_./"; /* Plus isalnum() */
-  const guchar *s;
-  gchar *ans;
-  GString *str;
-
-  str = g_string_sized_new(strlen(path));
-
-  for (s = path; *s; s++) {
-    if (!g_ascii_isalnum(*s) && !strchr(safe, *s))
-      g_string_append_printf(str, "%%%02x", *s);
-    else
-      str = g_string_append_c(str, *s);
-  }
-
-  ans = str->str;
-  g_string_free(str, FALSE);
-  
-  return ans;
-}
-
-gchar *encode_path_as_uri(const guchar *path)
-{
-  gchar *tpath = escape_uri_path(path);
-  gchar *uri;
-
-  uri = g_strconcat("file://", our_host_name(), tpath, NULL);
-  g_free(tpath);
-
-  return uri;
-}
-
-gchar *unescape_uri(const char *uri)
-{
-  const gchar *s;
-  gchar *d;
-  gchar *tmp;
-	
-  tmp = g_strdup(uri);
-  for (s = uri, d=tmp; *s; s++, d++) {
-    /*printf("%s\n", s);*/
-    if (*s=='%' && g_ascii_isxdigit(s[1]) &&
-	g_ascii_isxdigit(s[2])) {
-      int c;
-      char buf[3];
-      buf[0]=s[1];
-      buf[1]=s[2];
-      buf[2]=0;
-      c=(int) strtol(buf, NULL, 16);
-      *d=c;
-      s+=2;
-    } else {
-      *d=*s;
-    }
-  }
-  *d=0;
-
-  return tmp;
-}
-
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.7  2003/08/20 20:57:44  stephen
+ * Handle % escaped URI's
+ *
  * Revision 1.6  2003/03/05 15:31:23  stephen
  * First pass a conversion to GTK 2
  * Known problems in SOAP code.
