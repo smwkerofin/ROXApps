@@ -14,10 +14,13 @@ if [ $? -eq 0 ]; then
     exec rox $prog $@
 fi
 
-for dir in  `echo $APPPATH $PATH | sed 's/:/ /g'`; do
+if [ -z "$LIBDIRPATH" ]; then
+    LIBDIRPATH=$HOME/lib:/usr/local/lib:/usr/lib export LIBDIRPATH
+fi
+
+for dir in  `echo $APPPATH $PATH $LIBDIRPATH | sed 's/:/ /g'`; do
     if [ -d $dir/$prog -a -x $dir/$prog/AppRun ]; then
-	$dir/$prog/AppRun $@ & 
-	exit 0
+	exec $dir/$prog/AppRun $@ 
     elif [ -x $dir/$prog ]; then
 	exec $dir/$prog $@
     elif [ -r $dir/$prog ]; then
