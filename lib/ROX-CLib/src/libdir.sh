@@ -2,7 +2,10 @@
 #
 # Locate a named AppDir in LIBDIRPATH, optionally checking version
 #
-# $Id: libdir.sh,v 1.3 2004/07/07 20:23:33 stephen Exp $
+# This is Free Software under the terms of the GNU General Public License
+# version 2.  See ROX-CLib/Help/COPYING for more details.
+#
+# $Id: libdir.sh,v 1.4 2004/07/31 12:25:42 stephen Exp $
 
 if [ x"$LIBDIRPATH" = x ]; then
   LIBDIRPATH="$HOME/lib:/usr/local/lib:/usr/lib"
