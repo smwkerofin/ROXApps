@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: rox_filer_action.h,v 1.1 2001/12/05 16:46:33 stephen Exp $
  *
  * rox_filer_action.h - drive the filer via SOAP
  */
@@ -31,13 +31,21 @@ extern void rox_filer_mount(const char *mountpoint,
 			    int quiet, int opendir);
 
 /* Return value should be passed to g_free when done */
+extern char *rox_filer_version(void);
 extern char *rox_filer_file_type(const char *file);
 
+/* Do not free return value */
 extern const char *rox_filer_get_last_error(void);
+extern int rox_filer_have_error(void);
 extern void rox_filer_clear_error(void);
 
 #endif
 
 /*
- * $Log$
+ * $Log: rox_filer_action.h,v $
+ * Revision 1.1  2001/12/05 16:46:33  stephen
+ * Added rox_soap.c to talk to the filer using SOAP.  Added rox_filer_action.c
+ * to use rox_soap to drive the filer.
+ * Added test.c to try the above routines.
+ *
  */
