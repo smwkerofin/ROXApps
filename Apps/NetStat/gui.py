@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.14 2004/05/15 16:59:55 stephen Exp $
+# $Id: gui.py,v 1.15 2005/01/18 23:46:19 stephen Exp $
 
 import os
 import sys
@@ -389,7 +389,9 @@ def display_chart(widget, act):
     bot=height/2-2
     left=0
     right=width
-    draw_chart(widget.window, gc, (top, bot, left, right), history, vind+1, l, hmax)
+    if hmax>0:
+        draw_chart(widget.window, gc, (top, bot, left, right),
+                   history, vind+1, l, hmax)
     slayout.set_text('Tx')
     gc.foreground=black
     widget.window.draw_layout(gc, left, top, slayout)
@@ -399,7 +401,9 @@ def display_chart(widget, act):
     bot=height-2
     left=0
     right=width
-    draw_chart(widget.window, gc, (top, bot, left, right), history, vind+0, l, hmax)
+    if hmax>0:
+        draw_chart(widget.window, gc, (top, bot, left, right),
+                   history, vind+0, l, hmax)
     slayout.set_text('Rx')
     gc.foreground=black
     widget.window.draw_layout(gc, left, top, slayout)
