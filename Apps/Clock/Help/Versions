@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+2.1.2
+-----
+alarm.c would not compile with virgin ROX-CLib.
+
 2.1.1
 -----
 Draw clock face at higher resolution.

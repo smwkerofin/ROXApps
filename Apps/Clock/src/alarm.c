@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.14 2003/03/05 15:30:39 stephen Exp $
+ * $Id: alarm.c,v 1.15 2003/06/21 13:09:10 stephen Exp $
  */
 #include "config.h"
 
@@ -35,7 +35,7 @@
 #define altzone (timezone+3600)
 #endif
 
-#include "rox.h"
+#include <rox/rox.h>
 #include "alarm.h"
 
 /* Note these are used as array indicies, so leave them starting at zero
@@ -1031,6 +1031,10 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.15  2003/06/21 13:09:10  stephen
+ * Convert to new options system.  Use pango for fonts.
+ * New option for no-face.
+ *
  * Revision 1.14  2003/03/05 15:30:39  stephen
  * First pass at conversion to GTK 2.
  *

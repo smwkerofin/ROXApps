@@ -4,14 +4,14 @@
   <Summary xml:lang="it">Mostra l'ora.</Summary>
   <About>
     <Purpose>Tell the time</Purpose>
-    <Version>2.1.1 (5 August 2004)</Version>
+    <Version>2.1.2 (5 August 2004)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
   </About>
   <About xml:lang="it">
     <Purpose label="Scopo">mostrare l'ora</Purpose>
-    <Version label="Versione">2.1.1</Version>
+    <Version label="Versione">2.1.2</Version>
     <Authors label="Autore">Stephen Watson</Authors>
     <License label="Licenza"/>
     <Homepage label="Sito web">http://www.kerofin.demon.co.uk/rox/</Homepage>
