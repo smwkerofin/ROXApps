@@ -14,6 +14,10 @@ terminate a connection.</entry>
 <numentry name='wsize' label='Window size' min='8' max='128'>
 Size of the display window.
 </numentry>
+<radio-group name='display'>
+<radio value='arrows' label='Arrows'>Display is two coloured arrows</radio>
+<radio value='chart' label='Strip chart'>Display is two scrolling strip charts</radio>
+</radio-group>
 <frame label='Kilobytes'>
 <numentry name='high_K' label='High activity (B/s)' min='2' max='65536'>
 Number of bytes per second that indicates a high level of

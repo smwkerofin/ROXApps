@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.13 2004/03/17 18:51:31 stephen Exp $
+# $Id: gui.py,v 1.14 2004/05/15 16:59:55 stephen Exp $
 
 import os
 import sys
@@ -39,6 +39,9 @@ levels=[500, 50, 1, 0]
 levels2=[4096, 256, 1, 0]
 wsize=48
 
+DISPLAY_ARROWS='arrows'
+DISPLAY_CHART='chart'
+
 pids=[]
 
 # Load old style config if there is no new one
@@ -74,6 +77,7 @@ high_level=rox.options.Option('high', levels[0])
 medium_K=rox.options.Option('medium_K', levels2[1])
 high_K=rox.options.Option('high_K', levels2[0])
 win_size=rox.options.Option('wsize', wsize)
+display=rox.options.Option('display', DISPLAY_ARROWS)
 
 ifdisp=None
 win=None
@@ -277,53 +281,172 @@ def draw_arrow2(drawable, gc, pts, act, mid, top, bot):
     drawable.draw_layout(gc, x, y, slayout)
     gc.foreground=tmp
 
+def display_arrows(widget, act):
+    (x, y, width, height)=widget.get_allocation()
+    style=widget.get_style()
+    gc=style.bg_gc[g.STATE_NORMAL]
+
+    # Receive
+    top=2
+    bot=height*5/6-2
+    mid=height*5/6/2
+    cx=width/4
+    left=2
+    right=width/2-2
+    pts=((cx-2,top), (cx-2,mid), (left,mid), (cx,bot), (right,mid),
+         (cx+2,mid), (cx+2,top))
+    if act[2]<0:
+        draw_arrow(widget.window, gc, pts, act[0], cx, mid, bot)
+    else:
+        draw_arrow2(widget.window, gc, pts, act[2], cx, bot, height)
+        
+    # Transmit
+    top=2+height/6
+    bot=height-2
+    mid=top+height*5/6/2
+    cx=3*width/4
+    left=width/2+2
+    right=width-2
+    pts=((cx-2,bot), (cx-2,mid), (left,mid), (cx,top), (right,mid),
+         (cx+2,mid), (cx+2,bot))
+    if act[3]<0:
+        draw_arrow(widget.window, gc, pts, act[1], cx, top, mid)
+    else:
+        draw_arrow2(widget.window, gc, pts, act[3], cx, 2, top)
+
+def draw_chart(drawable, gc, box, history, ind, levels, max):
+    #print box, history, ind, levels, max
+    top, bot, left, right=box
+
+    for i in range(len(history)):
+        val=history[-i-1][ind]
+        x=right-i
+        y0=bot
+        y1=bot-int(val/float(max)*(bot-top))
+        #print bot-top, max, val/float(max), int(val/float(max)*(bot-top))
+        #print i, val, x, y0, y1
+        gc.foreground=low
+        drawable.draw_line(gc, x, y0, x, y1)
+
+        if val>levels[1]:
+            gc.foreground=medium
+            y0=bot-int(levels[1]/float(max)*(bot-top))
+            drawable.draw_line(gc, x, y0, x, y1)
+            if val>levels[0]:
+                gc.foreground=high
+                y0=bot-int(levels[0]/float(max)*(bot-top))
+                drawable.draw_line(gc, x, y0, x, y1)
+
+    gc.foreground=black
+    drawable.draw_line(gc, left, bot, right, bot)
+
+history=[]
+hmax=0
+def display_chart(widget, act):
+    global hmax, history
+    
+    (x, y, width, height)=widget.get_allocation()
+    style=widget.get_style()
+    gc=style.bg_gc[g.STATE_NORMAL]
+    tmpfg=gc.foreground
+
+    if hmax<1:
+        if act[2]<0 or act[3]<0:
+            hmax=levels[2]
+        else:
+            hmax=levels2[2]
+
+    if act[2]<0 or act[3]<0:
+        vals=(act[0], act[1])
+        vind=0
+        l=levels
+    else:
+        vals=(act[2], act[3])
+        vind=2
+        l=levels2
+
+    if act[vind]>hmax: hmax=act[vind]
+    if act[vind+1]>hmax: hmax=act[vind+1]
+
+    if len(history)>0:
+        history.append(act)
+    else:
+        history.append((0, 0, 0, 0))
+    if len(history)>width:
+        p=len(history)-width
+        history=history[p:]
+
+        max=history[0][vind]
+        for v in history:
+            if v[vind]>max: max=v[vind]
+            if v[vind+1]>max: max=v[vind+1]
+
+        if max<hmax/2:
+            hmax=max
+
+    # Transmit
+    top=2
+    bot=height/2-2
+    left=0
+    right=width
+    draw_chart(widget.window, gc, (top, bot, left, right), history, vind+1, l, hmax)
+    slayout.set_text('Tx')
+    gc.foreground=black
+    widget.window.draw_layout(gc, left, top, slayout)
+
+    # Receive
+    top=height/2+2
+    bot=height-2
+    left=0
+    right=width
+    draw_chart(widget.window, gc, (top, bot, left, right), history, vind+0, l, hmax)
+    slayout.set_text('Rx')
+    gc.foreground=black
+    widget.window.draw_layout(gc, left, top, slayout)
+    
+    if vind>1:
+        s=hsize(hmax)
+    else:
+        s='%dp' % hmax
+    #print hmax, s, history[-1]
+    try:
+        slayout.set_text(s, len(s))
+    except:
+        slayout.set_text(s)
+    w, h=slayout.get_pixel_size()
+    x=width-w
+    y=0
+    gc.foreground=black
+    widget.window.draw_layout(gc, x, y, slayout)
+
+    gc.foreground=tmpfg
+
+display_modes={DISPLAY_ARROWS: display_arrows, DISPLAY_CHART: display_chart}
+    
 def expose(widget, event):
     (x, y, width, height)=widget.get_allocation()
     style=widget.get_style()
     gc=style.bg_gc[g.STATE_NORMAL]
-    #widget.window.draw_rectangle(gc, 1, 0, 0, width, height)
-    #print dir(widget.window)
+
     try:
         area=None
         style.apply_default_background(widget.window, g.TRUE, g.STATE_NORMAL,
                                        area,
                                        0, 0, width, height)
     except:
-        #print sys.exc_info()[:2]
         widget.window.draw_rectangle(gc, 1, 0, 0, width, height)
 
     act=stats.getCurrent(iface)
-    #gc=widget.get_style().bg_gc[g.STATE_NORMAL]
-    #print iface, act
 
     if act and len(act)>1:
-        # Receive
-        top=2
-        bot=height*5/6-2
-        mid=height*5/6/2
-        cx=width/4
-        left=2
-        right=width/2-2
-        pts=((cx-2,top), (cx-2,mid), (left,mid), (cx,bot), (right,mid),
-             (cx+2,mid), (cx+2,top))
-        if act[2]<0:
-            draw_arrow(widget.window, gc, pts, act[0], cx, mid, bot)
-        else:
-            draw_arrow2(widget.window, gc, pts, act[2], cx, bot, height)
-        
-        # Transmit
-        top=2+height/6
-        bot=height-2
-        mid=top+height*5/6/2
-        cx=3*width/4
-        left=width/2+2
-        right=width-2
-        pts=((cx-2,bot), (cx-2,mid), (left,mid), (cx,top), (right,mid),
-             (cx+2,mid), (cx+2,bot))
-        if act[3]<0:
-            draw_arrow(widget.window, gc, pts, act[1], cx, top, mid)
-        else:
-            draw_arrow2(widget.window, gc, pts, act[3], cx, 2, top)
+        #print display.value, display_modes
+        try:
+            #print display_modes[display.value]
+            dfunc=display_modes[display.value]
+        except:
+            dfunc=display_arrows
+        #print dfunc
+        dfunc(widget, act)
 
     else:
         tmp=gc.foreground

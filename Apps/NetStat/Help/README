@@ -22,7 +22,8 @@ bring up a connection, such as
 or
 	ping my-isp
 
-Finally drag the NetStat icon to your panel.
+Finally drag the NetStat icon to your panel to run it as a panel
+applet.  Alternatively you can run it as a stand alone window.
 
 Display
 -------
@@ -44,8 +45,14 @@ Red	   Current level of traffic does not match previous, usually
 No arrow   Interface does not exist.  For a dial-up this can mean that
 	   there is no connection.
 
-Options
--------
+As an alternative you can select a chart display.  This plots two
+strip charts, Tx and Rx.  Tx is transmision, Rx is receive.  The
+maximum value is printed at the top right.  If there is a p suffix
+then this value is the number of packets, otherwise it is in bytes (or
+kilobytes if there is a K suffix).
+
+Usage
+-----
 Clicking button-3 on the display opens the menu.
 
 Clicking button-1 on the display executes the connect command, if you
@@ -54,14 +61,34 @@ defined one.
 Clicking button-2 on the display executes the disconnect command, if you
 defined one.
 
-To Do
------
-Add config window.
-Make an icon.
+Options
+-------
+
+	Main
+  	----
+	Interface - the name of the network interface to monitor,
+		    normally eth0 or ppp0
+
+	Connectivity
+	------------
+	Define the commands to execute on a left or right click
+
+	Display	
+	-------
+	Window size - initial size of window, in pixels
+
+	Arrows      - use the arrow display
+	Strip chart - use the strip chart display
+
+	Kilobytes   - Set number of bytes required for medium and high
+		      activity (low is fixed at 1)
+
+	Packets     - Set number of packets required for medium and high
+		      activity (low is fixed at 1)
 
 Bugs
 ----
 Please report to Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: README,v 1.1 2002/11/16 12:31:22 stephen Exp $
+$Id: README,v 1.2 2002/12/14 17:25:50 stephen Exp $
 
