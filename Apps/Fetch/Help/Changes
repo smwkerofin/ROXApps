@@ -1,6 +1,10 @@
 Fetch
 =====
 
+24-Jan-2005
+~~~~~~~~~~~
+Be compatible with pygtk 2.4.
+
 04-Dec-2004 (0.1.0)
 ~~~~~~~~~~~
 Use download manager.  Possible fix to stalled downloads (message

@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.3 2004/11/21 13:16:41 stephen Exp $
+# $Id: fetch.py,v 1.4 2004/12/05 13:19:02 stephen Exp $
 
 import os, sys
 import time
@@ -176,7 +176,7 @@ class Fetcher:
 
     def run(self):
         if self.con and self.outf:
-            rox.g.mainloop()
+            rox.g.main()
         
     def report(self, nb, tsize):
         #print 'report', self, nb, tsize
