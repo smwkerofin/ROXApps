@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.8 2002/03/04 11:48:10 stephen Exp $
+ * $Id: mem.c,v 1.9 2002/04/12 10:25:25 stephen Exp $
  */
 #include "config.h"
 
@@ -612,7 +612,6 @@ static MemWindow *make_window(guint32 xid)
     gtk_tooltips_set_tip(ttips, plug,
 			 "Mem shows the memory and swap usage",
 			 TIP_PRIVATE);
-    applet_get_panel_location(plug);
 
     dprintf(4, "vbox new");
     vbox=gtk_vbox_new(FALSE, 1);
@@ -1502,6 +1501,7 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Configure..."),	NULL, show_config_win, 0, NULL},
   { N_("/Update Now"),	        NULL, do_update, 0, NULL },
   { N_("/Close"), 	        NULL, close_window, 0, NULL },
+  { "/",                        NULL, NULL,         0, "<Separator>"},
   { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
 };
 
@@ -1560,7 +1560,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 	menu_create_menu(window);
 
       if(mwin->is_applet)
-	applet_show_menu(menu, bev);
+	applet_popup_menu(mwin->win, menu, bev);
       else
 	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		       bev->button, bev->time);
@@ -1761,6 +1761,10 @@ static gboolean update_swap(gpointer unused)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.9  2002/04/12 10:25:25  stephen
+ * Multiple windows.  Acts as a server, using SOAP, so there only needs to be
+ * one instance running.
+ *
  * Revision 1.8  2002/03/04 11:48:10  stephen
  * Stable release.
  *

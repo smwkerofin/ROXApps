@@ -1,6 +1,10 @@
 Mem
 ===
 
+1.1.1
+-----
+Use replacement applet menu positioning code (from ROX-CLib).
+
 1.1.0
 -----
 Multiple windows.  Acts as a server, using SOAP, so there only needs to be
