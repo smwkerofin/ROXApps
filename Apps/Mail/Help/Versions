@@ -1,6 +1,11 @@
 Versions of Mail
 ================
 
+0.3.4
+-----
+Updated to make better use of ROX-Lib, such as the standard InfoWin and
+stock images in menus.  Also now quits when window/applet closes.
+
 0.3.3
 -----
 More work on showing number of messages in outgoing queue.
