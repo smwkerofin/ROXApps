@@ -1,7 +1,7 @@
 from sys import argv
 import os
 
-import findrox
+import findrox; findrox.version(1, 9, 12)
 from rox import g
 
 from SendFile import SendFile
