@@ -1,6 +1,10 @@
 Fetch
 =====
 
+12-Jun-2004
+~~~~~~~~~~~
+Expanded the display.  Start work towards password handling.
+
 05-June-2004 (0.0.1)
 ~~~~~~~~~~~~
 Let the URL label wrap to avoid the window becoming too wide.

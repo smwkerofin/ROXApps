@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.2 2004/06/03 17:53:23 stephen Exp $
+# $Id: AppRun,v 1.3 2004/06/05 12:13:38 stephen Exp $
 
 import os, sys
+import time
 
 import findrox; findrox.version(1, 9, 14)
 import rox
@@ -24,47 +25,114 @@ def get_filename(url):
     while os.access(fname, os.F_OK):
         dot=base.index('.')
         if dot>=0:
-            fname=base[:dot]+('.%d' % num)+base[dot:]
+            fname=base[:dot]+('-%d' % num)+base[dot:]
         else:
-            fname=base+'.%d' % num
+            fname=base+'-%d' % num
         
         num+=1
         
     return fname
 
-class FetchWindow(rox.Window):
+class ROXURLopener(urllib.FancyURLopener):
+    def prompt_user_passwd(self, host, realm):
+        print host
+        print realm
+        return None, None
+
+class FetchWindow(rox.Dialog):
     def __init__(self, url, target=None):
         self.url=url
         if not target:
             target=get_filename(url)
         self.target=target
+        self.start_time=None
         
-        rox.Window.__init__(self)
+        rox.Dialog.__init__(self)
         self.set_title(self.url)
+        self.add_button(rox.g.STOCK_CANCEL, rox.g.RESPONSE_CANCEL)
+        self.connect('response', self.do_response)
 
-        vbox=rox.g.VBox()
-        self.add(vbox)
+        vbox=self.vbox
 
-        l=rox.g.Label('Download to %s' % self.target)
-        vbox.pack_start(l, padding=4)
+        table=rox.g.Table(8, 2)
+        vbox.pack_start(table, padding=4)
 
+        line=0
+        l=rox.g.Label('<b>Source</b>')
+        l.set_use_markup(True)
+        l.set_alignment(1., 0.5)
+        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        l=rox.g.Label(self.url)
+        l.set_line_wrap(True)
+        l.set_alignment(0., 0.5)
+        table.attach(l, 1, 2, line, line+1, xpadding=2)
+
+        line+=1
+        l=rox.g.Label('<b>Size</b>')
+        l.set_use_markup(True)
+        l.set_alignment(1., 0.5)
+        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        l=rox.g.Label('')
+        l.set_alignment(0., 0.5)
+        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        self.size_l=l
+
+        line+=1
+        l=rox.g.Label('<b>Type</b>')
+        l.set_use_markup(True)
+        l.set_alignment(1., 0.5)
+        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        l=rox.g.Label('')
+        l.set_alignment(0., 0.5)
+        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        self.type_l=l
+
+        line+=1
+        l=rox.g.Label('<b>Download to</b>')
+        l.set_use_markup(True)
+        l.set_alignment(1., 0.5)
+        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        l=rox.g.Label(os.getcwd())
+        l.set_alignment(0., 0.5)
+        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        line+=1
+        l=rox.g.Label(self.target)
+        l.set_alignment(0., 0.5)
+        table.attach(l, 1, 2, line, line+1, xpadding=2)
+
+        line+=1
         self.msg1=rox.g.Label('')
         self.msg1.set_line_wrap(True)
-        vbox.pack_start(self.msg1, padding=4)
+        table.attach(self.msg1, 0, 2, line, line+1)
 
+        line+=1
         self.prog=rox.g.ProgressBar()
-        vbox.pack_start(self.prog, padding=4)
+        table.attach(self.prog, 0, 2, line, line+1)
+
+        line+=1
+        l=rox.g.Label('<b>Estimated time</b>')
+        l.set_use_markup(True)
+        l.set_alignment(1., 0.5)
+        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        l=rox.g.Label('')
+        l.set_alignment(0., 0.5)
+        table.attach(l, 1, 2, line, line+1, xpadding=2)
+        self.etime=l
 
         self.connect('delete_event', self.delete_event)
 
         self.show_all()
+        self.opener=ROXURLopener()
         self.open_server()
 
+    def do_response(self, *unused):
+        sys.exit(0)
+
     def delete_event(self, *unused):
-        print 'delete_event', self, unused
-        print rox._toplevel_windows
+        #print 'delete_event', self, unused
+        #print rox._toplevel_windows
         self.close()
-        print rox._toplevel_windows
+        #print rox._toplevel_windows
         
     def message(self, text):
         self.msg1.set_text(text)
@@ -81,6 +149,24 @@ class FetchWindow(rox.Window):
             return
         self.prog.set_fraction(val)
         self.prog.set_text('%d%%' % (val*100))
+
+        if self.start_time and total>0 and size>0:
+            now=time.time()
+            elapsed=now-self.start_time
+            etotal=elapsed*total/size
+            eleft=etotal-elapsed
+            #print elapsed, etotal, eleft
+            secs=int(eleft)
+            hours=int(secs/3600)
+            secs-=hours*3600
+            mins=int(secs/60)
+            secs-=mins*60
+            if hours>0:
+                tstr='%d:%02d:%02d' % (hours, mins, secs)
+            else:
+                tstr='%02d:%02d' % (mins, secs)
+            self.etime.set_text(tstr)
+            
         run_main()
 
     def active(self):
@@ -96,20 +182,27 @@ class FetchWindow(rox.Window):
         rox.g.main_quit()
 
     def open_server(self):
-        self.message('Open %s' % self.url)
-        urllib.urlretrieve(self.url, self.target, self.report)
-        self.finished()
+        self.message('Downloading')
+        self.start_time=time.time()
+        fname, message=self.opener.retrieve(self.url, self.target, self.report)
+        #print message
+        #print dir(message)
+        self.finished(message)
 
     def report(self, nblock, bsize, tsize):
         #print 'report', self, nblock, bsize, tsize
         nb=nblock*bsize
         if tsize>0:
             self.percent_done(nb, tsize)
+            self.size_l.set_text('%d bytes' % tsize)
         else:
             self.active()
         run_main()
 
-    def finished(self):
+    def finished(self, header):
+        if header.has_key('Content-Type'):
+            self.type_l.set_text(header['Content-Type'])
+        self.message('Done')
         rox.g.timeout_add(3*1000, self.close)
         rox.g.main()
         
