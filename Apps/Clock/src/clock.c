@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.28 2004/03/26 15:25:38 stephen Exp $
+ * $Id: clock.c,v 1.29 2004/04/10 12:07:33 stephen Exp $
  */
 #include "config.h"
 
@@ -118,15 +118,8 @@ enum {WHITE, RED, GREEN, BLUE, ORANGE, GREY, BLACK};
 #define CL_SECOND_HAND  (colours+RED)
 #define CL_BACKGROUND   (colours+GREY)
 
-static GtkWidget *confwin=NULL;     /* Window for configuring */
-static GtkWidget *mode_sel=NULL;    /* Selects a display format */
-static GtkWidget *sel_fmt=NULL;     /* Shows the current format */
-static GtkWidget *user_fmt=NULL;    /* Entering the user-defined format */
-static GtkWidget *mode_flags[MODE_NFLAGS];
-static GtkWidget *interval=NULL;
-static GtkWidget *init_size=NULL;
-/*static GtkWidget *font_window;
-  static GtkWidget *font_name;*/
+#define CLOCK_SIZE 256
+static GdkPixbuf *clock_face=NULL;
 
 static Option o_format;
 static Option o_user_format;
@@ -148,6 +141,7 @@ typedef struct clock_window {
   GtkWidget *canvas;      /* Displays clock face */
   guint update_tag;            /* Handle for the timeout */
   GdkGC *gc;
+  GdkPixbuf *clock_face;
 } ClockWindow;
 
 static GList *windows=NULL;
@@ -329,7 +323,7 @@ int main(int argc, char *argv[])
 
   gtk_widget_show(cwin->win);
 
-  gtk_timeout_add(30*1000, check_alarms, NULL);
+  g_timeout_add(30*1000, check_alarms, NULL);
 
   if(show_options)
     show_conf_win();
@@ -364,7 +358,7 @@ static void remove_window(ClockWindow *win)
   
   windows=g_list_remove(windows, win);
 
-  gtk_timeout_remove(win->update_tag);
+  g_source_remove(win->update_tag);
   gdk_gc_unref(win->gc);
   g_free(win);
 
@@ -393,6 +387,7 @@ static ClockWindow *make_window(guint32 socket)
   int i;
 
   cwin=g_new0(ClockWindow, 1);
+  cwin->clock_face=NULL;
 
   cmap=gdk_rgb_get_cmap();
   
@@ -466,17 +461,15 @@ static ClockWindow *make_window(guint32 socket)
   /* next line causes trouble??  maybe just as an applet... */
   gtk_widget_set_events (cwin->canvas, GDK_EXPOSURE_MASK);
   gtk_box_pack_start (GTK_BOX (vbox), cwin->canvas, TRUE, TRUE, 0);
-  gtk_signal_connect (GTK_OBJECT (cwin->canvas), "expose_event",
-		      (GtkSignalFunc) expose_event, cwin);
-  gtk_signal_connect (GTK_OBJECT (cwin->canvas), "configure_event",
-		      (GtkSignalFunc) configure_event, cwin);
+  g_signal_connect (G_OBJECT (cwin->canvas), "expose_event",
+		      G_CALLBACK(expose_event), cwin);
+  g_signal_connect (G_OBJECT (cwin->canvas), "configure_event",
+		      G_CALLBACK(configure_event), cwin);
   gtk_widget_realize(cwin->canvas);
   if(!o_no_face.int_value)
     gtk_widget_show (cwin->canvas);
   gtk_widget_set_name(cwin->canvas, "clock face");
   
-  cwin->gc=gdk_gc_new(cwin->canvas->window);
-
   time(&now);
   strftime(buf, 80, get_format(), localtime(&now));
 
@@ -490,7 +483,7 @@ static ClockWindow *make_window(guint32 socket)
     gtk_widget_show(cwin->win);
 
   /* Make sure we get called periodically */
-  cwin->update_tag=gtk_timeout_add(o_interval.int_value,
+  cwin->update_tag=g_timeout_add(o_interval.int_value,
 			 (GtkFunction) do_update, cwin);
 
   windows=g_list_append(windows, cwin);
@@ -529,8 +522,8 @@ static void opts_changed(void)
 
   if(o_interval.has_changed) {
     if(current_window) {
-      gtk_timeout_remove(current_window->update_tag);
-      current_window->update_tag=gtk_timeout_add(o_interval.int_value,
+      g_source_remove(current_window->update_tag);
+      current_window->update_tag=g_timeout_add(o_interval.int_value,
 			       (GtkFunction) do_update, current_window);
     }
   }
@@ -561,10 +554,127 @@ static void setup_options(void)
   option_add_notify(opts_changed);
 }
 
-
 enum draw_hours {
   DH_NO, DH_QUARTER, DH_ALL
 };
+
+static GdkPixbuf *make_clock_face(int w, int h, GtkWidget *widget,
+				  GdkGC *gc)
+{
+  GdkPixbuf *face;
+  int sw, sh, rad;
+  int x0, y0, x1, y1;
+  int tick, twidth;
+  enum draw_hours th;
+  GdkColor *face_fg=CL_FACE_FG;
+  GdkFont *font=NULL;
+  GtkStyle *style;
+  PangoLayout *layout;
+  PangoFontDescription *pfd;
+  GdkPixmap *pmap;
+
+  pmap=gdk_pixmap_new(widget->window, w, h, -1);
+
+  style=gtk_widget_get_style(widget);
+  dprintf(3, "style=%p bg_gc[GTK_STATE_NORMAL]=%p", style,
+	  style->bg_gc[GTK_STATE_NORMAL]);
+  if(style && style->bg_gc[GTK_STATE_NORMAL]) {
+    gtk_style_apply_default_background(style, pmap, TRUE,
+				       GTK_STATE_NORMAL,
+				       NULL, 0, 0, w, h);
+  } else {
+    /* Blank out to the background colour */
+    gdk_gc_set_foreground(gc, CL_BACKGROUND);
+    gdk_draw_rectangle(pmap, gc, TRUE, 0, 0, w, h);
+  }
+
+  /* we want a diameter that can fit in our canvas */
+  if(h<w)
+    sw=sh=h;
+  else
+    sw=sh=w;
+  if(!(sw%2)) {
+    sw--;
+    sh--;
+  }
+
+  rad=sw/2;
+
+  x0=w/2;
+  y0=h/2;
+
+  layout=gtk_widget_create_pango_layout(widget, "");
+  dprintf(3, "font is %s", o_font.value? o_font.value: "");
+  pfd=pango_font_description_from_string(o_font.value);
+  pango_layout_set_font_description(layout, pfd);
+  
+  /* Draw the clock face, including the hours */
+  gdk_gc_set_foreground(gc, face_fg);
+  gdk_draw_arc(pmap, gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
+	       360*64);
+  sw-=12;
+  sh-=12;
+  rad=sw/2;
+  gdk_gc_set_foreground(gc, CL_FACE_BG);
+  gdk_draw_arc(pmap, gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
+	       360*64);
+  if(o_hours.int_value) {
+    int siz;
+    
+    pango_layout_set_text(layout, "12", -1);
+    pango_layout_get_pixel_size(layout, &twidth, NULL);
+    siz=sw/twidth;
+
+    if(siz<4)
+      th=DH_NO;
+    else if(siz<10)
+      th=DH_QUARTER;
+    else {
+      gint psize;
+      
+      th=DH_ALL;
+      psize=pango_font_description_get_size(pfd);
+      psize*=siz/10.;
+      pango_font_description_set_size(pfd, psize);
+      pango_layout_set_font_description(layout, pfd);
+    }
+  } else {
+    th=0;
+  }
+  pango_font_description_free(pfd);
+  
+  for(tick=0; tick<12; tick++) {
+    double ang=tick*2*M_PI/12.;
+    double x2=x0+rad*sin(ang)*7/8;
+    double y2=y0-rad*cos(ang)*7/8;
+    x1=x0+rad*sin(ang);
+    y1=y0-rad*cos(ang);
+    gdk_gc_set_foreground(gc, face_fg);
+    gdk_draw_line(pmap, gc, x2, y2, x1, y1);
+
+    if(th!=DH_NO && (th==DH_ALL || tick%3==0)) {
+      char buf[16];
+      int l;
+      int xt, yt;
+      
+      gdk_gc_set_foreground(gc, CL_HOUR_TEXT);
+      sprintf(buf, "%d", tick==0? 12: tick);
+      l=strlen(buf);
+      pango_layout_set_text(layout, buf, -1);
+      pango_layout_get_pixel_size(layout, &xt, &yt);
+      xt=x2-xt/2;
+      yt=y2-yt/2;
+      gdk_draw_layout(pmap, gc, xt, yt, layout);
+    }
+  }
+
+  face=gdk_pixbuf_get_from_drawable(NULL, pmap, NULL, 0, 0, 0, 0, w, h);
+  gdk_pixmap_unref(pmap);
+
+  g_object_unref(G_OBJECT(layout));
+
+  return face;
+}
 
 /* Redraw clock face and update digital_out */
 static gboolean do_update(ClockWindow *cwin)
@@ -598,7 +708,7 @@ static gboolean do_update(ClockWindow *cwin)
   if(o_no_face.int_value)
     return;
 
-  if(!cwin->gc || !cwin->canvas)
+  if(!cwin->gc || !cwin->canvas || !cwin->clock_face)
     return TRUE;
   
   h=cwin->canvas->allocation.height;
@@ -610,9 +720,8 @@ static gboolean do_update(ClockWindow *cwin)
   style=gtk_widget_get_style(cwin->canvas);
   dprintf(3, "style=%p bg_gc[GTK_STATE_NORMAL]=%p", style,
 	  style->bg_gc[GTK_STATE_NORMAL]);
+#if 0
   if(style && style->bg_gc[GTK_STATE_NORMAL]) {
-    /*gdk_draw_rectangle(pixmap, style->bg_gc[GTK_STATE_NORMAL], TRUE,
-		       0, 0, w, h);*/
     gtk_style_apply_default_background(style, cwin->canvas->window, TRUE,
 				       GTK_STATE_NORMAL,
 				       NULL, 0, 0, w, h);
@@ -621,6 +730,7 @@ static gboolean do_update(ClockWindow *cwin)
     gdk_gc_set_foreground(cwin->gc, CL_BACKGROUND);
     gdk_draw_rectangle(cwin->canvas->window, cwin->gc, TRUE, 0, 0, w, h);
   }
+#endif
 
   /* we want a diameter that can fit in our canvas */
   if(h<w)
@@ -646,62 +756,16 @@ static gboolean do_update(ClockWindow *cwin)
   x0=w/2;
   y0=h/2;
 
-  layout=gtk_widget_create_pango_layout(cwin->canvas, "");
-  dprintf(3, "font is %s", o_font.value? o_font.value: "");
-  pfd=pango_font_description_from_string(o_font.value);
-  pango_layout_set_font_description(layout, pfd);
-  pango_font_description_free(pfd);
+  /* Draw the clock face*/
+  gdk_pixbuf_render_to_drawable(cwin->clock_face,
+				cwin->canvas->window, cwin->gc,
+				0, 0, x0-rad-1, y0-rad-1, -1, -1,
+				GDK_RGB_DITHER_NONE,
+				0, 0);
   
-  /* Draw the clock face, including the hours */
-  gdk_gc_set_foreground(cwin->gc, face_fg);
-  gdk_draw_arc(cwin->canvas->window, cwin->gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
-	       360*64);
   sw-=4;
   sh-=4;
   rad=sw/2;
-  gdk_gc_set_foreground(cwin->gc, CL_FACE_BG);
-  gdk_draw_arc(cwin->canvas->window, cwin->gc, TRUE, x0-rad, y0-rad, sw, sh, 0,
-	       360*64);
-  if(o_hours.int_value) {
-    int siz;
-    
-    pango_layout_set_text(layout, "12", -1);
-    pango_layout_get_pixel_size(layout, &twidth, NULL);
-    siz=sw/twidth;
-
-    if(siz<4)
-      th=DH_NO;
-    else if(siz<10)
-      th=DH_QUARTER;
-    else
-      th=DH_ALL;
-  } else {
-    th=0;
-  }
-  for(tick=0; tick<12; tick++) {
-    double ang=tick*2*M_PI/12.;
-    double x2=x0+rad*sin(ang)*7/8;
-    double y2=y0-rad*cos(ang)*7/8;
-    x1=x0+rad*sin(ang);
-    y1=y0-rad*cos(ang);
-    gdk_gc_set_foreground(cwin->gc, face_fg);
-    gdk_draw_line(cwin->canvas->window, cwin->gc, x2, y2, x1, y1);
-
-    if(th!=DH_NO && (th==DH_ALL || tick%3==0)) {
-      char buf[16];
-      int l;
-      int xt, yt;
-      
-      gdk_gc_set_foreground(cwin->gc, CL_HOUR_TEXT);
-      sprintf(buf, "%d", tick==0? 12: tick);
-      l=strlen(buf);
-      pango_layout_set_text(layout, buf, -1);
-      pango_layout_get_pixel_size(layout, &xt, &yt);
-      xt=x2-xt/2;
-      yt=y2-yt/2;
-      gdk_draw_layout(cwin->canvas->window, cwin->gc, xt, yt, layout);
-    }
-  }
 
   /* Draw the hands */
   if(rad>100) {
@@ -754,18 +818,6 @@ static gboolean do_update(ClockWindow *cwin)
   gdk_draw_arc(cwin->canvas->window, cwin->gc, TRUE, x0-rad/2, y0-rad/2, rad, rad,
 	       0, 360*64);
 
-  /* Copy the pixmap to the display canvas */
-  /*
-  gdk_draw_pixmap(cwin->canvas->window,
-		  cwin->canvas->style->fg_gc[GTK_WIDGET_STATE (cwin->canvas)],
-		  cwin->pixmap,
-		  0, 0,
-		  0, 0,
-		  w, h);
-		  */
-  /*gtk_widget_queue_draw(cwin->canvas);*/
-
-  g_object_unref(G_OBJECT(layout));
 
   return TRUE;
 }
@@ -787,8 +839,35 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 			 gpointer data)
 {
   ClockWindow *cwin=(ClockWindow *) data;
+  int w, h;
   
   /*do_update(cwin);*/
+  dprintf(1, "configure_event");
+
+  if(!cwin->canvas || !cwin->canvas->window)
+    return TRUE;
+  
+  if(!cwin->gc)
+    cwin->gc=gdk_gc_new(cwin->canvas->window);
+
+  if(!clock_face)
+    clock_face=make_clock_face(CLOCK_SIZE, CLOCK_SIZE, cwin->canvas, cwin->gc);
+
+  if(cwin->clock_face)
+    gdk_pixbuf_unref(cwin->clock_face);
+  w=cwin->canvas->allocation.width;
+  h=cwin->canvas->allocation.height;
+  if(w>h)
+    w=h;
+  else if(h>w)
+    h=w;
+
+  if(w>CLOCK_SIZE || h>CLOCK_SIZE) {
+    cwin->clock_face=make_clock_face(w, h, cwin->canvas, cwin->gc);
+  } else {
+    cwin->clock_face=gdk_pixbuf_scale_simple(clock_face, w, h,
+					     GDK_INTERP_BILINEAR);
+  }
 
   return TRUE;
 }
@@ -1251,6 +1330,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.29  2004/04/10 12:07:33  stephen
+ * Remove dead code.  Open options dialog from command line or SOAP message.
+ *
  * Revision 1.28  2004/03/26 15:25:38  stephen
  * Use ROX-CLib 2.1.0
  *
