@@ -1,7 +1,7 @@
 /*
  * rox_resources.c -Find internationalized resource files.
  *
- * $Id$
+ * $Id: rox_resources.c,v 1.1 2001/11/05 14:00:27 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -95,6 +95,8 @@ static gchar *do_tests(GPtrArray *dirs, const gchar *app_dir,
 	return answer;
     }
   }
+
+  return NULL;
 }
   
 gchar *rox_resources_find(const gchar *app_name,
@@ -127,5 +129,8 @@ gchar *rox_resources_find(const gchar *app_name,
 }
 
 /*
- * $Log$
+ * $Log: rox_resources.c,v $
+ * Revision 1.1  2001/11/05 14:00:27  stephen
+ * Added resources finding function
+ *
  */
