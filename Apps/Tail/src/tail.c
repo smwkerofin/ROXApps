@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.13 2002/03/04 11:54:26 stephen Exp $
+ * $Id: tail.c,v 1.14 2003/03/05 15:30:40 stephen Exp $
  */
 
 #include "config.h"
@@ -566,7 +566,11 @@ static void file_saveas_proc(void)
 		     savebox);
     gtk_savebox_set_pathname(GTK_SAVEBOX(savebox), "tail.txt");
 
-    ipath=choices_find_path_load("text_plain.xpm", "MIME-icons");
+    ipath=choices_find_path_load("text_plain.png", "MIME-icons");
+    if(!ipath)
+      ipath=choices_find_path_load("text.png", "MIME-icons");
+    if(!ipath)
+      ipath=choices_find_path_load("text_plain.xpm", "MIME-icons");
     if(!ipath)
       ipath=choices_find_path_load("text.xpm", "MIME-icons");
     if(ipath) {
@@ -577,7 +581,6 @@ static void file_saveas_proc(void)
       pixbuf=gdk_pixbuf_new_from_xpm_data(default_xpm);
     }
     gtk_savebox_set_icon(GTK_SAVEBOX(savebox), pixbuf);
-
     
   }
 
@@ -682,6 +685,9 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.14  2003/03/05 15:30:40  stephen
+ * First pass at conversion to GTK 2.
+ *
  * Revision 1.13  2002/03/04 11:54:26  stephen
  * Stable release.
  *
