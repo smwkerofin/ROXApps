@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.8 2001/07/31 07:44:48 stephen Exp $
+ * $Id: tail.c,v 1.9 2001/08/22 11:11:17 stephen Exp $
  */
 
 #include <stdio.h>
@@ -660,8 +660,8 @@ static void make_drop_target(GtkWidget *widget)
   gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_ALL, target_table, ntarget,
 		    GDK_ACTION_COPY|GDK_ACTION_PRIVATE);
 
-  gtk_signal_connect(GTK_OBJECT(widget), "drag_drop",
-		     GTK_SIGNAL_FUNC(drag_drop), NULL);
+  /*gtk_signal_connect(GTK_OBJECT(widget), "drag_drop",
+		     GTK_SIGNAL_FUNC(drag_drop), NULL);*/
   gtk_signal_connect(GTK_OBJECT(widget), "drag_data_received",
 		     GTK_SIGNAL_FUNC(drag_data_received), NULL);
 
@@ -941,6 +941,10 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.9  2001/08/22 11:11:17  stephen
+ * Improved menu handling, load a gtkrc file from choices, if there is
+ * one.
+ *
  * Revision 1.8  2001/07/31 07:44:48  stephen
  * Better debug output.  Save menu accelerators.  Scrolling to end of
  * window back in, unless truncated.

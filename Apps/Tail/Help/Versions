@@ -1,6 +1,10 @@
 Tail
 ====
 
+0.1.7
+-----
+Fix drag & drop code to avoid double drops.
+
 0.1.6
 -----
 Updated menu code.  Reads <Choices>/Tail/gtkrc.
