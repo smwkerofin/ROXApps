@@ -22,8 +22,12 @@ OBJECTS = main.o
 
 ############ Things to keep the same
 
-${EXEC}: ${PLATFORM_DIR} ${OBJECTS}
-	${CC} -o ${EXEC} ${OBJECTS} ${LDFLAGS}
+${EXEC}: ${PROG}
+	[ -d "${PLATFORM_DIR}" ] || mkdir "${PLATFORM_DIR}"
+	mv "${PROG}" "${EXEC}"
+
+${PROG}: ${OBJECTS}
+	${CC} -o ${PROG} ${OBJECTS} ${LDFLAGS}
 
 ${PLATFORM_DIR}:
 	mkdir ${PLATFORM_DIR}
@@ -34,6 +38,9 @@ clean:
 depend:
 	makedepend -- $(CFLAGS) -- $(SRCS)
 
+zero-install: clean
+	strip "${EXEC}"
+
 Makefile: Makefile.in config.status
 	./config.status
 
@@ -41,7 +48,7 @@ config.h: config.h.in
 	./config.status
 
 config.status: configure
-	./configure --bindir=${PLATFORM_DIR}
+	./configure  --with-platform=${PLATFORM}
 
 configure: configure.in
 	autoconf

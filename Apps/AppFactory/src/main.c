@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.11 2003/04/23 17:57:41 stephen Exp $
+ * $Id: main.c,v 1.12 2003/05/17 13:32:37 stephen Exp $
  */
 #include "config.h"
 
@@ -35,13 +35,12 @@
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
-#include "choices.h"
 #define DEBUG              1   /* Allow debug output */
-#include "rox_debug.h"
-#include "rox_dnd.h"
-#include "gtksavebox.h"
-#include "rox_resources.h"
-#include "options.h"
+#include <rox.h>
+#include <rox/rox_resources.h>
+#include <rox/rox_dnd.h>
+#include <rox/options.h>
+#include <rox/gtksavebox.h>
 
 #define PROMPT_UTIL  "promptArgs.py"
 #define DEFAULT_ICON "application.png"
@@ -126,9 +125,7 @@ int main(int argc, char *argv[])
     exit(0);
   }
   
-  rox_debug_init("AppFactory");
-  choices_init();
-  options_init("AppFactory");
+  rox_init("AppFactory", &argc, &argv);
 
   /* First things first, set the locale information for time, so that
      strftime will give us a sensible date format... */
@@ -149,13 +146,14 @@ int main(int argc, char *argv[])
   author=g_get_real_name();
   read_config_xml();
   setup_config();
-  
-  /* Initialise X/GDK/GTK */
-  gtk_init(&argc, &argv);
+
+#if 0
+  /* Initialise X/GDK/GTK things */
   gdk_rgb_init();
   gtk_widget_push_visual(gdk_rgb_get_visual());
   gtk_widget_push_colormap(gdk_rgb_get_cmap());
-  
+#endif
+
   /* Process remaining arguments */
   nerr=0;
   do_exit=FALSE;
@@ -180,8 +178,6 @@ int main(int argc, char *argv[])
   }
   if(do_exit)
     exit(0);
-
-  rox_dnd_init();
 
   /* Create window */
   win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -675,10 +671,13 @@ static void show_config_win(void)
  * Pop-up menu
  */
 static GtkItemFactoryEntry menu_items[] = {
-  { N_("/Info"),		NULL, show_info_win, 0, NULL },
-  { N_("/Configure..."),	NULL, show_config_win, 0, NULL},
+  { N_("/Info"),		NULL, show_info_win, 0, "<StockItem>",
+                                 GTK_STOCK_DIALOG_INFO},
+  { N_("/Configure..."),	NULL, show_config_win, 0, "<StockItem>",
+                                 GTK_STOCK_PROPERTIES},
   { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
-  { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
+  { N_("/Quit"), 	        NULL, gtk_main_quit, 0,  "<StockItem>",
+                                 GTK_STOCK_QUIT},
 };
 
 /* Save user-defined menu accelerators */

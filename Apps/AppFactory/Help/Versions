@@ -1,6 +1,12 @@
 AppFactory
 ==========
 
+2.1.0
+-----
+Use aclocal.m4 from ROX-CLib 2.1.0.
+Option to build for Zero Install.
+Update for ROX-CLib 2.1.0, by using rox_init() and stock images in menus.
+
 2.0.0
 -----
 Stable release to go with ROX-CLib 2.0.0.
