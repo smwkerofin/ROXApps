@@ -1,3 +1,12 @@
+/*
+ * Printer - a printer manager for ROX
+ * Stephen Watson <stephen@kerofin.demon.co.uk>
+ *
+ * GPL applies.
+ *
+ * $Id$
+ */
+
 #ifndef _printer_h
 #define _printer_h
 
@@ -37,3 +46,9 @@ extern Job *job_new(Printer *print, const char *id, int size,
 extern void job_free(Job *);
 
 #endif
+
+
+/*
+ * $Log$
+ */
+
