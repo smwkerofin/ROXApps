@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.1 2002/10/19 14:35:21 stephen Exp $
+# $Id: gui.py,v 1.2 2002/10/30 13:39:46 stephen Exp $
 
 import os
 import sys
@@ -13,7 +13,7 @@ from rox import g
 import netstat
 
 if len(sys.argv)>2 and sys.argv[1]=='-a':
-    xid=int(sys.argv[2])
+    xid=long(sys.argv[2])
 else:
     xid=None
 
