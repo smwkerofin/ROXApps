@@ -1,0 +1,6 @@
+Makefile
+configure
+config.log
+config.cache
+config.status
+rox-clib.h
