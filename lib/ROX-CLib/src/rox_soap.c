@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.4 2002/03/19 08:29:20 stephen Exp $
+ * $Id: rox_soap.c,v 1.5 2002/04/29 08:17:25 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -26,7 +26,7 @@
 #include <gtk/gtkinvisible.h>
 
 #ifdef HAVE_XML
-#include <parser.h>
+#include <libxml/parser.h>
 #endif
 
 #include "rox_soap.h"
@@ -694,6 +694,11 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.5  2002/04/29 08:17:25  stephen
+ * Fixed applet menu positioning (didn't work if program was managing more than
+ * one applet window)
+ * Some work for GTK+ 2
+ *
  * Revision 1.4  2002/03/19 08:29:20  stephen
  * Added SOAP server (rox_soap_server.h).  SOAP client can connect to programs
  * other than ROX-Filer.

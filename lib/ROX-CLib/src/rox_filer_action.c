@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.6 2002/02/27 16:28:16 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.7 2002/03/19 08:29:18 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -10,7 +10,7 @@
 
 #include <glib.h>
 #ifdef HAVE_XML
-#include <parser.h>
+#include <libxml/parser.h>
 #else
 
 /* Fake the XML stuff */
@@ -485,6 +485,10 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.7  2002/03/19 08:29:18  stephen
+ * Added SOAP server (rox_soap_server.h).  SOAP client can connect to programs
+ * other than ROX-Filer.
+ *
  * Revision 1.6  2002/02/27 16:28:16  stephen
  * Add support for PanelAdd and PinboardAdd (assuming they get into the
  * filer)

@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap_server.c,v 1.1 2002/03/19 08:29:21 stephen Exp $
+ * $Id: rox_soap_server.c,v 1.2 2002/04/29 08:17:25 stephen Exp $
  *
  * rox_soap_server.c - Provide ROX-Filer like SOAP server
  *
@@ -26,7 +26,7 @@
 #include <gtk/gtkinvisible.h>
 
 #ifdef HAVE_XML
-#include <parser.h>
+#include <libxml/parser.h>
 #endif
 
 #define DEBUG 1

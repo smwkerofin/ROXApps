@@ -1,5 +1,5 @@
 /*
- * $Id: test.c,v 1.3 2002/01/07 15:37:09 stephen Exp $
+ * $Id: test.c,v 1.4 2002/03/19 08:29:24 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -11,7 +11,7 @@
 #include <gtk/gtk.h>
 
 #ifdef HAVE_XML
-#include <parser.h>
+#include <libxml/parser.h>
 #endif
 
 #define DEBUG 1
