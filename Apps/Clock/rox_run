@@ -2,8 +2,8 @@
 
 prog=$1
 if [ -z "$prog" ]; then
-    echo "rox_run: no arguments given" >&2
-    echo "usage: rox_run program [arguments]" >&2
+    echo "run_rox: no arguments given" >&2
+    echo "usage: run_rox program [arguments]" >&2
     exit 127
 fi
 
@@ -15,7 +15,11 @@ if [ $? -eq 0 ]; then
 fi
 
 if [ -z "$LIBDIRPATH" ]; then
-    LIBDIRPATH=$HOME/lib:/usr/local/lib:/usr/lib export LIBDIRPATH
+    LIBDIRPATH=$HOME/lib:/usr/local/lib:/usr/lib 
+    if [ -d /uri/0install ] ; then
+      LIBDIRPATH=$LIBDIRPATH:/uri/0install/www.kerofin.demon.co.uk/lib
+    fi
+    export LIBDIRPATH
 fi
 
 if [ -z "$APPPATH" ]; then
@@ -33,5 +37,5 @@ for dir in $APPPATH $PATH $LIBDIRPATH; do
     fi
 done
 
-echo "rox_run: $prog not found" >&2
+echo "run_rox: $prog not found" >&2
 exit 127
