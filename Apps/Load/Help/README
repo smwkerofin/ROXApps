@@ -11,6 +11,19 @@ glibtop_get_loadavg).
 If you click on the applet (or run the program outside an applet
 context) you will get a top-level window which you can resize.
 
+Compilation and Installation
+----------------------------
+
+To compile the program, simply run it from ROX-Filer (or run 
+Load/AppRun --compile).  You will need these libraries
+  * GTK+ 1.2.10
+  * libgtop
+  * libxml2 (optional)
+  * ROX-CLib
+
+The program may be run from any location.  To install it, simply copy the 
+application directory.
+
 Display
 -------
 
@@ -39,6 +52,8 @@ Initial size: Initial size of the window.  Changing this value will
 	      have no effect until the next time the program is run.
 
 Colour: Allows you to change the 6 colours used for plotting the bars.
+
+Display font: The font used to label the graph.
 
 Save: Set the new values and save the configuration for the next time.
 

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.11 2002/01/30 10:23:34 stephen Exp $
+ * $Id: load.c,v 1.12 2002/03/04 11:48:53 stephen Exp $
  *
  * Log at end of file
  */
@@ -14,6 +14,7 @@
 
 #define DEBUG              1
 #define INLINE_FONT_SEL    0
+#define TRY_SERVER         1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +26,12 @@
 
 #include <unistd.h>
 #include <sys/stat.h>
+#ifdef HAVE_LOCALE_H
+#include <locale.h>
+#endif
+#ifdef HAVE_LIBINTL_H
+#include <libintl.h>
+#endif
 
 #include <gtk/gtk.h>
 #include "infowin.h"
@@ -44,15 +51,21 @@
 #define USE_XML 0
 #endif
 
-/*#include "rox-clib.h"*/
-#include "choices.h"
-#include "rox_debug.h"
+#if USE_XML && TRY_SERVER && ROX_CLIB_VERSION>=201
+#define USE_SERVER 1
+#else
+#define USE_SERVER 0
+#endif
+
+#include "rox.h"
+#include "applet.h"
+#if USE_SERVER
+#include "rox_soap.h"
+#include "rox_soap_server.h"
+#endif
 
 static GtkWidget *menu=NULL;
 static GtkWidget *infowin=NULL;
-static GtkWidget *canvas = NULL;
-static GdkPixmap *pixmap = NULL;
-static GdkGC *gc=NULL;
 static GdkColormap *cmap = NULL;
 static GdkColor colours[]={
   {0, 0xffff,0xffff,0xffff},
@@ -113,7 +126,7 @@ typedef struct options {
   gboolean multiple_chart;
 } Options;
 
-static Options options={
+static Options default_options={
   2000, TRUE, FALSE, FALSE, MIN_WIDTH,
   NULL, TRUE
 };
@@ -146,35 +159,69 @@ static glibtop *server=NULL;
 static double max_load=1.0;
 static double red_line=1.0;
 static int reduce_delay=10;
-static guint update=0;
 static History *history=NULL;
 static int nhistory=0;
 static int ihistory=0;
-static gboolean is_applet;
 #ifdef HAVE_GETHOSTNAME
 static char hostname[256];
 #endif
 
-static void do_update(void);
-static gint configure_event(GtkWidget *widget, GdkEventConfigure *event);
+typedef struct load_window {
+  GtkWidget *win;
+  GtkWidget *canvas;
+  GdkPixmap *pixmap;
+  GdkGC *gc;
+  guint update;
+  gboolean is_applet;
+  Options options;
+} LoadWindow;
+
+#if USE_SERVER
+static ROXSOAPServer *sserver=NULL;
+#define LOAD_NAMESPACE_URL WEBSITE PROJECT
+#endif
+
+static GList *windows=NULL;
+static LoadWindow *current_window=NULL;
+
+static LoadWindow *make_window(guint32 socket);
+static void remove_window(LoadWindow *win);
+static void do_update(LoadWindow *);
+static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
+			    gpointer data);
+static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
+			    gpointer data);
 static void menu_create_menu(GtkWidget *window);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win);
 static void show_info_win(void);
+#if USE_SERVER
+static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata);
+static gboolean open_remote(guint32 xid);
+#endif
 
 static void read_config(void);
-static void write_config(void);
+static void write_config(const Options *);
 #if USE_XML
 static gboolean read_config_xml(void);
-static void write_config_xml(void);
+static void write_config_xml(const Options *);
 #endif
 
 static void usage(const char *argv0)
 {
+#if USE_SERVER
+  printf("Usage: %s [X-options] [gtk-options] [-nrvh] [XID]\n", argv0);
+#else
   printf("Usage: %s [X-options] [gtk-options] [-vh] [XID]\n", argv0);
+#endif
   printf("where:\n\n");
   printf("  X-options\tstandard Xlib options\n");
   printf("  gtk-options\tstandard GTK+ options\n");
+#if USE_SERVER
+  printf("  -n\tdon't attempt to contact existing server\n");
+  printf("  -r\treplace existing server\n");
+#endif
   printf("  -h\tprint this help message\n");
   printf("  -v\tdisplay version information\n");
   printf("  XID\tX window to display applet in\n");
@@ -204,18 +251,52 @@ static void do_version(void)
     else
     printf("libxml version %d)\n", LIBXML_VERSION);
   }
+  printf("  Using SOAP server... ");
+  if(USE_SERVER)
+    printf("yes\n");
+  else {
+    printf("no");
+    if(!TRY_SERVER)
+      printf(", disabled");
+    if(ROX_CLIB_VERSION<201)
+      printf(", no ROX-CLIB support");
+    if(!USE_XML)
+      printf(", XML not available");
+    printf("\n");
+  }
 }
 
 int main(int argc, char *argv[])
 {
-  GtkWidget *win=NULL;
-  GtkWidget *vbox;
-  GtkStyle *style;
-  int w=MIN_WIDTH, h=MIN_HEIGHT;
-  int i;
+  LoadWindow *lwin=NULL;
+  const char *app_dir;
   int c, do_exit, nerr;
+  guint32 xid;
+  int i;
+#ifdef HAVE_BINDTEXTDOMAIN
+  gchar *localedir;
+#endif
+#if USE_SERVER
+  const char *options="vhnr";
+  gboolean new_run=FALSE;
+  gboolean replace_server=FALSE;
+#else
+  const char *options="vh";
+#endif
 
   rox_debug_init("Load");
+
+#ifdef HAVE_SETLOCALE
+  setlocale(LC_TIME, "");
+  setlocale (LC_ALL, "");
+#endif
+  app_dir=g_getenv("APP_DIR");
+#ifdef HAVE_BINDTEXTDOMAIN
+  localedir=g_strconcat(app_dir, "/Messages", NULL);
+  bindtextdomain(PROJECT, localedir);
+  textdomain(PROJECT);
+  g_free(localedir);
+#endif
 
 #ifdef HAVE_GETHOSTNAME
   if(gethostname(hostname, sizeof(hostname))<0) {
@@ -246,10 +327,16 @@ int main(int argc, char *argv[])
   cmap=gdk_rgb_get_cmap();
   gtk_widget_push_colormap(cmap);
   
+  for(i=0; i<NUM_COLOUR; i++) {
+    gdk_color_alloc(cmap, colours+i);
+    dprintf(3, "colour %d: %4x, %4x, %4x: %ld", i, colours[i].red,
+	   colours[i].green, colours[i].blue, colours[i].pixel);
+  }
+
   /* Process remaining arguments */
   nerr=0;
   do_exit=FALSE;
-  while((c=getopt(argc, argv, "vh"))!=EOF)
+  while((c=getopt(argc, argv, options))!=EOF)
     switch(c) {
     case 'h':
       usage(argv[0]);
@@ -259,6 +346,14 @@ int main(int argc, char *argv[])
       do_version();
       do_exit=TRUE;
       break;
+#if USE_SERVER
+    case 'n':
+      new_run=TRUE;
+      break;
+    case 'r':
+      replace_server=TRUE;
+      break;
+#endif
     default:
       nerr++;
       break;
@@ -274,85 +369,171 @@ int main(int argc, char *argv[])
   choices_init();
   dprintf(1, "read config");
   read_config();
-  w=options.init_size;
-  h=options.init_size;
 
   if(optind>=argc || !atol(argv[optind])) {
-    dprintf(2, "make window");
-    is_applet=FALSE;
-    win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_widget_set_name(win, "load");
-    gtk_window_set_title(GTK_WINDOW(win), "Load");
-    gtk_signal_connect(GTK_OBJECT(win), "destroy", 
-		       GTK_SIGNAL_FUNC(gtk_main_quit), 
-		       "WM destroy");
-    gtk_signal_connect(GTK_OBJECT(win), "button_press_event",
-		       GTK_SIGNAL_FUNC(button_press), win);
-    gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
-    gtk_window_set_wmclass(GTK_WINDOW(win), "Load", PROJECT);
-    
-    dprintf(3, "set size to %d,%d", w, h);
-    gtk_widget_set_usize(win, w, h);
-    /*gtk_widget_realize(win);*/
-    
+    xid=0;
   } else {
-    GtkWidget *plug;
-
     dprintf(2, "argv[%d]=%s", optind, argv[optind]);
-    plug=gtk_plug_new(atol(argv[optind]));
-    gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
-		       GTK_SIGNAL_FUNC(gtk_main_quit), 
-		       "WM destroy");
-    gtk_widget_set_usize(plug, w, h);
-    
-    gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
-		       GTK_SIGNAL_FUNC(button_press), plug);
-    gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
-    
-    win=plug;
-    is_applet=TRUE;
-  }
-  menu_create_menu(GTK_WIDGET(win));
-  
-  vbox=gtk_vbox_new(FALSE, 1);
-  gtk_container_add(GTK_CONTAINER(win), vbox);
-  gtk_widget_show(vbox);
-
-  /*
-  style=gtk_widget_get_style(vbox);
-  colours[COL_BG]=style->bg[GTK_STATE_NORMAL];
-  */
-  
-  for(i=0; i<NUM_COLOUR; i++) {
-    gdk_color_alloc(cmap, colours+i);
-    dprintf(3, "colour %d: %4x, %4x, %4x: %ld", i, colours[i].red,
-	   colours[i].green, colours[i].blue, colours[i].pixel);
+    xid=atol(argv[optind]);
   }
 
-  canvas=gtk_drawing_area_new();
-  gtk_drawing_area_size (GTK_DRAWING_AREA(canvas), w-2, h-2);
-  gtk_box_pack_start (GTK_BOX (vbox), canvas, TRUE, TRUE, 0);
-  gtk_widget_show (canvas);
-  gtk_signal_connect (GTK_OBJECT (canvas), "expose_event",
-		      (GtkSignalFunc) do_update, NULL);
-  gtk_signal_connect (GTK_OBJECT (canvas), "configure_event",
-		      (GtkSignalFunc) configure_event, NULL);
-  gtk_widget_set_events (canvas, GDK_EXPOSURE_MASK);
-  gtk_widget_realize(canvas);
-  gtk_widget_set_name(canvas, "load display");
-  gc=gdk_gc_new(canvas->window);
-  gdk_gc_set_background(gc, colours+COL_BG);
-
-  if(is_applet)
-    applet_get_panel_location(win);
-  gtk_widget_show(win);
-
-  update=gtk_timeout_add(options.update_ms, (GtkFunction) do_update, NULL);
-  dprintf(3, "update tag is %u", update);
+#if USE_SERVER
+  if(replace_server || !rox_soap_ping(PROJECT)) {
+    dprintf(1, "Making SOAP server");
+    sserver=rox_soap_server_new(PROJECT, LOAD_NAMESPACE_URL);
+    rox_soap_server_add_action(sserver, "Open", NULL, "Parent",
+			       rpc_Open, NULL);
+  } else if(!new_run) {
+    if(open_remote(xid)) {
+      dprintf(1, "success in open_remote(%lu), exiting", xid);
+      return 0;
+    }
+  }
+#endif
+  lwin=make_window(xid);
   
   gtk_main();
 
+#if USE_SERVER
+  if(sserver)
+    rox_soap_server_delete(sserver);
+#endif
+
   return 0;
+}
+
+static void remove_window(LoadWindow *win)
+{
+  if(win==current_window)
+    current_window=NULL;
+  
+  windows=g_list_remove(windows, win);
+  /*gtk_widget_hide(win->win);*/
+
+  gtk_timeout_remove(win->update);
+  gdk_pixmap_unref(win->pixmap);
+  gdk_gc_unref(win->gc);
+  if(win->options.font_name)
+    g_free((void *) win->options.font_name);
+  g_free(win);
+
+  dprintf(1, "windows=%p, number of active windows=%d", windows,
+	  g_list_length(windows));
+  if(g_list_length(windows)<1)
+    gtk_main_quit();
+}
+
+static void window_gone(GtkWidget *widget, gpointer data)
+{
+  LoadWindow *lw=(LoadWindow *) data;
+
+  dprintf(1, "Window gone: %p %p", widget, lw);
+
+  remove_window(lw);
+}
+
+static LoadWindow *make_window(guint32 xid)
+{
+  LoadWindow *lwin;
+  GtkWidget *vbox;
+  int w=MIN_WIDTH, h=MIN_HEIGHT;
+  int i;
+  static GdkPixmap *pixmap=NULL;
+  static GdkBitmap *mask=NULL;
+  
+  lwin=g_new0(LoadWindow, 1);
+
+  lwin->options=default_options;
+  if(lwin->options.font_name)
+    lwin->options.font_name=g_strdup(lwin->options.font_name);
+
+  w=lwin->options.init_size;
+  h=lwin->options.init_size;
+  if(!xid) {
+    dprintf(2, "make window");
+    lwin->is_applet=FALSE;
+    lwin->win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_widget_set_name(lwin->win, "load");
+    gtk_window_set_title(GTK_WINDOW(lwin->win), "Load");
+    gtk_signal_connect(GTK_OBJECT(lwin->win), "destroy", 
+		       GTK_SIGNAL_FUNC(window_gone), 
+		       lwin);
+    gtk_signal_connect(GTK_OBJECT(lwin->win), "button_press_event",
+		       GTK_SIGNAL_FUNC(button_press), lwin);
+    gtk_widget_add_events(lwin->win, GDK_BUTTON_PRESS_MASK);
+    gtk_window_set_wmclass(GTK_WINDOW(lwin->win), "Load", PROJECT);
+    
+    dprintf(3, "set size to %d,%d", w, h);
+    gtk_widget_set_usize(lwin->win, w, h);
+
+  } else {
+    GtkWidget *plug;
+
+    plug=gtk_plug_new(xid);
+    gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
+		       GTK_SIGNAL_FUNC(window_gone), 
+		       lwin);
+    gtk_widget_set_usize(plug, w, h);
+    
+    gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
+		       GTK_SIGNAL_FUNC(button_press), lwin);
+    gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
+    
+    lwin->win=plug;
+    lwin->is_applet=TRUE;
+  }
+  if(!menu)
+    menu_create_menu(GTK_WIDGET(lwin->win));
+  
+  vbox=gtk_vbox_new(FALSE, 1);
+  gtk_container_add(GTK_CONTAINER(lwin->win), vbox);
+  gtk_widget_show(vbox);
+
+  lwin->canvas=gtk_drawing_area_new();
+  gtk_drawing_area_size (GTK_DRAWING_AREA(lwin->canvas), w-2, h-2);
+  gtk_box_pack_start (GTK_BOX (vbox), lwin->canvas, TRUE, TRUE, 0);
+  gtk_widget_show (lwin->canvas);
+  gtk_signal_connect (GTK_OBJECT (lwin->canvas), "expose_event",
+		      (GtkSignalFunc) expose_event, lwin);
+  gtk_signal_connect (GTK_OBJECT (lwin->canvas), "configure_event",
+		      (GtkSignalFunc) configure_event, lwin);
+  gtk_widget_set_events (lwin->canvas, GDK_EXPOSURE_MASK);
+  gtk_widget_realize(lwin->canvas);
+  gtk_widget_set_name(lwin->canvas, "load display");
+  lwin->gc=gdk_gc_new(lwin->canvas->window);
+  gdk_gc_set_background(lwin->gc, colours+COL_BG);
+
+  gtk_widget_realize(lwin->win);
+
+  if(!pixmap) {
+    gchar *fname=rox_resources_find(PROJECT, "AppIcon.xpm",
+				    ROX_RESOURCES_NO_LANG);
+    if(fname) {
+      GtkStyle *style;
+      style = gtk_widget_get_style(lwin->win);
+      pixmap = gdk_pixmap_create_from_xpm(GTK_WIDGET(lwin->win)->window,
+					  &mask, 
+					  &style->bg[GTK_STATE_NORMAL],
+					  fname);
+
+      g_free(fname);
+    }
+  }
+  if(pixmap)
+    gdk_window_set_icon(GTK_WIDGET(lwin->win)->window, NULL, pixmap, mask);
+    
+  if(lwin->is_applet)
+    applet_get_panel_location(lwin->win);
+  gtk_widget_show(lwin->win);
+
+  lwin->update=gtk_timeout_add(lwin->options.update_ms,
+			       (GtkFunction) do_update, lwin);
+  dprintf(3, "update tag is %u", lwin->update);
+  
+  windows=g_list_append(windows, lwin);
+  current_window=lwin;
+  gtk_widget_ref(lwin->win);
+
 }
 
 /* Return history data for the given index, either in the rolling window,
@@ -395,7 +576,7 @@ static void append_history(time_t when, const double loadavg[3])
   }  
 }
 
-static void do_update(void)
+static void do_update(LoadWindow *lwin)
 {
   int w, h;
   int bw, mbh, bh, bm=BOTTOM_MARGIN, tm=TOP_MARGIN, l2=0;
@@ -415,31 +596,33 @@ static void do_update(void)
     "1m", "5m", "15m"
   };
 
-  dprintf(4, "gc=%p canvas=%p pixmap=%p", gc, canvas, pixmap);
+  dprintf(4, "gc=%p canvas=%p pixmap=%p", lwin->gc, lwin->canvas,
+	  lwin->pixmap);
 
-  if(!gc || !canvas || !pixmap)
+  if(!lwin->gc || !lwin->canvas || !lwin->pixmap)
     return;
 
-  h=canvas->allocation.height;
-  w=canvas->allocation.width;
+  h=lwin->canvas->allocation.height;
+  w=lwin->canvas->allocation.width;
   
-  if(!font && options.font_name) {
-    font=gdk_font_load(options.font_name);
+  if(!font && lwin->options.font_name) {
+    font=gdk_font_load(lwin->options.font_name);
   }
   if(!font) 
-    font=canvas->style->font;
+    font=lwin->canvas->style->font;
   gdk_font_ref(font);
   
-  style=gtk_widget_get_style(canvas);
+  style=gtk_widget_get_style(lwin->canvas);
   dprintf(3, "style=%p bg_gc[GTK_STATE_NORMAL]=%p", style,
 	  style->bg_gc[GTK_STATE_NORMAL]);
   if(style && style->bg_gc[GTK_STATE_NORMAL]) {
-    gtk_style_apply_default_background(style, pixmap, TRUE, GTK_STATE_NORMAL,
+    gtk_style_apply_default_background(style, lwin->pixmap, TRUE,
+				       GTK_STATE_NORMAL,
 				       NULL, 0, 0, w, h);
   } else {
     /* Blank out to the background colour */
-    gdk_gc_set_foreground(gc, colours+COL_BG);
-    gdk_draw_rectangle(pixmap, gc, TRUE, 0, 0, w, h);
+    gdk_gc_set_foreground(lwin->gc, colours+COL_BG);
+    gdk_draw_rectangle(lwin->pixmap, lwin->gc, TRUE, 0, 0, w, h);
   }
 
   bx=2;
@@ -448,7 +631,7 @@ static void do_update(void)
     bw=MAX_BAR_WIDTH;
     bx=w-2-3*bw-3*BAR_GAP-1;
   }
-  if(options.show_vals) {
+  if(lwin->options.show_vals) {
     int width, height;
 
     width=gdk_char_width(font, '0');
@@ -509,8 +692,8 @@ static void do_update(void)
   for(i=0; i<3; i++) {
     ld=load.loadavg[i];
     bh=mbh*ld/max_load;
-    gdk_gc_set_foreground(gc, colours+COL_NORMAL(i));
-    gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bh);
+    gdk_gc_set_foreground(lwin->gc, colours+COL_NORMAL(i));
+    gdk_draw_rectangle(lwin->pixmap, lwin->gc, TRUE, bx, by-bh, bw, bh);
     
     dprintf(4, "load=%f max_load=%f, mbh=%d, by=%d, bh=%d, by-bh=%d",
 	   ld, max_load, mbh, by, bh, by-bh);
@@ -524,23 +707,24 @@ static void do_update(void)
       dprintf(5, "bhred=%d by-bhred=%d", bhred, by-bhred);
       dprintf(5, "(%d, %d) by (%d, %d)", bx, by-bh, bw, bhred);
       
-      gdk_gc_set_foreground(gc, colours+COL_HIGH(i));
+      gdk_gc_set_foreground(lwin->gc, colours+COL_HIGH(i));
       /*gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bhred);*/
-      gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bh-byred);
+      gdk_draw_rectangle(lwin->pixmap, lwin->gc, TRUE, bx, by-bh,
+			 bw, bh-byred);
     }
-    gdk_gc_set_foreground(gc, colours+COL_FG);
-    gdk_draw_rectangle(pixmap, gc, FALSE, bx, by-bh, bw, bh);
+    gdk_gc_set_foreground(lwin->gc, colours+COL_FG);
+    gdk_draw_rectangle(lwin->pixmap, lwin->gc, FALSE, bx, by-bh, bw, bh);
 
-    if(options.show_vals) {
+    if(lwin->options.show_vals) {
       sprintf(buf, "%3.*f", ndec, ld);
-      gdk_draw_string(pixmap, font, gc, bx+2, h-2-l2, buf);
+      gdk_draw_string(lwin->pixmap, font, lwin->gc, bx+2, h-2-l2, buf);
       if(l2>0) {
 	int xl=bx+2;
 	int lw;
 
 	lw=gdk_string_width(font, bar_labels[i]);
 	xl=bx+bw/2-lw/2;
-	gdk_draw_string(pixmap, font, gc, xl, h-2, bar_labels[i]);
+	gdk_draw_string(lwin->pixmap, font, lwin->gc, xl, h-2, bar_labels[i]);
       }
     }
 
@@ -575,46 +759,48 @@ static void do_update(void)
 	bx=BAR_GAP;
       }
 
-      for(j=options.multiple_chart? 2: 0; j>=0; j--) {
+      for(j=lwin->options.multiple_chart? 2: 0; j>=0; j--) {
 	ld=hist->load[j];
 	bh=mbh*ld/max_load;
-	gdk_gc_set_foreground(gc, colours+COL_NORMAL(j));
+	gdk_gc_set_foreground(lwin->gc, colours+COL_NORMAL(j));
 	dprintf(3, "(%d, %d) size (%d, %d)", bx, by-bh, gwidth, bh);
-	gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, gwidth, bh);
+	gdk_draw_rectangle(lwin->pixmap, lwin->gc, TRUE, bx, by-bh,
+			   gwidth, bh);
 	if(ld>red_line) {
 	  int bhred=mbh*(ld-red_line)/max_load;
 	  int byred=mbh*red_line/max_load;
-	  gdk_gc_set_foreground(gc, colours+COL_HIGH(j));
+	  gdk_gc_set_foreground(lwin->gc, colours+COL_HIGH(j));
 	  /*gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, gwidth, bhred);*/
-	  gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, gwidth, bh-byred);
+	  gdk_draw_rectangle(lwin->pixmap, lwin->gc, TRUE, bx, by-bh,
+			     gwidth, bh-byred);
 	}
       }
     }
 
-    gdk_gc_set_foreground(gc, colours+COL_FG);
-    gdk_draw_line(pixmap, gc, BAR_GAP, by, gorg, by);
+    gdk_gc_set_foreground(lwin->gc, colours+COL_FG);
+    gdk_draw_line(lwin->pixmap, lwin->gc, BAR_GAP, by, gorg, by);
     for(i=0, bx=gorg-2*i; bx>=BAR_GAP; i+=5, bx=gorg-CHART_RES*i)
       if(i%6==0) {
-	gdk_draw_line(pixmap, gc, bx, by, bx, by+bm-l2);
-	if(options.show_vals) {
+	gdk_draw_line(lwin->pixmap, lwin->gc, bx, by, bx, by+bm-l2);
+	if(lwin->options.show_vals) {
 	  sprintf(buf, "%d", i);
-	  gdk_draw_string(pixmap, font, gc,
+	  gdk_draw_string(lwin->pixmap, font, lwin->gc,
 			  bx-gdk_string_width(font, buf)/2, h-2, buf);
 	}
       } else {
-	gdk_draw_line(pixmap, gc, bx, by, bx, by+(bm-l2)/2);
+	gdk_draw_line(lwin->pixmap, lwin->gc, bx, by, bx, by+(bm-l2)/2);
       }
   }
 
-  if(options.show_max) {
+  if(lwin->options.show_max) {
     sprintf(buf, "Max %2d", (int) max_load);
-    gdk_gc_set_foreground(gc, colours+COL_FG);
-    gdk_draw_string(pixmap, font, gc, 2, tm, buf);
+    gdk_gc_set_foreground(lwin->gc, colours+COL_FG);
+    gdk_draw_string(lwin->pixmap, font, lwin->gc, 2, tm, buf);
 
     host_x=2+gdk_string_width(font, buf)+4;
   }
 
-  if(options.show_host) {
+  if(lwin->options.show_host) {
     const char *host=hostname;
     
     if(server->server_host)
@@ -623,17 +809,11 @@ static void do_update(void)
     x=w-gdk_string_width(font, host)-2;
     if(x<host_x)
       x=host_x;
-    gdk_gc_set_foreground(gc, colours+COL_FG);
-    gdk_draw_string(pixmap, font, gc, x, tm, host);
+    gdk_gc_set_foreground(lwin->gc, colours+COL_FG);
+    gdk_draw_string(lwin->pixmap, font, lwin->gc, x, tm, host);
   }
   
-    
-  gdk_draw_pixmap(canvas->window,
-		  canvas->style->fg_gc[GTK_WIDGET_STATE (canvas)],
-		  pixmap,
-		  0, 0,
-		  0, 0,
-		  w, h);
+  gtk_widget_queue_draw(lwin->canvas);    
 
   gdk_font_unref(font);
 }
@@ -685,24 +865,50 @@ static void resize_history(int width)
   nhistory=nrec;
 }
 
-/* Create a new backing pixmap of the appropriate size */
-static gint configure_event(GtkWidget *widget, GdkEventConfigure *event)
+static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
+			 gpointer data)
 {
-  if (pixmap)
-    gdk_pixmap_unref(pixmap);
+  int w, h;
+  LoadWindow *lwin=(LoadWindow *) data;
+  
+  if(!lwin->gc || !lwin->canvas || !lwin->pixmap)
+    return;
+  
+  h=lwin->canvas->allocation.height;
+  w=lwin->canvas->allocation.width;
 
-  pixmap = gdk_pixmap_new(widget->window,
+  /* Copy the pixmap to the display canvas */
+  gdk_draw_pixmap(lwin->canvas->window,
+		  lwin->canvas->style->fg_gc[GTK_WIDGET_STATE (lwin->canvas)],
+		  lwin->pixmap,
+		  0, 0,
+		  0, 0,
+		  w, h);
+
+  return TRUE;
+}
+
+/* Create a new backing pixmap of the appropriate size */
+static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
+			    gpointer data)
+{
+  LoadWindow *lwin=(LoadWindow *) data;
+  
+  if (lwin->pixmap)
+    gdk_pixmap_unref(lwin->pixmap);
+
+  lwin->pixmap = gdk_pixmap_new(widget->window,
 			  widget->allocation.width,
 			  widget->allocation.height,
 			  -1);
   resize_history(widget->allocation.width);
-  do_update();
+  do_update(lwin);
 
   return TRUE;
 }
 
 #if USE_XML
-static void write_config_xml(void)
+static void write_config_xml(const Options *opt)
 {
   gchar *fname;
   gboolean ok;
@@ -722,24 +928,24 @@ static void write_config_xml(void)
     xmlSetProp(doc->children, "version", VERSION);
 
     tree=xmlNewChild(doc->children, NULL, "update", NULL);
-    sprintf(buf, "%d", options.update_ms);
+    sprintf(buf, "%d", opt->update_ms);
     xmlSetProp(tree, "value", buf);
     
     tree=xmlNewChild(doc->children, NULL, "show", NULL);
-    sprintf(buf, "%d", options.show_max);
+    sprintf(buf, "%d", opt->show_max);
     xmlSetProp(tree, "max", buf);
-    sprintf(buf, "%d", options.show_vals);
+    sprintf(buf, "%d", opt->show_vals);
     xmlSetProp(tree, "vals", buf);
-    sprintf(buf, "%d", options.show_host);
+    sprintf(buf, "%d", opt->show_host);
     xmlSetProp(tree, "host", buf);
-    sprintf(buf, "%d", options.multiple_chart);
+    sprintf(buf, "%d", opt->multiple_chart);
     xmlSetProp(tree, "multiple-charts", buf);
     
-    if(options.font_name)
-      tree=xmlNewChild(doc->children, NULL, "font", options.font_name);
+    if(opt->font_name)
+      tree=xmlNewChild(doc->children, NULL, "font", opt->font_name);
     
     tree=xmlNewChild(doc->children, NULL, "applet", NULL);
-    sprintf(buf, "%d", options.init_size);
+    sprintf(buf, "%d", opt->init_size);
     xmlSetProp(tree, "initial-size", buf);
     
     tree=xmlNewChild(doc->children, NULL, "colours", NULL);
@@ -764,7 +970,7 @@ static void write_config_xml(void)
 }
 #endif
 
-static void write_config(void)
+static void write_config(const Options *opt)
 {
 #if !USE_XML
   gchar *fname;
@@ -787,14 +993,14 @@ static void write_config(void)
       strftime(buf, 80, "%c", localtime(&now));
       fprintf(out, "#\n# Written %s\n\n", buf);
 
-      fprintf(out, "update_ms=%d\n", options.update_ms);
-      fprintf(out, "show_max=%d\n", options.show_max);
-      fprintf(out, "show_vals=%d\n", options.show_vals);
-      fprintf(out, "show_host=%d\n", options.show_host);
-      fprintf(out, "multiple_chart=%d\n", options.multiple_chart);
-      fprintf(out, "init_size=%d\n", (int) options.init_size);
-      if(options.font_name)
-	fprintf(out, "font_name=%s\n", options.font_name);
+      fprintf(out, "update_ms=%d\n", opt->update_ms);
+      fprintf(out, "show_max=%d\n", opt->show_max);
+      fprintf(out, "show_vals=%d\n", opt->show_vals);
+      fprintf(out, "show_host=%d\n", opt->show_host);
+      fprintf(out, "multiple_chart=%d\n", opt->multiple_chart);
+      fprintf(out, "init_size=%d\n", (int) opt->init_size);
+      if(opt->font_name)
+	fprintf(out, "font_name=%s\n", opt->font_name);
 
       for(i=0; colour_info[i].colour>=0; i++) {
 	GdkColor *col=colours+colour_info[i].colour;
@@ -809,7 +1015,7 @@ static void write_config(void)
     g_free(fname);
   }
 #else
-  write_config_xml();
+  write_config_xml(opt);
 #endif
 }
 
@@ -854,28 +1060,28 @@ static gboolean read_config_xml(void)
  	str=xmlGetProp(node, "value");
 	if(!str)
 	  continue;
-	options.update_ms=atol(str);
+	default_options.update_ms=atol(str);
 	free(str);
 
       } else if(strcmp(node->name, "show")==0) {
 	str=xmlGetProp(node, "max");
 	if(str) {
-	  options.show_max=atoi(str);
+	  default_options.show_max=atoi(str);
 	  free(str);
 	}
 	str=xmlGetProp(node, "vals");
 	if(str) {
-	  options.show_vals=atoi(str);
+	  default_options.show_vals=atoi(str);
 	  free(str);
 	}
 	str=xmlGetProp(node, "host");
 	if(str) {
-	  options.show_host=atoi(str);
+	  default_options.show_host=atoi(str);
 	  free(str);
 	}
 	str=xmlGetProp(node, "multiple-charts");
 	if(str) {
-	  options.multiple_chart=atoi(str);
+	  default_options.multiple_chart=atoi(str);
 	  free(str);
 	}
 
@@ -883,16 +1089,16 @@ static gboolean read_config_xml(void)
 	str=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 	if(!str)
 	  continue;
-	if(options.font_name)
-	  g_free(options.font_name);
-	options.font_name=g_strdup(str);
+	if(default_options.font_name)
+	  g_free(default_options.font_name);
+	default_options.font_name=g_strdup(str);
 	free(str);
 
       } else if(strcmp(node->name, "applet")==0) {
  	str=xmlGetProp(node, "initial-size");
 	if(!str)
 	  continue;
-	options.init_size=atoi(str);
+	default_options.init_size=atoi(str);
 	free(str);
 
       } else if(strcmp(node->name, "colours")==0) {
@@ -999,28 +1205,22 @@ static void read_config(void)
 	    var=g_strstrip(words);
 
 	    if(strcmp(var, "update_ms")==0) {
-	      options.update_ms=atoi(val);
+	      default_options.update_ms=atoi(val);
 
-	      if(update) {
-		gtk_timeout_remove(update);
-		update=gtk_timeout_add(options.update_ms,
-				       (GtkFunction) do_update, NULL);
-	      }
-	      
 	    } else if(strcmp(var, "show_max")==0) {
-	      options.show_max=atoi(val);
+	      default_options.show_max=atoi(val);
 	    } else if(strcmp(var, "show_vals")==0) {
-	      options.show_vals=atoi(val);
+	      default_options.show_vals=atoi(val);
 	    } else if(strcmp(var, "show_host")==0) {
-	      options.show_host=atoi(val);
+	      default_options.show_host=atoi(val);
 	    } else if(strcmp(var, "multiple_chart")==0) {
-	      options.multiple_chart=atoi(val);
+	      default_options.multiple_chart=atoi(val);
 	    } else if(strcmp(var, "init_size")==0) {
-	      options.init_size=(guint) atoi(val);
+	      default_options.init_size=(guint) atoi(val);
 	    } else if(strcmp(var, "font_name")==0) {
-	      if(options.font_name)
-		g_free(options.font_name);
-	      options.font_name=g_strdup(val);
+	      if(default_options.font_name)
+		g_free(default_options.font_name);
+	      default_options.font_name=g_strdup(val);
 	    } else {
 	      int i;
 
@@ -1108,32 +1308,39 @@ static void set_config(GtkWidget *widget, gpointer data)
   int i;
   GdkColormap *cmap;
   gchar *text;
+  LoadWindow *lwin;
+  Options *opts;
+
+  lwin=gtk_object_get_data(GTK_OBJECT(ow->window), "LoadWindow");
+  opts=lwin? &lwin->options: &default_options;
 
   s=gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(ow->update_s));
-  options.update_ms=(guint) (s*1000);
-  options.show_max=
+  opts->update_ms=(guint) (s*1000);
+  opts->show_max=
     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_max));
-  options.show_vals=
+  opts->show_vals=
     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_vals));
-  options.show_host=
+  opts->show_host=
     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_host));
-  options.multiple_chart=
+  opts->multiple_chart=
     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->multiple_chart));
-  options.init_size=
+  opts->init_size=
     gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ow->init_size));
-  
-  gtk_timeout_remove(update);
-  update=gtk_timeout_add(options.update_ms,
-				     (GtkFunction) do_update, NULL);
 
-  if(options.font_name)
-    g_free(options.font_name);
+  if(lwin) {
+    gtk_timeout_remove(lwin->update);
+    lwin->update=gtk_timeout_add(opts->update_ms, (GtkFunction) do_update,
+				 lwin);
+  }
+
+  if(opts->font_name)
+    g_free(opts->font_name);
 #if INLINE_FONT_SEL
-  options.font_name=
+  opts->font_name=
     gtk_font_selection_get_font_name(GTK_FONT_SELECTION(ow->font_sel));
 #else
   gtk_label_get(GTK_LABEL(ow->font_name), &text);
-  options.font_name=g_strdup(text);
+  opts->font_name=g_strdup(text);
 #endif
   
   cmap=gdk_rgb_get_cmap();
@@ -1153,7 +1360,7 @@ static void set_config(GtkWidget *widget, gpointer data)
 static void save_config(GtkWidget *widget, gpointer data)
 {
   set_config(widget, data);
-  write_config();
+  write_config(current_window? &current_window->options: &default_options);
 }
 
 #if !INLINE_FONT_SEL
@@ -1381,7 +1588,7 @@ static void show_config_win(void)
     gtk_widget_show(label);
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
 
-    range=gtk_adjustment_new((gfloat)(options.update_ms/1000.),
+    range=gtk_adjustment_new((gfloat)(current_window->options.update_ms/1000.),
 			     1.0, 60., 0.1, 1., 1.);
     spin=gtk_spin_button_new(GTK_ADJUSTMENT(range), 1, 5);
     gtk_widget_set_name(spin, "update_s");
@@ -1401,21 +1608,24 @@ static void show_config_win(void)
     gtk_widget_set_name(check, "show_max");
     gtk_widget_show(check);
     gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 2);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check), options.show_max);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check),
+				 current_window->options.show_max);
     ow.show_max=check;
 
     check=gtk_check_button_new_with_label("Show values");
     gtk_widget_set_name(check, "show_vals");
     gtk_widget_show(check);
     gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 2);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check), options.show_vals);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check),
+				 current_window->options.show_vals);
     ow.show_vals=check;
 
     check=gtk_check_button_new_with_label("Show hostname");
     gtk_widget_set_name(check, "show_host");
     gtk_widget_show(check);
     gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 2);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check), options.show_host);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check),
+				 current_window->options.show_host);
     ow.show_host=check;
 
     check=gtk_check_button_new_with_label("Multiple charts");
@@ -1423,7 +1633,7 @@ static void show_config_win(void)
     gtk_widget_show(check);
     gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 2);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check),
-				 options.multiple_chart);
+				 current_window->options.multiple_chart);
     ow.multiple_chart=check;
 
     hbox=gtk_hbox_new(FALSE, 0);
@@ -1434,7 +1644,7 @@ static void show_config_win(void)
     gtk_widget_show(label);
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
 
-    range=gtk_adjustment_new((gfloat) options.init_size,
+    range=gtk_adjustment_new((gfloat) current_window->options.init_size,
 			     16, 128, 2, 16, 16);
     spin=gtk_spin_button_new(GTK_ADJUSTMENT(range), 1, 0);
     gtk_widget_set_name(spin, "init_size");
@@ -1498,7 +1708,8 @@ static void show_config_win(void)
     gtk_widget_show(ow.font_sel);
     gtk_box_pack_start(GTK_BOX(hbox), ow.font_sel, FALSE, FALSE, 2);
 #else
-    ow.font_name=gtk_label_new(options.font_name? options.font_name: "");
+    ow.font_name=gtk_label_new(current_window->options.font_name?
+			       current_window->options.font_name: "");
     gtk_widget_show(ow.font_name);
     gtk_box_pack_start(GTK_BOX(hbox), ow.font_name, FALSE, FALSE, 2);
 
@@ -1542,17 +1753,17 @@ static void show_config_win(void)
     GtkStyle *style;
     
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.update_s),
-			      (gfloat)(options.update_ms/1000.));
+			    (gfloat)(current_window->options.update_ms/1000.));
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.show_max),
-				 options.show_max);
+				 current_window->options.show_max);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.show_vals),
-				 options.show_vals);
+				 current_window->options.show_vals);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.show_host),
-				 options.show_host);
+				 current_window->options.show_host);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.multiple_chart),
-				 options.multiple_chart);
+				 current_window->options.multiple_chart);
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.init_size),
-			      (gfloat) options.init_size);
+			      (gfloat)current_window-> options.init_size);
 
     gtk_option_menu_set_history(GTK_OPTION_MENU(ow.colour_menu), 0);
     show_colour(ow.colour_show, colour_info[0].rgb);
@@ -1560,24 +1771,37 @@ static void show_config_win(void)
     gtk_widget_hide(ow.colour_dialog);
   }
 #if INLINE_FONT_SEL
-  if(options.font_name)
+  if(current_window->options.font_name)
     gtk_font_selection_set_font_name(GTK_FONT_SELECTION(ow.font_sel),
-				     options.font_name);
+				     current_window->options.font_name);
 #else
-  if(options.font_name) {
+  if(current_window->options.font_name) {
     gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(ow.font_window),
-				     options.font_name);
-    gtk_label_set_text(GTK_LABEL(ow.font_name), options.font_name);
+				     current_window->options.font_name);
+    gtk_label_set_text(GTK_LABEL(ow.font_name),
+		       current_window->options.font_name);
   }
 #endif
   gtk_widget_show(confwin);
 }
 
+static void close_window(void)
+{
+  LoadWindow *lw=current_window;
+
+  dprintf(1, "close_window %p %p", lw, lw->win);
+
+  gtk_widget_hide(lw->win);
+  gtk_widget_unref(lw->win);
+  gtk_widget_destroy(lw->win);
+}
+
 /* Pop-up menu */
 static GtkItemFactoryEntry menu_items[] = {
-  { "/Info",	NULL, show_info_win, 0, NULL },
-  { "/Configure",	NULL, show_config_win, 0, NULL },
-  { "/Quit",	NULL, gtk_main_quit, 0, NULL },
+  { N_("/Info"),	NULL, show_info_win, 0, NULL },
+  { N_("/Configure"),	NULL, show_config_win, 0, NULL },
+  { N_("/Close"), 	NULL, close_window, 0, NULL },
+  { N_("/Quit"),	NULL, gtk_main_quit, 0, NULL },
 };
 
 static void save_menus(void)
@@ -1625,28 +1849,98 @@ static void menu_create_menu(GtkWidget *window)
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win)
 {
+  LoadWindow *lwin=(LoadWindow *) win;
+
+  current_window=lwin;
+  
   if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
     if(!menu)
       menu_create_menu(GTK_WIDGET(win));
 
-    if(is_applet)
+    if(lwin->is_applet)
       applet_show_menu(menu, bev);
     else
       gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		     bev->button, bev->time);
     return TRUE;
-  } else if(is_applet && bev->type==GDK_BUTTON_PRESS && bev->button==1) {
-    gchar *cmd;
-
-    cmd=g_strdup_printf("%s/AppRun &", getenv("APP_DIR"));
-    system(cmd);
-    g_free(cmd);
+  } else if(lwin->is_applet && bev->type==GDK_BUTTON_PRESS && bev->button==1) {
+    make_window(0);
       
     return TRUE;
   }
 
   return FALSE;
 }
+
+#if USE_SERVER
+static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata)
+{
+  xmlNodePtr parent;
+  guint32 xid=0;
+
+  parent=args->data;
+  if(parent) {
+    gchar *str;
+
+    str=xmlNodeGetContent(parent);
+    if(str) {
+      xid=(guint32) atol(str);
+      g_free(str);
+    }
+  }
+
+  make_window(xid);
+
+  return NULL;
+}
+
+static void open_callback(ROXSOAP *serv, gboolean status, 
+				  xmlDocPtr reply, gpointer udata)
+{
+  gboolean *s=udata;
+  
+  dprintf(3, "In open_callback(%p, %d, %p, %p)", clock, status, reply,
+	 udata);
+  *s=status;
+  gtk_main_quit();
+}
+
+static gboolean open_remote(guint32 xid)
+{
+  ROXSOAP *serv;
+  xmlDocPtr doc;
+  xmlNodePtr node;
+  gboolean sent, ok;
+  char buf[32];
+
+  serv=rox_soap_connect(PROJECT);
+  dprintf(3, "server for %s is %p", PROJECT, serv);
+  if(!serv)
+    return FALSE;
+
+  doc=rox_soap_build_xml("Open", LOAD_NAMESPACE_URL, &node);
+  if(!doc) {
+    dprintf(3, "Failed to build XML doc");
+    rox_soap_close(serv);
+    return FALSE;
+  }
+
+  sprintf(buf, "%lu", xid);
+  xmlNewChild(node, NULL, "Parent", buf);
+
+  sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
+  dprintf(3, "sent %d", sent);
+
+  xmlFreeDoc(doc);
+  if(sent)
+    gtk_main();
+  rox_soap_close(serv);
+
+  return sent && ok;
+}
+
+#endif
 
 static void show_info_win(void)
 {
@@ -1661,6 +1955,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.12  2002/03/04 11:48:53  stephen
+ * Stable release.
+ *
  * Revision 1.11  2002/01/30 10:23:34  stephen
  * Use new applet menu positioning code. Add -h and -v options.
  *
