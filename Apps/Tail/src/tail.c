@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.15 2003/08/02 17:16:56 stephen Exp $
+ * $Id: tail.c,v 1.16 2003/11/29 16:58:49 stephen Exp $
  */
 
 #include "config.h"
@@ -171,7 +171,9 @@ int main(int argc, char *argv[])
   GtkWidget *hbox;
   GtkWidget *scr;
   GtkWidget *mbar;
-  gchar *rcfile;
+  GdkPixbuf *wicon;
+  GError *err=NULL;
+  gchar *rcfile, *wipath;
   gboolean show_change_time=TRUE;
   int c, do_exit, nerr;
   const gchar *app_dir;
@@ -242,6 +244,14 @@ int main(int argc, char *argv[])
   gtk_window_set_wmclass(GTK_WINDOW(win), "Tail", PROJECT);
   rox_dnd_register_uris(win, 0, got_uri_list, NULL);
   g_signal_connect(win, "popup-menu", G_CALLBACK(show_menu), win);
+
+  wipath=g_strconcat(app_dir, "/.DirIcon", NULL);
+  wicon=gdk_pixbuf_new_from_file(wipath, &err);
+  if(wicon) {
+    gtk_window_set_icon(GTK_WINDOW(win), wicon);
+    gdk_pixbuf_unref(wicon);
+  }
+  g_free(wipath);
   
   vbox=gtk_vbox_new(FALSE, 1);
   gtk_container_add(GTK_CONTAINER(win), vbox);
@@ -677,6 +687,10 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.16  2003/11/29 16:58:49  stephen
+ * Switch to rox_init()
+ * Mark messages as translatable
+ *
  * Revision 1.15  2003/08/02 17:16:56  stephen
  * Add Italian translation of AppInfo by Yuri Bongiorno
  *
