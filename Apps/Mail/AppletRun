@@ -14,6 +14,7 @@ import string
 from InfoWin import InfoWin
 from mailers import Mailer
 from selmailer import SelectMailer
+from Checker import getCheckers
 from my_support import *
 
 def mail_file():
@@ -24,8 +25,9 @@ def mail_file():
 mailfile=mail_file()
 app_dir=os.path.dirname(sys.argv[0])
 mail=-1
-mailers=None
 
+# Get the defined mailers
+mailers=None
 fname=rox.choices.load('Mail', 'mailers.xml')
 if fname!=None:
     mailers=Mailer.read_from(Mailer('dummy', ''), fname)
@@ -37,6 +39,13 @@ else:
     elm.write_to(mailers, fname)
 
 mailer=mailers[0]
+
+# Get the list of programs to check for or collect mail
+fname=rox.choices.load('Mail', 'check.xml')
+if fname!=None:
+    checkers=getCheckers(fname)
+else:
+    checkers=None
 
 # Find the XID of the socket which this applet will plug into.
 xid = int(sys.argv[1])
@@ -102,8 +111,8 @@ ebox.connect("drag_data_received", drag_data_received)
 menu=GtkMenu()
 
 item=GtkMenuItem("Info")
-iw=InfoWin('Mail', 'Monitor mail box', '0.1.0', 'Stephen Watson',
-           'http://www.kerofin.demon.co.uk/rox/')
+iw=InfoWin('Mail', 'Monitor mail box', '0.1.2 (18 July 2001)',
+           'Stephen Watson', 'http://www.kerofin.demon.co.uk/rox/')
 iw.connect('delete_event', lambda iw: iw.hide())
 def show_infowin(widget, data):
     iw=data
@@ -180,6 +189,16 @@ def update():
 
 timeout_add(5000, update)
 #print "added timeout"
+
+def run_check(checker):
+    #print checker.getCommand()
+    os.system(checker.getCommand())
+    return TRUE
+
+if checkers!=None:
+    for ch in checkers:
+        to=ch.getInterval()*1000
+        ch.setTimeout(timeout_add(int(to), run_check, ch))
 
 #print fname, mailer, mailers
 
