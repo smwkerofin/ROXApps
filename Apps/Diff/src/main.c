@@ -8,7 +8,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.1.1.1 2001/11/23 13:02:16 stephen Exp $
+ * $Id: main.c,v 1.2 2001/11/29 15:52:33 stephen Exp $
  */
 #include "config.h"
 
@@ -564,6 +564,8 @@ static gboolean load_window_from(GtkWidget *widget, const char *fname,
   g_return_val_if_fail(fname!=NULL, FALSE);
   g_return_val_if_fail(win!=NULL, FALSE);
 
+  dprintf(3, "Load '%s' into %p (data at %p)", fname, widget, win);
+
   in=fopen(fname, "r");
   if(!in) {
     rox_error("Failed to read %s: %s", fname, g_strerror(errno));
@@ -604,6 +606,8 @@ static gboolean load_from_uri(GtkWidget *widget, GSList *uris, gpointer data,
   if(!files)
     return FALSE;
 
+  dprintf(3, "first uri=%s", (char *) uris->data);
+
   if(files->data) {
     const char *fname=(const char *) files->data;
 
@@ -622,6 +626,8 @@ static gboolean load_from_xds(GtkWidget *widget, const char *path,
 			      gpointer data, gpointer udata)
 {
   DiffWindow *win=(DiffWindow *) udata;
+
+  dprintf(3, "load_from_xds: %s", path);
 
   if(load_window_from(widget, path, win)) {
     show_diffs(win);
@@ -801,6 +807,9 @@ static void show_diffs(DiffWindow *win)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.2  2001/11/29 15:52:33  stephen
+ * Test for <sys/filio.h>
+ *
  * Revision 1.1.1.1  2001/11/23 13:02:16  stephen
  * Coloured diff
  *

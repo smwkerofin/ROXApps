@@ -3,3 +3,4 @@ configure
 config.log
 config.h
 config.status
+config.cache
