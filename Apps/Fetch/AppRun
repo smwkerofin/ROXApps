@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.13 2004/11/22 13:07:41 stephen Exp $
+# $Id: AppRun,v 1.14 2004/12/05 13:20:09 stephen Exp $
 
 import os, sys
 import time
@@ -33,7 +33,7 @@ html_type=rox.mime.lookup('text/html')
 def run_main():
     while rox.g.events_pending():
         rox.g.main_iteration()
-    print 'done run_main' 
+    #print 'done run_main' 
 
 def get_filename(url):
     scheme, location, path, query, fragment=urlparse.urlsplit(url)
@@ -316,7 +316,7 @@ class FetchWindow(rox.Dialog):
         
 
     def read_some(self, source, condition, *unused):
-        print source, condition, unused
+        #print source, condition, unused
         #print self.con
 
         self.last_time=time.time()
@@ -326,7 +326,7 @@ class FetchWindow(rox.Dialog):
         while True:
             c=self.con.read(1)
             data+=c
-            print 'Read',data
+            #print 'Read',data
             if c=='\n':
                 break
         #print data,
