@@ -1,6 +1,10 @@
 Mem
 ===
 
+0.1.5
+-----
+Use XML for config file, if XML version >=2.4
+
 0.1.4
 -----
 Small changes to compilation system.

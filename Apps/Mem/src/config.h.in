@@ -14,6 +14,8 @@
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
 
+#undef HAVE_XML
+
 #if defined(HAVE_GETTEXT)
 #define _(String) gettext(String)
 #else

@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.3 2001/08/31 08:35:18 stephen Exp $
+ * $Id: mem.c,v 1.4 2001/09/06 09:53:31 stephen Exp $
  */
 #include "config.h"
 
@@ -37,6 +37,17 @@
 #include <glibtop.h>
 #include <glibtop/mem.h>
 #include <glibtop/swap.h>
+
+#ifdef HAVE_XML
+#include <tree.h>
+#include <parser.h>
+#endif
+
+#if defined(HAVE_XML) && LIBXML_VERSION>=20400
+#define USE_XML 1
+#else
+#define USE_XML 0
+#endif
 
 #include "choices.h"
 #include "infowin.h"
@@ -672,11 +683,96 @@ static void do_update(void)
 #define MEM_DISP    "MemoryAppletDisplay"
 #define SWAP_DISP   "SwapAppletDisplay"
 
+#if USE_XML
+static gboolean read_choices_xml()
+{
+  guchar *fname;
+
+  fname=choices_find_path_load("Config.xml", PROJECT);
+
+  if(fname) {
+    xmlDocPtr doc;
+    xmlNodePtr node, root;
+    xmlChar *string;
+    
+    doc=xmlParseFile(fname);
+    if(!doc) {
+      g_free(fname);
+      return FALSE;
+    }
+
+    root=xmlDocGetRootElement(doc);
+    if(!root) {
+      g_free(fname);
+      xmlFreeDoc(doc);
+      return FALSE;
+    }
+
+    if(strcmp(root->name, PROJECT)!=0) {
+      g_free(fname);
+      xmlFreeDoc(doc);
+      return FALSE;
+    }
+
+    for(node=root->xmlChildrenNode; node; node=node->next) {
+      xmlChar *string;
+      
+      if(node->type!=XML_ELEMENT_NODE)
+	continue;
+
+      /* Process data here */
+      if(strcmp(node->name, "update")==0) {
+ 	string=xmlGetProp(node, "rate");
+	if(!string)
+	  continue;
+	options.update_sec=atoi(string);
+	free(string);
+
+      } else if(strcmp(node->name, "Applet")==0) {
+ 	string=xmlGetProp(node, "initial-size");
+	if(string) {
+	  options.applet_init_size=atoi(string);
+	  free(string);
+	}
+ 	string=xmlGetProp(node, "mem");
+	if(string) {
+	  options.mem_disp=atoi(string);
+	  free(string);
+	}
+ 	string=xmlGetProp(node, "swap");
+	if(string) {
+	  options.swap_disp=atoi(string);
+	  free(string);
+	}
+	
+      } else if(strcmp(node->name, "Window")==0) {
+ 	string=xmlGetProp(node, "show-host");
+	if(string) {
+	  options.show_host=atoi(string);
+	  free(string);
+	}
+      }
+    }
+    
+    xmlFreeDoc(doc);
+    g_free(fname);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+#endif
+
 static void read_choices(void)
 {
   guchar *fname;
   
   choices_init();
+
+#if USE_XML
+  if(read_choices_xml())
+    return;
+#endif
 
   fname=choices_find_path_load("Config", PROJECT);
   if(fname) {
@@ -738,8 +834,55 @@ static void read_choices(void)
   }
 }
 
+#if USE_XML
+static void write_choices_xml(void)
+{
+  gchar *fname;
+  gboolean ok;
+
+  fname=choices_find_path_save("Config.xml", PROJECT, TRUE);
+  dprintf(2, "save to %s", fname? fname: "NULL");
+
+  if(fname) {
+    xmlDocPtr doc;
+    xmlNodePtr tree;
+    FILE *out;
+    char buf[80];
+
+    doc = xmlNewDoc("1.0");
+    doc->children=xmlNewDocNode(doc, NULL, PROJECT, NULL);
+    xmlSetProp(doc->children, "version", VERSION);
+
+    /* Insert data here */
+    tree=xmlNewChild(doc->children, NULL, "update", NULL);
+    sprintf(buf, "%d", options.update_sec);
+    xmlSetProp(tree, "rate", buf);
+  
+    tree=xmlNewChild(doc->children, NULL, "Applet", NULL);
+    sprintf(buf, "%d", options.applet_init_size);
+    xmlSetProp(tree, "initial-size", buf);
+    sprintf(buf, "%d", options.mem_disp);
+    xmlSetProp(tree, "mem", buf);
+    sprintf(buf, "%d", options.swap_disp);
+    xmlSetProp(tree, "swap", buf);
+  
+    tree=xmlNewChild(doc->children, NULL, "Window", NULL);
+    sprintf(buf, "%d", options.show_host);
+    xmlSetProp(tree, "show-host", buf);
+
+    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
+
+    xmlFreeDoc(doc);
+    g_free(fname);
+  }
+}
+#endif
+
 static void write_choices(void)
 {
+#if USE_XML
+  write_choices_xml();
+#else
   FILE *out;
   gchar *fname;
     
@@ -751,13 +894,14 @@ static void write_choices(void)
   if(!out)
     return;
   
-  fprintf(out, _("# Config file for FreeFS\n"));
+  fprintf(out, _("# Config file for Mem\n"));
   fprintf(out, "%s: %d\n", UPDATE_RATE, options.update_sec);
   fprintf(out, "%s: %d\n", INIT_SIZE, options.applet_init_size);
   fprintf(out, "%s: %d\n", SHOW_HOST, options.show_host);
   fprintf(out, "%s: %d\n", MEM_DISP, options.mem_disp);
   fprintf(out, "%s: %d\n", SWAP_DISP, options.swap_disp);
   fclose(out);
+#endif
 }
 
 static void show_info_win(void)
@@ -1276,6 +1420,9 @@ static gboolean update_swap(gpointer unused)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.4  2001/09/06 09:53:31  stephen
+ * Add some display options.
+ *
  * Revision 1.3  2001/08/31 08:35:18  stephen
  * Added support for swap under Solaris, by piping "/usr/sbin/swap -s".
  *
