@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.9 2004/11/21 13:26:05 stephen Exp $
+# $Id: vidthumb.py,v 1.10 2005/02/19 11:54:32 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -78,10 +78,12 @@ class VidThumb(thumb.Thumbnailler):
                 secs-=mins*60
             tstr='%d:%02d:%02d' % (hours, mins, secs)
             if debug: print tstr
-            gc.set_foreground(cmap.alloc_color('white'))
             dummy=gtk.Window()
             layout=dummy.create_pango_layout(tstr)
             
+            gc.set_foreground(cmap.alloc_color('black'))
+            pixmap.draw_layout(gc, 11, 5, layout)
+            gc.set_foreground(cmap.alloc_color('white'))
             pixmap.draw_layout(gc, 10, 4, layout)
             if debug: print layout
                                
