@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.4 2002/11/16 12:31:09 stephen Exp $
+# $Id: gui.py,v 1.5 2002/11/16 12:34:44 stephen Exp $
 
 import os
 import sys
@@ -103,12 +103,27 @@ menu.append(item)
 
 menu.show_all()
 
+def reap():
+    global pids
+    active=[]
+    for pid in pids:
+        res=os.waitpid(pid, os.WNOHANG)
+        if not res or res[0]!=pid:
+            active.append(pid)
+    pids=active
+    if len(pids)==0:
+        return 0
+    return 1
+
 def click(widget, event, data=None):
     #print widget, event, data
     if event.button==1:
         if select_cmd:
             pid=os.spawnl(os.P_NOWAIT, '/bin/sh', 'sh', '-c', select_cmd)
-            if pid>0: pids.append(pid)
+            if pid>0:
+                pids.append(pid)
+                if len(pids)==1:
+                    g.timeout_add(10000, reap)
             return 1
     elif event.button==3:
         menu.popup(None, None, None, event.button, event.time)
