@@ -18,5 +18,5 @@ else:
     fname=rox.choices.save('Mail', 'mailers.xml', 1)
     mailer.write_to([mailer], fname)
 
-run_prog(mailer.read_command())
+os.spawnv(os.P_WAIT, "/bin/sh", ('sh', '-c', mailer.read_command()))
 
