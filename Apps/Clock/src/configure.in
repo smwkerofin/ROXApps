@@ -50,6 +50,22 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 dnl Checks for library functions.
 AC_CHECK_FUNCS(setlocale fstat stat bindtextdomain gettext)
 
+dnl Is altzone defined in <time.h> ?
+AC_MSG_CHECKING(for altzone)
+AC_TRY_LINK(
+#include <time.h>
+,
+int tmp; tmp=altzone;,
+altzone=yes,
+altzone=no
+)
+if test $altzone = yes; then
+  AC_MSG_RESULT(yes)
+  AC_DEFINE(HAVE_ALTZONE)
+else
+  AC_MSG_RESULT(no)
+fi
+
 dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(version information)
 changequote(,)dnl

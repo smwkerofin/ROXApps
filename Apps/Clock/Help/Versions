@@ -1,6 +1,12 @@
 Changes to Clock
 ================
 
+1.1.6
+-----
+Use font selection dialog instead of widget.
+Added a monday-thursday repeat.
+Test for altzone in <time.h>
+
 1.1.5
 -----
 Change to XML handling: requires 2.4 or later.  Use old style config otherwise.

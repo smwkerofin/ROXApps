@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.9 2001/11/08 15:10:39 stephen Exp $
+ * $Id: alarm.c,v 1.10 2001/11/12 14:40:39 stephen Exp $
  */
 #include "config.h"
 
@@ -33,20 +33,28 @@
 #define USE_XML 0
 #endif
 
+#ifndef HAVE_ALTZONE
+#define altzone (timezone+3600)
+#endif
+
 #include "choices.h"
 #include "rox_debug.h"
 #include "alarm.h"
 
+/* Note these are used as array indicies, so leave them starting at zero
+   and monotonically increasing */
 typedef enum repeat_mode {
   REPEAT_NONE,
   REPEAT_HOURLY, REPEAT_DAILY,
   REPEAT_WEEKDAYS, /* Mon-Fri */
   REPEAT_WEEKLY, REPEAT_MONTHLY, REPEAT_YEARLY,
+  REPEAT_WEEKDAYS_EXCEPT_FRIDAY /* Mon-Thu */
 } RepeatMode;
 
 static const char *repeat_text[]={
   N_("None"), N_("Hourly"), N_("Daily"), N_("Weekdays only"), N_("Weekly"),
   N_("Monthly"), N_("Yearly"),
+  N_("Weekdays (except Friday)"), 
   NULL
 };
 
@@ -136,7 +144,19 @@ int alarm_load_xml(const gchar *fname)
     if(!string) {
       rep=REPEAT_NONE;
     } else {
-      rep=atoi(string);
+      if(isdigit(string[0])) {
+	rep=atoi(string);
+      } else {
+	int i;
+
+	rep=REPEAT_NONE;
+	for(i=0; repeat_text[i]; i++) {
+	  if(strcmp(string, repeat_text[i])==0) {
+	    rep=i;
+	    break;
+	  }
+	}
+      }
       free(string);
     }
     
@@ -149,8 +169,10 @@ int alarm_load_xml(const gchar *fname)
     }
 
     string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
-    if(!string)
-      continue;
+    if(!string) {
+      string=malloc(1);
+      string[0]=0;
+    }
 
     message=(const char *) string;
     nalarm=alarm_new(when, rep, message, flags);
@@ -310,6 +332,23 @@ static time_t next_alarm_time(time_t when, RepeatMode mode, guint flags)
     tms->tm_year++;
     break;
 
+  case REPEAT_WEEKDAYS_EXCEPT_FRIDAY:
+    switch(tms->tm_wday) {
+    case 0: case 1: case 2: case 3:
+      tms->tm_mday++;
+      break;
+    case 4:
+      tms->tm_mday+=4;
+      break;      
+    case 5:
+      tms->tm_mday+=3;
+      break;
+    case 6:
+      tms->tm_mday+=2;
+      break;
+    }
+    break;
+
   default:
     return (time_t) -1;
   }
@@ -422,8 +461,7 @@ void alarm_save_xml(void)
       tree=xmlNewChild(doc->children, NULL, "alarm", alarm->message);
       sprintf(buf, "%ld", alarm->when);
       xmlSetProp(tree, "time", buf);
-      sprintf(buf, "%d", alarm->repeat);
-      xmlSetProp(tree, "repeat", buf);
+      xmlSetProp(tree, "repeat", repeat_text[alarm->repeat]);
       sprintf(buf, "%u", alarm->flags);
       xmlSetProp(tree, "flags", buf);
     }
@@ -941,6 +979,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.10  2001/11/12 14:40:39  stephen
+ * Change to XML handling: requires 2.4 or later.  Use old style config otherwise.
+ *
  * Revision 1.9  2001/11/08 15:10:39  stephen
  * Fix compilation warning
  *

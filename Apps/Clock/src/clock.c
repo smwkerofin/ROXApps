@@ -5,12 +5,13 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.17 2001/11/08 15:10:57 stephen Exp $
+ * $Id: clock.c,v 1.18 2001/11/12 14:40:39 stephen Exp $
  */
 #include "config.h"
 
 #define DEBUG              1
 #define APPLET_MENU        1
+#define INLINE_FONT_SEL    0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -130,7 +131,12 @@ static GtkWidget *user_fmt=NULL;    /* Entering the user-defined format */
 static GtkWidget *mode_flags[MODE_NFLAGS];
 static GtkWidget *interval=NULL;
 static GtkWidget *init_size=NULL;
+#if INLINE_FONT_SEL
 static GtkWidget *font_sel=NULL;
+#else
+static GtkWidget *font_window;
+static GtkWidget *font_name;
+#endif
 
 static guint update_tag;            /* Handle for the timeout */
 static time_t config_time=0;        /* Time our config file was last changed */
@@ -1015,6 +1021,7 @@ static void set_config(GtkWidget *widget, gpointer data)
   Mode nmode;
   gfloat sec;
   int i;
+  gchar *text;
 
   /* get data from window contents */
   menu=gtk_option_menu_get_menu(GTK_OPTION_MENU(mode_sel));
@@ -1032,8 +1039,13 @@ static void set_config(GtkWidget *widget, gpointer data)
   udef=gtk_entry_get_text(GTK_ENTRY(user_fmt));
   strncpy(user_defined, udef, sizeof(user_defined));
 
+#if INLINE_FONT_SEL
   nmode.font_name=
     gtk_font_selection_get_font_name(GTK_FONT_SELECTION(font_sel));
+#else
+  gtk_label_get(GTK_LABEL(font_name), &text);
+  nmode.font_name=g_strdup(text);
+#endif
 
   dprintf(2, "format=%s, %s", nmode.format->name, nmode.format->fmt);
   dprintf(2, "flags=%d, interval=%d", nmode.flags, nmode.interval);
@@ -1047,6 +1059,37 @@ static void set_config(GtkWidget *widget, gpointer data)
   
   gtk_widget_hide(confwin);
 }
+
+#if !INLINE_FONT_SEL
+static void set_font(GtkWidget *widget, gpointer data)
+{
+  gchar *name;
+
+  name=gtk_font_selection_dialog_get_font_name(GTK_FONT_SELECTION_DIALOG(font_window));
+  if(name) {
+    gtk_label_set_text(GTK_LABEL(font_name), name);
+    g_free(name);
+    gtk_widget_hide(font_window);
+  }
+}
+
+static void show_font_window(GtkWidget *widget, gpointer data)
+{
+  gchar *name;
+
+  gtk_label_get(GTK_LABEL(font_name), &name);
+  gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(font_window),
+					  name);
+
+  gtk_widget_show(font_window);
+}
+
+static void hide_font_window(GtkWidget *widget, gpointer data)
+{
+  gtk_widget_hide(font_window);
+}
+
+#endif
 
 static void sel_format(GtkWidget *widget, gpointer data)
 {
@@ -1083,6 +1126,7 @@ static void show_conf_win(void)
     GtkWidget *item;
     GtkRequisition req;
     GtkObject *adj;
+    GtkStyle *style;
     int mw=0, mh=0;
     int set=0;
 
@@ -1186,11 +1230,31 @@ static void show_conf_win(void)
     gtk_widget_show(label);
     gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
 
+#if INLINE_FONT_SEL
     font_sel=gtk_font_selection_new();
     gtk_font_selection_set_preview_text(GTK_FONT_SELECTION(font_sel),
 					"1 2 3 4 5 6 7 8 9 10 11 12");
     gtk_widget_show(font_sel);
     gtk_box_pack_start(GTK_BOX(hbox), font_sel, FALSE, FALSE, 2);
+#else
+    font_name=gtk_label_new(mode.font_name? mode.font_name: "");
+    gtk_widget_show(font_name);
+    gtk_box_pack_start(GTK_BOX(hbox), font_name, FALSE, FALSE, 2);
+
+    font_window=gtk_font_selection_dialog_new("Choose display font");
+    gtk_font_selection_dialog_set_preview_text(GTK_FONT_SELECTION_DIALOG(font_window),
+					"1 2 3 4 5 6 7 8 9 10 11 12");
+    gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(font_window)->ok_button), 
+		       "clicked", GTK_SIGNAL_FUNC(set_font), NULL);
+    gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(font_window)->cancel_button), 
+		       "clicked", GTK_SIGNAL_FUNC(hide_font_window), NULL);
+
+    but=gtk_button_new_with_label("Change");
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked",
+		       GTK_SIGNAL_FUNC(show_font_window), NULL);
+#endif
 
     hbox=gtk_hbox_new(FALSE, 0);
     gtk_widget_show(hbox);
@@ -1246,9 +1310,17 @@ static void show_conf_win(void)
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(interval), mode.interval/1000.);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(init_size), mode.init_size);
 
+#if INLINE_FONT_SEL
   if(mode.font_name)
     gtk_font_selection_set_font_name(GTK_FONT_SELECTION(font_sel),
 				     mode.font_name);
+#else
+  if(mode.font_name) {
+    gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(font_window),
+				     mode.font_name);
+    gtk_label_set_text(GTK_LABEL(font_name), mode.font_name);
+  }
+#endif
 
   gtk_widget_show(confwin);
 }
@@ -1475,6 +1547,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.18  2001/11/12 14:40:39  stephen
+ * Change to XML handling: requires 2.4 or later.  Use old style config otherwise.
+ *
  * Revision 1.17  2001/11/08 15:10:57  stephen
  * Fix memory leak in xml routines
  *
