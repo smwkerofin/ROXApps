@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.7 2001/05/16 11:02:17 stephen Exp $
+ * $Id: clock.c,v 1.8 2001/05/16 11:22:06 stephen Exp $
  */
 #include "config.h"
 
@@ -161,7 +161,7 @@ static int sprite_frame;
 #endif
 #endif
 
-static void do_update(void);        /* Update clock face and text out */
+static gboolean do_update(void);        /* Update clock face and text out */
 static gint configure_event(GtkWidget *widget, GdkEventConfigure *event);
                                     /* Window resized */
 static gint expose_event(GtkWidget *widget, GdkEventExpose *event);
@@ -345,7 +345,8 @@ static void set_mode(Mode *nmode)
   }
 
   /* Change visibility of text line? */
-  if((nmode->flags & MODE_NO_TEXT)!=(mode.flags & MODE_NO_TEXT)) {
+  if(digital_out &&
+     (nmode->flags & MODE_NO_TEXT)!=(mode.flags & MODE_NO_TEXT)) {
     if(nmode->flags & MODE_NO_TEXT)
       gtk_widget_hide(digital_out);
     else
@@ -356,7 +357,7 @@ static void set_mode(Mode *nmode)
 }
 
 /* Redraw clock face and update digital_out */
-static void do_update(void)
+static gboolean do_update(void)
 {
   time_t now;
   char buf[80];
@@ -387,7 +388,7 @@ static void do_update(void)
   }
 
   if(!gc || !canvas || !pixmap)
-    return;
+    return TRUE;
   
   h=canvas->allocation.height;
   w=canvas->allocation.width;
@@ -453,7 +454,7 @@ static void do_update(void)
     double y2=y0-rad*cos(ang)*7/8;
     x1=x0+rad*sin(ang);
     y1=y0-rad*cos(ang);
-    gdk_gc_set_foreground(gc, CL_FACE_FG);
+    gdk_gc_set_foreground(gc, face_fg);
     gdk_draw_line(pixmap, gc, x2, y2, x1, y1);
 
     if(th && (th==2 || tick%3==0)) {
@@ -509,19 +510,48 @@ static void do_update(void)
 #endif
 
   /* Draw the hands */
-  x1=x0+rad*sin(h_ang)/2;
-  y1=y0-rad*cos(h_ang)/2;
-  gdk_gc_set_foreground(gc, CL_HOUR_HAND);
-  gdk_draw_line(pixmap, gc, x0, y0, x1, y1);
-  x1=x0+rad*sin(m_ang);
-  y1=y0-rad*cos(m_ang);
-  gdk_gc_set_foreground(gc, CL_MINUTE_HAND);
-  gdk_draw_line(pixmap, gc, x0, y0, x1, y1);
-  if(mode.flags & MODE_SECONDS) {
-    x1=x0+rad*sin(s_ang);
-    y1=y0-rad*cos(s_ang);
-    gdk_gc_set_foreground(gc, CL_SECOND_HAND);
+  if(rad>100) {
+    GdkPoint points[4];
+    
+    points[0].x=(gint16)(x0+rad*sin(h_ang)*0.5);
+    points[0].y=(gint16)(y0-rad*cos(h_ang)*0.5);
+    points[1].x=(gint16)(x0+rad*sin(h_ang+M_PI/2)*0.02);
+    points[1].y=(gint16)(y0-rad*cos(h_ang+M_PI/2)*0.02);
+    points[2].x=(gint16)(x0+rad*sin(h_ang-M_PI)*0.02);
+    points[2].y=(gint16)(y0-rad*cos(h_ang-M_PI)*0.02);
+    points[3].x=(gint16)(x0+rad*sin(h_ang-M_PI/2)*0.02);
+    points[3].y=(gint16)(y0-rad*cos(h_ang-M_PI/2)*0.02);
+    gdk_gc_set_foreground(gc, CL_HOUR_HAND);
+    gdk_draw_polygon(pixmap, gc, TRUE, points, 4);
+    
+  } else {
+    x1=x0+rad*sin(h_ang)*0.5;
+    y1=y0-rad*cos(h_ang)*0.5;
+    gdk_gc_set_foreground(gc, CL_HOUR_HAND);
+    gdk_gc_set_line_attributes(gc, 2, GDK_LINE_SOLID, GDK_CAP_ROUND,
+			       GDK_JOIN_MITER);
     gdk_draw_line(pixmap, gc, x0, y0, x1, y1);
+    
+  }
+  
+  x1=x0+rad*sin(m_ang)*0.95;
+  y1=y0-rad*cos(m_ang)*0.95;
+  gdk_gc_set_foreground(gc, CL_MINUTE_HAND);
+  gdk_gc_set_line_attributes(gc, 2, GDK_LINE_SOLID, GDK_CAP_ROUND,
+			     GDK_JOIN_MITER);
+  gdk_draw_line(pixmap, gc, x0, y0, x1, y1);
+  
+  gdk_gc_set_line_attributes(gc, 0, GDK_LINE_SOLID, GDK_CAP_ROUND,
+			     GDK_JOIN_MITER);
+  if(mode.flags & MODE_SECONDS) {
+    int x2, y2;
+    
+    x1=x0+rad*sin(s_ang)*0.95;
+    y1=y0-rad*cos(s_ang)*0.95;
+    x2=x0+rad*sin(s_ang+M_PI)*0.05;
+    y2=y0-rad*cos(s_ang+M_PI)*0.05;
+    gdk_gc_set_foreground(gc, CL_SECOND_HAND);
+    gdk_draw_line(pixmap, gc, x2, y2, x1, y1);
   }
   gdk_gc_set_foreground(gc, CL_HOUR_HAND);
   rad=sw/10;
@@ -539,6 +569,8 @@ static void do_update(void)
 
   if(load_alarms)
     alarm_check();
+
+  return TRUE;
 }
 
 static gint expose_event(GtkWidget *widget, GdkEventExpose *event)
@@ -938,23 +970,27 @@ static void show_conf_win(void)
 
     hbox=GTK_DIALOG(confwin)->action_area;
 
-    but=gtk_button_new_with_label(_("Cancel"));
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(cancel_config), confwin);
-
     but=gtk_button_new_with_label(_("Set"));
+    GTK_WIDGET_SET_FLAGS(but, GTK_CAN_DEFAULT);
+    gtk_widget_grab_default(but);
     gtk_widget_show(but);
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
 		       GINT_TO_POINTER(FALSE));
 
     but=gtk_button_new_with_label(_("Save"));
+    GTK_WIDGET_SET_FLAGS(but, GTK_CAN_DEFAULT);
     gtk_widget_show(but);
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
 		       GINT_TO_POINTER(TRUE));
+
+    but=gtk_button_new_with_label(_("Cancel"));
+    GTK_WIDGET_SET_FLAGS(but, GTK_CAN_DEFAULT);
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked",
+		       GTK_SIGNAL_FUNC(cancel_config), confwin);
 
   }
 
@@ -1266,6 +1302,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.8  2001/05/16 11:22:06  stephen
+ * Fix bug in loading config.
+ *
  * Revision 1.7  2001/05/16 11:02:17  stephen
  * Added repeating alarms.
  * Menu supported on applet (compile time option).
