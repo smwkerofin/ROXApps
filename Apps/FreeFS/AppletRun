@@ -7,6 +7,8 @@ PROG=freefs
 APP_DIR=`dirname $0`
 APP_DIR=`cd $APP_DIR;pwd`; export APP_DIR
 
+$APP_DIR/choice_install FreeFS $APP_DIR/gtkrc gtkrc
+
 ARCH=`uname -m`
 case $ARCH in
 	i?86) ARCH=ix86 ;;
@@ -34,7 +36,7 @@ esac
 BIN=$APP_DIR/$PLATFORM/$PROG
 
 if [ -x $BIN ] ; then
-    exec $BIN -a "$@"
+    exec $BIN -a "$@" $HOME
 else
     echo "ERROR from $0:" >&2
     echo "I cannot find an executable file for your host type ($PLATFORM)." >&2
@@ -47,6 +49,6 @@ else
 	$0 --compile
     fi
     if [ -x $BIN ]; then
-	exec $BIN -a "$@"
+	exec $BIN -a "$@" $HOME
     fi
 fi
