@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: options.h,v 1.1 2003/04/16 09:01:19 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -8,6 +8,8 @@
 
 #ifndef _options_h
 #define _options_h
+
+#include <libxml/parser.h>
 
 struct _Option;
 typedef struct _Option Option;
@@ -47,6 +49,9 @@ GtkWidget *options_show(void);
 #endif
 
 /*
- * $Log$
+ * $Log: options.h,v $
+ * Revision 1.1  2003/04/16 09:01:19  stephen
+ * Added options code from filer
+ *
  */
 
