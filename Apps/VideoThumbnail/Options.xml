@@ -1,7 +1,7 @@
 <?xml version='1.0'?>
 <options>
 <section title="Types">
-<button name="install" label="Install handlers">Click here to install the handlers for the supported MIME-types</button>
+<install-button label="Install handlers">Click here to install the handlers for the supported MIME-types</install-button>
 </section>
 <section title="Image">
 <numentry name='tsize' label='Thumbnail size' min='16' max='256'>
@@ -11,5 +11,12 @@ Size of the generated thumbnails (normally overriden by the filer).
 <numentry name='ssize' label='Sprocket size' min='4' max='16'>
 Size of the sprocket effect.
 </numentry>
+<toggle name='time' label='Add time label'>If selected print the total
+time of the file in the thumb</toggle>
+</section>
+<section title="Errors">
+<toggle name='report' label='Report errors'>If selected report any error
+that occurs, rather than ignoring it.
+Only useful if you are debugging.</toggle>
 </section>
 </options>
