@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.3 2003/11/08 12:40:00 stephen Exp $
+# $Id: vidthumb.py,v 1.4 2003/12/22 11:30:45 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -92,13 +92,13 @@ class VidThumb(thumb.Thumbnailler):
             try:
                 os.stat(ofile)
             except:
-                report_exception()
+                self.report_exception()
                 ofile='%08d.png' % 1
 
                 try:
                     os.stat(ofile)
                 except:
-                    report_exception()
+                    self.report_exception()
                     ofile=None
         
             return ofile
@@ -106,7 +106,7 @@ class VidThumb(thumb.Thumbnailler):
         try:
             vlen=get_length(inname)
         except:
-            report_exception()
+            self.report_exception()
             vlen=None
     
         if vlen is None:
