@@ -4,6 +4,11 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+11-Sep-2004
+~~~~~~~~~~~
+Fix bug in rox_path.c that broke drag and drop when the URIs contained
+hostnames.
+
 04-Aug-2004 2.1.2
 ~~~~~~~~~~~
 Added reference to GPL in libdir script.
@@ -178,4 +183,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.11 2004/08/04 18:16:23 stephen Exp $
+$Id: Changes,v 1.12 2004/08/04 18:36:27 stephen Exp $
