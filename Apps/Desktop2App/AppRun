@@ -1,0 +1,4 @@
+#!/bin/sh
+
+APP_DIR="`dirname $0`"
+python "$APP_DIR/gui.py" "$@"
