@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.8 2004/09/25 10:52:11 stephen Exp $
+# $Id: vidthumb.py,v 1.9 2004/11/21 13:26:05 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -86,7 +86,31 @@ class VidThumb(thumb.Thumbnailler):
             if debug: print layout
                                
         return img.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
+
+    def failed_image(self, rsize, tstr):
+        #print 'failed_image', self, rsize
+        w=rsize
+        h=rsize/4*3
+        try:
+            p=rox.g.gdk.Pixbuf(rox.g.gdk.COLORSPACE_RGB, False, 8, w, h)
+        except:
+            sys.exit(2)
+        #print p
+
+        pixmap, mask=p.render_pixmap_and_mask()
+        cmap=pixmap.get_colormap()
+        gc=pixmap.new_gc(foreground=cmap.alloc_color('black'))
+            
+        pixmap.draw_rectangle(gc, rox.g.TRUE, 0, 0, w, h)
         
+        gc.set_foreground(cmap.alloc_color('red'))
+        dummy=rox.g.Window()
+        layout=dummy.create_pango_layout(tstr)
+        if w>40:
+            layout.set_width(w-20)
+        pixmap.draw_layout(gc, 10, 4, layout)
+        
+        return img.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
 
     def get_image(self, inname, rsize):
         """Generate the raw image from the file.  We run mplayer (twice)
@@ -153,13 +177,11 @@ class VidThumb(thumb.Thumbnailler):
             vlen=get_length(inname)
         except:
             self.report_exception()
-            vlen=None
+            return self.failed_image(rsize, 'Bad length')
+
         self.total_time=vlen
         if debug: print vlen
     
-        if vlen is None:
-            sys.exit(2)
-
         # Select a frame 5% of the way in, but not more than 60s  (Long files
         # usually have a fade in).
         pos=vlen*0.05
@@ -168,12 +190,11 @@ class VidThumb(thumb.Thumbnailler):
 
         frfname=write_frame(inname, pos)
         if frfname is None:
-            sys.exit(2)
+            return self.failed_image(rsize, 'Bad file')
 
         # Now we load the raw image in
-        gtk=rox.g
 
-        return gtk.gdk.pixbuf_new_from_file(frfname)
+        return rox.g.gdk.pixbuf_new_from_file(frfname)
         
 # Process command line args.  Although the filer always passes three args,
 # let the last two default to something sensible to allow use outside

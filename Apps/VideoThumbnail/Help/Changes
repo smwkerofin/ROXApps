@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+11-Feb-2005
+~~~~~~~~~~~
+When thumbnail creation fails generate an image with a error message.
+
 27-Oct-2004
 -----------
 Pass -noloop to mplayer.
