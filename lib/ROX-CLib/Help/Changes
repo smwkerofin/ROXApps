@@ -4,6 +4,12 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+22-May-2004
+~~~~~~~~~~~
+InfoWin is now ROXInfoWin.  info_win_new() (and others) retained for binary 
+compatability.
+Added AppInfo.xml parser.
+
 12-May-2004
 ~~~~~~~~~~~
 Avoid the code that triggers the SOAP bug.
@@ -152,4 +158,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.6 2004/05/05 19:26:42 stephen Exp $
+$Id: Changes,v 1.7 2004/05/12 18:29:04 stephen Exp $
