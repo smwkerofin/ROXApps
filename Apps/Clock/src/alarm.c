@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.11 2001/11/29 16:16:14 stephen Exp $
+ * $Id: alarm.c,v 1.12 2002/04/12 10:18:46 stephen Exp $
  */
 #include "config.h"
 
@@ -23,8 +23,8 @@
 #include <gtk/gtk.h>
 
 #ifdef HAVE_XML
-#include <tree.h>
-#include <parser.h>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
 #endif
 
 #if defined(HAVE_XML) && LIBXML_VERSION>=20400
@@ -1020,6 +1020,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.12  2002/04/12 10:18:46  stephen
+ * Another attempt at fixing the bug when time zone changes.
+ *
  * Revision 1.11  2001/11/29 16:16:14  stephen
  * Use font selection dialog instead of widget.
  * Added a monday-thursday repeat.

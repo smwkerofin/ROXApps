@@ -1,6 +1,10 @@
 Load
 ====
 
+1.3.3
+-----
+Fix compilation problem with libxml2.
+
 1.3.2
 -----
 Use replacement applet menu positioning code (from ROX-CLib).

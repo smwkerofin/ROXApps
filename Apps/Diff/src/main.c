@@ -8,7 +8,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.5 2002/03/04 11:27:24 stephen Exp $
+ * $Id: main.c,v 1.6 2002/05/14 10:35:08 stephen Exp $
  */
 #include "config.h"
 
@@ -41,8 +41,8 @@
 #include "infowin.h"
 
 #ifdef HAVE_XML
-#include <tree.h>
-#include <parser.h>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
 #endif
 
 #if defined(HAVE_XML) && LIBXML_VERSION>=20400
@@ -884,6 +884,9 @@ static void show_diffs(DiffWindow *win)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.6  2002/05/14 10:35:08  stephen
+ * Fix for getting incomplete lines because of buffering
+ *
  * Revision 1.5  2002/03/04 11:27:24  stephen
  * Added support for shared ROX-CLib.
  *

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.14 2002/04/12 10:24:30 stephen Exp $
+ * $Id: load.c,v 1.15 2002/04/29 08:37:35 stephen Exp $
  *
  * Log at end of file
  */
@@ -41,8 +41,8 @@
 #include <glibtop/loadavg.h>
 
 #ifdef HAVE_XML
-#include <tree.h>
-#include <parser.h>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
 #endif
 
 #if defined(HAVE_XML) && LIBXML_VERSION>=20400
@@ -1850,6 +1850,7 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),	NULL, show_info_win, 0, NULL },
   { N_("/Configure"),	NULL, show_config_win, 0, NULL },
   { N_("/Close"), 	NULL, close_window, 0, NULL },
+  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
   { N_("/Quit"),	NULL, gtk_main_quit, 0, NULL },
 };
 
@@ -2007,6 +2008,10 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.15  2002/04/29 08:37:35  stephen
+ * Use replacement applet menu positioning code (from ROX-CLib).
+ * Fix problem setting options for a window.
+ *
  * Revision 1.14  2002/04/12 10:24:30  stephen
  * Moved colour allocation to after read_choices().  Fixed bug in strip chart
  * if running multiple windows.

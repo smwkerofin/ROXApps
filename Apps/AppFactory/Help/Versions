@@ -1,6 +1,10 @@
 AppFactory
 ==========
 
+1.0.2
+-----
+Fix compilation with libxml2.
+
 1.0.1
 -----
 Make sure AppRun can find rox_run.

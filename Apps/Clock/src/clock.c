@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.22 2002/03/25 10:34:11 stephen Exp $
+ * $Id: clock.c,v 1.23 2002/04/29 08:33:30 stephen Exp $
  */
 #include "config.h"
 
@@ -46,8 +46,8 @@
 #endif
 
 #ifdef HAVE_XML
-#include <tree.h>
-#include <parser.h>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
 #endif
 
 #if defined(HAVE_XML) && LIBXML_VERSION>=20400
@@ -1557,6 +1557,7 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Configure..."),       	NULL, show_conf_win, 0, NULL },
   { N_("/Alarms..."),		NULL, alarm_show_window, 0, NULL },
   { N_("/Close"), 	        NULL, close_window, 0, NULL },
+  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
   { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
 };
 
@@ -1726,6 +1727,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.23  2002/04/29 08:33:30  stephen
+ * Use replacement applet menu positioning code (from ROX-CLib).
+ *
  * Revision 1.22  2002/03/25 10:34:11  stephen
  * Use ROX-CLib's SOAP server code to have one instance run multiple windows.
  * Set an icon for the window. (Doesn't quite work properly...)

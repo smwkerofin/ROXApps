@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.7 2002/02/04 11:13:05 stephen Exp $
+ * $Id: main.c,v 1.8 2002/03/04 11:18:23 stephen Exp $
  */
 #include "config.h"
 
@@ -33,8 +33,8 @@
 #include "infowin.h"
 
 #ifdef HAVE_XML
-#include <tree.h>
-#include <parser.h>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
 #endif
 
 #if defined(HAVE_XML) && LIBXML_VERSION>=20400
@@ -975,6 +975,7 @@ static void show_config_win(void)
 static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),		NULL, show_info_win, 0, NULL },
   { N_("/Configure..."),	NULL, show_config_win, 0, NULL},
+  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
   { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
 };
 

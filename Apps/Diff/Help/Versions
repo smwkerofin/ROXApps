@@ -1,6 +1,10 @@
 Versions of Diff
 ================
 
+1.0.3
+-----
+Fix compilation problems with libxml2.
+
 1.0.2
 -----
 Fix for getting incomplete lines because of buffering.

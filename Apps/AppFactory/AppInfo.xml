@@ -3,7 +3,7 @@
   <Summary>Construct ROX wrappers for non-ROX programs</Summary>
   <About>
     	<Purpose>Construct ROX wrappers for non-ROX programs</Purpose>
-	<Version>1.0.1 (7 March 2002)</Version>
+	<Version>1.0.2 (24 August 2002)</Version>
     	<Authors>Stephen Watson</Authors>
     	<License>GNU General Public License</License>
     	<Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
