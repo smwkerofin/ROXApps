@@ -6,6 +6,11 @@ dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
 
+if test -z "$ROX_RUN"; then
+  AC_CHECK_PROG(ROX_RUN, rox_run, rox_run)
+fi
+AC_SUBST(ROX_RUN)
+
 dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
