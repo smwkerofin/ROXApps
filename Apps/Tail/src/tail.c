@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id$
+ * $Id: tail.c,v 1.1.1.1 2001/04/12 13:24:36 stephen Exp $
  */
 
 #include <stdio.h>
@@ -15,7 +15,7 @@
 #include <fcntl.h>
 
 #include <gtk/gtk.h>
-/*#include "infowin.h"*/
+#include "infowin.h"
 
 #include "config.h"
 /*#include "choices.h"*/
@@ -31,13 +31,19 @@ static guint update_tag=0;
 
 static gint check_file(gpointer unused);
 static void set_file(const char *);
+static void show_info_win(void);
 
 static void dnd_init(void);
 static void make_drop_target(GtkWidget *widget);
+static void file_open_proc(void);
 
 static GtkItemFactoryEntry menu_items[] = {
   {"/_File", NULL, NULL, 0, "<Branch>"},
+  {"/File/_Open file...", "<control>O", file_open_proc, 0, NULL},
+  {"/File/sep",     NULL,         NULL, 0, "<Separator>" },
   {"/File/E_xit","<control>X",  gtk_main_quit, 0, NULL },
+  {"/_Help", NULL, NULL, 0, "<LastBranch>"},
+  {"/Help/_About", "<control>A", show_info_win, 0, NULL},
 };
 
 static void get_main_menu(GtkWidget *window, GtkWidget **menubar)
@@ -206,6 +212,58 @@ static void set_file(const char *name)
   if(fname)
     g_free(fname);
   fname=tmp;
+}
+
+/* Make a destroy-frame into a close */
+static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
+			      gpointer data)
+{
+  /* Change this destroy into a hide */
+  gtk_widget_hide(GTK_WIDGET(data));
+  return TRUE;
+}
+
+static void show_info_win(void)
+{
+  static GtkWidget *infowin=NULL;
+  
+  if(!infowin) {
+    infowin=info_win_new(PROGRAM, PURPOSE, VERSION, AUTHOR, WEBSITE);
+  }
+
+  gtk_window_set_position(GTK_WINDOW(infowin), GTK_WIN_POS_MOUSE);
+  gtk_widget_show(infowin);
+}
+
+static void choose_file(GtkWidget *widget, GtkFileSelection *fs)
+{
+  const gchar *path=gtk_file_selection_get_filename(GTK_FILE_SELECTION(fs));
+
+  set_file(path);
+  
+  gtk_widget_hide(GTK_WIDGET(fs));
+}
+
+static void close_filesel(GtkWidget *widget, GtkFileSelection *fs)
+{
+  gtk_widget_hide(GTK_WIDGET(fs));
+}
+
+static void file_open_proc(void)
+{
+  static GtkWidget *fs=NULL;
+
+  if(!fs) {
+    fs=gtk_file_selection_new("Select file to monitor");
+    gtk_signal_connect (GTK_OBJECT (GTK_FILE_SELECTION (fs)->ok_button),
+			"clicked", (GtkSignalFunc) choose_file, fs);
+    gtk_signal_connect(GTK_OBJECT(GTK_FILE_SELECTION(fs)->
+				  cancel_button),
+		       "clicked", (GtkSignalFunc) close_filesel,fs);
+    /*gtk_file_selection_hide_fileop_buttons (GTK_FILE_SELECTION(fs));*/
+  }
+
+  gtk_widget_show(fs);
 }
 
 /*
@@ -531,5 +589,8 @@ static void drag_data_received(GtkWidget      	*widget,
 }
 
 /*
- * $Log$
+ * $Log: tail.c,v $
+ * Revision 1.1.1.1  2001/04/12 13:24:36  stephen
+ * Initial version
+ *
  */

@@ -13,9 +13,9 @@ EXEC = ${PLATFORM_DIR}/${PROG}
 
 PROG = Tail
 
-SRCS = tail.c
+SRCS = tail.c infowin.c
 
-OBJECTS = tail.o
+OBJECTS = tail.o infowin.o
 
 ############ Things to keep the same
 
