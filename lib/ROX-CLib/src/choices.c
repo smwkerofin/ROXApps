@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.1.1.1 2001/05/29 14:09:58 stephen Exp $
+ * $Id: choices.c,v 1.2 2001/07/17 14:42:45 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -106,7 +106,7 @@ GPtrArray *choices_list_dirs(char *dir)
 
 	while (*cdir)
 	{
-		guchar	*path;
+		gchar	*path;
 
 		path = g_strconcat(*cdir, "/", dir, NULL);
 		if (exists(path))
