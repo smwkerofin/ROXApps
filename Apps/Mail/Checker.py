@@ -1,8 +1,12 @@
+import os
+
 import xml.sax
 import xml.sax.saxutils
 from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesImpl
 from xml.dom.minidom import parse
+
+import gtk
 
 class Checker:
     def __init__(self, cmd, int):
@@ -13,9 +17,15 @@ class Checker:
     def getCommand(self):
         return self.cmd
 
+    def setCommand(self, cmd):
+        self.cmd=cmd
+
     def getInterval(self):
         # print self.int
         return self.int
+
+    def setInterval(self, int):
+        self.int=float(int)
 
     def writeTo(self, gen):
         gen.startElement('check', AttributesImpl({'command': self.cmd,
@@ -29,6 +39,18 @@ class Checker:
     def getTimeout(self):
         return self.time
 
+    def run(self):
+        os.system(self.cmd)
+        return 1
+
+    def schedule(self):
+        to=self.int*1000
+        if self.time!=0:
+            gtk.timeout_remove(self.time)
+        def run_check(self):
+            self.run()
+        self.time=gtk.timeout_add(int(to), run_check, self)
+
 def getCheckers(fname):
     doc=parse(fname)
 
@@ -38,7 +60,7 @@ def getCheckers(fname):
 
     checkers=[]
     for c in ch:
-        cmd=c.getAttribute('command')
+        cmd=str(c.getAttribute('command'))
         interval=float(c.getAttribute('interval'))
 
         checkers.append(Checker(cmd, interval))

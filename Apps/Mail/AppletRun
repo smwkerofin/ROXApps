@@ -15,6 +15,7 @@ from InfoWin import InfoWin
 from mailers import Mailer
 from selmailer import SelectMailer
 from Checker import getCheckers
+from checkwin import CheckWin
 from my_support import *
 
 def mail_file():
@@ -111,13 +112,14 @@ ebox.connect("drag_data_received", drag_data_received)
 menu=GtkMenu()
 
 item=GtkMenuItem("Info")
-iw=InfoWin('Mail', 'Monitor mail box', '0.1.2 (18 July 2001)',
+iw=InfoWin('Mail', 'Monitor mail box', '0.1.3 (13 December 2001)',
            'Stephen Watson', 'http://www.kerofin.demon.co.uk/rox/')
 iw.connect('delete_event', lambda iw: iw.hide())
 def show_infowin(widget, data):
     iw=data
     iw.show()
 item.connect("activate", show_infowin, iw)
+#print iw
 menu.append(item)
 
 item=GtkMenuItem("Select mailer...")
@@ -142,6 +144,13 @@ def show_sel_mailer(widget):
     sm.set_callback(select_mailer)
     sm.show()
 item.connect("activate", show_sel_mailer)
+menu.append(item)
+
+item = GtkMenuItem("Check mail programs")
+def show_checker_win(widget):
+    cw=CheckWin(checkers)
+    cw.show()
+item.connect("activate", show_checker_win)
 menu.append(item)
 
 item = GtkMenuItem("Quit")
@@ -172,8 +181,9 @@ ebox.connect("button_press_event", click)
 
 def update():
     global mail
+    #print mailfile, file_size(mailfile), mail
     if file_size(mailfile)>0:
-        if mail==0:
+        if mail!=1:
             nomail_pixmap.hide()
             mail_pixmap.show()
             mail=1
@@ -187,18 +197,12 @@ def update():
     return TRUE
 
 
-timeout_add(5000, update)
-#print "added timeout"
-
-def run_check(checker):
-    #print checker.getCommand()
-    os.system(checker.getCommand())
-    return TRUE
+tag=timeout_add(5000, update)
+#print "added timeout ",tag
 
 if checkers!=None:
     for ch in checkers:
-        to=ch.getInterval()*1000
-        ch.setTimeout(timeout_add(int(to), run_check, ch))
+        ch.schedule()
 
 #print fname, mailer, mailers
 
