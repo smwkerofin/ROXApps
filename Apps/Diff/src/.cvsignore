@@ -1,2 +1,5 @@
 Makefile
 configure
+config.log
+config.h
+config.status

@@ -8,7 +8,7 @@
  *
  * GPL applies.
  *
- * $Id$
+ * $Id: main.c,v 1.1.1.1 2001/11/23 13:02:16 stephen Exp $
  */
 #include "config.h"
 
@@ -24,7 +24,10 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
+#ifdef HAVE_SYS_FILIO_H
 #include <sys/filio.h>
+#endif
+#include <fcntl.h>
 
 /* These next two are for internationalization */
 #ifdef HAVE_LOCALE_H
@@ -797,5 +800,8 @@ static void show_diffs(DiffWindow *win)
 }
 
 /*
- * $Log$
+ * $Log: main.c,v $
+ * Revision 1.1.1.1  2001/11/23 13:02:16  stephen
+ * Coloured diff
+ *
  */

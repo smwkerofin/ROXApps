@@ -24,7 +24,7 @@ fi
 dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
-AC_CHECK_HEADERS(locale.h sys/stat.h libintl.h)
+AC_CHECK_HEADERS(locale.h sys/stat.h libintl.h sys/filio.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 
