@@ -1,10 +1,10 @@
 /*
- * %W% %E%
- *
  * Printer - a printer manager for ROX
  * Stephen Watson <stephen@kerofin.demon.co.uk>
  *
  * GPL applies.
+ *
+ * $Id$
  */
 
 #include <stdio.h>
@@ -31,10 +31,18 @@
 /* The icon */
 #include "../AppIcon.xpm"
 
+#define DEBUG 1
+void dprintf(const char *fmt, ...);
+
 /* Printer data */
 GList *printers=NULL;
 Printer *current_printer=NULL;
 Printer *default_printer=NULL;
+
+static gchar *col_headings[]={
+  "Id", "Size", "User", "Started",
+  NULL
+};
 
 /* GTK+ objects */
 static GtkWidget *win;
@@ -57,6 +65,7 @@ static void job_sel(GtkWidget *clist, gint row, gint column,
 		    GdkEvent *event, gpointer data);
 static void printer_sel(GtkWidget *widget, gpointer data);
 static void list_printers(void);
+static void list_jobs(void);
 
 static void print_file(const char *fname);
 static void print_file_as(const char *fname, const char *mime_type);
@@ -153,6 +162,16 @@ static void usage(const char *argv0)
   exit(1);
 }
 
+void dprintf(const char *fmt, ...)
+{
+  va_list list;
+
+  va_start(list, fmt);
+  fprintf(stderr, "Printer debug: ");
+  vfprintf(stderr, fmt, list);
+  va_end(list);  
+}
+
 int main(int argc, char *argv[])
 {
   GtkWidget *menu;
@@ -177,7 +196,7 @@ int main(int argc, char *argv[])
   win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_widget_set_name(win, "printer window");
 
-  gtk_window_set_title(GTK_WINDOW(win), "FEMAP Main Control");
+  gtk_window_set_title(GTK_WINDOW(win), "Printer");
   gtk_signal_connect(GTK_OBJECT(win), "destroy", 
 		     GTK_SIGNAL_FUNC(gtk_main_quit), 
 		     "WM destroy");
@@ -220,12 +239,6 @@ int main(int argc, char *argv[])
   optmenu=gtk_menu_new();
   gtk_option_menu_set_menu(GTK_OPTION_MENU(printer_list), optmenu);
 
-  /*
-  mw=0;
-  mh=0;
-  append_option_menu_item(cprog, optmenu, "Femap", 0,
-			  GTK_SIGNAL_FUNC(sel_prog), &mw, &mh);
-			  */
 
   hbox=gtk_hbox_new(FALSE, 0);
   gtk_widget_show(hbox);
@@ -240,10 +253,14 @@ int main(int argc, char *argv[])
 				 GTK_POLICY_AUTOMATIC,
 				 GTK_POLICY_AUTOMATIC);
   gtk_widget_show(scrw);
-  gtk_widget_set_usize(scrw, 24*12, 6*12);
+  gtk_widget_set_usize(scrw, 480, 128);
   gtk_box_pack_start(GTK_BOX(hbox), scrw, TRUE, TRUE, 2);
   
-  job_list=gtk_clist_new(NUM_COLUMN);
+  job_list=gtk_clist_new_with_titles(NUM_COLUMN, col_headings);
+  gtk_clist_set_column_width(GTK_CLIST(job_list), COL_ID, 96);
+  gtk_clist_set_column_width(GTK_CLIST(job_list), COL_SIZE, 48);
+  gtk_clist_set_column_width(GTK_CLIST(job_list), COL_USER, 96);
+  /*gtk_clist_set_column_width(GTK_CLIST(job_list), COL_START, 128);*/
   gtk_clist_set_selection_mode(GTK_CLIST(job_list), GTK_SELECTION_SINGLE);
   gtk_signal_connect(GTK_OBJECT(job_list), "select_row",
 		       GTK_SIGNAL_FUNC(job_sel),
@@ -271,6 +288,9 @@ int main(int argc, char *argv[])
   gtk_widget_show(win);
 
   list_printers();
+  list_jobs();
+
+  gtk_timeout_add(5000, (GtkFunction) list_jobs, NULL);
 
   gtk_main();
 
@@ -331,73 +351,13 @@ static void job_sel(GtkWidget *clist, gint row, gint column,
 {
 }
 
-static guint shell_output(const char *cmd, GdkInputFunction func,
-			  gpointer data)
+static void read_default_printer(char *buf, gpointer data)
 {
-  guint tag;
-  int i;
-  int pid;
-  int out[2];
-  
-  extern int getdtablesize(void);
-  
-  pipe(out);
-
-  pid=fork();
-  if(!pid) {
-    dup2(out[1], 1);
-    for(i=getdtablesize(); i>2; i--) /* Close all but standard files */
-      (void) close(i);
-
-    execl("/bin/sh", "sh", "-c", "lpstat -p", NULL);
-    _exit(12);
-    
-  } else if(pid<0) {
-    return 0;
-    
-  } else {
-    close(out[1]);
-
-    tag=gdk_input_add(out[0], GDK_INPUT_READ, func, data);
-  }
-  
-  return tag;
-}
-
-static void end_default_printer(gint fd)
-{
-  int stat;
-  
-  gdk_input_remove(default_printer_pipe_tag);
-  default_printer_pipe_tag=0;
-  close(fd);
-  waitpid((pid_t) -1, &stat, WNOHANG);
-}
-
-static void read_default_printer(gpointer data, gint fd,
-			      GdkInputCondition condition)
-{
-  int nready, nr, actual;
-  char buf[1024];
   char *ptr;
+
+  if(!buf)
+    return;
   
-  if(!(condition&GDK_INPUT_READ) || ioctl(fd, FIONREAD, &nready)<0)
-    return;
-
-  if(nready<=0) {
-    end_default_printer(fd);
-    return;
-  }
-
-  nr=nready>sizeof(buf)? sizeof(buf): nready;
-  actual=read(fd, buf, nr);
-
-  if(actual<1) {
-    end_default_printer(fd);
-    return;
-  }
-  buf[actual]=0;
-
   ptr=strchr(buf, '\n');
   if(ptr)
     *ptr=0;
@@ -414,25 +374,18 @@ static void read_default_printer(gpointer data, gint fd,
 
 static void get_default_printer(void)
 {
-  default_printer_pipe_tag=shell_output("lpstat -d", read_default_printer,
+  default_printer_pipe_tag=run_task("lpstat -d", read_default_printer,
 					NULL);
 }
 
-static void end_printer_list(gint fd)
+static void end_printer_list(void)
 {
-  int stat;
-  
-  gdk_input_remove(printer_list_pipe_tag);
-  printer_list_pipe_tag=0;
-  close(fd);
-
-  waitpid((pid_t) -1, &stat, WNOHANG);
-
   get_default_printer();
 }
 
-static void read_printer_list_line(GtkWidget *optitem, char *line)
+static void read_printer_list_line(char *line, gpointer udata)
 {
+  GtkWidget *optitem=GTK_WIDGET(udata);
   GtkWidget *menu;
   GtkWidget *item;
   GtkRequisition req;
@@ -441,6 +394,11 @@ static void read_printer_list_line(GtkWidget *optitem, char *line)
   gchar **sects, **words;
   gchar *name;
   gboolean en=FALSE, avail=TRUE;
+
+  if(!line) {
+    end_printer_list();
+    return;
+  }
 
   if(strncmp(line, "printer ", 8)!=0)
     return;
@@ -462,7 +420,7 @@ static void read_printer_list_line(GtkWidget *optitem, char *line)
   if(sects[2] && strcmp(sects[2], "available")==0)
     avail=0;
     
-  printf("append %s\n", name);
+  dprintf("append %s\n", name);
   p=printer_new(name, en, avail);
   g_free(name);
   printers=g_list_append(printers, p);
@@ -487,38 +445,6 @@ static void read_printer_list_line(GtkWidget *optitem, char *line)
   g_strfreev(sects);
 }
 
-static void read_printer_list(gpointer data, gint fd,
-			      GdkInputCondition condition)
-{
-  GtkWidget *optitem=GTK_WIDGET(data);
-  int nready, nr, actual;
-  char buf[1024];
-  gchar **lines;
-  int i;
-  
-  if(!(condition&GDK_INPUT_READ) || ioctl(fd, FIONREAD, &nready)<0)
-    return;
-
-  if(nready<=0) {
-    end_printer_list(fd);
-    return;
-  }
-
-  nr=nready>sizeof(buf)? sizeof(buf): nready;
-  actual=read(fd, buf, nr);
-
-  if(actual<1) {
-    end_printer_list(fd);
-    return;
-  }
-  buf[actual]=0;
-
-  lines=g_strsplit(buf, "\n", 1024);
-  for(i=0; lines[i]; i++)
-    read_printer_list_line(optitem, lines[i]);
-  g_strfreev(lines);
-}
-
 static void list_printers(void)
 {
   GtkWidget *nmenu;
@@ -536,8 +462,36 @@ static void list_printers(void)
   nmenu=gtk_menu_new();
   gtk_option_menu_set_menu(GTK_OPTION_MENU(printer_list), nmenu);
   
-  printer_list_pipe_tag=shell_output("lpstat -p", read_printer_list, printer_list);
+  printer_list_pipe_tag=run_task("lpstat -p", read_printer_list_line,
+				 printer_list);
 
+}
+
+static void read_jobs(gchar *line, gpointer udata)
+{
+  GtkWidget *clist=GTK_WIDGET(udata);
+  gchar *cols[NUM_COLUMN];
+  
+  if(!line) {
+    gtk_clist_thaw(GTK_CLIST(clist));
+    return;
+  }
+
+  cols[COL_ID]=line;
+  cols[COL_SIZE]="";
+  cols[COL_USER]="";
+  cols[COL_START]="";
+
+  gtk_clist_append(GTK_CLIST(clist), cols);
+}
+
+static void list_jobs(void)
+{
+  dprintf("list jobs\n");
+  
+  gtk_clist_freeze(GTK_CLIST(job_list));
+  gtk_clist_clear(GTK_CLIST(job_list));
+  run_task("lpstat", read_jobs, job_list);
 }
 
 /* In print mode */
@@ -687,12 +641,12 @@ static void make_drop_target(GtkWidget *widget)
   gtk_signal_connect(GTK_OBJECT(widget), "drag_data_received",
 		     GTK_SIGNAL_FUNC(drag_data_received), NULL);
 
-  /*printf("made %p a drop target\n", widget);*/
+  dprintf("made %p a drop target\n", widget);
 }
 
 static void print_context(GQuark key_id, gpointer data, gpointer user_data)
 {
-  printf("%p (%s) = %p (%s)\n", key_id, g_quark_to_string(key_id),
+  dprintf("%p (%s) = %p (%s)\n", key_id, g_quark_to_string(key_id),
 	 data, data? data: "NULL");
 }
 
@@ -778,17 +732,17 @@ static gboolean drag_drop(GtkWidget 	  *widget,
   char *path=NULL;
   GdkAtom target = GDK_NONE;
 
-  /*
-  printf("in drag_drop(%p, %p, %d, %d, %u, %p)\n", widget, context, x, y,
+  
+  dprintf("in drag_drop(%p, %p, %d, %d, %u, %p)\n", widget, context, x, y,
 	 time, data);
-  */
+  
   
   /*g_dataset_foreach(context, print_context, NULL);*/
 
   if(provides(context, XdndDirectSave0)) {
     leafname = get_xds_prop(context);
     if (leafname) {
-      /*printf("leaf is %s\n", leafname);*/
+      dprintf("leaf is %s\n", leafname);
       target = XdndDirectSave0;
       g_dataset_set_data_full(context, "leafname", leafname, g_free);
     }
@@ -892,10 +846,10 @@ static void got_uri_list(GtkWidget 		*widget,
   if (!uri_list)
     error = "No URIs in the text/uri-list (nothing to do!)";
   else {
-    /*
+    
     for(next_uri=uri_list; next_uri; next_uri=next_uri->next)
-      printf("%s\n", next_uri->data);
-      */
+      dprintf("%s\n", next_uri->data);
+      
 
     uri=uri_list->data;
 
@@ -916,7 +870,7 @@ static void got_uri_list(GtkWidget 		*widget,
   } else {
     gtk_drag_finish(context, TRUE, FALSE, time);    /* Success! */
 
-    printf("new target is %s\n", path);
+    dprintf("new target is %s\n", path);
     
   }
   
@@ -943,7 +897,7 @@ static void drag_data_received(GtkWidget      	*widget,
 			       guint32          time,
 			       gpointer		user_data)
 {
-  /*printf("%p in drag_data_received\n", widget);*/
+  dprintf("%p in drag_data_received\n", widget);
   
   if (!selection_data->data) {
     /* Timeout? */
@@ -953,10 +907,10 @@ static void drag_data_received(GtkWidget      	*widget,
 
   switch(info) {
   case TARGET_XDS:
-    /*printf("XDS\n");*/
+    dprintf("XDS\n");
     break;
   case TARGET_URI_LIST:
-    /*printf("URI list\n");*/
+    dprintf("URI list\n");
     got_uri_list(widget, context, selection_data, time);
     break;
   default:
@@ -965,4 +919,8 @@ static void drag_data_received(GtkWidget      	*widget,
     break;
   }
 }
+
+/*
+ * $Log$
+ */
 
