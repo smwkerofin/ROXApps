@@ -4,7 +4,7 @@ Load
 1.5.0
 -----
 
-Convert to GTK+ 2.
+Convert to GTK+ 2.  Switch to using options code from ROX-CLib.
 
 1.4.1
 -----

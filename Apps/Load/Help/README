@@ -16,9 +16,9 @@ Compilation and Installation
 
 To compile the program, simply run it from ROX-Filer (or run 
 Load/AppRun --compile).  You will need these libraries
-  * GTK+ 1.2.10
-  * libgtop
-  * libxml2 (optional)
+  * GTK+ 2
+  * libgtop 2
+  * libxml2
   * ROX-CLib
 
 The program may be run from any location.  To install it, simply copy the 
@@ -55,11 +55,9 @@ Colour: Allows you to change the 6 colours used for plotting the bars.
 
 Display font: The font used to label the graph.
 
-Save: Set the new values and save the configuration for the next time.
+OK: Save current values
 
-Set: Set the new values but leave the saved configuration unchanged.
-
-Cancel: Discard the changed values.
+Revert: Change back to saved values
 
 Updates
 -------

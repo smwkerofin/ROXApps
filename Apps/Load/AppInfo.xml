@@ -3,7 +3,7 @@
   <Summary>Display the system load average.</Summary>
   <About>
     <Purpose>Display system load</Purpose>
-	<Version>1.5.0 (22 February 2003)</Version>
+	<Version>1.5.0 (16 April 2003)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
