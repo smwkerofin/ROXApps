@@ -1,6 +1,10 @@
 Load
 ====
 
+0.1.8
+-----
+Allow user to set initial size.
+
 0.1.7
 -----
 If the display is wide enough, provide a strip chart.

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.2 2001/04/24 07:52:33 stephen Exp $
+ * $Id: load.c,v 1.3 2001/05/10 14:56:18 stephen Exp $
  *
  * Log at end of file
  */
@@ -30,6 +30,8 @@
 #include "config.h"
 #include "choices.h"
 
+#define APPLET_MENU        1
+
 static GtkWidget *menu=NULL;
 static GtkWidget *infowin=NULL;
 static GtkWidget *canvas = NULL;
@@ -51,17 +53,18 @@ enum {COL_WHITE, COL_HIGH, COL_NORMAL, COL_BLUE, COL_BG, COL_FG};
 #define BOTTOM_MARGIN 12
 #define TOP_MARGIN 10
 #define MIN_WIDTH 36
-#define MIN_HEIGHT 36
+#define MIN_HEIGHT MIN_WIDTH
 #define MAX_BAR_WIDTH 32
 
 typedef struct options {
   guint32 update_ms;
   gboolean show_max;
   gboolean show_vals;
+  guint init_size;
 } Options;
 
 static Options options={
-  2000, TRUE, FALSE
+  2000, TRUE, FALSE, MIN_WIDTH
 };
 
 typedef struct option_widgets {
@@ -69,6 +72,7 @@ typedef struct option_widgets {
   GtkWidget *update_s;
   GtkWidget *show_max;
   GtkWidget *show_vals;
+  GtkWidget *init_size;
 } OptionWidgets;
 
 static glibtop *server=NULL;
@@ -112,6 +116,8 @@ int main(int argc, char *argv[])
   choices_init();
   /*fprintf(stderr, "read config\n");*/
   read_config();
+  w=options.init_size;
+  h=options.init_size;
 
   if(argc<2 || !atol(argv[1])) {
     /*fprintf(stderr, "make window\n");*/
@@ -138,6 +144,13 @@ int main(int argc, char *argv[])
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
 		       "WM destroy");
     gtk_widget_set_usize(plug, w, h);
+    
+#if APPLET_MENU
+    /* We want to pop up a menu on a button press */
+    gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
+		       GTK_SIGNAL_FUNC(button_press), plug);
+    gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
+#endif
     
     win=plug;
   }
@@ -409,6 +422,7 @@ static void write_config(void)
       fprintf(out, "update_ms=%d\n", options.update_ms);
       fprintf(out, "show_max=%d\n", options.show_max);
       fprintf(out, "show_vals=%d\n", options.show_vals);
+      fprintf(out, "init_size=%d\n", (int) options.init_size);
 
       fclose(out);
 
@@ -473,6 +487,8 @@ static void read_config(void)
 	      options.show_max=atoi(val);
 	    } else if(strcmp(var, "show_vals")==0) {
 	      options.show_vals=atoi(val);
+	    } else if(strcmp(var, "init_size")==0) {
+	      options.init_size=(guint) atoi(val);
 	    }
 	  }
 	}
@@ -541,7 +557,9 @@ static void set_config(GtkWidget *widget, gpointer data)
     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_max));
   options.show_vals=
     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_vals));
-
+  options.init_size=
+    gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ow->init_size));
+  
   gtk_timeout_remove(update);
   update=gtk_timeout_add(options.update_ms,
 				     (GtkFunction) do_update, NULL);
@@ -617,13 +635,29 @@ static void show_config_win(void)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check), options.show_vals);
     ow.show_vals=check;
 
+    hbox=gtk_hbox_new(FALSE, 0);
+    gtk_widget_show(hbox);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+
+    label=gtk_label_new("Initial size");
+    gtk_widget_show(label);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+
+    range=gtk_adjustment_new((gfloat) options.init_size,
+			     16, 128, 2, 16, 16);
+    spin=gtk_spin_button_new(GTK_ADJUSTMENT(range), 1, 0);
+    gtk_widget_set_name(spin, "init_size");
+    gtk_widget_show(spin);
+    gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 2);
+    ow.init_size=spin;
+
     hbox=GTK_DIALOG(confwin)->action_area;
 
-    but=gtk_button_new_with_label("Cancel");
+    but=gtk_button_new_with_label("Save");
     gtk_widget_show(but);
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(cancel_config), confwin);
+		       GTK_SIGNAL_FUNC(save_config), &ow);
 
     but=gtk_button_new_with_label("Set");
     gtk_widget_show(but);
@@ -631,11 +665,11 @@ static void show_config_win(void)
     gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
 		       &ow);
 
-    but=gtk_button_new_with_label("Save");
+    but=gtk_button_new_with_label("Cancel");
     gtk_widget_show(but);
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(save_config), &ow);
+		       GTK_SIGNAL_FUNC(cancel_config), confwin);
 
   } else {
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.update_s),
@@ -644,6 +678,8 @@ static void show_config_win(void)
 				 options.show_max);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.show_vals),
 				 options.show_vals);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.init_size),
+			      (gfloat) options.init_size);
   }
   
   gtk_widget_show(confwin);
@@ -702,6 +738,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.3  2001/05/10 14:56:18  stephen
+ * Added strip chart if window is wide enough.
+ *
  * Revision 1.2  2001/04/24 07:52:33  stephen
  * Display tweaks
  *
