@@ -1,0 +1,18 @@
+Tail
+====
+
+This program displays the contents of a file in a read-only text
+window, updating as the file is updated.  It is designed to do the
+same function as the "tail -f" command.
+
+To set the file to display, either:
+* drag a file to its icon in the filer, 
+* drag a file to it as it runs,
+* use the "File=>Open File.." menu option
+* use it as the end of a pileline.
+
+The latest version is at http://www.kerofin.demon.co.uk/rox/
+
+-- 
+Stephen Watson 
+stephen@kerofin.demon.co.uk
