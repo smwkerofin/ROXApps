@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.16 2003/11/29 16:58:49 stephen Exp $
+ * $Id: tail.c,v 1.17 2004/02/14 13:59:19 stephen Exp $
  */
 
 #include "config.h"
@@ -35,11 +35,9 @@
 #include <gtk/gtk.h>
 #include <gtk/gtkdnd.h>
 
-#include "infowin.h"
-#include "gtksavebox.h"
-#include "choices.h"
-#include "rox_debug.h"
-#include "rox_dnd.h"
+#include <rox/rox.h>
+#include <rox/rox_dnd.h>
+#include <rox/gtksavebox.h>
 
 static GtkWidget *win;
 static GtkWidget *text;
@@ -73,9 +71,12 @@ static void add_menu_entries(GtkTextView *view, GtkMenu *menu, gpointer);
 static gboolean show_menu(GtkWidget *widget, gpointer);
 
 static GtkItemFactoryEntry menu_items[] = {
-  {N_("/_Info"), "<control>I", show_info_win, 0, NULL},
-  {N_("/_Save text..."), "<control>S", file_saveas_proc, 0, NULL},
-  {N_("/_Quit"),"<control>Q",  gtk_main_quit, 0, NULL },
+  {N_("/_Info"), "<control>I", show_info_win, 0, "<StockItem>",
+  GTK_STOCK_DIALOG_INFO},
+  {N_("/_Save text..."), "<control>S", file_saveas_proc, 0, "<StockItem>",
+  GTK_STOCK_SAVE_AS},
+  {N_("/_Quit"),"<control>Q",  gtk_main_quit, 0,  "<StockItem>",
+  GTK_STOCK_QUIT},
 };
 
 #define MENU_TYPE GTK_TYPE_MENU
@@ -537,55 +538,47 @@ static void saved_to_uri(GtkSavebox *savebox, gchar *uri)
     gtk_savebox_set_pathname(GTK_SAVEBOX(savebox), uri);
 }
 
-static void save_done(GtkSavebox *savebox)
-{
-  gtk_widget_hide(GTK_WIDGET(savebox));
-}
-
 #include "default.xpm"
 
 static void file_saveas_proc(void)
 {
-  static GtkWidget *savebox=NULL;
-
-  if(!savebox) {
-    GdkPixbuf *pixbuf=NULL;
-    gchar *ipath;
-    GError *err=NULL;
+  GtkWidget *savebox=NULL;
+  GdkPixbuf *pixbuf=NULL;
+  gchar *ipath;
+  GError *err=NULL;
     
-    savebox=gtk_savebox_new(_("Save"));
-    gtk_signal_connect(GTK_OBJECT(savebox), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     savebox);
-    gtk_signal_connect(GTK_OBJECT(savebox), "save_to_file", 
+  savebox=gtk_savebox_new(_("Save"));
+
+  rox_debug_printf(2, "%p %s %p %p", savebox, "save_to_file",
+		   save_to_file, savebox);
+  gtk_signal_connect(GTK_OBJECT(savebox), "save_to_file", 
 		     GTK_SIGNAL_FUNC(save_to_file), 
 		     savebox);
-    gtk_signal_connect(GTK_OBJECT(savebox), "saved_to_uri", 
+  rox_debug_printf(2, "%p %s %p %p", savebox, "saved_to_uri",
+		   saved_to_uri, savebox);
+  gtk_signal_connect(GTK_OBJECT(savebox), "saved_to_uri", 
 		     GTK_SIGNAL_FUNC(saved_to_uri), 
 		     savebox);
-    gtk_signal_connect(GTK_OBJECT(savebox), "save_done", 
-		     GTK_SIGNAL_FUNC(save_done), 
-		     savebox);
-    gtk_savebox_set_pathname(GTK_SAVEBOX(savebox), "tail.txt");
-
-    ipath=choices_find_path_load("text_plain.png", "MIME-icons");
-    if(!ipath)
-      ipath=choices_find_path_load("text.png", "MIME-icons");
-    if(!ipath)
-      ipath=choices_find_path_load("text_plain.xpm", "MIME-icons");
-    if(!ipath)
-      ipath=choices_find_path_load("text.xpm", "MIME-icons");
-    if(ipath) {
-      pixbuf=gdk_pixbuf_new_from_file(ipath, &err);
-      g_free(ipath);
-    }
-    if(!pixbuf) {
-      pixbuf=gdk_pixbuf_new_from_xpm_data(default_xpm);
-    }
-    gtk_savebox_set_icon(GTK_SAVEBOX(savebox), pixbuf);
     
-  }
+  rox_debug_printf(2, "set pathname to %s", "tail.txt");
+  gtk_savebox_set_pathname(GTK_SAVEBOX(savebox), "tail.txt");
 
+  ipath=choices_find_path_load("text_plain.png", "MIME-icons");
+  if(!ipath)
+    ipath=choices_find_path_load("text.png", "MIME-icons");
+  if(!ipath)
+    ipath=choices_find_path_load("text_plain.xpm", "MIME-icons");
+  if(!ipath)
+    ipath=choices_find_path_load("text.xpm", "MIME-icons");
+  if(ipath) {
+    pixbuf=gdk_pixbuf_new_from_file(ipath, &err);
+    g_free(ipath);
+  }
+  if(!pixbuf) {
+    pixbuf=gdk_pixbuf_new_from_xpm_data(default_xpm);
+  }
+  gtk_savebox_set_icon(GTK_SAVEBOX(savebox), pixbuf);
+    
   gtk_widget_show(savebox);
 }
 
@@ -687,6 +680,9 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.17  2004/02/14 13:59:19  stephen
+ * Load icon for windows
+ *
  * Revision 1.16  2003/11/29 16:58:49  stephen
  * Switch to rox_init()
  * Mark messages as translatable
