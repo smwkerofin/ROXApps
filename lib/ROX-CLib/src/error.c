@@ -1,7 +1,7 @@
 /*
  * error.c - display error message
  *
- * $Id$
+ * $Id: error.c,v 1.1.1.1 2001/05/29 14:09:58 stephen Exp $
  */
 
 #include <stdio.h>
@@ -10,6 +10,8 @@
 #include <stdarg.h>
 
 #include <gtk/gtk.h>
+
+#include "error.h"
 
 static GtkWidget *errwin=NULL;
 static GtkWidget *errmess=NULL;
@@ -28,7 +30,7 @@ static void dismiss_error(GtkWidget *widget, gpointer data)
   gtk_widget_hide(errwin);
 }
 
-void error_show(const char *fmt, ...)
+void rox_error(const char *fmt, ...)
 {
   va_list list;
   gchar *mess;
@@ -76,5 +78,8 @@ void error_show(const char *fmt, ...)
 }
 
 /*
- * $Log$
+ * $Log: error.c,v $
+ * Revision 1.1.1.1  2001/05/29 14:09:58  stephen
+ * Initial version of the library
+ *
  */

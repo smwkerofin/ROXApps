@@ -1,16 +1,19 @@
 /*
  * error.h - display error message
  *
- * $Id$
+ * $Id: error.h,v 1.1.1.1 2001/05/29 14:09:59 stephen Exp $
  */
 
 #ifndef _error_h
 #define _error_h
 
-extern void error_show(const char *fmt, ...);
+extern void rox_error(const char *fmt, ...);
 
 #endif
 
 /*
- * $Log$
+ * $Log: error.h,v $
+ * Revision 1.1.1.1  2001/05/29 14:09:59  stephen
+ * Initial version of the library
+ *
  */
