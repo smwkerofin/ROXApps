@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.9 2002/08/24 16:39:43 stephen Exp $
+ * $Id: main.c,v 1.10 2003/03/05 15:30:39 stephen Exp $
  */
 #include "config.h"
 
@@ -41,6 +41,7 @@
 #include "rox_dnd.h"
 #include "gtksavebox.h"
 #include "rox_resources.h"
+#include "options.h"
 
 #define PROMPT_UTIL "promptArgs.py"
 
@@ -48,9 +49,8 @@
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win); /* button press on window */
 static void show_info_win(void);        /* Show information box */
-static void read_config(void);          /* Read configuration */
 static gboolean read_config_xml(void);  /* Read XML configuration */
-static void write_config_xml(void);     /* Write XML configuration */
+static void setup_config(void);
 
 static gboolean app_dropped(GtkWidget *, GSList *uris, gpointer data,
 			    gpointer udata);
@@ -69,21 +69,11 @@ static GtkWidget *prompt_args;
 
 static GtkWidget *save=NULL;
 
-/* Configuration */
-typedef struct options {
-  gchar *author;
-  gchar *homepage;
-} Options;
+static const char *author="";
+static char *homepage="";
 
-static Options options={
-  "", ""
-};
-
-typedef struct option_widgets {
-  GtkWidget *window;
-  GtkWidget *author;
-  GtkWidget *homepage;
-} OptionWidgets;
+static Option opt_author;
+static Option opt_homepage;
 
 static void usage(const char *argv0)
 {
@@ -135,6 +125,8 @@ int main(int argc, char *argv[])
   }
   
   rox_debug_init("AppFactory");
+  choices_init();
+  options_init("AppFactory");
 
   /* First things first, set the locale information for time, so that
      strftime will give us a sensible date format... */
@@ -152,8 +144,9 @@ int main(int argc, char *argv[])
   g_free(localedir);
 #endif
 
-  options.author=g_strdup(g_get_real_name());
-  options.homepage=g_strdup("");
+  author=g_get_real_name();
+  read_config_xml();
+  setup_config();
   
   /* Initialise X/GDK/GTK */
   gtk_init(&argc, &argv);
@@ -185,10 +178,6 @@ int main(int argc, char *argv[])
   }
   if(do_exit)
     exit(0);
-
-  /* Init choices and read them in */
-  choices_init();
-  read_config();
 
   rox_dnd_init();
 
@@ -299,6 +288,12 @@ int main(int argc, char *argv[])
   gtk_main();
 
   return 0;
+}
+
+static void setup_config(void)
+{
+  option_add_string(&opt_author, "author", author);
+  option_add_string(&opt_homepage, "web", homepage);
 }
 
 static gboolean app_dropped(GtkWidget *widget, GSList *uris, gpointer data,
@@ -504,14 +499,13 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   subtree=xmlNewChild(tree, NULL, "Purpose", buf);
   sprintf(buf, "0.1.0 by %s %s", PROJECT, VERSION);
   subtree=xmlNewChild(tree, NULL, "Version", buf);
-  if(options.author && options.author[0])
-    sprintf(buf, "AppFactory by %s, wrapper by %s", AUTHOR, options.author);
+  if(opt_author.value[0])
+    sprintf(buf, "AppFactory by %s, wrapper by %s", AUTHOR, opt_author.value);
   else
     sprintf(buf, "AppFactory by %s", AUTHOR);
   subtree=xmlNewChild(tree, NULL, "Authors", buf);
   subtree=xmlNewChild(tree, NULL, "License", "GNU General Public License");
-  if(options.homepage && options.homepage[0])
-    subtree=xmlNewChild(tree, NULL, "Homepage", options.homepage);
+  subtree=xmlNewChild(tree, NULL, "Homepage", opt_homepage.value);
     
   xmlSaveFormatFileEnc(fname, doc, NULL, 1);
   xmlFreeDoc(doc);
@@ -558,12 +552,13 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
 
 static void saved_to_uri(GtkSavebox *savebox, gchar *uri)
 {
+  if(uri)
     gtk_savebox_set_pathname(GTK_SAVEBOX(savebox), uri);
 }
 
-static void save_done(GtkSavebox *savebox)
+static void save_done(GtkSavebox *savebox, gpointer unused)
 {
-  gtk_widget_hide(GTK_WIDGET(savebox));
+  save=NULL;
 }
 
 /* Make a destroy-frame into a close, allowing us to re-use the window */
@@ -584,15 +579,13 @@ static void begin_save(GtkWidget *widget, gpointer data)
   if(!save) {
     save=gtk_savebox_new(_("Save"));
 
-    gtk_signal_connect(GTK_OBJECT(save), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
+    gtk_signal_connect(GTK_OBJECT(save), "destroy", 
+		     GTK_SIGNAL_FUNC(save_done), 
 		     save);
     gtk_signal_connect(GTK_OBJECT(save), "save_to_file",
 		       GTK_SIGNAL_FUNC(save_to_file), NULL);
     gtk_signal_connect(GTK_OBJECT(save), "saved_to_uri",
 		       GTK_SIGNAL_FUNC(saved_to_uri), NULL);
-    gtk_signal_connect(GTK_OBJECT(save), "save_done",
-		       GTK_SIGNAL_FUNC(save_done), NULL);
   }
 
   pixbuf=gtk_image_get_pixbuf(GTK_IMAGE(prog_icon));
@@ -607,36 +600,7 @@ static void begin_save(GtkWidget *widget, gpointer data)
   gtk_widget_show(save);
 }
 
-static void write_config_xml(void)
-{
-  gchar *fname;
-  gboolean ok;
-
-  fname=choices_find_path_save("options.xml", PROJECT, TRUE);
-  dprintf(2, "save to %s", fname? fname: "NULL");
-
-  if(fname) {
-    xmlDocPtr doc;
-    xmlNodePtr tree;
-    FILE *out;
-    char buf[80];
-
-    doc = xmlNewDoc("1.0");
-    doc->children=xmlNewDocNode(doc, NULL, "AppFactory", NULL);
-    xmlSetProp(doc->children, "version", VERSION);
-
-    /* Insert data here */
-    tree=xmlNewChild(doc->children, NULL, "Author", options.author);    
-    tree=xmlNewChild(doc->children, NULL, "Homepage", options.homepage);    
-  
-    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
-
-    xmlFreeDoc(doc);
-    g_free(fname);
-  }
-}
-
-
+/* Read old config format */
 static gboolean read_config_xml(void)
 {
   guchar *fname;
@@ -677,17 +641,12 @@ static gboolean read_config_xml(void)
       if(strcmp(node->name, "Author")==0) {
 	string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 	if(string) {
-	  if(options.author)
-	    g_free(options.author);
-	  options.author=g_strdup(string);
-	  free(string);
+	  author=g_strdup(string);
 	}
       } else if(strcmp(node->name, "Homepage")==0) {
 	string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 	if(string) {
-	  if(options.homepage)
-	    g_free(options.homepage);
-	  options.homepage=g_strdup(string);
+	  homepage=g_strdup(string);
 	  free(string);
 	}
       }
@@ -701,177 +660,15 @@ static gboolean read_config_xml(void)
   return FALSE;
 }
 
-/* Read in the config. */
-static void read_config(void)
-{
-  guchar *fname;
-
-  if(read_config_xml())
-    return;
-  
-  /* Use the choices system to locate the file to read */
-  fname=choices_find_path_load("options", PROJECT);
-
-  if(fname) {
-    FILE *in;
-    in=fopen(fname, "r");
-    if(in) {
-      char buf[1024], *line;
-      char *end;
-
-      do {
-	line=fgets(buf, sizeof(buf), in);
-	if(!line)
-	  break;
-	end=strchr(line, '\n');
-	if(end)
-	  *end=0;
-	end=strchr(line, '#');  /* everything after # is a comment */
-	if(end)
-	  *end=0;
-
-	/* Process the line here... */
-	if(*line) {
-	  char *sep;
-
-	  dprintf(4, "line=%s", line);
-	  sep=strchr(line, '=');
-	  if(sep) {
-	    const char *var=line;
-	    const char *val=sep+1;
-
-	    *sep=0;
-	    dprintf(3, "%s = %s", var, val);
-	    if(strcmp(var, "author")==0) {
-	      if(options.author)
-		g_free(options.author);
-	      options.author=g_strdup(val);
-	    } else if(strcmp(var, "homepage")==0) {
-	      if(options.homepage)
-		g_free(options.homepage);
-	      options.homepage=g_strdup(val);
-	    }
-	  }
-	}
-	
-      } while(!feof(in));
-
-      fclose(in);
-    }
-
-    g_free(fname);
-  }
-}
 
 static void hide_window(GtkWidget *widget, gpointer data)
 {
   gtk_widget_hide(GTK_WIDGET(data));
 }
 
-static void cancel_config(GtkWidget *widget, gpointer data)
-{
-  GtkWidget *confwin=GTK_WIDGET(data);
-  
-  gtk_widget_hide(confwin);
-}
-
-static void set_config(GtkWidget *widget, gpointer data)
-{
-  OptionWidgets *ow=(OptionWidgets *) data;
-
-  if(options.author)
-    g_free(options.author);
-  options.author=g_strdup(gtk_entry_get_text(GTK_ENTRY(ow->author)));
-  
-  if(options.homepage)
-    g_free(options.homepage);
-  options.homepage=g_strdup(gtk_entry_get_text(GTK_ENTRY(ow->homepage)));
- 
-  gtk_widget_hide(ow->window);
-}
-
-static void save_config(GtkWidget *widget, gpointer data)
-{
-  set_config(widget, data);
-  write_config_xml();
-}
-
 static void show_config_win(void)
 {
-  static GtkWidget *confwin=NULL;
-  static OptionWidgets ow;
-
-  if(!confwin) {
-    GtkWidget *vbox;
-    GtkWidget *hbox;
-    GtkWidget *but;
-    GtkWidget *label;
-    GtkWidget *entry;
-
-    confwin=gtk_dialog_new();
-    gtk_signal_connect(GTK_OBJECT(confwin), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     confwin);
-    gtk_window_set_title(GTK_WINDOW(confwin), "Configuration");
-    gtk_window_set_position(GTK_WINDOW(confwin), GTK_WIN_POS_MOUSE);
-    ow.window=confwin;
-
-    vbox=GTK_DIALOG(confwin)->vbox;
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 4);
-
-    label=gtk_label_new(_("Author"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-
-    entry=gtk_entry_new();
-    gtk_widget_set_name(entry, "author");
-    gtk_widget_show(entry);
-    gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 4);
-    ow.author=entry;
-
-    hbox=gtk_hbox_new(FALSE, 0);
-    gtk_widget_show(hbox);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 4);
-
-    label=gtk_label_new(_("Home page"));
-    gtk_widget_show(label);
-    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-
-    entry=gtk_entry_new();
-    gtk_widget_set_name(entry, "homepage");
-    gtk_widget_show(entry);
-    gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 4);
-    ow.homepage=entry;
-
-    hbox=GTK_DIALOG(confwin)->action_area;
-
-    but=gtk_button_new_with_label(_("Save"));
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(save_config), &ow);
-
-    but=gtk_button_new_with_label(_("Set"));
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked", GTK_SIGNAL_FUNC(set_config),
-		       &ow);
-
-    but=gtk_button_new_with_label(_("Cancel"));
-    gtk_widget_show(but);
-    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
-    gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(cancel_config), confwin);
-
-  } 
-
-  gtk_entry_set_text(GTK_ENTRY(ow.author), options.author);
-  gtk_entry_set_text(GTK_ENTRY(ow.homepage), options.homepage);
-  
-  gtk_widget_show(confwin);  
+  options_show(); 
 }
 
 /*
