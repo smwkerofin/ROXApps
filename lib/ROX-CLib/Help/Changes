@@ -4,6 +4,11 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+05-May-2004
+~~~~~~~~~~~
+Fix bug in Makefile.in for re-running configure.
+Extra debug trying to find bug in SOAP to filer when filer not there.
+
 10-Apr-2004
 ~~~~~~~~~~~
 Added aclocal.m4 containing useful autoconf macros for ROX.
@@ -143,4 +148,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.4 2004/04/07 19:38:37 stephen Exp $
+$Id: Changes,v 1.5 2004/04/10 10:30:52 stephen Exp $

@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.9 2003/03/05 15:31:23 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.10 2003/03/25 14:31:34 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -68,18 +68,19 @@ static void send_soap(xmlDocPtr rpc, rox_soap_callback callback,
   
   data.status=FALSE;
   data.udata=udata;
-  
-  rox_soap_send(filer, rpc, TRUE, callback, &data);
-  dprintf(3, "status=%d", data.status);
 
-  dprintf(2, "Entering gtk_main() for rox_soap_send");
+  rox_debug_printf(2, "calling rox_soap_send()"); 
+  rox_soap_send(filer, rpc, TRUE, callback, &data);
+  rox_debug_printf(3, "status=%d", data.status);
+
+  rox_debug_printf(2, "Entering gtk_main() for rox_soap_send");
   gtk_main();
   dprintf(3, "status=%d", data.status);
   if(!data.status) {
     rox_soap_send_via_pipe(filer, rpc, callback, &data);
-    dprintf(2, "Entering gtk_main() for rox_soap_send_via_pipe");
+    rox_debug_printf(2, "Entering gtk_main() for rox_soap_send_via_pipe");
     gtk_main();
-    dprintf(3, "status=%d", data.status);
+    rox_debug_printf(3, "status=%d", data.status);
   }
 }
 
@@ -88,6 +89,9 @@ static void simple_call(const char *action, const char *argname,
 {
   xmlDocPtr rpc;
   xmlNodePtr tree;
+
+  rox_debug_printf(2, "In simple_call %s %s %s", action,
+		   argname? argname: "NULL", arg? arg: "NULL");
 
   check_init();
 
@@ -464,6 +468,9 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.10  2003/03/25 14:31:34  stephen
+ * New attempt at working SOAP code.
+ *
  * Revision 1.9  2003/03/05 15:31:23  stephen
  * First pass a conversion to GTK 2
  * Known problems in SOAP code.
