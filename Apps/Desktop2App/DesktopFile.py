@@ -1,4 +1,4 @@
-# $Id: DesktopFile.py,v 1.2 2003/09/15 11:37:03 stephen Exp $
+# $Id: DesktopFile.py,v 1.3 2004/11/21 13:05:32 stephen Exp $
 
 """Scan .desktop files and generate rox wrappers for programs"""
 
@@ -38,6 +38,8 @@ class DesktopEntry:
                 for size in ('48x48', '64x64', '32x32', '22x22', '16x16'):
                     self.ipath.append(os.path.join(prefix, kde_pixmap_dir,
                                                    col, size, 'apps'))
+        self.ipath.append('/usr/local/share/pixmaps')
+        self.ipath.append('/usr/share/pixmaps')
 
         self.type=section.get('Type')
         self.no_display=section.getBoolean('NoDisplay', 0)
