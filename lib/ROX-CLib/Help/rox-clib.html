@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.1 2002/12/07 13:08:13 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.2 2003/04/16 09:01:02 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -91,9 +91,33 @@ to your link line, e.g.
       <li> <a href="#infowin.h"> infowin.h</a></li>
     </ul>
 
-    <p>Four functions are declared:
+    <p>Six functions are declared:
 
     <dl>
+      <dt>
+	<code>void rox_init(const char *program, int *argc, char ***argv)</code>
+      <dd><p>
+
+	  This handles the initialization of the library.  It calls:
+	</p>
+        <ul>
+          <li><code>gtk_init(argc, argv)</code>
+          <li><code>rox_debug_init(program)</code>
+          <li><code>choices_init()</code>
+          <li><code>options_init(program)</code> (if it detects an
+					      $APP_DIR/Options.xml file)
+          <li><code>rox_dnd_init()</code>
+        </ul>
+
+      <dt>
+	<code><const gchar *rox_get_program_name(void);/code>
+      <dd><p>
+
+	  Returns the program name, as passed to rox_init().  If
+					      rox_init() was not
+					      called then it returns NULL.
+	</p>
+
       <dt>
 	<code>int rox_clib_version_number(void)</code>
       <dd><p>
@@ -271,6 +295,12 @@ a saved file would go without actually altering the filesystem).
 
 	    <dd><p>Create a new InfoWin object.  The data in the
 	      window is taken from the function arguments.</p>
+
+	  <dt><code>GtkWidget* info_win_new_from_appinfo(const gchar *<var>program</var>)</code>
+
+	    <dd><p>Create a new InfoWin object.  The data in the
+	      window is taken from the file $APP_DIR/AppInfo.xml, if
+							    it exists.</p>
 
 	  <dt><code>void info_win_add_browser_command(InfoWin *<var>iw</var>, 
 	      const gchar *<var>cmd</var>)</code>
@@ -923,7 +953,7 @@ The 'section' elements can be nested.</p>
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Tue Apr 15 19:26:22 BST 2003
+Last modified: Sat Oct 18 12:57:36 BST 2003
 <!-- hhmts end -->
   </body>
 </html>

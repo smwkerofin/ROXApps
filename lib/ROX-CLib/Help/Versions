@@ -1,6 +1,13 @@
 Changes to ROX-CLib by Version
 ==============================
 
+1.1.3
+-----
+Added rox_init() to call all the usual _init() functions.
+Added info_win_new_from_appinfo().
+rox_debug is now enabled by default.
+Fixed race condition in SOAP code.
+
 1.1.2
 -----
 Handle %-escaped URIs in drag and drop.  
