@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppletRun,v 1.9 2003/03/16 12:27:03 stephen Exp $
+# $Id: AppletRun,v 1.10 2003/03/16 12:28:57 stephen Exp $
 
 import findrox
 import rox
@@ -53,6 +53,22 @@ if fname!=None:
 else:
     checkers=None
 
+version=''
+from xml.dom.minidom import parse
+doc=parse(os.path.join(app_dir, 'AppInfo.xml'))
+about=doc.getElementsByTagName("About")
+def get_text(node):
+    t=''
+    for sub in node.childNodes:
+        if sub.nodeType==node.TEXT_NODE:
+            t+=sub.data
+    return t
+for a in about:
+    for node in a.childNodes:
+        if node.nodeType==node.ELEMENT_NODE:
+            if node.tagName=='Version':
+                version=get_text(node)
+
 # Make our applet
 class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
     def __init__(self, xid, app_dir, mailers, checkers):
@@ -91,7 +107,7 @@ class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
         self.menu=g.Menu()
 
         item=g.MenuItem("Info")
-        iw=InfoWin('Mail', 'Monitor mail box', '0.3.0 (16 March 2003)',
+        iw=InfoWin('Mail', 'Monitor mail box', version,
                    'Stephen Watson', 'http://www.kerofin.demon.co.uk/rox/')
         iw.connect('delete_event', lambda iw: iw.hide())
         def show_infowin(widget, data):
@@ -145,7 +161,7 @@ class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
         ebox.connect("button_press_event", click, self)
 
         def update(obj):
-            obj.update()
+            return obj.update()
 
         self.tag=g.timeout_add(5000, update, self)
 

@@ -1,6 +1,10 @@
 Versions of Mail
 ================
 
+0.3.1
+-----
+Fix update to return TRUE, otherwise it never gets called again
+
 0.3.0
 -----
 Switch to ROX-Lib2 and GTK 2.
