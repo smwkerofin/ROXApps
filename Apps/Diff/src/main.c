@@ -8,7 +8,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.2 2001/11/29 15:52:33 stephen Exp $
+ * $Id: main.c,v 1.3 2001/12/21 09:54:26 stephen Exp $
  */
 #include "config.h"
 
@@ -102,6 +102,40 @@ static gboolean load_from_xds(GtkWidget *widget, const char *path,
 			      gpointer data, gpointer udata);
 static void show_diffs(DiffWindow *win);
 
+static void usage(const char *argv0)
+{
+  printf("Usage: %s [X-options] [gtk-options] [-vh]\n", argv0);
+  printf("where:\n\n");
+  printf("  X-options\tstandard Xlib options\n");
+  printf("  gtk-options\tstandard GTK+ options\n");
+  printf("  -h\tprint this help message\n");
+  printf("  -v\tdisplay version information\n");
+}
+
+static void do_version(void)
+{
+  printf("%s %s\n", PROJECT, VERSION);
+  printf("%s\n", PURPOSE);
+  printf("%s\n", WEBSITE);
+  printf("Copyright 2002 %s\n", AUTHOR);
+  printf("Distributed under the terms of the GNU General Public License.\n");
+  printf("(See the file COPYING in the Help directory).\n");
+  printf("%s last compiled %s\n", __FILE__, __DATE__);
+
+  printf("\nCompile time options:\n");
+  printf("  Debug output... %s\n", DEBUG? "yes": "no");
+  printf("  Using XML... ");
+  if(USE_XML)
+    printf("yes (libxml version %d)\n", LIBXML_VERSION);
+  else {
+    printf("no (");
+    if(HAVE_XML)
+      printf("libxml not found)\n");
+    else
+    printf("libxml version %d)\n", LIBXML_VERSION);
+  }
+}
+
 /* Main.  Here we set up the gui and enter the main loop */
 int main(int argc, char *argv[])
 {
@@ -109,6 +143,7 @@ int main(int argc, char *argv[])
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
 #endif
+  int c, do_exit, nerr;
 
   /* First things first, set the locale information for time, so that
      strftime will give us a sensible date format... */
@@ -126,6 +161,12 @@ int main(int argc, char *argv[])
   g_free(localedir);
 #endif
   
+  /* Check for this argument by itself */
+  if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
+    do_version();
+    exit(0);
+  }
+  
   /* Initialise X/GDK/GTK */
   gtk_init(&argc, &argv);
   gdk_rgb_init();
@@ -133,6 +174,31 @@ int main(int argc, char *argv[])
   cmap=gdk_rgb_get_cmap();
   gtk_widget_push_colormap(cmap);
   
+  /* Process remaining arguments */
+  nerr=0;
+  do_exit=FALSE;
+  while((c=getopt(argc, argv, "vh"))!=EOF)
+    switch(c) {
+    case 'h':
+      usage(argv[0]);
+      do_exit=TRUE;
+      break;
+    case 'v':
+      do_version();
+      do_exit=TRUE;
+      break;
+    default:
+      nerr++;
+      break;
+    }
+  if(nerr) {
+    fprintf(stderr, "%s: invalid options\n", argv[0]);
+    usage(argv[0]);
+    exit(10);
+  }
+  if(do_exit)
+    exit(0);
+
   /* Init choices and read them in */
   rox_debug_init(PROJECT);
   choices_init();
@@ -807,6 +873,9 @@ static void show_diffs(DiffWindow *win)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.3  2001/12/21 09:54:26  stephen
+ * Added some debug lines (not ready for new release yet).
+ *
  * Revision 1.2  2001/11/29 15:52:33  stephen
  * Test for <sys/filio.h>
  *
