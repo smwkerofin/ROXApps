@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.8 2001/10/04 13:47:47 stephen Exp $
+ * $Id: load.c,v 1.9 2001/11/12 14:43:47 stephen Exp $
  *
  * Log at end of file
  */
@@ -102,6 +102,7 @@ static ColourInfo colour_info[]={
 #define MIN_WIDTH     36
 #define MIN_HEIGHT    MIN_WIDTH
 #define MAX_BAR_WIDTH 32
+#define CHART_RES     2
 
 typedef struct options {
   guint32 update_ms;
@@ -117,6 +118,7 @@ typedef struct options {
   GdkColor *back_colour;
 #endif
   gchar *font_name;
+  gboolean multiple_chart;
 } Options;
 
 static Options options={
@@ -126,7 +128,7 @@ static Options options={
   {colours+COL_HIGH0, colours+COL_HIGH1, colours+COL_HIGH2},
   colours+COL_FG, colours+COL_BG,
 #endif
-  NULL
+  NULL, TRUE
 };
 
 typedef struct option_widgets {
@@ -135,6 +137,7 @@ typedef struct option_widgets {
   GtkWidget *show_max;
   GtkWidget *show_vals;
   GtkWidget *show_host;
+  GtkWidget *multiple_chart;
   GtkWidget *init_size;
   GtkWidget *colour_menu;
   GtkWidget *colour_show;
@@ -336,7 +339,7 @@ static void append_history(time_t when, const double loadavg[3])
 static void do_update(void)
 {
   int w, h;
-  int bw, mbh, bh, bm=BOTTOM_MARGIN, tm=TOP_MARGIN;
+  int bw, mbh, bh, bm=BOTTOM_MARGIN, tm=TOP_MARGIN, l2=0;
   int bx, by, x, sbx;
   int cpu, other;
   double ld;
@@ -349,6 +352,9 @@ static void do_update(void)
   time_t now;
   History *hist;
   GtkStyle *style;
+  static const char *bar_labels[]={
+    "1m", "5m", "15m"
+  };
 
   dprintf(4, "gc=%p canvas=%p pixmap=%p", gc, canvas, pixmap);
 
@@ -396,7 +402,11 @@ static void do_update(void)
       ndec=3;
 
     tm=height+2;
-    bm=height+4;
+    if(h-2*(height+4)-tm>2*bm)
+      bm=2*(height+4);
+    else
+      bm=height+4;
+    l2=bm-(height+4);
   }
   by=h-bm;
   if(by<48) 
@@ -450,19 +460,29 @@ static void do_update(void)
     
     if(ld>red_line) {
       int bhred=mbh*(ld-red_line)/max_load;
+      int byred=mbh*red_line/max_load;
       
       dprintf(5, "bhred=%d by-bhred=%d", bhred, by-bhred);
       dprintf(5, "(%d, %d) by (%d, %d)", bx, by-bh, bw, bhred);
       
       gdk_gc_set_foreground(gc, colours+COL_HIGH(i));
-      gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bhred);
+      /*gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bhred);*/
+      gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bh-byred);
     }
     gdk_gc_set_foreground(gc, colours+COL_FG);
     gdk_draw_rectangle(pixmap, gc, FALSE, bx, by-bh, bw, bh);
 
     if(options.show_vals) {
       sprintf(buf, "%3.*f", ndec, ld);
-      gdk_draw_string(pixmap, font, gc, bx+2, h-2, buf);
+      gdk_draw_string(pixmap, font, gc, bx+2, h-2-l2, buf);
+      if(l2>0) {
+	int xl=bx+2;
+	int lw;
+
+	lw=gdk_string_width(font, bar_labels[i]);
+	xl=bx+bw/2-lw/2;
+	gdk_draw_string(pixmap, font, gc, xl, h-2, bar_labels[i]);
+      }
     }
 
     bx+=bw+BAR_GAP;
@@ -470,7 +490,7 @@ static void do_update(void)
 
   if(history && ihistory>0) {
     History *prev;
-    int gwidth=2;
+    int gwidth=CHART_RES;
     int gorg=sbx-BAR_GAP;
 
     dprintf(2, "draw history");
@@ -482,39 +502,49 @@ static void do_update(void)
 	break;
       prev=get_history(i-1);
       if(prev) {
-	bx=gorg-2*(int)(now-prev->when);
-	gwidth=2*(int)(hist->when-prev->when);
+	bx=gorg-CHART_RES*(int)(now-prev->when);
+	gwidth=CHART_RES*(int)(hist->when-prev->when);
 
 	dprintf(3, " 0x%lx: 0x%lx, 0x%lx -> %d, %d", now, hist->when,
 		prev->when, bx, gwidth);
       } else {
-	bx=gorg-2*(int)(now-hist->when-1);
-	gwidth=2;
+	bx=gorg-CHART_RES*(int)(now-hist->when-1)-CHART_RES;
+	gwidth=CHART_RES;
       }
       if(bx<BAR_GAP) {
 	gwidth-=(BAR_GAP-bx);
 	bx=BAR_GAP;
       }
-      
-      ld=hist->load[0];
-      bh=mbh*ld/max_load;
-      gdk_gc_set_foreground(gc, colours+COL_NORMAL(0));
-      dprintf(3, "(%d, %d) size (%d, %d)", bx, by-bh, gwidth, bh);
-      gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, gwidth, bh);
-      if(ld>red_line) {
-	int bhred=mbh*(ld-red_line)/max_load;
-	gdk_gc_set_foreground(gc, colours+COL_HIGH(0));
-	gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, gwidth, bhred);
+
+      for(j=options.multiple_chart? 2: 0; j>=0; j--) {
+	ld=hist->load[j];
+	bh=mbh*ld/max_load;
+	gdk_gc_set_foreground(gc, colours+COL_NORMAL(j));
+	dprintf(3, "(%d, %d) size (%d, %d)", bx, by-bh, gwidth, bh);
+	gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, gwidth, bh);
+	if(ld>red_line) {
+	  int bhred=mbh*(ld-red_line)/max_load;
+	  int byred=mbh*red_line/max_load;
+	  gdk_gc_set_foreground(gc, colours+COL_HIGH(j));
+	  /*gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, gwidth, bhred);*/
+	  gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, gwidth, bh-byred);
+	}
       }
     }
 
     gdk_gc_set_foreground(gc, colours+COL_FG);
     gdk_draw_line(pixmap, gc, BAR_GAP, by, gorg, by);
-    for(i=0, bx=gorg-2*i; bx>=BAR_GAP; i+=5, bx=gorg-2*i)
-      if(i%6==0)
-	gdk_draw_line(pixmap, gc, bx, by, bx, by+bm);
-      else
-	gdk_draw_line(pixmap, gc, bx, by, bx, by+bm/2);
+    for(i=0, bx=gorg-2*i; bx>=BAR_GAP; i+=5, bx=gorg-CHART_RES*i)
+      if(i%6==0) {
+	gdk_draw_line(pixmap, gc, bx, by, bx, by+bm-l2);
+	if(options.show_vals) {
+	  sprintf(buf, "%d", i);
+	  gdk_draw_string(pixmap, font, gc,
+			  bx-gdk_string_width(font, buf)/2, h-2, buf);
+	}
+      } else {
+	gdk_draw_line(pixmap, gc, bx, by, bx, by+(bm-l2)/2);
+      }
   }
 
   if(options.show_max) {
@@ -555,7 +585,7 @@ static void resize_history(int width)
   History *tmp;
   int i;
 
-  nrec=(width-2-3*MAX_BAR_WIDTH-3*BAR_GAP-2-1)/2;
+  nrec=(width-2-3*MAX_BAR_WIDTH-3*BAR_GAP-2-1)/CHART_RES;
 
   if(nrec<=nhistory)
     return;
@@ -643,6 +673,8 @@ static void write_config_xml(void)
     xmlSetProp(tree, "vals", buf);
     sprintf(buf, "%d", options.show_host);
     xmlSetProp(tree, "host", buf);
+    sprintf(buf, "%d", options.multiple_chart);
+    xmlSetProp(tree, "multiple-charts", buf);
     
     if(options.font_name)
       tree=xmlNewChild(doc->children, NULL, "font", options.font_name);
@@ -700,6 +732,7 @@ static void write_config(void)
       fprintf(out, "show_max=%d\n", options.show_max);
       fprintf(out, "show_vals=%d\n", options.show_vals);
       fprintf(out, "show_host=%d\n", options.show_host);
+      fprintf(out, "multiple_chart=%d\n", options.multiple_chart);
       fprintf(out, "init_size=%d\n", (int) options.init_size);
       if(options.font_name)
 	fprintf(out, "font_name=%s\n", options.font_name);
@@ -779,6 +812,11 @@ static gboolean read_config_xml(void)
 	str=xmlGetProp(node, "host");
 	if(str) {
 	  options.show_host=atoi(str);
+	  free(str);
+	}
+	str=xmlGetProp(node, "multiple-charts");
+	if(str) {
+	  options.multiple_chart=atoi(str);
 	  free(str);
 	}
 
@@ -916,6 +954,8 @@ static void read_config(void)
 	      options.show_vals=atoi(val);
 	    } else if(strcmp(var, "show_host")==0) {
 	      options.show_host=atoi(val);
+	    } else if(strcmp(var, "multiple_chart")==0) {
+	      options.multiple_chart=atoi(val);
 	    } else if(strcmp(var, "init_size")==0) {
 	      options.init_size=(guint) atoi(val);
 	    } else if(strcmp(var, "font_name")==0) {
@@ -1018,6 +1058,8 @@ static void set_config(GtkWidget *widget, gpointer data)
     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_vals));
   options.show_host=
     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->show_host));
+  options.multiple_chart=
+    gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ow->multiple_chart));
   options.init_size=
     gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(ow->init_size));
   
@@ -1080,6 +1122,14 @@ static void show_font_window(GtkWidget *widget, gpointer data)
 
   gtk_widget_show(ow->font_window);
 }
+
+static void hide_font_window(GtkWidget *widget, gpointer data)
+{
+  OptionWidgets *ow=(OptionWidgets *) data;
+  
+  gtk_widget_hide(ow->font_window);
+}
+
 #endif
 
 static void append_option_menu_item(GtkWidget *base, GtkWidget *optmen,
@@ -1309,6 +1359,14 @@ static void show_config_win(void)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check), options.show_host);
     ow.show_host=check;
 
+    check=gtk_check_button_new_with_label("Multiple charts");
+    gtk_widget_set_name(check, "multiple_chart");
+    gtk_widget_show(check);
+    gtk_box_pack_start(GTK_BOX(hbox), check, FALSE, FALSE, 2);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check),
+				 options.multiple_chart);
+    ow.multiple_chart=check;
+
     hbox=gtk_hbox_new(FALSE, 0);
     gtk_widget_show(hbox);
     gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
@@ -1391,6 +1449,8 @@ static void show_config_win(void)
     gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(ow.font_window)->ok_button), 
 		       "clicked", GTK_SIGNAL_FUNC(set_font), &ow);
 
+    gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(ow.font_window)->cancel_button), 
+		       "clicked", GTK_SIGNAL_FUNC(hide_font_window), &ow);
     but=gtk_button_new_with_label("Change");
     gtk_widget_show(but);
     gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
@@ -1430,6 +1490,8 @@ static void show_config_win(void)
 				 options.show_vals);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.show_host),
 				 options.show_host);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ow.multiple_chart),
+				 options.multiple_chart);
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(ow.init_size),
 			      (gfloat) options.init_size);
 
@@ -1541,6 +1603,10 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.9  2001/11/12 14:43:47  stephen
+ * Uses XML for config, if XML 2.4 or later.
+ * Can select a font for display.
+ *
  * Revision 1.8  2001/10/04 13:47:47  stephen
  * Can change foreground & background colours as well.
  *

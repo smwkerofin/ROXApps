@@ -1,6 +1,10 @@
 Load
 ====
 
+1.1.5
+-----
+Allow multiple strip charts.  Fix glich drawing red/green interface.
+
 1.1.4
 -----
 Uses XML for config, if XML 2.4 or later.
