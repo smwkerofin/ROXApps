@@ -1,0 +1,23 @@
+README for Mem
+==============
+
+Mem - display memory and swap space usage.
+
+This program, which can function as a ROX applet or a standalone program, 
+displays the current real memory usage and the current swap space usage.
+It obtains these values by using the libgtop library.
+
+Bugs
+----
+
+The swap space display is broken under Solaris, apparently a bug in libgtop.
+This is disabled until a fixed libgtop is available.
+
+Updates
+-------
+
+The latest version is at http://www.kerofin.demon.co.uk/rox/
+
+-- 
+Stephen Watson 
+stephen@kerofin.demon.co.uk
