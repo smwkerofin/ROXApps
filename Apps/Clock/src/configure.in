@@ -14,7 +14,7 @@ AC_SUBST(GTK_CONFIG)
 dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
-AC_CHECK_HEADERS(locale.h sys/stat.h)
+AC_CHECK_HEADERS(locale.h sys/stat.h libintl.h)
 
 dnl Do we have gdk-pixbuf?  Provide an extra if we do.
 AC_MSG_CHECKING(for gdk-pixbuf library)
@@ -38,7 +38,7 @@ AC_DEFINE(USE_GDK_PIXBUF)
 dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(setlocale fstat stat)
+AC_CHECK_FUNCS(setlocale fstat stat bindtextdomain gettext)
 
 dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(extracting version information)
