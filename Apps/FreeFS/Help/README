@@ -64,11 +64,13 @@ Compiling
 ---------
 
 You will need:
-  Gtk+ 1.2.8 or later
+  GTK+ 1.2.8 or later
   Libgtop (I use 1.1.2 but 1.0 may work).
+  autoconf
+  ROX-CLib
 
-
-Run FreeFS/AppRun --compile.  It should also compile itself when first run.
+Run FreeFS/AppRun --compile.  It should also compile itself when first run
+or used as an applet.
 
 This has only been tried under Solaris 7-8 and Linux .  Reports of
 success/failure under other OS's to stephen@kerofin.demon.co.uk
@@ -77,8 +79,8 @@ please.
 Credits
 -------
 
-Most of the drag and drop code was lifted from ROX-Filer by Thomas
-Leonard, as was the AppRun file.
+Most of the AppRun file was lifted from ROX-Filer by Thomas
+Leonard.
 
 The design of the window came from the replacement RISC OS Free
 templates by Bernard Veasey.

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.8 2001/08/20 09:32:15 stephen Exp $
+ * $Id: freefs.c,v 1.9 2001/08/29 13:46:14 stephen Exp $
  */
 #include "config.h"
 
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
     fs_name=gtk_label_new("");
     gtk_label_set_justify(GTK_LABEL(fs_name), GTK_JUSTIFY_LEFT);
     gtk_widget_set_name(fs_name, "text display");
-    gtk_box_pack_start(GTK_BOX(hbox), fs_name, TRUE, TRUE, 2);
+    gtk_box_pack_start(GTK_BOX(hbox), fs_name, TRUE, FALSE, 2);
     gtk_widget_show(fs_name);
     gtk_tooltips_set_tip(ttips, fs_name,
 			 "This is the name of the directory\n"
@@ -884,6 +884,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.9  2001/08/29 13:46:14  stephen
+ * Fixed up the debug output.
+ *
  * Revision 1.8  2001/08/20 09:32:15  stephen
  * Switch to using ROX-CLib.  Menu created at start so accelerators are
  * always available.

@@ -1,6 +1,11 @@
 Versions of FreeFS
 ==================
 
+1.1.2
+-----
+Another compilation fix: run autoconf if configure script missing.
+Can now choose what is shown in applet mode.
+
 1.1.1
 -----
 Enable debug correctly.  Clean up some CVS bits.  Fix autocompile.
