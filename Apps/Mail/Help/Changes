@@ -1,7 +1,7 @@
 Versions of Mail
 ================
 
-19-Feb-2005
+19-Feb-2005 (0.3.7)
 ~~~~~~~~~~~
 Got the "Check mail programs" window working.  Still needs some way of 
 editing the entries.
@@ -53,4 +53,4 @@ Check child processes to avoid zombies where possible.
 First released version
 
 -- 
-$Id$
+$Id: Changes,v 1.1 2005/02/19 11:44:49 stephen Exp $
