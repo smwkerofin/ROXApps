@@ -1,6 +1,10 @@
 Versions of Diff
 ================
 
+1.0.1
+-----
+Make sure AppRun can find rox_run.
+
 1.0.0
 -----
 Added support for shared ROX-CLib.
