@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.5 2001/05/09 10:20:05 stephen Exp $
+ * $Id: tail.c,v 1.6 2001/05/18 09:41:09 stephen Exp $
  */
 
 #include <stdio.h>
@@ -125,7 +125,7 @@ static GtkWidget *get_main_menu(GtkWidget *window)
 
 static void detach(GtkWidget *widget, GtkMenu *menu)
 {
-  printf("detach\n");
+  dprintf("detach\n");
 }
 
 int main(int argc, char *argv[])
@@ -201,7 +201,8 @@ void dprintf(const char *fmt, ...)
 
   va_start(list, fmt);
 #if DEBUG
-  vfprintf(stderr, fmt, list);
+  /*vfprintf(stderr, fmt, list);*/
+  g_logv(PROJECT, G_LOG_LEVEL_DEBUG, fmt, list);
 #endif
   va_end(list);
 }
@@ -585,11 +586,11 @@ static GdkAtom application_octet_stream;
 
 static void dnd_init(void)
 {
-	XdndDirectSave0 = gdk_atom_intern("XdndDirectSave0", FALSE);
-	xa_text_plain = gdk_atom_intern("text/plain", FALSE);
-	text_uri_list = gdk_atom_intern("text/uri-list", FALSE);
-	application_octet_stream = gdk_atom_intern("application/octet-stream",
-			FALSE);
+  XdndDirectSave0 = gdk_atom_intern("XdndDirectSave0", FALSE);
+  xa_text_plain = gdk_atom_intern("text/plain", FALSE);
+  text_uri_list = gdk_atom_intern("text/uri-list", FALSE);
+  application_octet_stream = gdk_atom_intern("application/octet-stream",
+					     FALSE);
 }
 
 static void make_drop_target(GtkWidget *widget)
@@ -659,8 +660,8 @@ GSList *uri_list_to_gslist(char *uri_list)
     linebreak = strchr(uri_list, 13);
 
     if (!linebreak || linebreak[1] != 10) {
-      fprintf(stderr, "uri_list_to_gslist: Incorrect or missing line "
-		      "break in text/uri-list data\n");
+      show_error("uri_list_to_gslist: Incorrect or missing line "
+		      "break in text/uri-list data");
       return list;
     }
     
@@ -694,7 +695,7 @@ static gboolean drag_drop(GtkWidget 	  *widget,
   GdkAtom target = GDK_NONE;
 
   /*
-  printf("in drag_drop(%p, %p, %d, %d, %u, %p)\n", widget, context, x, y,
+  dprintf("in drag_drop(%p, %p, %d, %d, %u, %p)\n", widget, context, x, y,
 	 time, data);
   */
   
@@ -827,7 +828,8 @@ static void got_uri_list(GtkWidget 		*widget,
 
   if (error) {
     gtk_drag_finish(context, FALSE, FALSE, time);	/* Failure */
-    fprintf(stderr, "%s: %s\n", "got_uri_list", error);
+    /*fprintf(stderr, "%s: %s\n", "got_uri_list", error);*/
+    show_error("%s: %s", "got_uri_list", error);
   } else {
     gtk_drag_finish(context, TRUE, FALSE, time);    /* Success! */
 
@@ -857,7 +859,7 @@ static void drag_data_received(GtkWidget      	*widget,
 			       guint32          time,
 			       gpointer		user_data)
 {
-  /*printf("%p in drag_data_received\n", widget);*/
+  /*dprintf("%p in drag_data_received\n", widget);*/
   
   if (!selection_data->data) {
     /* Timeout? */
@@ -867,22 +869,26 @@ static void drag_data_received(GtkWidget      	*widget,
 
   switch(info) {
   case TARGET_XDS:
-    /*printf("XDS\n");*/
+    dprintf("XDS\n");
     gtk_drag_finish(context, FALSE, FALSE, time);
     break;
   case TARGET_URI_LIST:
-    /*printf("URI list\n");*/
+    dprintf("URI list\n");
     got_uri_list(widget, context, selection_data, time);
     break;
   default:
-    fprintf(stderr, "drag_data_received: unknown target\n");
+    /*fprintf(stderr, "drag_data_received: unknown target\n");*/
     gtk_drag_finish(context, FALSE, FALSE, time);
+    show_error("drag_data_received: unknown target");
     break;
   }
 }
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.6  2001/05/18 09:41:09  stephen
+ * Made it much more ROX-like: pop-up menu, save box, etc.
+ *
  * Revision 1.5  2001/05/09 10:20:05  stephen
  * Version number now in AppInfo.xml
  * Disable debug output!
