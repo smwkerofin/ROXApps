@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.1 2001/12/05 16:46:33 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.2 2001/12/07 11:25:01 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -21,14 +21,19 @@
 
 #include "rox_filer_action.h"
 
-#define ENV_NAMESPACE_URL "http://www.w3.org/2001/06/soap-envelope"
-#define SOAP_NAMESPACE_URL "http://www.w3.org/2001/09/soap-rpc"
+#define ENV_NAMESPACE_URL "http://www.w3.org/2001/12/soap-envelope"
+#define SOAP_NAMESPACE_URL "http://www.w3.org/2001/12/soap-rpc"
 #define ROX_NAMESPACE_URL "http://rox.sourceforge.net/SOAP/ROX-Filer"
 
 static gboolean doneinit=FALSE;
 static ROXSOAP *filer=NULL;
 static char *last_error=NULL;
 static char last_error_buffer[1024];
+
+struct fa_data {
+  gboolean status;
+  gpointer udata;
+};
 
 #define check_init() do{if(!doneinit){rox_filer_action_init();}}while(0)
 
@@ -64,11 +69,11 @@ static void make_soap(const char *action, xmlDocPtr *rpc, xmlNodePtr *act)
 static void expect_no_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
 			    gpointer udata)
 {
-  gboolean *stat=(gboolean *) udata;
+  struct fa_data *data=(struct fa_data *) udata;
 
   dprintf(3, "expect_no_reply(%d, %p, %p)", status, reply, udata);
 
-  *stat=status;
+  data->status=status;
   if(!status) {
     strcpy(last_error_buffer, rox_soap_get_last_error());
     last_error=last_error_buffer;
@@ -77,19 +82,23 @@ static void expect_no_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
   gtk_main_quit();
 }
 
-static void send_soap(xmlDocPtr rpc, rox_soap_callback callback)
+static void send_soap(xmlDocPtr rpc, rox_soap_callback callback,
+		      gpointer udata)
 {
-  gboolean status=FALSE;
+  struct fa_data data;
   
-  rox_soap_send(filer, rpc, TRUE, callback, &status);
-  dprintf(3, "status=%d", status);
+  data.status=FALSE;
+  data.udata=udata;
+  
+  rox_soap_send(filer, rpc, TRUE, callback, &data);
+  dprintf(3, "status=%d", data.status);
 
   gtk_main();
-  dprintf(3, "status=%d", status);
-  if(!status) {
-    rox_soap_send_via_pipe(filer, rpc, callback, &status);
+  dprintf(3, "status=%d", data.status);
+  if(!data.status) {
+    rox_soap_send_via_pipe(filer, rpc, callback, &data);
     gtk_main();
-    dprintf(3, "status=%d", status);
+    dprintf(3, "status=%d", data.status);
   }
 }
 
@@ -104,7 +113,7 @@ static void simple_call(const char *action, const char *argname,
   make_soap(action, &rpc, &tree);
   (void) xmlNewChild(tree, NULL, argname, arg);
 
-  send_soap(rpc, expect_no_reply);
+  send_soap(rpc, expect_no_reply, NULL);
   
   xmlFreeDoc(rpc);
 }
@@ -149,7 +158,7 @@ void rox_filer_panel(const char *name, ROXPanelSide side)
   (void) xmlNewChild(tree, NULL, "Name", name);
   (void) xmlNewChild(tree, NULL, "Side", sidename);
 
-  send_soap(rpc, expect_no_reply);
+  send_soap(rpc, expect_no_reply, NULL);
   
   xmlFreeDoc(rpc);
 }
@@ -175,7 +184,7 @@ void rox_filer_show(const char *directory, const char *leafname)
   (void) xmlNewChild(tree, NULL, "Directory", directory);
   (void) xmlNewChild(tree, NULL, "Leafname", leafname);
 
-  send_soap(rpc, expect_no_reply);
+  send_soap(rpc, expect_no_reply, NULL);
   
   xmlFreeDoc(rpc);
 }
@@ -200,7 +209,7 @@ static void do_transfer_op(const char *action, const char *from,
     (void) xmlNewChild(tree, NULL, "Quiet", arg);
   }
 
-  send_soap(rpc, expect_no_reply);
+  send_soap(rpc, expect_no_reply, NULL);
 
   xmlFreeDoc(rpc);
 }
@@ -244,7 +253,7 @@ void rox_filer_mount(const char *mountpoint, int quiet, int opendir)
     (void) xmlNewChild(tree, NULL, "OpenDir", arg);
   }
 
-  send_soap(rpc, expect_no_reply);
+  send_soap(rpc, expect_no_reply, NULL);
 
   xmlFreeDoc(rpc);
 }
@@ -262,7 +271,7 @@ static xmlNode *get_subnode(xmlNode *node, const char *namespaceURI,
 
 		dprintf(3, "node->ns=%s namespaceURI=%s",
 			node->ns? node->ns->href: "NULL",
-			namespaceURI? namespaceURI: "NULL");
+			namespaceURI? namespaceURI: (const char *) "NULL");
 		if (node->ns == NULL || namespaceURI == NULL)
 		{
 			if (node->ns == NULL && namespaceURI == NULL)
@@ -278,16 +287,22 @@ static xmlNode *get_subnode(xmlNode *node, const char *namespaceURI,
 }
 
 
-static char *file_type_reply_str;
+static char *filer_reply_str=NULL;
 
-static void file_type_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
+static void string_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
 			    gpointer udata)
 {
-  gboolean *stat=(gboolean *) udata;
+  struct fa_data *data=(struct fa_data *) udata;
+  static gchar *resp=NULL;
 
-  dprintf(3, "file_type_reply(%d, %p, %p)", status, reply, udata);
+  if(resp)
+    g_free(resp);
+  resp=g_strconcat((gchar *) data->udata, "Response", NULL);
+  
+  dprintf(3, "string_reply(%d, %p, %p (%p: %s))", status, reply, udata,
+	  data->udata, resp);
 
-  *stat=status;
+  data->status=status;
 
   if(status && reply) {
     xmlNodePtr root;
@@ -311,18 +326,21 @@ static void file_type_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
 	    last_error=last_error_buffer;
 	    continue;
 	  }
-	  if(strcmp(node->name, "FileTypeResponse")!=0)
+	  if(strcmp(node->name, resp)!=0)
 	    continue;
 
 	  sub=get_subnode(node, SOAP_NAMESPACE_URL, "result");
 	  if(sub) {
 	    char *type;
 	    type=xmlNodeGetContent(sub);
-	    file_type_reply_str=g_strdup(type);
+	    filer_reply_str=g_strdup(type);
 	    g_free(type);
 	    break;
 	  } else {
-	    last_error="No valid MIMEType node found";
+	    last_error="No valid reply node found";
+	    sprintf(last_error_buffer, "No valid %s result node found",
+		    (gchar *) data->udata);
+	    last_error=last_error_buffer;
 	  }
 	}
       } else {
@@ -354,15 +372,41 @@ char *rox_filer_file_type(const char *file)
   make_soap("FileType", &rpc, &tree);
   (void) xmlNewChild(tree, NULL, "Filename", file);
 
-  file_type_reply_str=NULL;
-  send_soap(rpc, file_type_reply);
+  filer_reply_str=NULL;
+  send_soap(rpc, string_reply, "FileType");
 
   xmlFreeDoc(rpc);
 
-  ans=file_type_reply_str? g_strdup(file_type_reply_str): NULL;
-  g_free(file_type_reply_str);
+  ans=filer_reply_str? g_strdup(filer_reply_str): NULL;
+  g_free(filer_reply_str);
 
   return ans;
+}
+
+char *rox_filer_version(void)
+{
+  xmlDocPtr rpc;
+  xmlNodePtr tree;
+  gchar *ans;
+
+  check_init();
+
+  make_soap("Version", &rpc, &tree);
+
+  filer_reply_str=NULL;
+  send_soap(rpc, string_reply, "Version");
+
+  xmlFreeDoc(rpc);
+
+  ans=filer_reply_str? g_strdup(filer_reply_str): NULL;
+  g_free(filer_reply_str);
+
+  return ans;
+}
+
+int rox_filer_have_error(void)
+{
+  return !!last_error;
 }
 
 const char *rox_filer_get_last_error(void)
@@ -380,6 +424,9 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.2  2001/12/07 11:25:01  stephen
+ * More work on SOAP, mainly to get rox_filer_file_type() working.
+ *
  * Revision 1.1  2001/12/05 16:46:33  stephen
  * Added rox_soap.c to talk to the filer using SOAP.  Added rox_filer_action.c
  * to use rox_soap to drive the filer.
