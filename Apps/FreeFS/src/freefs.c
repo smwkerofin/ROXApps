@@ -1,11 +1,11 @@
 /*
- * %W% %E%
- *
  * freefs - Monitor free space on a single file system.
  *
  * Stephen Watson <stephen@kerofin.demon.co.uk>
  *
  * GPL applies.
+ *
+ * $Id$
  */
 
 #include <stdio.h>
@@ -15,7 +15,6 @@
 #include <errno.h>
 
 #include <fcntl.h>
-/*#include <sys/mnttab.h>*/ /* Replaced by glibtop */
 #include <sys/statvfs.h>
 #include <sys/stat.h>
 
@@ -29,19 +28,14 @@
 #include "config.h"
 #include "choices.h"
 
-/* For SCCS (but ignored by gcc) */
-#pragma ident "%W% %E%"
-
 /* The icon */
 #include "../pixmaps/freefs.xpm"
-
-/*#define MNTTAB "/etc/mnttab"*/ /* Replaced by glibtop */
 
 /* Enable the drag and drop stuff */
 #define TRY_DND 1
 
 /* GTK+ objects */
-static GtkWidget *win;
+static GtkWidget *win=NULL;
 static GtkWidget *fs_name, *fs_total, *fs_used, *fs_free, *fs_per;
 static GtkWidget *menu=NULL;
 static guint update_tag=0;
@@ -57,6 +51,7 @@ static void read_choices(void);
 static void menu_create_menu(void);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
+
 #ifdef TRY_DND
 static void make_drop_target(GtkWidget *widget);
 static void dnd_init(void);
@@ -82,6 +77,8 @@ int main(int argc, char *argv[])
   GtkStyle *style;
   char tbuf[1024], *home;
   guchar *fname;
+  int c;
+  guint xid=0;
   
   gtk_init(&argc, &argv);
 
@@ -94,9 +91,16 @@ int main(int argc, char *argv[])
     g_free(fname);
   }
 
+  while((c=getopt(argc, argv, "a:"))!=EOF)
+    switch(c) {
+    case 'a':
+      xid=atol(optarg);
+      break;
+    }
+
   /* Figure out which directory we should be monitoring */
-  if(argv[1])
-    df_dir=g_strdup(argv[1]);
+  if(argv[optind])
+    df_dir=g_strdup(argv[optind]);
   else
     df_dir=g_dirname(argv[0]);
   if(!g_path_is_absolute(df_dir)) {
@@ -107,98 +111,132 @@ int main(int argc, char *argv[])
     g_free(tmp);
   }
 
+  if(!xid) {
+    /* Full window mode */
 #ifdef TRY_DND
-  dnd_init();
+    dnd_init();
 #endif
 
-  /* Construct our window and bits */
-  win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_widget_set_name(win, "fs free");
-  gtk_window_set_title(GTK_WINDOW(win), df_dir);
-  gtk_signal_connect(GTK_OBJECT(win), "destroy", 
-		     GTK_SIGNAL_FUNC(gtk_main_quit), 
-		     "WM destroy");
-  gtk_signal_connect(GTK_OBJECT(win), "button_press_event",
-		     GTK_SIGNAL_FUNC(button_press), NULL);
-  gtk_widget_realize(win);
-  gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
+    /* Construct our window and bits */
+    win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_widget_set_name(win, "fs free");
+    gtk_window_set_title(GTK_WINDOW(win), df_dir);
+    gtk_signal_connect(GTK_OBJECT(win), "destroy", 
+		       GTK_SIGNAL_FUNC(gtk_main_quit), 
+		       "WM destroy");
+    gtk_signal_connect(GTK_OBJECT(win), "button_press_event",
+		       GTK_SIGNAL_FUNC(button_press), NULL);
+    gtk_widget_realize(win);
+    gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
 #ifdef TRY_DND
-  make_drop_target(win);
+    make_drop_target(win);
 #endif
-  /* Set the icon */
-  style = gtk_widget_get_style(win);
-  pixmap = gdk_pixmap_create_from_xpm_d(GTK_WIDGET(win)->window,  &mask,
-                                           &style->bg[GTK_STATE_NORMAL],
-                                           (gchar **)freefs_xpm );
-  gdk_window_set_icon(GTK_WIDGET(win)->window, NULL, pixmap, mask);
+    /* Set the icon */
+    style = gtk_widget_get_style(win);
+    pixmap = gdk_pixmap_create_from_xpm_d(GTK_WIDGET(win)->window,  &mask,
+					  &style->bg[GTK_STATE_NORMAL],
+					  (gchar **)freefs_xpm );
+    gdk_window_set_icon(GTK_WIDGET(win)->window, NULL, pixmap, mask);
   
-  vbox=gtk_vbox_new(FALSE, 1);
-  gtk_container_add(GTK_CONTAINER(win), vbox);
-  gtk_widget_show(vbox);
+    vbox=gtk_vbox_new(FALSE, 1);
+    gtk_container_add(GTK_CONTAINER(win), vbox);
+    gtk_widget_show(vbox);
   
-  hbox=gtk_hbox_new(FALSE, 1);
-  gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
-  gtk_widget_show(hbox);
+    hbox=gtk_hbox_new(FALSE, 1);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+    gtk_widget_show(hbox);
 
-  label=gtk_label_new("Mounted on");
-  gtk_widget_set_name(label, "simple label");
-  gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-  gtk_widget_show(label);
+    label=gtk_label_new("Mounted on");
+    gtk_widget_set_name(label, "simple label");
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+    gtk_widget_show(label);
 
-  fs_name=gtk_label_new("");
-  gtk_widget_set_name(fs_name, "text display");
-  gtk_box_pack_start(GTK_BOX(hbox), fs_name, TRUE, TRUE, 2);
-  gtk_widget_show(fs_name);
+    fs_name=gtk_label_new("");
+    gtk_widget_set_name(fs_name, "text display");
+    gtk_box_pack_start(GTK_BOX(hbox), fs_name, TRUE, TRUE, 2);
+    gtk_widget_show(fs_name);
 #ifdef TRY_DND
-  /*make_drop_target(fs_name);*/
+    /*make_drop_target(fs_name);*/
 #endif
   
-  label=gtk_label_new("Total:");
-  gtk_widget_set_name(label, "simple label");
-  gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
-  gtk_widget_show(label);
+    label=gtk_label_new("Total:");
+    gtk_widget_set_name(label, "simple label");
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+    gtk_widget_show(label);
 
-  fs_total=gtk_label_new("XXxxx ybytes");
-  gtk_widget_set_name(fs_total, "text display");
-  gtk_box_pack_start(GTK_BOX(hbox), fs_total, FALSE, FALSE, 2);
-  gtk_widget_show(fs_total);
+    fs_total=gtk_label_new("XXxxx ybytes");
+    gtk_widget_set_name(fs_total, "text display");
+    gtk_box_pack_start(GTK_BOX(hbox), fs_total, FALSE, FALSE, 2);
+    gtk_widget_show(fs_total);
   
-  hbox=gtk_hbox_new(FALSE, 1);
-  gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 2);
-  gtk_widget_show(hbox);
-
-  fs_used=gtk_label_new("XXxxx ybytes");
-  gtk_widget_set_name(fs_used, "text display");
-  gtk_box_pack_start(GTK_BOX(hbox), fs_used, TRUE, FALSE, 2);
-  gtk_widget_show(fs_used);
+    hbox=gtk_hbox_new(FALSE, 1);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 2);
+    gtk_widget_show(hbox);
+    
+    fs_used=gtk_label_new("XXxxx ybytes");
+    gtk_widget_set_name(fs_used, "text display");
+    gtk_box_pack_start(GTK_BOX(hbox), fs_used, TRUE, FALSE, 2);
+    gtk_widget_show(fs_used);
   
-  adj = (GtkAdjustment *) gtk_adjustment_new (0, 1, 100, 0, 0, 0);
+    adj = (GtkAdjustment *) gtk_adjustment_new (0, 1, 100, 0, 0, 0);
   
-  fs_per=gtk_progress_bar_new();
-  gtk_widget_set_name(fs_per, "gauge");
-  gtk_progress_bar_set_bar_style(GTK_PROGRESS_BAR(fs_per),
+    fs_per=gtk_progress_bar_new();
+    gtk_widget_set_name(fs_per, "gauge");
+    gtk_progress_bar_set_bar_style(GTK_PROGRESS_BAR(fs_per),
 				   GTK_PROGRESS_CONTINUOUS);
-  gtk_progress_set_format_string(GTK_PROGRESS(fs_per), "%p%%");
-  gtk_progress_set_show_text(GTK_PROGRESS(fs_per), TRUE);
-  gtk_widget_set_usize(fs_per, 240, 24);
-  gtk_widget_show(fs_per);
-  gtk_box_pack_start(GTK_BOX(hbox), fs_per, TRUE, TRUE, 2);
+    gtk_progress_set_format_string(GTK_PROGRESS(fs_per), "%p%%");
+    gtk_progress_set_show_text(GTK_PROGRESS(fs_per), TRUE);
+    gtk_widget_set_usize(fs_per, 240, 24);
+    gtk_widget_show(fs_per);
+    gtk_box_pack_start(GTK_BOX(hbox), fs_per, TRUE, TRUE, 2);
 #ifdef TRY_DND
-  /*make_drop_target(fs_per);*/
+    /*make_drop_target(fs_per);*/
 #endif
   
-  fs_free=gtk_label_new("XXxxx ybytes");
-  gtk_widget_set_name(fs_free, "text display");
-  gtk_box_pack_start(GTK_BOX(hbox), fs_free, TRUE, FALSE, 2);
-  gtk_widget_show(fs_free);
+    fs_free=gtk_label_new("XXxxx ybytes");
+    gtk_widget_set_name(fs_free, "text display");
+    gtk_box_pack_start(GTK_BOX(hbox), fs_free, TRUE, FALSE, 2);
+    gtk_widget_show(fs_free);
+  } else {
+    /* We are an applet, plug ourselves in */
+    GtkWidget *plug;
+    int i;
+    
+    plug=gtk_plug_new(xid);
+    gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
+		       GTK_SIGNAL_FUNC(gtk_main_quit), 
+		       "WM destroy");
+    gtk_widget_set_usize(plug, 48, 48);
+
+    vbox=gtk_vbox_new(FALSE, 1);
+    gtk_container_add(GTK_CONTAINER(plug), vbox);
+    gtk_widget_show(vbox);
+  
+    fs_per=gtk_progress_bar_new();
+    gtk_widget_set_name(fs_per, "gauge");
+    gtk_progress_bar_set_bar_style(GTK_PROGRESS_BAR(fs_per),
+				   GTK_PROGRESS_CONTINUOUS);
+    gtk_progress_set_format_string(GTK_PROGRESS(fs_per), "%p%%");
+    gtk_progress_set_show_text(GTK_PROGRESS(fs_per), TRUE);
+    gtk_widget_show(fs_per);
+    gtk_box_pack_start(GTK_BOX(vbox), fs_per, TRUE, TRUE, 2);
+
+    fs_name=gtk_label_new("");
+    gtk_widget_set_name(fs_name, "text display");
+    gtk_box_pack_start(GTK_BOX(vbox), fs_name, FALSE, FALSE, 2);
+    gtk_widget_show(fs_name);
+    
+    gtk_widget_show(plug);
+  }
 
   /* Set up glibtop and check now */
   glibtop_init_r(&glibtop_global_server,
 		 (1<<GLIBTOP_SYSDEPS_FSUSAGE)|(1<<GLIBTOP_SYSDEPS_MOUNTLIST),
 		 0);
   update_fs_values(df_dir);
-  
-  gtk_widget_show(win);
+
+  if(!xid)
+    gtk_widget_show(win);
   update_tag=gtk_timeout_add(update_sec*1000,
 			 (GtkFunction) update_fs_values, df_dir);
   /*printf("update_sec=%d, update_tag=%u\n", update_sec, update_tag);*/
@@ -331,12 +369,17 @@ static gboolean update_fs_values(gchar *mntpt)
       }
       /*printf("%2.0f %%\n", fused);*/
 
-      /*printf("mount point=%s\n", find_mount_point(mntpt));*/
-      gtk_label_set_text(GTK_LABEL(fs_name), find_mount_point(mntpt));
-      gtk_label_set_text(GTK_LABEL(fs_total), fmt_size(total));
-      gtk_label_set_text(GTK_LABEL(fs_used), fmt_size(used));
-      gtk_label_set_text(GTK_LABEL(fs_free), fmt_size(avail));
+      if(win) {
+	/*printf("mount point=%s\n", find_mount_point(mntpt));*/
+	gtk_label_set_text(GTK_LABEL(fs_name), find_mount_point(mntpt));
+	gtk_label_set_text(GTK_LABEL(fs_total), fmt_size(total));
+	gtk_label_set_text(GTK_LABEL(fs_used), fmt_size(used));
+	gtk_label_set_text(GTK_LABEL(fs_free), fmt_size(avail));
 
+      } else {
+	gtk_label_set_text(GTK_LABEL(fs_name),
+			   g_basename(find_mount_point(mntpt)));
+      }
       gtk_progress_set_value(GTK_PROGRESS(fs_per), fused);
 
     }
@@ -344,7 +387,7 @@ static gboolean update_fs_values(gchar *mntpt)
   /*
   printf("update_fs_values(%s), ok=%d, update_sec=%d\n", mntpt, ok, update_sec);
   */
-  if(!ok) {
+  if(!ok && win) {
     gtk_label_set_text(GTK_LABEL(fs_name), "?");
     gtk_label_set_text(GTK_LABEL(fs_total), "?");
     gtk_label_set_text(GTK_LABEL(fs_used), "?");
@@ -843,3 +886,7 @@ static void drag_data_received(GtkWidget      	*widget,
 }
 
 #endif
+
+/*
+ * $Log$
+ */
