@@ -3,7 +3,7 @@
 /* Define our data */
 #define ROXCLIB_PROJECT "ROX-CLib"
 #define ROXCLIB_PURPOSE "C library for ROX apps"
-#define ROXCLIB_VERSION "0.1.0"
+#define ROXCLIB_VERSION "?"
 #define ROXCLIB_AUTHOR  "Stephen Watson"
 #define ROXCLIB_WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 
