@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.21 2004/02/14 13:45:19 stephen Exp $
+ * $Id: load.c,v 1.22 2004/04/10 12:11:42 stephen Exp $
  *
  * Log at end of file
  */
@@ -21,6 +21,7 @@
 #include <time.h>
 #include <math.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include <unistd.h>
 #include <sys/stat.h>
@@ -32,10 +33,6 @@
 #endif
 
 #include <gtk/gtk.h>
-
-#include <glibtop.h>
-#include <glibtop/cpu.h>
-#include <glibtop/loadavg.h>
 
 #include <libxml/tree.h>
 #include <libxml/parser.h>
@@ -101,13 +98,13 @@ static ColourInfo colour_info[]={
 #define CHART_RES      2          /* Pixels per second for history */
 #define TEXT_MARGIN    2
 
+static double load[3];     /* Latest result */
+
 typedef struct history_data {
   double load[3];
   time_t when;
 } History;
 
-static glibtop *server=NULL;
-static glibtop_loadavg load;
 static guint data_update_tag=0;
 static int max_load=1;
 static double red_line=1.0;
@@ -152,6 +149,7 @@ static ROXSOAPServer *sserver=NULL;
 static GList *windows=NULL;
 static LoadWindow *current_window=NULL;
 
+static int get_num_cpu(void);
 static LoadWindow *make_window(guint32 socket);
 static void remove_window(LoadWindow *win);
 static gboolean window_update(LoadWindow *win);
@@ -232,7 +230,8 @@ int main(int argc, char *argv[])
   const char *options="vhnro";
   gboolean new_run=FALSE;
   gboolean replace_server=FALSE;
-  gboolean show_options=FALSE;  
+  gboolean show_options=FALSE;
+  int ncpu;
 
   rox_init("Load", &argc, &argv);
 
@@ -263,13 +262,11 @@ int main(int argc, char *argv[])
     do_version();
     exit(0);
   }
-  
-  server=glibtop_init_r(&glibtop_global_server,
-			(1<<GLIBTOP_SYSDEPS_CPU)|(1<<GLIBTOP_SYSDEPS_LOADAVG),
-			0);
-  if(server->ncpu>0)
-    red_line=(double) server->ncpu;
-  dprintf(2, "ncpu=%d %f", server->ncpu, red_line);
+
+  ncpu=get_num_cpu();
+  if(ncpu>0)
+    red_line=(double) ncpu;
+  dprintf(2, "ncpu=%d %f", ncpu, red_line);
 
   gdk_rgb_init();
   gtk_widget_push_visual(gdk_rgb_get_visual());
@@ -319,7 +316,7 @@ int main(int argc, char *argv[])
 	   colours[i].green, colours[i].blue, colours[i].pixel);
   }
 
-  data_update_tag=gtk_timeout_add(opt_update_rate.int_value*1000,
+  data_update_tag=g_timeout_add(opt_update_rate.int_value*1000,
 			       (GtkFunction) data_update, NULL);
   data_update(NULL);
   
@@ -378,6 +375,36 @@ static void setup_config(void)
   option_add_notify(opts_changed);
 }
 
+/* Work out number of CPU's here.  0 means we could not work it out and
+ 1 should be assumed */
+static int get_num_cpu(void)
+{
+#ifdef _SC_NPROCESSORS_ONLN
+  return (int) sysconf(_SC_NPROCESSORS_ONLN);
+#else
+  FILE *pstat;
+  char buffer[BUFSIZ];
+  int ncpu=0;
+
+  pstat=fopen("/proc/stat", "r");
+  if(pstat) {
+    while(fgets(buffer, BUFSIZ, pstat)) {
+      rox_debug_printf(4, "line=%s", buffer);
+      if(strncmp(buffer, "cpu", 3)==0 && isdigit(buffer[3])) {
+	int t=atoi(buffer+3);
+	if(t>=ncpu)
+	  ncpu=t+1;
+      }
+      rox_debug_printf(3, "ncpu=%d", ncpu);
+    }
+
+    fclose(pstat);
+  }
+
+  return ncpu;
+#endif
+}
+
 static void remove_window(LoadWindow *win)
 {
   if(win==current_window)
@@ -386,7 +413,7 @@ static void remove_window(LoadWindow *win)
   windows=g_list_remove(windows, win);
   /*gtk_widget_hide(win->win);*/
 
-  gtk_timeout_remove(win->update);
+  g_source_remove(win->update);
   gdk_pixmap_unref(win->pixmap);
   gdk_gc_unref(win->gc);
   g_free(win);
@@ -481,7 +508,7 @@ static LoadWindow *make_window(guint32 xid)
 
   gtk_widget_show(lwin->win);
 
-  lwin->update=gtk_timeout_add(opt_update_rate.int_value*1000,
+  lwin->update=g_timeout_add(opt_update_rate.int_value*1000,
 			       (GtkFunction) window_update, lwin);
   dprintf(3, "update tag is %u", lwin->update);
   
@@ -534,13 +561,15 @@ static void append_history(time_t when, const double loadavg[3])
   }  
 }
 
+/* Updates the global load result and adds it to the history */
 static gboolean data_update(gpointer unused)
 {
   time_t now;
   
-  glibtop_get_loadavg_l(server, &load);
-  time(&now);
-  append_history(now, load.loadavg);
+  if(getloadavg(load, 3)!=-1) {
+    time(&now);
+    append_history(now, load);
+  }
 
   return TRUE;
 }
@@ -634,10 +663,10 @@ static gboolean window_update(LoadWindow *lwin)
   
   reduce=TRUE;
   for(i=0; i<3; i++) {
-    if(load.loadavg[i]>max_load-1)
+    if(load[i]>max_load-1)
       reduce=FALSE;
-    if(max_load<load.loadavg[i]) {
-      max_load=((int) load.loadavg[i])+1;
+    if(max_load<load[i]) {
+      max_load=((int) load[i])+1;
       reduce_delay=10;
     }
   }
@@ -655,7 +684,7 @@ static gboolean window_update(LoadWindow *lwin)
       max_load--;
   }
   for(i=0; i<3; i++) {
-    ld=load.loadavg[i];
+    ld=load[i];
     bh=mbh*ld/(double) max_load;
     gdk_gc_set_foreground(lwin->gc, colours+COL_NORMAL(i));
     gdk_draw_rectangle(lwin->pixmap, lwin->gc, TRUE, bx, by-bh, bw, bh);
@@ -781,9 +810,6 @@ static gboolean window_update(LoadWindow *lwin)
     const char *host=hostname;
     int lw;
     
-    /*if(server->server_host)
-      host=server->server_host;*/
-    
     pango_layout_set_text(layout, host, -1);
     pango_layout_get_pixel_size(layout, &lw, NULL);
     x=w-lw-2;
@@ -904,6 +930,7 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
   return TRUE;
 }
 
+/* This is for the pre- rox_options config */
 static gboolean read_config_xml(void)
 {
   guchar *fname;
@@ -1080,8 +1107,8 @@ static void opts_changed(void)
     gdk_colormap_alloc_color(cmap, colours+COL_BG, FALSE, TRUE);
   }
   if(opt_update_rate.has_changed) {
-    gtk_timeout_remove(data_update_tag);
-    data_update_tag=gtk_timeout_add(opt_update_rate.int_value*1000,
+    g_source_remove(data_update_tag);
+    data_update_tag=g_timeout_add(opt_update_rate.int_value*1000,
 				    (GtkFunction) data_update, NULL);
   }
   if(opt_applet_size.has_changed) {
@@ -1212,6 +1239,7 @@ static gboolean popup_menu(GtkWidget *window, gpointer udata)
   
 }
 
+/* SOAP stuff now */
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata)
 {
@@ -1331,6 +1359,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.22  2004/04/10 12:11:42  stephen
+ * Remove dead code.  Open options dialog from command line or SOAP message.  Stock items in menus.
+ *
  * Revision 1.21  2004/02/14 13:45:19  stephen
  * Fix debug line
  *
