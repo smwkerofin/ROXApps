@@ -1,5 +1,5 @@
 /*
- * $Id: pkg.c,v 1.1.1.1 2001/05/29 14:09:59 stephen Exp $
+ * $Id: pkg.c,v 1.2 2002/02/13 11:00:37 stephen Exp $
  */
 
 #include <stdio.h>
@@ -158,13 +158,16 @@ static int do_cflags(const char *app_dir, const char *platform)
   int state=0;
   GString *line;
   gchar *tmp;
+  char cmd[256];
 
   tmp=g_strdup_printf("-I%s/%s/include ", app_dir, platform);
   line=g_string_new(tmp);
   g_free(tmp);
-  line=run_command(line, "gtk-config --cflags");
+  sprintf(cmd, "%s --cflags", GTK_CONFIG);
+  line=run_command(line, cmd);
 #ifdef HAVE_XML
-  line=run_command(line, "xml-config --cflags");
+  sprintf(cmd, "%s --cflags", XML_CONFIG);
+  line=run_command(line, cmd);
 #endif
   puts(line->str);
   g_string_free(line, TRUE);
@@ -177,13 +180,16 @@ static int do_libs(const char *app_dir, const char *platform)
   int state=0;
   GString *line;
   gchar *tmp;
+  char cmd[256];
 
   tmp=g_strdup_printf("-L%s/%s/lib -l%s ", app_dir, platform, LIBNAME);
   line=g_string_new(tmp);
   g_free(tmp);
-  line=run_command(line, "gtk-config --libs");
+  sprintf(cmd, "%s --libs", GTK_CONFIG);
+  line=run_command(line, cmd);
 #ifdef HAVE_XML
-  line=run_command(line, "xml-config --libs");
+  sprintf(cmd, "%s --libs", XML_CONFIG);
+  line=run_command(line, cmd);
 #endif
   puts(line->str);
   g_string_free(line, TRUE);
@@ -210,12 +216,12 @@ static int do_help(const char *app_dir, const char *platform)
 
   printf("\nCompile time options:\n");
 #ifdef GTK2
-  printf("\tGTK+ 2.x\n");
+  printf("\tGTK+ 2.x, using %s\n", GTK_CONFIG);
 #else
-  printf("\tGTK+ 1.2.x\n");
+  printf("\tGTK+ 1.2.x, using %s\n", GTK_CONFIG);
 #endif
 #ifdef HAVE_XML
-  printf("\tHave XML\n");
+  printf("\tHave XML, using %s\n", XML_CONFIG);
 #else
   printf("\tNo XML\n");
 #endif
@@ -232,6 +238,12 @@ static int do_version(const char *app_dir, const char *platform)
 
 /*
  * $Log: pkg.c,v $
+ * Revision 1.2  2002/02/13 11:00:37  stephen
+ * Better way of accessing web site (by running a URI file).  Improvement to
+ * language checking in rox_resources.c.  Visit by the const fairy in choices.h.
+ * Updated pkg program to check for libxml2.  Added rox.c to access ROX-CLib's
+ * version number.
+ *
  * Revision 1.1.1.1  2001/05/29 14:09:59  stephen
  * Initial version of the library
  *
