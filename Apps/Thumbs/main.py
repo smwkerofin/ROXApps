@@ -1,8 +1,8 @@
-# $Id$
+# $Id: main.py,v 1.1.1.1 2003/05/09 14:02:09 stephen Exp $
 
 import findrox
 
-import os
+import os, sys
 import stat
 import time
 import urlparse
@@ -223,7 +223,13 @@ class Win(rox.Window):
             if i%20==0:
                 while rox.g.events_pending():
                     rox.g.main_iteration_do(0)
-            uri, mtime=get_thumb_state(p)
+            try:
+                uri, mtime=get_thumb_state(p)
+            except:
+                #print i, p, sys.exc_info()[:2]
+                rox.report_exception()
+                failed+=1
+                continue
             if test(uri, mtime, dat):
                 if self.do_delete(p, uri, mtime):
                     count+=1
