@@ -1,6 +1,14 @@
 Changes to Clock
 ================
 
+2.1.1
+-----
+Draw clock face at higher resolution.
+Less flicker when clock face bigger.
+Numbers on clock face scale with face size.
+Change to new libdir compilation system.
+Changed some deprecated GTK+ functions.
+
 2.1.0
 -----
 Get rid of some legacy code. 
