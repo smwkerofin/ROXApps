@@ -1,6 +1,10 @@
 Tail
 ====
 
+0.1.3
+-----
+Use a pop-up menu.
+
 0.1.2
 -----
 Disable the debug output.  I tried to monitor the file it itself was appending

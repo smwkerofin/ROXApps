@@ -1,13 +1,14 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.4 2001/04/26 13:21:13 stephen Exp $
+ * $Id: tail.c,v 1.5 2001/05/09 10:20:05 stephen Exp $
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <errno.h>
 
 #include "config.h"
 
@@ -22,17 +23,23 @@
 #include <fcntl.h>
 
 #include <gtk/gtk.h>
+#include <gtk/gtkdnd.h>
 #include "infowin.h"
+#include "gtksavebox.h"
 
-/*#include "choices.h"*/
+#include "choices.h"
 
-#define DEBUG 0
+#define DEBUG         0
+#define USE_MENUBAR   0
+#define USE_FILE_OPEN 0
+
 void dprintf(const char *fmt, ...);
 
 static GtkWidget *win;
 static GtkWidget *text;
 static GtkWidget *errwin=NULL;
 static GtkWidget *errmess=NULL;
+static GtkWidget *menu;
 
 static int fd=-1;
 static off_t pos;
@@ -48,18 +55,42 @@ static void show_error(const char *fmt, ...);
 
 static void dnd_init(void);
 static void make_drop_target(GtkWidget *widget);
+#if USE_FILE_OPEN
 static void file_open_proc(void);
+#endif
+static void file_saveas_proc(void);
+#if !USE_MENU_BAR
+static gint button_press(GtkWidget *window, GdkEventButton *bev,
+			 gpointer win);
+#endif
 
+#if USE_MENU_BAR
 static GtkItemFactoryEntry menu_items[] = {
   {"/_File", NULL, NULL, 0, "<Branch>"},
+#if USE_FILE_OPEN
   {"/File/_Open file...", "<control>O", file_open_proc, 0, NULL},
+#endif
+  {"/File/_Save text...", "<control>S", file_saveas_proc, 0, NULL},
   {"/File/sep",     NULL,         NULL, 0, "<Separator>" },
   {"/File/E_xit","<control>X",  gtk_main_quit, 0, NULL },
   {"/_Help", NULL, NULL, 0, "<LastBranch>"},
   {"/Help/_About", "<control>A", show_info_win, 0, NULL},
+}
+#else
+static GtkItemFactoryEntry menu_items[] = {
+  {"/_Info", "<control>I", show_info_win, 0, NULL},
+#if USE_FILE_OPEN
+  {"/_File", NULL, NULL, 0, "<Branch>"},
+  {"/File/_Open file...", "<control>O", file_open_proc, 0, NULL},
+  {"/File/_Save text...", "<control>S", file_saveas_proc, 0, NULL},
+#else
+  {"/_Save text...", "<control>S", file_saveas_proc, 0, NULL},
+#endif
+  {"/_Quit","<control>Q",  gtk_main_quit, 0, NULL },
 };
+#endif
 
-static void get_main_menu(GtkWidget *window, GtkWidget **menubar)
+static GtkWidget *get_main_menu(GtkWidget *window)
 {
   GtkItemFactory *item_factory;
   GtkAccelGroup *accel_group;
@@ -74,8 +105,13 @@ static void get_main_menu(GtkWidget *window, GtkWidget **menubar)
      Param 3: A pointer to a gtk_accel_group.  The item factory sets up
               the accelerator table while generating menus.
   */
-  item_factory = gtk_item_factory_new (GTK_TYPE_MENU_BAR, "<main>", 
-				       accel_group);
+  item_factory = gtk_item_factory_new (
+#if USE_MENU_BAR
+				       GTK_TYPE_MENU_BAR,
+#else
+				       GTK_TYPE_MENU,
+#endif
+				       "<main>", accel_group);
   /* This function generates the menu items. Pass the item factory,
      the number of items in the array, the array itself, and any
      callback data for the the menu items. */
@@ -84,9 +120,12 @@ static void get_main_menu(GtkWidget *window, GtkWidget **menubar)
   /* Attach the new accelerator group to the window. */
   gtk_accel_group_attach (accel_group, GTK_OBJECT (window));
 
-  if (menubar)
-    /* Finally, return the actual menu bar created by the item factory. */ 
-    *menubar = gtk_item_factory_get_widget (item_factory, "<main>");
+  return gtk_item_factory_get_widget (item_factory, "<main>");
+}
+
+static void detach(GtkWidget *widget, GtkMenu *menu)
+{
+  printf("detach\n");
 }
 
 int main(int argc, char *argv[])
@@ -94,9 +133,10 @@ int main(int argc, char *argv[])
   GtkWidget *vbox;
   GtkWidget *hbox;
   GtkWidget *scr;
-  GtkWidget *menu;
+  GtkWidget *mbar;
 
   gtk_init(&argc, &argv);
+  choices_init();
   dnd_init();
 
   win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -105,15 +145,23 @@ int main(int argc, char *argv[])
 		     "WM destroy");
   gtk_window_set_title(GTK_WINDOW(win), "Tail");
   make_drop_target(win);
+#if !USE_MENU_BAR
+  /* We want to pop up a menu on a button press */
+  gtk_signal_connect(GTK_OBJECT(win), "button_press_event",
+		     GTK_SIGNAL_FUNC(button_press), win);
+  gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
+#endif
   
   vbox=gtk_vbox_new(FALSE, 1);
   gtk_container_add(GTK_CONTAINER(win), vbox);
   gtk_widget_show(vbox);
-  
-  get_main_menu(win, &menu);
-  gtk_box_pack_start(GTK_BOX(vbox), menu, FALSE, FALSE, 2);
-  gtk_widget_show(menu);
 
+#if USE_MENU_BAR
+  mbar=get_main_menu(win);
+  gtk_box_pack_start(GTK_BOX(vbox), mbar, FALSE, FALSE, 2);
+  gtk_widget_show(mbar);
+#endif
+  
   /*
   hbox=gtk_hbox_new(FALSE, 1);
   gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
@@ -135,7 +183,7 @@ int main(int argc, char *argv[])
 
   gtk_widget_show(win);
 
-  if(argv[1])
+  if(argv[1] && strcmp(argv[1], "-")!=0)
     set_file(argv[1]);
   else
     set_fd(fileno(stdin));
@@ -316,7 +364,7 @@ static void show_info_win(void)
   gtk_widget_show(infowin);
 }
 
-static void dismiss_error(GtkWidget *widget, gpointer data)
+static void hide_window(GtkWidget *widget, gpointer data)
 {
   gtk_widget_hide(errwin);
 }
@@ -355,7 +403,7 @@ static void show_error(const char *fmt, ...)
     gtk_widget_show(but);
     gtk_box_pack_start(GTK_BOX(hbox), but, TRUE, TRUE, 2);
     gtk_signal_connect(GTK_OBJECT(but), "clicked",
-		       GTK_SIGNAL_FUNC(dismiss_error), errwin);
+		       GTK_SIGNAL_FUNC(hide_window), errwin);
   }
   
   va_start(list, fmt);
@@ -367,6 +415,7 @@ static void show_error(const char *fmt, ...)
   g_free(mess);
 }
 
+#if USE_FILE_OPEN
 static void choose_file(GtkWidget *widget, GtkFileSelection *fs)
 {
   const gchar *path=gtk_file_selection_get_filename(GTK_FILE_SELECTION(fs));
@@ -397,6 +446,118 @@ static void file_open_proc(void)
 
   gtk_widget_show(fs);
 }
+#endif
+
+static gint save_to_file(GtkSavebox *savebox, gchar *pathname)
+{
+  FILE *out;
+  gint state=GTK_XDS_SAVED;
+
+  errno=0;
+  out=fopen(pathname, "w");
+  if(out) {
+    gchar *txt;
+    guint len;
+    size_t nb;
+
+    txt=gtk_editable_get_chars(GTK_EDITABLE(text), 0, -1);
+    len=gtk_text_get_length(GTK_TEXT(text));
+    if(txt) {
+      nb=fwrite(txt, 1, len, out);
+
+      if(nb<len) {
+	show_error("Error writing to %s\n%s", pathname, strerror(errno));
+	state=GTK_XDS_SAVE_ERROR;
+      }
+      
+    } else {
+      show_error("Failed to get text!");
+      state=GTK_XDS_SAVE_ERROR;
+    }
+
+    fclose(out);
+    
+  } else {
+    show_error("Failed to open %s for writing", pathname);
+    state=GTK_XDS_SAVE_ERROR;
+  }
+
+  return state;
+}
+
+static void saved_to_uri(GtkSavebox *savebox, gchar *uri)
+{
+    gtk_savebox_set_pathname(GTK_SAVEBOX(savebox), uri);
+}
+
+static void save_done(GtkSavebox *savebox)
+{
+  gtk_widget_hide(GTK_WIDGET(savebox));
+}
+
+#include "default.xpm"
+
+static void file_saveas_proc(void)
+{
+  static GtkWidget *savebox=NULL;
+
+  if(!savebox) {
+    GdkPixmap *pixmap;
+    GdkPixmap *mask;
+    gchar *ipath;
+    
+    savebox=gtk_savebox_new();
+    gtk_signal_connect(GTK_OBJECT(savebox), "delete_event", 
+		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
+		     savebox);
+    gtk_signal_connect(GTK_OBJECT(savebox), "save_to_file", 
+		     GTK_SIGNAL_FUNC(save_to_file), 
+		     savebox);
+    gtk_signal_connect(GTK_OBJECT(savebox), "saved_to_uri", 
+		     GTK_SIGNAL_FUNC(saved_to_uri), 
+		     savebox);
+    gtk_signal_connect(GTK_OBJECT(savebox), "save_done", 
+		     GTK_SIGNAL_FUNC(save_done), 
+		     savebox);
+    gtk_savebox_set_pathname(GTK_SAVEBOX(savebox), "tail.txt");
+
+    ipath=choices_find_path_load("text_plain.xpm", "MIME-icons");
+    if(!ipath)
+      ipath=choices_find_path_load("text.xpm", "MIME-icons");
+    if(ipath) {
+      pixmap=gdk_pixmap_create_from_xpm(savebox->window, &mask, NULL,
+					ipath);
+      g_free(ipath);
+    } else {
+      pixmap=gdk_pixmap_create_from_xpm_d(savebox->window, &mask, NULL,
+					  default_xpm);
+    }
+    gtk_savebox_set_icon(GTK_SAVEBOX(savebox), pixmap, mask);
+
+    
+  }
+
+  gtk_widget_show(savebox);
+}
+
+#if !USER_MENU_BAR
+/* Button press in window */
+static gint button_press(GtkWidget *window, GdkEventButton *bev,
+			 gpointer win)
+{
+  if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
+    /* Pop up the menu */
+    if(!menu) 
+      menu=get_main_menu(GTK_WIDGET(win));
+    
+    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
+				bev->button, bev->time);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+#endif
 
 /*
  * Drag and drop code
@@ -722,6 +883,10 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.5  2001/05/09 10:20:05  stephen
+ * Version number now in AppInfo.xml
+ * Disable debug output!
+ *
  * Revision 1.4  2001/04/26 13:21:13  stephen
  * Don't include sys/filio.h if it isn't there.
  * Remove code that scrolled to end of window, because it core dumped.
