@@ -3,19 +3,20 @@ srcdir = @srcdir@
 PLATFORM_DIR = @bindir@
 .SUFFIXES:
 .SUFFIXES: .c .o
+ROX_CLIB = @ROX_RUN@ ROX-CLib
 
 CC = @CC@
-CFLAGS = @CFLAGS@ `gtk-config --cflags` -I.
-LDFLAGS = @LDFLAGS@ `gtk-config --libs`
+CFLAGS = @CFLAGS@ `gtk-config --cflags` -I. `${ROX_CLIB} --cflags`
+LDFLAGS = @LDFLAGS@ `gtk-config --libs` `${ROX_CLIB} --libs`
 EXEC = ${PLATFORM_DIR}/${PROG}
 
 ############ Things to change for different programs
 
 PROG = Tail
 
-SRCS = tail.c infowin.c gtksavebox.c choices.c
+SRCS = tail.c 
 
-OBJECTS = tail.o infowin.o gtksavebox.o choices.o
+OBJECTS = tail.o
 
 ############ Things to keep the same
 
