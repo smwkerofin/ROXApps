@@ -1,6 +1,10 @@
 Versions of FreeFS
 ==================
 
+1.1.1
+-----
+Enable debug correctly.  Clean up some CVS bits.  Fix autocompile.
+
 1.1.0
 -----
 Switch to using ROX-CLib.  Menu created at start so accelerators are
