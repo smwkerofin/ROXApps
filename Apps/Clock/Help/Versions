@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+0.1.13
+------
+Drop old (0.1.6) config sypport.  Save alarms file after one is raised.
+
 0.1.12
 ------
 Can configure the initial size
