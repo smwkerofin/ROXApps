@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.13 2004/05/15 16:54:56 stephen Exp $
+ * $Id: main.c,v 1.14 2004/08/05 17:13:26 stephen Exp $
  */
 #include "config.h"
 
@@ -30,16 +30,14 @@
 #endif
 
 #include <gtk/gtk.h>
-#include "infowin.h"
 
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
 #define DEBUG              1   /* Allow debug output */
-#include <rox.h>
+#include <rox/rox.h>
 #include <rox/rox_resources.h>
 #include <rox/rox_dnd.h>
-#include <rox/options.h>
 #include <rox/gtksavebox.h>
 
 #define PROMPT_UTIL  "promptArgs.py"

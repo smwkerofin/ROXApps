@@ -1,6 +1,10 @@
 AppFactory
 ==========
 
+2.1.2
+-----
+Correct include of ROX-CLib files.
+
 2.1.1
 -----
 Generated script needs to quote variables (Gareth Williams).
