@@ -1,0 +1,42 @@
+dnl Process this file with autoconf to produce a configure script.
+AC_INIT(main.c)
+AC_CONFIG_HEADER(config.h)
+
+dnl Checks for programs.
+AC_PROG_CC
+AC_PROG_MAKE_SET
+
+if test -z "$GTK_CONFIG"; then
+  GTK_CONFIG=gtk-config
+fi
+AC_SUBST(GTK_CONFIG)
+
+if test -z "$ROX_RUN"; then
+  AC_CHECK_PROG(ROX_RUN, rox_run, rox_run, "$APP_DIR/rox_run")
+fi
+AC_SUBST(ROX_RUN)
+
+AC_CHECK_PROG(XML_CONFIG, xml2-config, xml2-config, false)
+if test "$XML_CONFIG" != "false"; then
+  AC_DEFINE(HAVE_XML)
+fi
+
+dnl Checks for header files.
+AC_PATH_X
+AC_HEADER_STDC
+AC_CHECK_HEADERS(locale.h sys/stat.h libintl.h)
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+
+dnl Checks for library functions.
+AC_CHECK_FUNCS(setlocale bindtextdomain gettext)
+
+dnl Extract version info from AppInfo.xml
+AC_MSG_CHECKING(version information)
+changequote(,)dnl
+VERSION=`sed -n 's/^.*<Version>\([^<]*\).*<\/Version>.*$/\1/p' ../AppInfo.xml`
+changequote([,])dnl
+AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
+AC_MSG_RESULT(version $VERSION)
+
+AC_OUTPUT(Makefile)

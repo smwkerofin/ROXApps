@@ -1,0 +1,7 @@
+README file for Diff
+====================
+
+This app provides coloured diff output and supports drag and drop.
+
+Drop the files to compare in the upper two windows and the differences will be 
+displayed in the window below.
