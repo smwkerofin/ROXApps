@@ -1,6 +1,13 @@
 Fetch
 =====
 
+21-Nov-2004
+~~~~~~~~~~~
+Backend fetcher now just attempts to fetch a full buffer.  GUI can warn
+if backend stalled.  Fetch to temporary file, renamed when fetch complete.
+Added Bytes fetched to display.  Added comments on local and server type
+not matching.
+
 13-Nov-2004
 ~~~~~~~~~~~
 Improvements to the file type icon display.

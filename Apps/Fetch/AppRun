@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.10 2004/09/25 10:41:00 stephen Exp $
+# $Id: AppRun,v 1.11 2004/11/13 17:11:28 stephen Exp $
 
 import os, sys
 import time
@@ -19,8 +19,9 @@ wait_for=rox.options.Option('wait_for', 3)
 
 rox.app_options.notify()
 
-bsize=4096
-stimeo=5*60
+#bsize=4096
+#stimeo=5*60
+tsuf='.fetching'
 
 unknown_type=rox.mime.lookup('text/plain')
 html_type=rox.mime.lookup('text/html')
@@ -36,7 +37,7 @@ def get_filename(url):
         base='index.html'
     fname=base
     num=1
-    while os.access(fname, os.F_OK):
+    while os.access(fname, os.F_OK) or os.access(fname+tsuf, os.F_OK):
         dot=base.index('.')
         if dot>=0:
             fname=base[:dot]+('-%d' % num)+base[dot:]
@@ -52,13 +53,17 @@ class FetchWindow(rox.Dialog):
         self.url=url
         if not target:
             target=get_filename(url)
-        self.target=target
+        self.target=target+tsuf
+        file(self.target, 'w').close()
+        self.real_target=target
 
         self.count=None
         self.start_time=None
+        self.last_time=None
         self.size=0
         self.con=None
         self.bad_fetch=0 # 1=maybe, 2=yes
+        self.stype=unknown_type
         
         rox.Dialog.__init__(self)
         self.set_title(self.url)
@@ -108,7 +113,7 @@ class FetchWindow(rox.Dialog):
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
         self.ltype_icon=rox.g.Image()
-        ltype=rox.mime.get_type_by_name(self.target)
+        ltype=rox.mime.get_type_by_name(self.real_target)
         if ltype:
             icon=ltype.get_icon(rox.mime.ICON_SIZE_SMALL)
             if icon:
@@ -132,9 +137,19 @@ class FetchWindow(rox.Dialog):
         l.set_alignment(0., 0.5)
         table.attach(l, 2, 3, line, line+1, xpadding=2)
         line+=1
-        l=rox.g.Label(self.target)
+        l=rox.g.Label(self.real_target)
         l.set_alignment(0., 0.5)
         table.attach(l, 2, 3, line, line+1, xpadding=2)
+
+        line+=1
+        l=rox.g.Label(_('<b>Bytes fetched</b>'))
+        l.set_use_markup(True)
+        l.set_alignment(1., 0.5)
+        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        l=rox.g.Label('')
+        l.set_alignment(0., 0.5)
+        table.attach(l, 2, 3, line, line+1, xpadding=2)
+        self.fetched_l=l
 
         line+=1
         self.msg1=rox.g.Label('')
@@ -166,6 +181,7 @@ class FetchWindow(rox.Dialog):
         self.speed=l
 
         self.connect('delete_event', self.delete_event)
+        rox.g.timeout_add(2000, self.idle_update)
 
         self.proc=None
         self.show_all()
@@ -183,6 +199,16 @@ class FetchWindow(rox.Dialog):
         msg+='.'
         rox.info(msg)
         sys.exit(0)
+
+    def idle_update(self, *unused):
+        #print 'in idle_update', self.last_time
+        if self.last_time:
+            now=time.time()
+            if now-self.last_time>60:
+                self.message('Stalled? Last update %ds ago' %
+                             int(now-self.last_time))
+
+        return True
 
     def delete_event(self, *unused):
         #print 'delete_event', self, unused
@@ -206,7 +232,7 @@ class FetchWindow(rox.Dialog):
             return
         self.prog.set_fraction(val)
         self.prog.set_text('%d%%' % (val*100))
-        self.set_title('%d%% %s' % (val*100, self.target))
+        self.set_title('%d%% %s' % (val*100, self.real_target))
 
         if self.start_time and total>0 and size>0:
             now=time.time()
@@ -259,6 +285,7 @@ class FetchWindow(rox.Dialog):
             stype=rox.mime.lookup(stype_name.strip())
         except:
             stype=unknown_type
+        self.stype=stype
         if stype:
             icon=stype.get_icon(rox.mime.ICON_SIZE_SMALL)
             if icon:
@@ -275,6 +302,9 @@ class FetchWindow(rox.Dialog):
     def read_some(self, source, condition, *unused):
         #print source, condition, unused
         #print self.con
+
+        self.last_time=time.time()
+        self.message('Downloading')
 
         data=''
         while True:
@@ -328,6 +358,15 @@ class FetchWindow(rox.Dialog):
         
     def report(self, nb, tsize):
         #print 'report', self, nb, tsize
+        if nb>4<<20:
+            tstr='%d bytes (%d MB)' % (nb, nb>>20)
+        elif nb>4<<10:
+            tstr='%d bytes (%d KB)' % (nb, nb>>10)
+        else:
+            tstr='%d bytes' % nb
+            
+        self.fetched_l.set_text(tstr)
+
         if tsize>0:
             self.percent_done(nb, tsize)
             if tsize>4<<20:
@@ -342,10 +381,22 @@ class FetchWindow(rox.Dialog):
         run_main()
 
     def finished(self):
+        os.rename(self.target, self.real_target)
         self.con.close()
-        self.message(_('Done'))
+        t=wait_for.int_value*1000
+        mess=_('Done')
+        if self.ltype!=self.stype:
+            if self.stype==unknown_type:
+                mess=_('Done (server did not know type)')
+            elif self.stype==html_type:
+                mess=_('Server may have sent error')
+                t*=3
+            else:
+                mess=_('Done.  Warning: type mismatch')
+                t*=3
+        self.message(mess)
         run_main()
-        rox.g.timeout_add(wait_for.int_value*1000, self.close)
+        rox.g.timeout_add(t, self.close)
         #rox.mainloop()
         
 def main():

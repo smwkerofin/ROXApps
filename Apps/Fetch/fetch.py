@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.1 2004/08/28 15:09:35 stephen Exp $
+# $Id: fetch.py,v 1.2 2004/09/25 10:42:01 stephen Exp $
 
 import os, sys
 import time
@@ -21,7 +21,8 @@ wait_for=rox.options.Option('wait_for', 3)
 
 rox.app_options.notify()
 
-bsize=4096
+bsize=4096*2 # The bigger this number, the lighter the CPU load.  But we get
+             # fewer updates to the GUI
 stimeo=5*60
 
 # This won't work in Python 2.2
@@ -153,6 +154,7 @@ class Fetcher:
                 rsz=left
         if nready>-1 and rsz>nready:
             rsz=nready
+        rsz=self.bsize
 
         if rsz>0:
             data=self.con.read(rsz)
