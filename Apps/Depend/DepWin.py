@@ -1,10 +1,12 @@
-# $Id$
+# $Id: DepWin.py,v 1.1.1.1 2004/04/17 11:34:56 stephen Exp $
 """Window"""
 
 import rox
 import rox.loading
+import rox.filer
 
 import os, stat
+import webbrowser
 
 import appinfo, depend
 
@@ -15,6 +17,8 @@ STATUS=3
 PATH=4
 ACTUAL=5
 COLOUR=6
+DEPEND=7
+LINK=8
 
 colours=('white', 'goldenrod', 'red')
 
@@ -34,11 +38,13 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
         swin.set_shadow_type(rox.g.SHADOW_IN)
         vbox.pack_start(swin, True, True, 0)
 
-        self.model = rox.g.ListStore(str, str, str, str, str, str, str)
+        self.model = rox.g.ListStore(str, str, str, str, str, str, str,
+                                     object, str)
         view = rox.g.TreeView(self.model)
         self.view = view
         swin.add(view)
         view.set_search_column(1)
+        view.connect('row-activated', self.activate_row)
 
         cell = rox.g.CellRendererText()
         column = rox.g.TreeViewColumn('Type', cell, text = TYPE)
@@ -70,6 +76,11 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
         column = rox.g.TreeViewColumn('Installed version', cell, text = ACTUAL)
         view.append_column(column)
         column.set_sort_column_id(ACTUAL)
+
+        cell = rox.g.CellRendererText()
+        column = rox.g.TreeViewColumn('Web site', cell, text = LINK)
+        view.append_column(column)
+        column.set_sort_column_id(LINK)
 
         vbox.show_all()
         
@@ -137,14 +148,43 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
         for dep in deps:
             #print dep
             iter=self.model.append()
-            type, name, version, state, path, actual=dep.info()
+            type, name, version, state, path, actual, link=dep.info()
             #print type, name, version, state
             #print type, name, version, depend.state_msgs[state]
             self.model.set(iter, TYPE, type, NAME, name, VERSION, version,
                            STATUS, depend.stat_msgs[state],
-                           COLOUR, colours[state])
+                           COLOUR, colours[state], DEPEND, dep)
             if path:
                 self.model.set(iter, PATH, path)
             if actual:
                 self.model.set(iter, ACTUAL, actual)
+            if link:
+                self.model.set(iter, LINK, link)
             
+    def activate_row(self, view, path, col, udata=None):
+        #print 'activate_row', view, path, col, udata
+        iter=self.model.get_iter(path)
+        dep=self.model.get_value(iter, DEPEND)
+
+        where=dep.getLocation()
+        if dep.status==depend.OK:
+            if where:
+                rox.filer.show_file(where)
+        elif dep.status==depend.VERSION:
+            rox.alert('%s is installed on your system at %s, but is an old version (%s < %s).' % (dep.name, where, dep.actual_version, dep.version))
+            if where:
+                rox.filer.show_file(where)
+            link=dep.getLink()
+            if link and rox.confirm("Do you want to visit the web site '%s'?" %
+                                    link, rox.g.STOCK_JUMP_TO):
+                webbrowser.open_new(link)
+            
+        else:
+            rox.alert("""%s could not be found on your system.  You may need
+            to set some environment variables to locate it, install it from
+            your distribution discs or download it from a web site.""" %
+                      dep.name)
+            link=dep.getLink()
+            if link and rox.confirm("Do you want to visit the web site '%s'?" %
+                                    link, rox.g.STOCK_JUMP_TO):
+                webbrowser.open_new(link)

@@ -48,8 +48,8 @@ Name element and may contain a NeedsVersion element.
   NeedsVersion is ignored.
 
 * Library
-  A shared library called Name which should reside in $LIBDIRPATH
-  ($HOME/lib:/usr/local/lib:/usr/lib).  If NeedsVersion is specified
+  A shared library called Name which should reside in $LD_LIBRARY_PATH
+  ($HOME/lib:/usr/local/lib) or /usr/lib.  If NeedsVersion is specified
   then libName.so.version is looked for, otherwise libName.so
 
 * Python
@@ -67,4 +67,4 @@ Latest versions are at http://www.kerofin.demon.co.uk/rox/utils.html
 -- 
 Stephen Watson stephen@kerofin.demon.co.uk
 
-$Id$
+$Id: README,v 1.1.1.1 2004/04/17 11:34:56 stephen Exp $

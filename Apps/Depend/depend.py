@@ -1,4 +1,4 @@
-# $Id: depend.py,v 1.1.1.1 2004/04/17 11:34:56 stephen Exp $
+# $Id: depend.py,v 1.2 2004/05/12 18:32:31 stephen Exp $
 
 """depend"""
 
@@ -34,10 +34,11 @@ except:
     pass
 
 class Dependency:
-    def __init__(self, type, name, version=None):
+    def __init__(self, type, name, version=None, uri=None):
         self.type=type
         self.name=name
         self.version=version
+        self.uri=uri
 
         self.status=MISSING
         self.where=None
@@ -48,7 +49,7 @@ class Dependency:
 
     def info(self):
         state=self.check()
-        return self.type, self.name, self.version, state, self.where, self.actual_version
+        return self.type, self.name, self.version, state, self.where, self.actual_version, self.uri
 
     def __str__(self):
         return '%s %s %s %s' % (self.type, self.name, self.version,
@@ -56,15 +57,30 @@ class Dependency:
     def getVersion(self):
         return versionTriple(self.version)
 
+    def getLocation(self):
+        return self.where
+
+    def getLink(self):
+        return self.uri
+
 class FileDependency(Dependency):
-    def __init__(self, type, paths, name, version=None):
-        Dependency.__init__(self, type, name, version)
+    def __init__(self, type, paths, name, version=None, uri=None):
+        Dependency.__init__(self, type, name, version, uri)
         self.paths=paths
 
     def check(self):
-        leaf=self.get_leaf()
+        leaf=self.get_leaf(self.version)
         for dir in self.paths:
             path=os.path.join(dir, leaf)
+            #print 'try',path
+            if os.access(path, os.R_OK) and self.is_ok(path):
+                self.where=path
+                return self.version_check(path)
+
+        leaf=self.get_leaf(None)
+        for dir in self.paths:
+            path=os.path.join(dir, leaf)
+            #print 'try', path
             if os.access(path, os.R_OK) and self.is_ok(path):
                 self.where=path
                 return self.version_check(path)
@@ -72,7 +88,7 @@ class FileDependency(Dependency):
         self.status=MISSING
         return self.status
 
-    def get_leaf(self):
+    def get_leaf(self, version):
         return self.name
 
     def is_ok(self, path):
@@ -101,6 +117,7 @@ def make_depend(node):
     type=node.localName
     name=None
     version=None
+    uri=None
     #print node.localName
     for subnode in node.childNodes:
         #print subnode
@@ -111,19 +128,21 @@ def make_depend(node):
             name=data(subnode)
         elif subnode.localName=='NeedsVersion':
             version=data(subnode)
+        elif subnode.localName=='Link':
+            uri=data(subnode)
 
     if name is None:
         raise 'No name defined for dependency'
     try:
-        return _readers[type](name, version)
+        return _readers[type](name, version, uri)
     except:
         print '%s %s' % sys.exc_info()[:2]
         return Dependency(type, name, version)
     
 
 class AppDirDependency(Dependency):
-    def __init__(self, name, version=None):
-        Dependency.__init__(self, 'AppDir', name, version)
+    def __init__(self, name, version=None, uri=None):
+        Dependency.__init__(self, 'AppDir', name, version, uri)
 
     def check(self):
         rvers=self.getVersion()
@@ -165,8 +184,8 @@ class AppDirDependency(Dependency):
         return self.status
 
 class PythonDependency(Dependency):
-    def __init__(self, name, version=None):
-        Dependency.__init__(self, 'Python', name, version)
+    def __init__(self, name, version=None, uri=None):
+        Dependency.__init__(self, 'Python', name, version, uri)
 
     def check(self):
         try:
@@ -180,21 +199,22 @@ class PythonDependency(Dependency):
 
 class LibraryDependency(FileDependency):
     """Dependancy on a single shared library, in the usual places"""
-    def __init__(self, name, version=None):
-        FileDependency.__init__(self, 'Library', libpaths, name, version)
+    def __init__(self, name, version=None, uri=None):
+        FileDependency.__init__(self, 'Library', libpaths, name, version, uri)
 
-    def get_leaf(self):
-        if self.version:
-            leaf='lib%s.so.%s' % (self.name, self.version)
+    def get_leaf(self, version):
+        if version:
+            leaf='lib%s.so.%s' % (self.name, version)
         else:
             leaf='lib%s.so' % self.name
         return leaf
     
 class ProgramDependency(FileDependency):
     """Dependancy on a single program, in the usual places"""
-    def __init__(self, name, version=None):
+    def __init__(self, name, version=None, uri=None):
         FileDependency.__init__(self, 'Program',
-                                os.environ['PATH'].split(':'), name, version)
+                                os.environ['PATH'].split(':'), name,
+                                version, uri)
 
     def is_ok(self, path):
         if os.access(path, os.X_OK):
@@ -203,8 +223,8 @@ class ProgramDependency(FileDependency):
     
 class PackageDependency(Dependency):
     """Dependancy on a pkg-config package"""
-    def __init__(self, name, version=None):
-        Dependency.__init__(self, 'Package', name, version)
+    def __init__(self, name, version=None, uri=None):
+        Dependency.__init__(self, 'Package', name, version, uri)
         
     def check(self):
         if self.version:
@@ -217,6 +237,7 @@ class PackageDependency(Dependency):
         if res==0:
             self.status=OK
             self.set_version()
+            self.set_location()
             return self.status
 
         if self.version:
@@ -225,6 +246,7 @@ class PackageDependency(Dependency):
             if res==0:
                 self.status=VERSION
                 self.set_version()
+                self.set_location()
                 return self.status
 
         self.status=MISSING
@@ -235,6 +257,14 @@ class PackageDependency(Dependency):
         lines=f.readlines()
         f.close()
         self.actual_version=lines[0].strip()
+
+    def set_location(self):
+        f=os.popen('pkg-config --variable=prefix %s' % self.name, 'r')
+        lines=f.readlines()
+        f.close()
+        loc=lines[0].strip()
+        if loc:
+            self.where=loc
 
 _readers={
     'AppDir': AppDirDependency,
