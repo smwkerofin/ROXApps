@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.8 2001/05/16 11:22:06 stephen Exp $
+ * $Id: clock.c,v 1.9 2001/05/18 09:37:27 stephen Exp $
  */
 #include "config.h"
 
@@ -39,6 +39,8 @@
 #define SUPPORT_OLD_CONFIG 1
 #define APPLET_MENU        1
 
+static gboolean applet_mode=FALSE;
+
 typedef struct time_format {
   const char *name;   /* User visible name for this format */
   const char *fmt;    /* Format to pass to strftime(3c) */
@@ -69,10 +71,11 @@ typedef struct mode {
   TimeFormat *format;  /* Format of text below clock */
   int flags;          /* Bit mask of flags defined above */
   guint32 interval;   /* Interval between updates (in ms) */
+  guint init_size;
 } Mode;
 
 static Mode mode={
-  formats, MODE_SECONDS, 500
+  formats, MODE_SECONDS, 500, 64
 };
 
 #if SUPPORT_OLD_CONFIG
@@ -133,6 +136,7 @@ static GtkWidget *sel_fmt=NULL;     /* Shows the current format */
 static GtkWidget *user_fmt=NULL;    /* Entering the user-defined format */
 static GtkWidget *mode_flags[MODE_NFLAGS];
 static GtkWidget *interval=NULL;
+static GtkWidget *init_size=NULL;
 
 static guint update_tag;            /* Handle for the timeout */
 static time_t config_time=0;        /* Time our config file was last changed */
@@ -226,7 +230,8 @@ int main(int argc, char *argv[])
     gtk_signal_connect(GTK_OBJECT(win), "destroy", 
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
 		       "WM destroy");
-    gtk_widget_set_usize(win, 64, 64);
+    dprintf("initial size=%d\n", mode.init_size);
+    gtk_widget_set_usize(win, mode.init_size, mode.init_size);
 
     /* We want to pop up a menu on a button press */
     gtk_signal_connect(GTK_OBJECT(win), "button_press_event",
@@ -240,10 +245,17 @@ int main(int argc, char *argv[])
 
     /*dprintf("argv[1]=%s\n", argv[1]);*/
     plug=gtk_plug_new(atol(argv[1]));
+    if(!plug) {
+      fprintf(stderr, "%s: failed to plug into socket %s, not a XID?\n",
+	      argv[0], argv[1]);
+      exit(1);
+    }
+    applet_mode=TRUE;
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
 		       "WM destroy");
-    gtk_widget_set_usize(plug, 64, 64);
+    dprintf("initial size=%d\n", mode.init_size);
+    gtk_widget_set_usize(plug, mode.init_size, mode.init_size);
 
 #if APPLET_MENU
     /* We want to pop up a menu on a button press */
@@ -637,6 +649,7 @@ static void write_config(void)
       fprintf(out, "flags=%d\n", (int) mode.flags);
       fprintf(out, "interval=%ld\n", (long) mode.interval);
       fprintf(out, "user_format=%s\n", user_defined);
+      fprintf(out, "init_size=%d\n", (int) mode.init_size);
 
       fclose(out);
 
@@ -724,6 +737,9 @@ static void read_config(void)
 	    } else if(strcmp(var, "user_format")==0) {
 	      strncpy(user_defined, val, sizeof(user_defined));
 	      
+	    } else if(strcmp(var, "init_size")==0) {
+	      nmode.init_size=(guint) atoi(val);
+	      
 	    }
 	  }
 	}
@@ -732,6 +748,8 @@ static void read_config(void)
 
       fclose(in);
 
+      if(nmode.init_size<16)
+	nmode.init_size=16;
       set_mode(&nmode);
     }
 #if SUPPORT_OLD_CONFIG
@@ -820,6 +838,8 @@ static void set_config(GtkWidget *widget, gpointer data)
       nmode.flags|=1<<i;
   sec=gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(interval));
   nmode.interval=(guint32) (sec*1000.);
+  nmode.init_size=
+    (guint) gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(init_size));
     
   udef=gtk_entry_get_text(GTK_ENTRY(user_fmt));
   strncpy(user_defined, udef, sizeof(user_defined));
@@ -968,6 +988,24 @@ static void show_conf_win(void)
       gtk_box_pack_start(GTK_BOX(hbox), mode_flags[i], FALSE, FALSE, 2);
     }
 
+    hbox=gtk_hbox_new(FALSE, 0);
+    gtk_widget_show(hbox);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+
+    label=gtk_label_new(_("Initial size"));
+    gtk_widget_show(label);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+
+    adj=gtk_adjustment_new((gfloat) mode.init_size, 16, 128,
+			   2, 16, 16);
+    init_size=gtk_spin_button_new(GTK_ADJUSTMENT(adj), 1., 0);
+    gtk_widget_show(init_size);
+    gtk_box_pack_start(GTK_BOX(hbox), init_size, FALSE, FALSE, 2);
+
+    label=gtk_label_new(_("(only used on start up)"));
+    gtk_widget_show(label);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+
     hbox=GTK_DIALOG(confwin)->action_area;
 
     but=gtk_button_new_with_label(_("Set"));
@@ -1002,6 +1040,7 @@ static void show_conf_win(void)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mode_flags[i]),
 				 mode.flags & 1<<i);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(interval), mode.interval/1000.);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(init_size), mode.init_size);
 
   gtk_widget_show(confwin);
 }
@@ -1302,6 +1341,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.9  2001/05/18 09:37:27  stephen
+ * Fixed bug in update (needed to return TRUE!), display tweaks
+ *
  * Revision 1.8  2001/05/16 11:22:06  stephen
  * Fix bug in loading config.
  *

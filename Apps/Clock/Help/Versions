@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+0.1.12
+------
+Can configure the initial size
+
 0.1.11
 ------
 Fixed bug in repeating alarms.
