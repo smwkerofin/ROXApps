@@ -2,7 +2,7 @@
 <AppInfo>
   <About>
     <Purpose>Provide ROX interface to mail clients</Purpose>
-	<Version>0.3.3 (15 September 2003)</Version>
+	<Version>0.3.4 (28 April 2004)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
@@ -18,6 +18,11 @@
   <Summary xml:lang="it">Applet che indica lo stato della posta e che
 spedisce email</Summary>
   <Dependencies>
-    <AppDir><Name>ROX-Lib2</Name></AppDir>
+    <AppDir>
+      <Name>ROX-Lib2</Name>
+      <NeedsVersion>1.9.12</NeedsVersion>
+      <Link>http://rox.sourceforge.net</Link>
+      <ZeroInstall>/uri/0install/rox.sourceforge.net/lib</ZeroInstall>
+    </AppDir>
   </Dependencies>
 </AppInfo>
