@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id$
+# $Id: AppRun,v 1.1.1.1 2004/05/26 19:51:13 stephen Exp $
 
 import os, sys
 import urlparse
@@ -35,8 +35,8 @@ def build_install_button(box, node, label):
     return [button]
 rox.OptionsBox.widget_registry['install-button'] = build_install_button
 
-def uri_from_file(fname):
-    for line in file(fname, 'r').readlines():
+def uri_from_file(fl):
+    for line in fl.readlines():
         l=line.strip()
         if not l or l[0]=='#':
             continue
@@ -72,21 +72,23 @@ def run_options():
     rox.edit_options()
     rox.mainloop()
 
-def run_file(fname):
-    uri=uri_from_file(fname)
+def run_file(fl):
+    uri=uri_from_file(fl)
     if not uri:
-        rox.alert('No URI found in %s' % fname)
+        rox.alert('No URI found in %s' % fl.name)
         return
     launch_uri(uri)
 
 if __name__=='__main__':
     if len(sys.argv)>1:
         if sys.argv[1][0]=='/':
-            run_file(sys.argv[1])
+            run_file(file(sys.argv[1], 'r'))
         elif sys.argv[1]=='-o':
             run_options()
+        elif sys.argv[1]=='-':
+            run_file(sys.stdin)
         else:
             launch_uri(sys.argv[1])
     else:
-        rox.alert('Launch should be passed either a URL or a URI file')
+        run_options()
         

@@ -1,6 +1,10 @@
 Launch
 ======
 
+31-May-2004
+~~~~~~~~~~~
+Handle URL's passed via stdin (argument of '-').
+
 26-May-2004 (0.1.0)
 ~~~~~~~~~~~
 First version.  Written in the time it took to listen to the second
