@@ -1,7 +1,7 @@
 /*
  * rox_path.c - utilities for path handling, support for drag & drop
  *
- * $Id: rox_path.c,v 1.7 2004/09/11 14:09:27 stephen Exp $
+ * $Id: rox_path.c,v 1.8 2004/10/02 13:10:22 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -62,14 +62,16 @@ int rox_hostname_is_local(const char *hname)
   const char *ahname=rox_hostname();
 #ifdef HAVE_GETHOSTBYNAME
   struct hostent *hp;
-  struct hostent *lhp;
 #endif
 
+  if(strcmp(hname, "localhost")==0)
+    return TRUE;
   if(ahname && strcmp(ahname, hname)==0)
     return TRUE;
   
 #ifdef HAVE_GETHOSTBYNAME
-    hp=gethostbyname(hname);
+  if(ahname) {
+    hp=gethostbyname(ahname);
     if(hp) {
       char **alias;
       if(strcmp(hp->h_name, hname)==0) {
@@ -81,14 +83,9 @@ int rox_hostname_is_local(const char *hname)
 	  return TRUE;
 	}
       }
-
-      lhp=gethostbyname(hname);
-      if(lhp) {
-	if(strcmp(hp->h_name, lhp->h_name)==0) {
-	  return TRUE;
-	}
-      }
     }
+
+  }
 #endif
     
   return FALSE;
@@ -139,6 +136,10 @@ char *rox_path_get_path(const char *uri)
 
 /*
  * $Log: rox_path.c,v $
+ * Revision 1.8  2004/10/02 13:10:22  stephen
+ * Added uri.h and rox_uri_launch() (and moved some stuff from rox_path
+ * there) to better handle launching URIs.  ROXInfoWin now uses it.
+ *
  * Revision 1.7  2004/09/11 14:09:27  stephen
  * Fix bug in drag and drop
  *
