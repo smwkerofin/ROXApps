@@ -1,5 +1,5 @@
 /*
- * $Id: test.c,v 1.6 2003/03/05 15:31:23 stephen Exp $
+ * $Id: test.c,v 1.7 2003/03/25 14:31:34 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -15,6 +15,7 @@
 #define DEBUG 1
 #include "rox.h"
 #include "rox_soap.h"
+#include "error.h"
 #include "rox_filer_action.h"
 
 #define TEST_FILE "tmp/tmp/rm.me"
@@ -32,8 +33,7 @@ int main(int argc, char *argv[])
   xmlNodePtr act;
   gboolean state;
   
-  gtk_init(&argc, &argv);
-  rox_debug_init("test");
+  rox_init("test", &argc, &argv);
   rox_soap_set_timeout(NULL, 5000);
 
   printf("ROX-CLib version %s\n\n", rox_clib_version_string());
@@ -115,6 +115,8 @@ int main(int argc, char *argv[])
   if(state)
     gtk_main();
   rox_soap_close(prog);
+
+  rox_error("This is an error %d", 42);
   
   return 0;
 }
