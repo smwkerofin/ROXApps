@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.32 2004/10/23 11:32:05 stephen Exp $
+ * $Id: clock.c,v 1.33 2004/10/29 13:36:48 stephen Exp $
  */
 #include "config.h"
 
@@ -95,7 +95,6 @@ static Mode default_mode={
 };
 
 static GtkWidget *menu=NULL;          /* Popup menu */
-static GtkWidget *infowin=NULL;       /* Information window */
 static GdkColormap *cmap = NULL;
 static GdkPixbuf *alarm_icon=NULL;
 static GdkColor colours[]={
@@ -1112,16 +1111,6 @@ static void read_config(void)
   }
 }
 
-
-/* Make a destroy-frame into a close */
-static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
-			      gpointer data)
-{
-  /* Change this destroy into a hide */
-  gtk_widget_hide(GTK_WIDGET(data));
-  return TRUE;
-}
-
 /* Show the configure window */
 static void show_conf_win(void)
 {
@@ -1369,19 +1358,17 @@ static gboolean options_remote(void)
 /* Show the info window */
 static void show_info_win(void)
 {
-  if(!infowin) {
-    /* Need to make it first */
-    infowin=info_win_new_from_appinfo(PROJECT);
-    gtk_signal_connect(GTK_OBJECT(infowin), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     infowin);
-  }
+  GtkWidget *infowin=rox_info_win_new_from_appinfo(PROJECT);
 
+  rox_add_window(infowin);
   gtk_widget_show(infowin);
 }
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.33  2004/10/29 13:36:48  stephen
+ * Use rox_choices_load()/save() and  window counting
+ *
  * Revision 1.32  2004/10/23 11:32:05  stephen
  * digital readout named for theming
  * Use new window counting stuff in ROX-CLib
