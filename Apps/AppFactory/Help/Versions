@@ -1,6 +1,14 @@
 AppFactory
 ==========
 
+1.0.0
+-----
+Change order of elements in the generated AppInfo.xml.
+
+0.1.9
+-----
+Fix compilation problem when we have an old libxml.
+
 0.1.8
 -----
 Added -h and -v options.
