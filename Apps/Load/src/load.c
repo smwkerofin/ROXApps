@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.22 2004/04/10 12:11:42 stephen Exp $
+ * $Id: load.c,v 1.23 2004/08/18 17:24:55 stephen Exp $
  *
  * Log at end of file
  */
@@ -579,7 +579,7 @@ static gboolean window_update(LoadWindow *lwin)
   int w, h;
   int bw, mbh, bh, bm=BOTTOM_MARGIN, tm=TOP_MARGIN, l1=BOTTOM_MARGIN, l2=0;
   int theight;
-  int bx, by, x, sbx;
+  int bx, by, x, y, sbx;
   int cpu, other;
   double ld;
   int i, j;
@@ -709,6 +709,11 @@ static gboolean window_update(LoadWindow *lwin)
     gdk_gc_set_foreground(lwin->gc, colours+COL_FG);
     gdk_draw_rectangle(lwin->pixmap, lwin->gc, FALSE, bx, by-bh, bw, bh);
 
+    for(j=1; j<ld; j++) {
+      y=mbh*j/(double) max_load;
+      gdk_draw_line(lwin->pixmap, lwin->gc, bx, by-y, bx+bw, by-y);
+    }
+
     if(opt_show_vals.int_value) {
       sprintf(buf, "%3.*f", ndec, ld);
       pango_layout_set_text(layout, buf, -1);
@@ -775,6 +780,12 @@ static gboolean window_update(LoadWindow *lwin)
 			     gwidth, bh-byred);
 	}
       }
+    }
+    gdk_gc_set_foreground(lwin->gc, colours+COL_FG);
+    for(j=1; j<max_load; j++) {
+      y=mbh*j/(double) max_load;
+      gdk_draw_line(lwin->pixmap, lwin->gc, sbx-BAR_GAP, by-y,
+		    TEXT_MARGIN, by-y);
     }
 
     gdk_gc_set_foreground(lwin->gc, colours+COL_FG);
@@ -1359,6 +1370,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.23  2004/08/18 17:24:55  stephen
+ * Eliminate use of libgtop
+ *
  * Revision 1.22  2004/04/10 12:11:42  stephen
  * Remove dead code.  Open options dialog from command line or SOAP message.  Stock items in menus.
  *
