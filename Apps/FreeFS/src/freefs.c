@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.12 2001/11/08 15:12:23 stephen Exp $
+ * $Id: freefs.c,v 1.13 2001/11/12 14:42:10 stephen Exp $
  */
 #include "config.h"
 
@@ -59,6 +59,7 @@
 #include "rox_dnd.h"
 #endif
 #include "rox_resources.h"
+#include "rox_filer_action.h"
 
 #define TIP_PRIVATE "For more information see the help file"
 
@@ -912,11 +913,23 @@ static void show_config_win(void)
   gtk_widget_show(confwin);  
 }
 
+static void do_opendir(gpointer dat, guint action, GtkWidget *wid)
+{
+  const char *dir=df_dir;
+
+  if(action)
+    dir=find_mount_point(dir);
+
+  rox_filer_open_dir(dir);
+}
+
 /* Pop-up menu */
 static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),		NULL, show_info_win, 0, NULL },
   { N_("/Configure..."),	NULL, show_config_win, 0, NULL},
   { N_("/Update Now"),	NULL, do_update, 0, NULL },
+  { N_("/Open directory"),	NULL, do_opendir, 0, NULL },
+  { N_("/Open FS root"),	NULL, do_opendir, 1, NULL },
   { N_("/Quit"), 	NULL, gtk_main_quit, 0, NULL },
 };
 
@@ -1020,6 +1033,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.13  2001/11/12 14:42:10  stephen
+ * Change to XML handling: requires 2.4 or later.  Use old style config otherwise.
+ *
  * Revision 1.12  2001/11/08 15:12:23  stephen
  * Fix leak in read/write XML config.
  *
