@@ -1,5 +1,6 @@
 PKG_CONFIG = "@PKG_CONFIG@"
-ROX_CLIB = "@ROX_RUN@" ROX-CLib
+ROX_CLIB = "@ROX_CLIB_PATH@/AppRun"
+# ROX_CLIB = "@ROX_RUN@" ROX-CLib
 SHELL = @SHELL@
 srcdir = @srcdir@
 PLATFORM = @with_platform@
@@ -8,8 +9,8 @@ PLATFORM_DIR = ../${PLATFORM}
 .SUFFIXES: .c .o
 
 CC = @CC@
-CFLAGS = @CFLAGS@ `${PKG_CONFIG} --cflags gtk+-2.0 libxml-2.0` -I. `${ROX_CLIB} --cflags`
-LDFLAGS = @LDFLAGS@ `${PKG_CONFIG} --libs gtk+-2.0 libxml-2.0` ${LIBS} `${ROX_CLIB} --libs`
+CFLAGS = @CFLAGS@ -I. `${ROX_CLIB} --cflags`
+LDFLAGS = @LDFLAGS@ ${LIBS} `${ROX_CLIB} --libs`
 EXEC = ${PLATFORM_DIR}/${PROG}
 
 ############ Things to change for different programs

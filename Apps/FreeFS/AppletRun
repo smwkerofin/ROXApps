@@ -18,10 +18,15 @@ if [ x"$PLATFORM" = x"" ]; then
   PLATFORM=`uname -s`-$ARCH export PLATFORM
 fi
 
+if [ "x$MAKE" = x ]; then
+  MAKE=make export MAKE
+fi
+
+ROX_CLIB=`"$APP_DIR/libdir" --0install www.kerofin.demon.co.uk ROX-CLib`/AppRun
 if [ -z "$LD_LIBRARY_PATH" ]; then
-    LD_LIBRARY_PATH=`"$APP_DIR/rox_run" ROX-CLib --runtime`
+    LD_LIBRARY_PATH=`"$ROX_CLIB" --runtime`
 else
-    LD_LIBRARY_PATH=`"$APP_DIR/rox_run" ROX-CLib --runtime`:$LD_LIBRARY_PATH
+    LD_LIBRARY_PATH=`"$ROX_CLIB" --runtime`:$LD_LIBRARY_PATH
 fi
 export LD_LIBRARY_PATH
 

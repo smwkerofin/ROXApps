@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.26 2004/05/05 19:20:33 stephen Exp $
+ * $Id: freefs.c,v 1.27 2004/05/10 18:36:22 stephen Exp $
  */
 #include "config.h"
 
@@ -75,11 +75,14 @@ typedef struct free_window {
   GtkWidget *fs_name, *fs_total, *fs_used, *fs_free, *fs_per;
   
   gboolean is_applet;
+  gboolean minimal;
   guint update_tag;
   
   char *df_dir;
   char *real_path;
   gchar *fs_mount;
+
+  gchar *id;
   
 } FreeWindow;
 
@@ -101,7 +104,9 @@ static GList *fs_exclude=NULL; /* File system types not to offer on menu */
 static GList *mount_points=NULL;
 
 /* Call backs & stuff */
-static FreeWindow *make_window(guint32 socket, const char *dir);
+static FreeWindow *make_window(guint32 socket, const char *dir,
+			       gboolean mini, const gchar *id);
+static FreeWindow *find_window(const gchar *id);
 static gboolean update_fs_values(FreeWindow *);
 static void do_update(void);
 static void init_options(void);
@@ -112,24 +117,30 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 static gboolean popup_menu(GtkWidget *window, gpointer udata);
 static gboolean handle_uris(GtkWidget *widget, GSList *uris, gpointer data,
 			   gpointer udata);
+
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
-static gboolean open_remote(guint32 xid, const char *path);
+static gboolean open_remote(guint32 xid, const char *path, gboolean mini);
 static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
 static gboolean options_remote(void);
+static xmlNodePtr rpc_Change(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata);
+/*static gboolean change_remote(const char *id, const char *path);*/
+
 static void get_mount_points(void);
 
 static ROXSOAPServerActions actions[]={
-  {"Open", "Path", "Parent", rpc_Open, NULL},
+  {"Open", "Path", "Parent,Minimal,ID", rpc_Open, NULL},
   {"Options", NULL, NULL, rpc_Options, NULL},
+  {"Change", "Path,ID", NULL, rpc_Change, NULL},
 
   {NULL},
 };
 
 static void usage(const char *argv0)
 {
-  printf("Usage: %s [X-options] [gtk-options] [-ovhnr] [-a XID] [dir]\n",
+  printf("Usage: %s [X-options] [gtk-options] [-ovhnr] [-a XID] [-m XID] [dir]\n",
 	 argv0);
   printf("where:\n\n");
   printf("  X-options\tstandard Xlib options\n");
@@ -138,6 +149,7 @@ static void usage(const char *argv0)
   printf("  -v\tdisplay version information\n");
   printf("  -o\topen options window\n");
   printf("  -a XID\tX id of window to use in applet mode\n");
+  printf("  -m XID\tX id of window to use in minimal applet mode\n");
   printf("  -n\tdon't attempt to contact existing server\n");
   printf("  -r\treplace existing server\n");
   printf("  dir\tdirectory on file sustem to monitor\n");
@@ -177,7 +189,8 @@ int main(int argc, char *argv[])
   gchar *localedir;
 #endif
   int c, do_exit, nerr;
-  const char *options="vha:nro";
+  const char *options="vha:nrom:";
+  gboolean minimal=FALSE;
   gboolean new_run=FALSE;
   gboolean replace_server=FALSE;
   gboolean show_options=FALSE;
@@ -187,8 +200,8 @@ int main(int argc, char *argv[])
     do_version();
     exit(0);
   }
-  
-  rox_init(PROJECT, &argc, &argv);
+
+  rox_init_with_domain(PROJECT, DOMAIN, &argc, &argv);
 
   app_dir=g_getenv("APP_DIR");
 #ifdef HAVE_BINDTEXTDOMAIN
@@ -223,6 +236,10 @@ int main(int argc, char *argv[])
     case 'o':
       show_options=TRUE;
       break;
+    case 'm':
+      minimal=TRUE;
+      xid=atol(optarg);
+      break;
     default:
       nerr++;
       break;
@@ -240,7 +257,7 @@ int main(int argc, char *argv[])
   /* Pick the gtkrc file up from CHOICESPATH */
   fname=rox_resources_find(PROJECT, "gtkrc", ROX_RESOURCES_DEFAULT_LANG);
   if(!fname)
-    fname=choices_find_path_load("gtkrc", PROGRAM);
+    fname=rox_choices_load("gtkrc", PROGRAM, DOMAIN);
   if(fname) {
     gtk_rc_parse(fname);
     g_free(fname);
@@ -273,7 +290,7 @@ int main(int argc, char *argv[])
 	exit(22);
       }
     }
-    if(open_remote(xid, df_dir)) {
+    if(open_remote(xid, df_dir, minimal)) {
       dprintf(1, "success in open_remote(%lu), exiting", xid);
       return 0;
     } else {
@@ -284,10 +301,10 @@ int main(int argc, char *argv[])
   if(show_options) 
     show_config_win(0);
 
-  (void) make_window(xid, df_dir);
+  (void) make_window(xid, df_dir, minimal, NULL);
   g_free(df_dir);
   
-  gtk_main();
+  rox_main_loop();
 
   dprintf(2, "server=%p", server);
   if(server)
@@ -310,10 +327,6 @@ static void remove_window(FreeWindow *win)
   g_free(win->fs_mount);
   g_free(win);
 
-  dprintf(1, "windows=%p, number of active windows=%d", windows,
-	  g_list_length(windows));
-  if(g_list_length(windows)<1)
-    gtk_main_quit();
 }
 
 static void window_gone(GtkWidget *widget, gpointer data)
@@ -325,7 +338,8 @@ static void window_gone(GtkWidget *widget, gpointer data)
   remove_window(fw);
 }
 
-static FreeWindow *make_window(guint32 xid, const char *dir)
+static FreeWindow *make_window(guint32 xid, const char *dir,
+			       gboolean mini, const gchar *id)
 {
   FreeWindow *fwin;
   GtkWidget *vbox, *hbox;
@@ -347,6 +361,7 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
   fwin->df_dir=g_strdup(dir);
   fwin->real_path=NULL;
   fwin->fs_mount=NULL;
+  fwin->minimal=mini;
 
   if(!xid) {
     /* Full window mode */
@@ -450,8 +465,9 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     g_signal_connect(plug, "destroy", 
 		       G_CALLBACK(window_gone), 
 		       fwin);
-    gtk_widget_set_size_request(plug, opt_applet_size.int_value,
-			 opt_applet_size.int_value);
+    if(!mini)
+      gtk_widget_set_size_request(plug, opt_applet_size.int_value,
+				  opt_applet_size.int_value);
     dprintf(4, "set_usize %d\n", opt_applet_size.int_value);
     
     g_signal_connect(plug, "button_press_event",
@@ -471,26 +487,30 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     vbox=gtk_vbox_new(FALSE, 1);
     gtk_container_add(GTK_CONTAINER(plug), vbox);
     gtk_widget_show(vbox);
-  
-    dprintf(4, "alignment new");
-    align=gtk_alignment_new(1, 0.5, 1, 0);
-    gtk_box_pack_end(GTK_BOX(vbox), align, TRUE, TRUE, 2);
-    gtk_widget_show(align);
 
-    dprintf(4, "label new");
-    fwin->fs_name=gtk_label_new("");
-    gtk_label_set_justify(GTK_LABEL(fwin->fs_name), GTK_JUSTIFY_RIGHT);
-    gtk_widget_set_name(fwin->fs_name, "text display");
-    gtk_container_add(GTK_CONTAINER(align), fwin->fs_name);
-    if(opt_applet_show_dir.int_value)
-      gtk_widget_show(fwin->fs_name);
-    gtk_tooltips_set_tip(ttips, fwin->fs_name,
-			 "This shows the dir where the FS is mounted",
-			 TIP_PRIVATE);
+    if(!mini) {
+      dprintf(4, "alignment new");
+      align=gtk_alignment_new(1, 0.5, 1, 0);
+      gtk_box_pack_end(GTK_BOX(vbox), align, TRUE, TRUE, 2);
+      gtk_widget_show(align);
+
+      dprintf(4, "label new");
+      fwin->fs_name=gtk_label_new("");
+      gtk_label_set_justify(GTK_LABEL(fwin->fs_name), GTK_JUSTIFY_RIGHT);
+      gtk_widget_set_name(fwin->fs_name, "text display");
+      gtk_container_add(GTK_CONTAINER(align), fwin->fs_name);
+      if(opt_applet_show_dir.int_value)
+	gtk_widget_show(fwin->fs_name);
+      gtk_tooltips_set_tip(ttips, fwin->fs_name,
+			   "This shows the dir where the FS is mounted",
+			   TIP_PRIVATE);
+    } else {
+      fwin->fs_name=NULL;
+    }
 
     fwin->fs_per=gtk_progress_bar_new();
     gtk_widget_set_name(fwin->fs_per, "gauge");
-    /*gtk_widget_set_usize(fwin->fs_per, -1, 22);*/
+    gtk_widget_set_size_request(fwin->fs_per, -1, 6);
     gtk_widget_show(fwin->fs_per);
     gtk_box_pack_end(GTK_BOX(vbox), fwin->fs_per, FALSE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, fwin->fs_per,
@@ -523,12 +543,32 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
 			 (GtkFunction) update_fs_values, fwin);
   dprintf(2, "update_sec=%d, update_tag=%u", opt_update_sec.int_value,
 	  fwin->update_tag);
+
+  if(id)
+    fwin->id=g_strdup(id);
+  else
+    fwin->id=NULL;
   
   windows=g_list_append(windows, fwin);
   current_window=fwin;
   gtk_widget_ref(fwin->win);
+  rox_add_window(fwin->win);
 
   return fwin;
+}
+
+static FreeWindow *find_window(const gchar *id)
+{
+  GList *p;
+
+  for(p=windows; p; p=g_list_next(p)) {
+    FreeWindow *f=(FreeWindow *) p->data;
+
+    if(f->id && strcmp(f->id, id)==0) 
+      return f;
+  }
+
+  return NULL;
 }
 
 /* Change the directory/file and therefore FS we are monitoring */
@@ -788,8 +828,9 @@ static gboolean update_fs_values(FreeWindow *fwin)
 	gtk_label_set_text(GTK_LABEL(fwin->fs_used), fmt_size(used));
 	gtk_label_set_text(GTK_LABEL(fwin->fs_free), fmt_size(avail));
 
-      } else {
+      } else if(fwin->fs_name) {
 	const char *mpt;
+	
 	dprintf(5, "set text");
 	mpt=find_mount_point(fwin->df_dir);
 	if(strcmp(mpt, "/")==0)
@@ -801,7 +842,8 @@ static gboolean update_fs_values(FreeWindow *fwin)
       sprintf(tbuf, "%d%%", (int)(fused));
       gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fwin->fs_per),
 				    fused/100.);
-      gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fwin->fs_per), tbuf);
+      if(!fwin->minimal)
+	gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fwin->fs_per), tbuf);
     }
   }
   
@@ -817,7 +859,8 @@ static gboolean update_fs_values(FreeWindow *fwin)
     }
 
     gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(fwin->fs_per), 0.);
-    gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fwin->fs_per), "");
+    if(!fwin->minimal)
+      gtk_progress_bar_set_text(GTK_PROGRESS_BAR(fwin->fs_per), "");
   }
 
   return TRUE;
@@ -836,7 +879,7 @@ static void opts_changed(void)
 
     for(p=windows; p; p=g_list_next(p)) {
       FreeWindow *fw=(FreeWindow *) p->data;
-      if(fw && fw->is_applet) {
+      if(fw && fw->is_applet && !fw->minimal) {
 	gtk_widget_set_size_request(fw->win, opt_applet_size.int_value,
 				    opt_applet_size.int_value);
       }
@@ -851,89 +894,10 @@ static void opts_changed(void)
 
 static void init_options(void)
 {
-  guchar *fname;
-  
   guint update_sec=5;           /* How often to update */
   guint applet_init_size=32;    /* Initial size of applet */
   gboolean applet_show_dir=TRUE;/* Print name of directory on applet version */
 
-  fname=choices_find_path_load("Config.xml", PROJECT);
-
-  if(fname) {
-    xmlDocPtr doc;
-    xmlNodePtr node, root;
-    const xmlChar *string;
-    
-    doc=xmlParseFile(fname);
-    if(!doc) {
-      g_free(fname);
-      return;
-    }
-
-    root=xmlDocGetRootElement(doc);
-    if(!root) {
-      g_free(fname);
-      xmlFreeDoc(doc);
-      return;
-    }
-
-    if(strcmp(root->name, "FreeFS")!=0) {
-      g_free(fname);
-      xmlFreeDoc(doc);
-      return;
-    }
-
-    for(node=root->xmlChildrenNode; node; node=node->next) {
-      xmlChar *string;
-      
-      if(node->type!=XML_ELEMENT_NODE)
-	continue;
-
-      /* Process data here */
-      if(strcmp(node->name, UPDATE_RATE)==0) {
- 	string=xmlGetProp(node, "value");
-	if(!string)
-	  continue;
-	update_sec=atoi(string);
-	free(string);
-	
-      } else if(strcmp(node->name, "Applet")==0) {
- 	string=xmlGetProp(node, "initial-size");
-	if(string) {
-	  applet_init_size=atoi(string);
-	  free(string);
-	}
- 	string=xmlGetProp(node, "show-dir");
-	if(string) {
-	  applet_show_dir=atoi(string);
-	  free(string);
-	}
-	
-      } else if(strcmp(node->name, EXCLUDE_FS)==0) {
-	xmlNodePtr sub;
-	
-	g_list_foreach(fs_exclude, (GFunc) g_free, NULL);
-	g_list_free(fs_exclude);
-	fs_exclude=NULL;
-
-	for(sub=node->xmlChildrenNode; sub; sub=sub->next) {
-	  if(sub->type!=XML_ELEMENT_NODE)
-	    continue;
-	  if(strcmp(sub->name, "Name")==0) {
-	    string=xmlNodeListGetString(doc, sub->xmlChildrenNode, 1);
-	    if(string) {
-	      fs_exclude=g_list_append(fs_exclude, g_strdup(string));
-	      free(string);
-	    }
-	  }
-	}
-     }
-
-    }
-    xmlFreeDoc(doc);
-    
-    g_free(fname);
-  }
   option_add_int(&opt_update_sec, "update_rate", update_sec);
   option_add_int(&opt_applet_size, "applet_size", applet_init_size);
   option_add_int(&opt_applet_show_dir, "show_dir", applet_show_dir);
@@ -944,29 +908,13 @@ static void init_options(void)
 
 static void show_info_win(void)
 {
-  static GtkWidget *infowin=NULL;
-  
-  if(!infowin) {
-    infowin=info_win_new(PROGRAM, PURPOSE, VERSION, AUTHOR, WEBSITE);
-  }
+  GtkWidget *infowin;
+
+  infowin=rox_info_win_new_from_appinfo(PROGRAM);
+  rox_add_window(infowin);
 
   gtk_widget_show(infowin);
 }
-
-/* Make a destroy-frame into a close */
-static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
-			      gpointer data)
-{
-  /* Change this destroy into a hide */
-  gtk_widget_hide(GTK_WIDGET(data));
-  return TRUE;
-}
-
-static void hide_window(GtkWidget *widget, gpointer data)
-{
-  gtk_widget_hide(GTK_WIDGET(data));
-}
-
 
 static void do_opendir(gpointer dat, guint action, GtkWidget *wid)
 {
@@ -1013,8 +961,6 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Open/FS root"),	NULL, do_opendir, 1,       
                                 "<StockItem>", GTK_STOCK_OPEN},
   { N_("/Scan"),                NULL, NULL, 0, NULL},
-/*  { N_("/Scan/By name"),	NULL, NULL, 0, NULL },
-  { N_("/Scan/By mount point"),	NULL, NULL, 1, NULL },*/
   { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
   { N_("/Close"), 	        NULL, close_window, 0,      
                                 "<StockItem>", GTK_STOCK_CLOSE},
@@ -1027,7 +973,7 @@ static void save_menus(void)
 {
   char	*menurc;
 	
-  menurc = choices_find_path_save("menus", PROJECT, TRUE);
+  menurc = rox_choices_save("menus", PROJECT, DOMAIN);
   if (menurc) {
     gtk_accel_map_save(menurc);
     g_free(menurc);
@@ -1115,7 +1061,7 @@ static void menu_create_menu(GtkWidget *window)
 	/* Attach the new accelerator group to the window. */
   gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
-  menurc=choices_find_path_load("menus", PROJECT);
+  menurc=rox_choices_load("menus", PROJECT, DOMAIN);
   if(menurc) {
     gtk_accel_map_load(menurc);
     g_free(menurc);
@@ -1155,7 +1101,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
       }
       return TRUE;
     } else if(bev->button==1 && fwin->is_applet) {
-      FreeWindow *nwin=make_window(0, fwin->df_dir);
+      FreeWindow *nwin=make_window(0, fwin->df_dir, FALSE);
 
       gtk_widget_show(nwin->win);
 
@@ -1187,9 +1133,10 @@ static gboolean popup_menu(GtkWidget *window, gpointer udata)
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata)
 {
-  xmlNodePtr path, parent;
+  xmlNodePtr path, parent=NULL, mini=NULL;
   gchar *str;
   guint32 xid=0;
+  gboolean minimal=FALSE;
   gchar *dir;
 
   dprintf(3, "rpc_Open(%p, \"%s\", %p, %p)", server, action_name, args, udata);
@@ -1198,8 +1145,10 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   str=xmlNodeGetContent(path);
   dir=g_strdup(str);
   g_free(str);
-  
-  parent=g_list_next(args)->data;
+
+  args=g_list_next(args);
+  if(args)
+    parent=args->data;
   if(parent) {
 
     str=xmlNodeGetContent(parent);
@@ -1209,8 +1158,21 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
     }
   }
 
+  if(args)
+    args=g_list_next(args);
+  if(args)
+    mini=args->data;
+  if(mini) {
+
+    str=xmlNodeGetContent(mini);
+    if(str) {
+      minimal=(strcmp(str, "yes")==0);
+      g_free(str);
+    }
+  }
+
   if(dir && dir[0])
-    make_window(xid, dir);
+    make_window(xid, dir, minimal);
   else {
     rox_error("Invalid remote call, Path not given");
   }
@@ -1219,6 +1181,37 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   dprintf(3, "rpc_Open complete");
 
   return NULL;
+}
+
+static xmlNodePtr rpc_Change(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata)
+{
+  xmlNodePtr path, id;
+  gchar *str;
+  gchar *dir, *ids;
+  FreeWindow *fwin;
+
+  dprintf(3, "rpc_Change(%p, \"%s\", %p, %p)", server, action_name,
+	  args, udata);
+
+  path=args->data;
+  str=xmlNodeGetContent(path);
+  dir=g_strdup(str);
+  g_free(str);
+
+  args=g_list_next(args);
+  id=args->data;
+  str=xmlNodeGetContent(id);
+  ids=g_strdup(str);
+  g_free(str);
+
+  fwin=find_window(ids);
+  if(fwin) {
+    set_target(fwin, dir);
+  }
+
+  g_free(ids);
+  g_free(dir);
 }
 
 static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
@@ -1245,7 +1238,7 @@ static void open_callback(ROXSOAP *serv, gboolean status,
   gtk_main_quit();
 }
 
-static gboolean open_remote(guint32 xid, const char *path)
+static gboolean open_remote(guint32 xid, const char *path, gboolean mini)
 {
   ROXSOAP *serv;
   xmlDocPtr doc;
@@ -1270,6 +1263,7 @@ static gboolean open_remote(guint32 xid, const char *path)
     sprintf(buf, "%lu", xid);
     xmlNewChild(node, NULL, "Parent", buf);
   }
+  xmlNewChild(node, NULL, "Minimal", mini? "yes": "no");
 
   sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
   dprintf(3, "sent %d", sent);
@@ -1337,6 +1331,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.27  2004/05/10 18:36:22  stephen
+ * Eliminate libgtop
+ *
  * Revision 1.26  2004/05/05 19:20:33  stephen
  * Extra debug
  *

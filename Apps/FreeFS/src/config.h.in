@@ -6,6 +6,7 @@
 #define VERSION ""
 #define AUTHOR  "Stephen Watson"
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
+#define DOMAIN "kerofin.demon.co.uk"
 
 #include <sys/types.h>
 

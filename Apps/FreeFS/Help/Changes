@@ -1,0 +1,141 @@
+Changes to FreeFS
+=================
+
+16-Nov-2004
+~~~~~~~~~~~
+Use new ROX-CLib features.  Added (untested) minimalist applet mode.
+
+2.1.1
+-----
+Build system changed for Zero Install.
+Don't use libgtop any more.
+
+2.1.0
+-----
+New version for ROX-CLib 2.1.0.  Remove dead code.  Open options dialog from 
+command line or SOAP message.  Stock items in menus. 
+
+2.0.0
+-----
+Stable release to go with ROX-CLib 2.0.0.
+
+1.5.2
+-----
+Italian translation of AppInfo provided by Yuri Bongiorno.
+Safer way to parse ROX-CLib's version number by Christopher Arndt.
+
+1.5.1
+-----
+Use new options system.
+New icon provided by Geoff Youngs.
+
+1.5.0
+-----
+Gtk+ 2.0.
+
+1.4.1
+-----
+Fix compilation problems when path has spaces.
+
+1.4.0
+-----
+Stable release (as 1.3.3).
+
+1.3.3
+-----
+Fix bug with applet when mountpoint was /.
+
+1.3.2
+-----
+Fix compilation with libxml2.
+
+1.3.1
+-----
+Added menu of mounted file systems so you can choose which to monitor, 
+otherwise there was no way of changing the FS in the applet version.
+Fixed memory leak which manifested if you monitored more than one FS.
+Use replacement applet menu positioning code (from ROX-CLib).
+
+1.3.0
+-----
+Multiple windows.  Acts as a server, using SOAP, so there only needs to be
+one instance running.
+
+1.2.1
+-----
+Make sure AppRun can find rox_run.
+
+1.2.0
+-----
+Stable release.
+
+1.1.8
+-----
+Add -h and -v options.
+
+1.1.7
+-----
+New applet menu positioning code (from ROX-CLib).
+
+1.1.6
+-----
+Added option to open a viewer for the root of the FS being monitored, mainly
+to test the new filer_action code.
+
+1.1.5
+-----
+Change to XML handling: requires 2.4 or later.  Use old style config otherwise.
+
+1.1.4
+-----
+Fix leak in read/write XML config.
+
+1.1.3
+-----
+Pick up window icon from rox_resources_find.
+Config file now in XML.
+
+1.1.2
+-----
+Another compilation fix: run autoconf if configure script missing.
+Can now choose what is shown in applet mode.
+
+1.1.1
+-----
+Enable debug correctly.  Clean up some CVS bits.  Fix autocompile.
+
+1.1.0
+-----
+Switch to using ROX-CLib.  Menu created at start so accelerators are
+always available.
+
+1.0.0
+-----
+No changes.  This is the stable version.
+
+0.1.8
+-----
+Fixed bug in memory management.
+
+0.1.7
+-----
+Improved applet appearance for top and bottom panels.  Support menu 
+accelerators.  Add tooltip help.
+
+0.1.6
+-----
+getopt lives in different places on different OS's.  Clicking button-1 on 
+applet runs full program.  Auto-compile in applet mode.  Some work on i18n.
+
+0.1.5
+-----
+Should auto-compile.  Added option to set initial size of applet.  Allow menu
+on applet version.
+
+0.1.4
+-----
+Use new AppInfo.xml stuff.
+
+0.1.3
+-----
+Added applet version.
