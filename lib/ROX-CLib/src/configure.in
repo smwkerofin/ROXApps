@@ -43,11 +43,41 @@ AC_SUBST(GTK_LIBS)
 AC_DEFINE_UNQUOTED(GTK_CFLAGS, "$GTK_CFLAGS")
 AC_DEFINE_UNQUOTED(GTK_LIBS, "$GTK_LIBS")
 
-AC_CHECK_PROG(XML_CONFIG, xml2-config, xml2-config, false)
-if test "$XML_CONFIG" != "false"; then
-  AC_DEFINE(HAVE_XML)
-  AC_DEFINE_UNQUOTED(XML_CONFIG, "$XML_CONFIG")
+AC_MSG_CHECKING(that pkg-config runs)
+if "$PKG_CONFIG" --version > /dev/null 2>&1 ; then
+  AC_MSG_RESULT(yes)
+else
+  AC_MSG_RESULT(no)
+  AC_MSG_ERROR([*** $PKG_CONFIG missing ***
+
+\'$PKG_CONFIG --version\' failed to run - make sure it is inside one of the
+directories in your PATH environment variable!
+
+pkg-config comes with the developement packages for GTK+-2.0, available at:
+
+    http://www.gtk.org])
 fi
+
+AC_DEFUN(ROX_REQUIRE, [
+AC_MSG_CHECKING(that $1 (version >= $2) is installed)
+if "$PKG_CONFIG" --atleast-version=$2 $1 ; then
+  AC_MSG_RESULT(yes)
+else
+  AC_MSG_RESULT(no)
+  if "$PKG_CONFIG" --exists $1 ; then
+    AC_MSG_ERROR(Current version is only `"$PKG_CONFIG" "$1" --modversion`)
+  else
+    AC_MSG_ERROR(Package is not installed)
+  fi
+fi
+])
+
+ROX_REQUIRE(gtk+-2.0, 2.0.1)
+ROX_REQUIRE(glib-2.0, 2.0.3)
+ROX_REQUIRE(libxml-2.0, 2.4.0)
+
+XML_CONFIG="$PKG_CONFIG libxml-2.0"
+AC_SUBST(XML_CONFIG)
 
 dnl Checks for libraries.
 AC_CHECK_LIB(nsl, gethostbyname)

@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: options.c,v 1.1 2003/04/16 09:01:19 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -721,7 +721,7 @@ static void build_options_window(void)
 
 	if (!options_doc)
 	{
-		error(_("Internal error: %s unreadable"), path);
+		rox_error(_("Internal error: %s unreadable"), path);
 		g_free(path);
 		return;
 	}
@@ -1081,7 +1081,7 @@ static void save_options(void)
 				xmlDocGetRootElement(doc));
 
 	if (save_xml_file(doc, save_new) || rename(save_new, save))
-		error(_("Error saving %s: %s"), save, g_strerror(errno));
+		rox_error(_("Error saving %s: %s"), save, g_strerror(errno));
 
 	g_free(save_new);
 	g_free(save);
@@ -1761,5 +1761,8 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 
 /*
- * $Log$
+ * $Log: options.c,v $
+ * Revision 1.1  2003/04/16 09:01:19  stephen
+ * Added options code from filer
+ *
  */
