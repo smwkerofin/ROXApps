@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.7 2004/08/05 17:37:39 stephen Exp $
+# $Id: vidthumb.py,v 1.8 2004/09/25 10:52:11 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -108,7 +108,7 @@ class VidThumb(thumb.Thumbnailler):
             from pos seconds into the video"""
 
             # Ask for 2 frames.  Seems to work better
-            cmd='mplayer -really-quiet -vo png -z 5 -ss %f -frames 2 -nosound "%s"' % (pos, fname)
+            cmd='mplayer -really-quiet -vo png -z 5 -ss %f -frames 2 -nosound -noloop "%s"' % (pos, fname)
             cmd+=' > /dev/null 2>&1'
 
             # If we have 2 frames ignore the first and return the second, else

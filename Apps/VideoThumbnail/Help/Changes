@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+27-Oct-2004
+-----------
+Pass -noloop to mplayer.
+
 21-Aug-2004 (0.1.4)
 -----------
 Frame selection now dependant on the type of file.
