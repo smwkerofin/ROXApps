@@ -1,0 +1,16 @@
+/* The configure script will auto-generate config.h from config.h.in */
+
+/* Define our data */
+#define ROXCLIB_PROJECT "TestLib"
+#define ROXCLIB_PURPOSE "C library for ROX apps"
+#define ROXCLIB_VERSION "0.1.0"
+#define ROXCLIB_AUTHOR  "Stephen Watson"
+#define ROXCLIB_WEBSITE "http://www.kerofin.demon.co.uk/rox/"
+
+#ifdef LIB_IS_FINAL
+#define LIB_PROJECT ROXCLIB_PROJECT
+#define LIB_PURPOSE ROXCLIB_PURPOSE
+#define LIB_VERSION ROXCLIB_VERSION
+#define LIB_AUTHOR  ROXCLIB_AUTHOR
+#define LIB_WEBSITE ROXCLIB_WEBSITE
+#endif
