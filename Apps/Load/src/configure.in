@@ -59,11 +59,6 @@ ROX_REQUIRE(glib-2.0, 2.0.3)
 ROX_REQUIRE(libxml-2.0, 2.4.0)
 ROX_REQUIRE(libgtop-2.0, 2.0.0)
 
-if test -z "$ROX_RUN"; then
-  AC_CHECK_PROG(ROX_RUN, rox_run, rox_run, "$APP_DIR/rox_run")
-fi
-AC_SUBST(ROX_RUN)
-
 dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
@@ -75,27 +70,9 @@ dnl Checks for library functions.
 AC_CHECK_FUNCS(gethostname setlocale bindtextdomain gettext)
 
 dnl Check for ROX-CLib and version
-AC_MSG_CHECKING(ROX-CLib)
-if "$ROX_RUN" ROX-CLib ; then
-  verstr=`"$ROX_RUN" ROX-CLib -v`
-  ver=`echo $verstr | cut -d " " -f 2`
-  set `echo $ver | tr '.' ' '`
-  ROX_CLIB_VERSION=`expr $1 \* 10000 + $2 \* 100 + $3`
-  AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ROX_CLIB_VERSION)
-  AC_MSG_RESULT(version $ver)
-  if test $ROX_CLIB_VERSION -lt 20000 ; then
-    AC_MSG_ERROR(ROX-CLib is too old.  Need 2.0.0 or later not $verstr)
-  fi
-else
-  AC_MSG_ERROR(can't run ROX-CLib)
-fi
+ROX_CLIB(2, 1, 0)
 
 dnl Extract version info from AppInfo.xml
-AC_MSG_CHECKING(version information)
-changequote(,)dnl
-VERSION=`sed -n 's/^.*<Version>\([^<]*\)<\/Version>.*$/\1/p' ../AppInfo.xml`
-changequote([,])dnl
-AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
-AC_MSG_RESULT(version $VERSION)
+ROX_SELF_VERSION
 
 AC_OUTPUT(Makefile)
