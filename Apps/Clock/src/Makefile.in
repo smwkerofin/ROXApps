@@ -40,6 +40,9 @@ clean:
 depend:
 	makedepend -- $(CFLAGS) -- $(SRCS)
 
+zero-install: clean
+	strip "${EXEC}"
+
 Makefile: Makefile.in config.status
 	./config.status
 
