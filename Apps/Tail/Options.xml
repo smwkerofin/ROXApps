@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<options>
+  <section title='Display'>
+    <font override='0' label='Display' name='font'>The font used for display</font>
+  </section>
+</options>
