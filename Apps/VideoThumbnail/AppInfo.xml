@@ -18,7 +18,7 @@
     <Program>
       <Name>mplayer</Name>
       <NeedsVersion>0.90</NeedsVersion>
-      <Link>http://www.mplayer.hu</Link>
+      <Link>http://www.mplayerhq.hu</Link>
     </Program>
   </Dependencies>
   <CanThumbnail>
