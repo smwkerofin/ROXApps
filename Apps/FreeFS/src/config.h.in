@@ -11,9 +11,18 @@
 
 #undef HAVE_UNISTD_H
 #undef HAVE_LIBINTL_H
+#undef HAVE_MNTENT_H
+#undef HAVE_SYS_MNTTAB_H
+
 #undef HAVE_REALPATH
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
+#undef HAVE_STATFS
+#undef HAVE_STATVFS
+#undef HAVE_SETMNTENT
+
+#define FSTAB ""
+#define MTAB ""
 
 #define ROX_CLIB_VERSION ""
 
@@ -24,6 +33,5 @@
 #endif
 #define N_(String) (String)
 
-#define GTK_WINDOW_DIALOG GTK_WINDOW_TOPLEVEL
 #define G_DISABLE_CONST_RETURNS
 

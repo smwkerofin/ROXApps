@@ -57,17 +57,46 @@ fi
 ROX_REQUIRE(gtk+-2.0, 2.0.1)
 ROX_REQUIRE(glib-2.0, 2.0.3)
 ROX_REQUIRE(libxml-2.0, 2.4.0)
-ROX_REQUIRE(libgtop-2.0, 2.0.0)
+dnl ROX_REQUIRE(libgtop-2.0, 2.0.0)
 
 dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
-AC_CHECK_HEADERS(unistd.h libintl.h)
+AC_CHECK_HEADERS(unistd.h libintl.h mntent.h sys/mnttab.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(realpath bindtextdomain gettext)
+AC_CHECK_FUNCS(realpath bindtextdomain gettext statvfs statfs setmntent)
+
+dnl Which file contains the mount entries?
+AC_MSG_CHECKING(for the fs table)
+FSTAB=/dev/null
+for f in /etc/vfstab /etc/fstab ; do
+  if test -r $f ; then
+    FSTAB=$f
+  fi
+done
+if test $FSTAB = /dev/null ; then
+  AC_MSG_ERROR(not found)
+else
+  AC_MSG_RESULT($FSTAB)
+  AC_DEFINE_UNQUOTED(FSTAB, "$FSTAB")
+fi
+
+AC_MSG_CHECKING(for the mounted fs table)
+MTAB=/dev/null
+for f in /etc/mtab /etc/mnttab ; do
+  if test -r $f ; then
+    MTAB=$f
+  fi
+done
+if test $MTAB = /dev/null ; then
+  AC_MSG_ERROR(not found)
+else
+  AC_MSG_RESULT($MTAB)
+  AC_DEFINE_UNQUOTED(MTAB, "$MTAB")
+fi
 
 dnl Check for ROX-CLib and version
 ROX_CLIB(2, 1, 0)

@@ -3,7 +3,8 @@ Versions of FreeFS
 
 2.1.1
 -----
-Minor changes for Zero Install.
+Build system changed for Zero Install.
+Don't use libgtop any more.
 
 2.1.0
 -----

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.25 2004/04/12 13:33:56 stephen Exp $
+ * $Id: freefs.c,v 1.26 2004/05/05 19:20:33 stephen Exp $
  */
 #include "config.h"
 
@@ -29,15 +29,26 @@
 #include <libintl.h>
 #endif
 
+#if defined(HAVE_MNTENT_H)
+#include <mntent.h>
+#define CHECK_MOUNTS
+#elif defined(HAVE_SYS_MNTTAB_H)
+#include <sys/mnttab.h>
+#define CHECK_MOUNTS
+#else
+#undef CHECK_MOUNTS
+#endif
+
 #include <fcntl.h>
-#include <sys/statvfs.h>
 #include <sys/stat.h>
+#ifdef HAVE_STATFS
+#include <sys/vfs.h>
+#endif
+#ifdef HAVE_STATVFS
+#include <sys/statvfs.h>
+#endif
 
 #include <gtk/gtk.h>
-
-#include <glibtop.h>
-#include <glibtop/mountlist.h>
-#include <glibtop/fsusage.h>
 
 #include <libxml/tree.h>
 #include <libxml/parser.h>
@@ -67,8 +78,16 @@ typedef struct free_window {
   guint update_tag;
   
   char *df_dir;
+  char *real_path;
+  gchar *fs_mount;
   
 } FreeWindow;
+
+typedef struct mount_info {
+  gchar *mount_point;
+  gchar *device;
+  gchar *type;
+} MountInfo;
 
 static GList *windows=NULL;
 
@@ -78,6 +97,8 @@ static ROXSOAPServer *server=NULL;
 #define FREEFS_NAMESPACE_URL WEBSITE PROJECT
 
 static GList *fs_exclude=NULL; /* File system types not to offer on menu */
+
+static GList *mount_points=NULL;
 
 /* Call backs & stuff */
 static FreeWindow *make_window(guint32 socket, const char *dir);
@@ -97,6 +118,7 @@ static gboolean open_remote(guint32 xid, const char *path);
 static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
 static gboolean options_remote(void);
+static void get_mount_points(void);
 
 static ROXSOAPServerActions actions[]={
   {"Open", "Path", "Parent", rpc_Open, NULL},
@@ -237,12 +259,6 @@ int main(int argc, char *argv[])
     g_free(tmp);
   }
   
-  /* Set up glibtop and check now */
-  dprintf(4, "set up glibtop");
-  glibtop_init_r(&glibtop_global_server,
-		 (1<<GLIBTOP_SYSDEPS_FSUSAGE)|(1<<GLIBTOP_SYSDEPS_MOUNTLIST),
-		 0);
-  
   if(replace_server || !rox_soap_ping(PROJECT)) {
     dprintf(1, "Making SOAP server");
     server=rox_soap_server_new(PROJECT, FREEFS_NAMESPACE_URL);
@@ -290,6 +306,8 @@ static void remove_window(FreeWindow *win)
 
   gtk_timeout_remove(win->update_tag);
   g_free(win->df_dir);
+  g_free(win->real_path);
+  g_free(win->fs_mount);
   g_free(win);
 
   dprintf(1, "windows=%p, number of active windows=%d", windows,
@@ -327,6 +345,8 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
   fwin=g_new0(FreeWindow, 1);
 
   fwin->df_dir=g_strdup(dir);
+  fwin->real_path=NULL;
+  fwin->fs_mount=NULL;
 
   if(!xid) {
     /* Full window mode */
@@ -544,6 +564,91 @@ static const char *fmt_size(unsigned long long bytes)
   return buf;
 }
 
+int compare_mount_info(const void *a, const void *b)
+{
+  const MountInfo *ma=(const MountInfo *) a;
+  const MountInfo *mb=(const MountInfo *) b;
+
+  return strcmp(ma->mount_point, mb->mount_point);
+}
+
+static MountInfo *next_mount_point(FILE *table)
+{
+  MountInfo *entry=NULL;
+  
+#if defined(HAVE_MNTENT_H)
+  struct mntent *ment;
+#elif defined(HAVE_SYS_MNTTAB_H)
+  struct mnttab ment;
+#endif
+  
+#if defined(HAVE_MNTENT_H)
+  ment=getmntent(table);
+  if(!ment)
+    return NULL;
+
+  rox_debug_printf(3, "ment=%p %s %s %s", ment, ment->mnt_dir,
+		   ment->mnt_fsname, ment->mnt_type);
+  entry=g_new(MountInfo, 1);
+  entry->mount_point=g_strdup(ment->mnt_dir);
+  entry->device=g_strdup(ment->mnt_fsname);
+  entry->type=g_strdup(ment->mnt_type);
+  
+#elif defined(HAVE_SYS_MNTTAB_H)
+  if(getmntent(table, &ment)!=0)
+    return NULL;
+  
+  entry=g_new(MountInfo, 1);
+  entry->mount_point=g_strdup(ment.mnt_mountp);
+  entry->device=g_strdup(ment.mnt_special);
+  entry->type=g_strdup(ment.mnt_fstype);
+
+#endif
+  if(entry)
+    rox_debug_printf(3, "%s %s %s", entry->mount_point,
+		     entry->device, entry->type);
+
+  return entry;
+}
+
+static void get_mount_points(void)
+{
+  GList *lp;
+  MountInfo *entry;
+  FILE *f;
+
+  if(mount_points) {
+    for(lp=mount_points; lp; lp=g_list_next(lp)) {
+      entry=(MountInfo *) lp->data;
+      g_free(entry->mount_point);
+      g_free(entry->device);
+      g_free(entry->type);
+      g_free(entry);
+    }
+    g_list_free(mount_points);
+    mount_points=NULL;
+  }
+
+#ifdef HAVE_SETMNTENT
+  f=setmntent(MTAB, "r");
+#else
+  f=fopen(MTAB, "r");
+#endif
+  if(!f)
+    return;
+
+  for(entry=next_mount_point(f); entry; entry=next_mount_point(f))
+    mount_points=g_list_append(mount_points, entry);
+  
+#ifdef HAVE_SETMNTENT
+  endmntent(f);
+#else
+  fclose(f);
+#endif
+
+  g_list_sort(mount_points, compare_mount_info);
+}
+
 static const char *find_mount_point(const char *fname)
 {
   static char wnm[PATH_MAX];
@@ -554,9 +659,9 @@ static const char *find_mount_point(const char *fname)
   const char *ans=NULL;
   char name[PATH_MAX];
   char *sl;
-  glibtop_mountentry *ents;
-  glibtop_mountlist list;
   int i;
+  GList *lp;
+  MountInfo *entry;
 
 #ifdef HAVE_REALPATH
   dprintf(3, "Calling realpath for %s", fname);
@@ -572,17 +677,20 @@ static const char *find_mount_point(const char *fname)
     return prev_ans;
   }
 
-  ents=glibtop_get_mountlist(&list, FALSE);
+  if(!mount_points)
+    get_mount_points();
   
   strcpy(wnm, name);
   do {
-    for(i=0; i<list.number; i++) {
-      dprintf(5, "%s - %s", wnm, ents[i].mountdir);
-      if(strcmp(wnm, ents[i].mountdir)==0) {
+    for(lp=mount_points; lp; lp=g_list_next(lp)) {
+      entry=(MountInfo *) lp->data;
+      dprintf(5, "%s - %s", wnm, entry->mount_point);
+      if(strcmp(wnm, entry->mount_point)==0) {
 	ans=wnm;
 	break;
       }
     }
+    
     if(ans)
       break;
     sl=strrchr(wnm, '/');
@@ -599,8 +707,6 @@ static const char *find_mount_point(const char *fname)
   prev=g_strdup(name);
   prev_ans=ans;
 
-  free(ents);
-
   return ans? ans: failed;
 }
 
@@ -616,11 +722,20 @@ static gboolean update_fs_values(FreeWindow *fwin)
   dprintf(3, "update_fs_values(\"%s\")", fwin->df_dir);
   
   if(fwin->df_dir) {
-    glibtop_fsusage buf;
+#if defined(HAVE_STATVFS)
+    struct statvfs buf;
+#elif defined(HAVE_STATFS)
+    struct statfs buf;
+#else
+#error No way to get FS stats
+#endif
 
     errno=0;
-    glibtop_get_fsusage(&buf, fwin->df_dir);
-    ok=(errno==0);
+#if defined(HAVE_STATVFS)
+    ok=statvfs(fwin->df_dir, &buf)==0;
+#else
+    ok=statfs(fwin->df_dir, &buf)==0;
+#endif
     if(!ok)
       perror(fwin->df_dir);
     
@@ -630,21 +745,39 @@ static gboolean update_fs_values(FreeWindow *fwin)
       gdouble fused;
       char tbuf[32];
       
-      dprintf(5, "%lld %lld %lld", buf.blocks, buf.bfree,
-	     buf.bavail);
-      
-      total=BLOCKSIZE*(unsigned long long) buf.blocks;
-      used=BLOCKSIZE*(unsigned long long) (buf.blocks-buf.bfree);
-      avail=BLOCKSIZE*(unsigned long long) buf.bavail;
+#if defined(HAVE_STATVFS)
+      rox_debug_printf(5, "%lu %lu %lu %lu", buf.f_frsize, buf.f_blocks,
+		       buf.f_bfree, buf.f_bavail);
+
+      total=buf.f_frsize*(unsigned long long) buf.f_blocks;
+      used=buf.f_frsize*(unsigned long long) (buf.f_blocks-buf.f_bfree);
+      avail=buf.f_frsize*(unsigned long long) buf.f_bavail;
       dprintf(4, "%llu %llu %llu", total, used, avail);
 
-      if(buf.blocks>0) {
-	fused=(100.f*(buf.blocks-buf.bavail))/((gdouble) buf.blocks);
+      if(buf.f_blocks>0) {
+	fused=(100.f*(buf.f_blocks-buf.f_bavail))/((gdouble) buf.f_blocks);
 	if(fused>100.)
 	  fused=100.;
       } else {
 	fused=0.;
       }
+#else
+      dprintf(5, "%ld %ld %ld %ld", buf.f_bsize, buf.f_blocks, buf.f_bfree,
+	     buf.f_bavail);
+
+      total=buf.f_bsize*(unsigned long long) buf.f_blocks;
+      used=buf.f_bsize*(unsigned long long) (buf.f_blocks-buf.f_bfree);
+      avail=buf.f_bsize*(unsigned long long) buf.f_bavail;
+      dprintf(4, "%llu %llu %llu", total, used, avail);
+
+      if(buf.f_blocks>0) {
+	fused=(100.f*(buf.f_blocks-buf.f_bavail))/((gdouble) buf.f_blocks);
+	if(fused>100.)
+	  fused=100.;
+      } else {
+	fused=0.;
+      }
+#endif
       dprintf(4, "%2.0f %%", fused);
 
       if(!fwin->is_applet) {
@@ -692,6 +825,7 @@ static gboolean update_fs_values(FreeWindow *fwin)
 
 static void do_update(void)
 {
+  get_mount_points();
   update_fs_values(current_window);
 }
 
@@ -878,9 +1012,9 @@ static GtkItemFactoryEntry menu_items[] = {
                                 "<StockItem>", GTK_STOCK_OPEN},
   { N_("/Open/FS root"),	NULL, do_opendir, 1,       
                                 "<StockItem>", GTK_STOCK_OPEN},
-  { N_("/Scan"),                NULL, NULL, 0, "<Branch>"},
-  { N_("/Scan/By name"),	NULL, NULL, 0, NULL },
-  { N_("/Scan/By mount point"),	NULL, NULL, 1, NULL },
+  { N_("/Scan"),                NULL, NULL, 0, NULL},
+/*  { N_("/Scan/By name"),	NULL, NULL, 0, NULL },
+  { N_("/Scan/By mount point"),	NULL, NULL, 1, NULL },*/
   { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
   { N_("/Close"), 	        NULL, close_window, 0,      
                                 "<StockItem>", GTK_STOCK_CLOSE},
@@ -900,16 +1034,7 @@ static void save_menus(void)
   }
 }
 
-static GtkWidget *scan_by_name_menu=NULL;
-static GtkWidget *scan_by_mount_menu=NULL;
-
-int compare_mountentry(const void *a, const void *b)
-{
-  const glibtop_mountentry *ma=(const glibtop_mountentry *) a;
-  const glibtop_mountentry *mb=(const glibtop_mountentry *) b;
-
-  return strcmp(ma->mountdir, mb->mountdir);
-}
+static GtkWidget *scan_menu=NULL;
 
 static void menu_set_target(gchar *mount)
 {
@@ -927,50 +1052,49 @@ static void menu_item_destroyed(GtkWidget *item, gpointer data)
 static void update_menus(void)
 {
   GtkWidget *item;
-  gchar *name;
   gchar *mount;
-  GtkWidget *name_menu;
-  GtkWidget *mount_menu;
+  gchar *lbl;
+  GtkWidget *mount_menu, *l;
   int i;
   
-  glibtop_mountlist mount_info;
-  glibtop_mountentry *mounts;
-
-  name_menu=gtk_menu_new();
   mount_menu=gtk_menu_new();
 
-  dprintf(3, "name_menu=%p, mount_menu=%p", name_menu, mount_menu);
-  mounts=glibtop_get_mountlist(&mount_info, 0);
-  if(mounts) {
-    qsort(mounts, mount_info.number, sizeof(*mounts), compare_mountentry);
-    for(i=0; i<mount_info.number; i++) {
-      if(g_list_find_custom(fs_exclude, mounts[i].type, (GCompareFunc) strcmp))
-	continue;
+  dprintf(3, "mount_menu=%p", mount_menu);
+  if(!mount_points)
+    get_mount_points();
+  if(mount_points) {
+    GList *lp;
+    MountInfo *entry;
+    
+    for(lp=mount_points; lp; lp=g_list_next(lp)) {
+      entry=(MountInfo *) lp->data;
       
-      mount=g_strdup(mounts[i].mountdir);
-      name=mounts[i].devname;
-      dprintf(2, "name=%s, mount=%s type=%s", name, mount, mounts[i].type);
+      if(g_list_find_custom(fs_exclude, entry->type, (GCompareFunc) strcmp))
+	continue;
 
-      item=gtk_menu_item_new_with_label(name);
+      mount=g_strdup(entry->mount_point);
+      lbl=g_strdup_printf("<b>%s</b> (%s)", entry->mount_point, entry->device);
+
+      dprintf(2, "mount=%s type=%s", mount, entry->type);
+
+      /*item=gtk_menu_item_new_with_label(lbl);*/
+      item=gtk_menu_item_new();
+      l=gtk_label_new("");
+      gtk_misc_set_alignment(GTK_MISC(l), 0.0, 0.5);
+      gtk_label_set_markup(GTK_LABEL(l), lbl);
+      gtk_container_add(GTK_CONTAINER(item), l);
       gtk_signal_connect_object(GTK_OBJECT(item), "activate",
 				GTK_SIGNAL_FUNC(menu_set_target), mount);
       gtk_signal_connect(GTK_OBJECT(item), "destroy",
 			 GTK_SIGNAL_FUNC(menu_item_destroyed), mount);
-      gtk_menu_shell_append(GTK_MENU_SHELL(name_menu), item);
-
-      item=gtk_menu_item_new_with_label(mount);
-      gtk_signal_connect_object(GTK_OBJECT(item), "activate",
-				GTK_SIGNAL_FUNC(menu_set_target), mount);
       gtk_menu_shell_append(GTK_MENU_SHELL(mount_menu), item);
-    }
 
-    free(mounts);
+      g_free(lbl);
+    }
   }
 
-  gtk_widget_show_all(name_menu);
-  gtk_menu_item_set_submenu(GTK_MENU_ITEM(scan_by_name_menu), name_menu);
   gtk_widget_show_all(mount_menu);
-  gtk_menu_item_set_submenu(GTK_MENU_ITEM(scan_by_mount_menu), mount_menu);
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(scan_menu), mount_menu);
 }
 
 static void menu_create_menu(GtkWidget *window)
@@ -1002,12 +1126,9 @@ static void menu_create_menu(GtkWidget *window)
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
 
   /*name=g_strdup_printf("%s")*/
-  scan_by_name_menu=gtk_item_factory_get_widget(item_factory,
-						"/Scan/By name");
-  dprintf(3, "scan_by_name_menu=%p", scan_by_name_menu);
-  scan_by_mount_menu=gtk_item_factory_get_widget(item_factory,
-						"/Scan/By mount point");
-  dprintf(3, "scan_by_mount_menu=%p", scan_by_mount_menu);
+  scan_menu=gtk_item_factory_get_widget(item_factory,
+						"/Scan");
+  dprintf(3, "scan_menu=%p", scan_menu);
 }
 
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
@@ -1216,6 +1337,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.26  2004/05/05 19:20:33  stephen
+ * Extra debug
+ *
  * Revision 1.25  2004/04/12 13:33:56  stephen
  * Remove dead code.  Open options dialog from command line or SOAP message.  Stock items in menus.
  *

@@ -65,7 +65,6 @@ Compiling
 
 You will need:
   GTK+ 2.0 or later
-  Libgtop2
   ROX-CLib 2.1.0
 
 Run FreeFS/AppRun --compile.  It should also compile itself when first run
