@@ -1,6 +1,10 @@
 Tail
 ====
 
+0.1.6
+-----
+Updated menu code.  Reads <Choices>/Tail/gtkrc.
+
 0.1.5
 -----
 Better debug output.  Save menu accelerators.  Scrolling to end of
