@@ -1,6 +1,13 @@
 Changes to ROX-CLib by Version
 ==============================
 
+0.1.10
+------
+Better way of accessing web site (by running a URI file).  Improvement to
+language checking in rox_resources.c.  Visit by the const fairy in choices.h.
+Updated pkg program to check for libxml2.  Added rox.c to access ROX-CLib's 
+version number.
+
 0.1.9
 -----
 Added applet.c for things useful in implementing applets.

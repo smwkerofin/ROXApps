@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
+<!DOCTYPE AppInfo SYSTEM "/home/stephen/src/rox/AppInfo.dtd">
 <AppInfo>
   <About>
     <Purpose>C library for ROX apps</Purpose>
-        <Version>0.1.9 (9 January 2002)</Version>
+        <Version>0.1.10 (13 February 2002)</Version>
     <Authors>Stephen Watson, Thomas Leonard</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>

@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.2 2001/07/17 14:42:45 stephen Exp $
+ * $Id: choices.c,v 1.3 2001/11/05 13:59:46 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -95,7 +95,7 @@ void choices_init(void)
  *
  * Free the list using choices_free_list().
  */
-GPtrArray *choices_list_dirs(char *dir)
+GPtrArray *choices_list_dirs(const char *dir)
 {
 	GPtrArray	*list;
 	gchar		**cdir = dir_list;
@@ -140,7 +140,7 @@ void choices_free_list(GPtrArray *list)
  * The return values may be NULL - use built-in defaults - otherwise
  * g_free() the result.
  */
-gchar *choices_find_path_load(char *leaf, char *dir)
+gchar *choices_find_path_load(const char *leaf, const char *dir)
 {
 	gchar		**cdir = dir_list;
 
@@ -170,7 +170,8 @@ gchar *choices_find_path_load(char *leaf, char *dir)
  *
  * g_free() the result.
  */
-gchar *choices_find_path_save(char *leaf, char *dir, gboolean create)
+gchar *choices_find_path_save(const char *leaf, const char *dir,
+			      gboolean create)
 {
 	gchar	*path, *retval;
 	

@@ -21,16 +21,16 @@ PROG = pkg
 
 SRCS = pkg.c error.c choices.c infowin.c rox_debug.c rox_dnd.c
 SRCS += gtksavebox.c rox_path.c rox_resources.c rox_soap.c test.c
-SRCS += rox_filer_action.c applet.c
+SRCS += rox_filer_action.c applet.c rox.c
 OBJECTS = pkg.o 
 
 LIBOBJECTS = error.o choices.o infowin.o rox_debug.o rox_dnd.o
 LIBOBJECTS += gtksavebox.o rox_path.o rox_resources.o rox_soap.o
-LIBOBJECTS += rox_filer_action.o applet.o
+LIBOBJECTS += rox_filer_action.o applet.o rox.o
 
 INCLUDES = rox-clib.h error.h choices.h infowin.h rox_debug.h rox_dnd.h
 INCLUDES += gtksavebox.h rox_path.h rox_resources.h rox_soap.h
-INCLUDES += rox_filer_action.h applet.h
+INCLUDES += rox_filer_action.h applet.h rox.h
 
 ############ Things to keep the same
 

@@ -1,20 +1,23 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.c,v 1.1.1.1 2001/05/29 14:09:59 stephen Exp $
+ * $Id: infowin.c,v 1.2 2001/11/05 13:59:18 stephen Exp $
  */
 #include "rox-clib.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <unistd.h>
 
 #include <gtk/gtk.h>
 #include "infowin.h"
 
+#define DEBUG 1
 #include "rox_debug.h"
+#include "rox_filer_action.h"
 
 static void info_win_finalize (GtkObject *object);
 
@@ -54,6 +57,9 @@ static void goto_website(GtkWidget *widget, gpointer data)
   int pid;
   char cpath[1024];
   char *path, *dir, *file;
+  FILE *out;
+  char tfname[256];
+  time_t now;
 
   g_return_if_fail(IS_INFO_WIN(data));
 
@@ -61,6 +67,18 @@ static void goto_website(GtkWidget *widget, gpointer data)
 
   if(!iw->web_site)
     return;
+
+  time(&now);
+  sprintf(tfname, "/tmp/infowin.%d.%ld.uri", (int) geteuid(), (long) now);
+  out=fopen(tfname, "w");
+  if(out) {
+    fprintf(out, "URL=%s\n", iw->web_site);
+    fclose(out);
+    dprintf(2, "access %s via %s", iw->web_site, tfname);
+    rox_filer_run(tfname);
+    if(!rox_filer_have_error())
+      return;
+  }
 
   pid=fork();
 
@@ -268,6 +286,9 @@ static void info_win_finalize (GtkObject *object)
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.2  2001/11/05 13:59:18  stephen
+ * Changed printf to dprintf
+ *
  * Revision 1.1.1.1  2001/05/29 14:09:59  stephen
  * Initial version of the library
  *

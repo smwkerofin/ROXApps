@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.2 2001/12/07 11:25:01 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.3 2002/01/07 15:39:01 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -11,6 +11,32 @@
 #include <glib.h>
 #ifdef HAVE_XML
 #include <parser.h>
+#else
+
+/* Fake the XML stuff */
+typedef struct {
+  char *href;
+} xmlNs;
+typedef xmlNs *xmlNsPtr;
+typedef struct {
+  xmlNode *xmlChildrenNode;
+  int type;
+  char *name;
+  xmlNsPtr ns;
+} xmlNode;
+typedef xmlNode *xmlNodePtr;
+typedef struct {
+  xmlNodePtr children;
+} xmlDoc;
+typedef xmlDoc *xmlDocPtr;
+#define xmlNewDoc(ver) (NULL)
+#define xmlNewDocNode(d, ns, root, t) (NULL)
+#define xmlSetNs(node, ns)
+#define xmlNewChild(node, ns, elem, content) (NULL)
+#define xmlFreeDoc(doc)
+#define xmlDocGetRootElement(doc) (NULL)
+#define xmlNodeGetContent(node) ("")
+
 #endif
 
 #include "rox_soap.h"
@@ -54,6 +80,10 @@ static void make_soap(const char *action, xmlDocPtr *rpc, xmlNodePtr *act)
   xmlNsPtr rox_ns=NULL;
 
   doc=xmlNewDoc("1.0");
+  if(!doc) {
+    last_error="XML document creation failed";
+    return;
+  }
   
   doc->children=xmlNewDocNode(doc, env_ns, "Envelope", NULL);
   env_ns=xmlNewNs(doc->children, ENV_NAMESPACE_URL, "env");
@@ -270,7 +300,7 @@ static xmlNode *get_subnode(xmlNode *node, const char *namespaceURI,
 			continue;
 
 		dprintf(3, "node->ns=%s namespaceURI=%s",
-			node->ns? node->ns->href: "NULL",
+			node->ns? (char *) node->ns->href: "NULL",
 			namespaceURI? namespaceURI: (const char *) "NULL");
 		if (node->ns == NULL || namespaceURI == NULL)
 		{
@@ -424,6 +454,10 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.3  2002/01/07 15:39:01  stephen
+ * Updated SOAP namespaces, added rox_filer_version() and improved
+ * send_soap() to allow some methods to specify the expected reply.
+ *
  * Revision 1.2  2001/12/07 11:25:01  stephen
  * More work on SOAP, mainly to get rox_filer_file_type() working.
  *

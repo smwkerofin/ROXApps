@@ -47,6 +47,26 @@ Brief listing of functions
 
 Organized by header file.
 
+rox.h
+-----
+Top level include.  It includes:
+  choices.h
+  error.h
+  rox_debug.h
+  rox_resources.h
+  infowin.h
+
+Two functions are declared:
+
+int rox_clib_version_number(void)
+
+Returns the version number of the library, so that 1.2.3 is encoded as 10203.
+
+const char *rox_clib_version_string(void);
+
+Returns a string of the version number of the library, in the form
+"x.y.z (nth month year)".
+
 choices.h
 ---------
 
@@ -56,7 +76,7 @@ void choices_init(void)
 
 Must be called before the other choices_* calls.
 
-GPtrArray *choices_list_dirs(char *dir)
+GPtrArray *choices_list_dirs(const char *dir)
 
 Returns an array of the directories in CHOICESPATH which contain
 a subdirectory called 'dir'.  The result should be freed by passing it
@@ -66,7 +86,7 @@ void choices_free_list(GPtrArray *list)
 
 Frees the list returned by choices_list_dirs()
 
-gchar *choices_find_path_load(char *leaf, char *dir)
+gchar *choices_find_path_load(const char *leaf, const char *dir)
 
 Get the pathname of a choices file to load. Eg:
 
@@ -76,7 +96,8 @@ Get the pathname of a choices file to load. Eg:
 The return values may be NULL - use built-in defaults - otherwise
 g_free() the result.
 
-gchar *choices_find_path_save(char *leaf, char *dir, gboolean create)
+gchar *choices_find_path_save(const char *leaf, const char *dir, 
+				gboolean create)
 
 Returns the pathname of a file to save to, or NULL if saving is
 disabled. If 'create' is TRUE then intermediate directories will
@@ -213,6 +234,15 @@ directly.  Returns the full path if found (pass to g_free when done)
 or NULL if not.  lang may be ROX_RESOURCES_NO_LANG to not search
 for sub-directories, or ROX_RESOURCES_DEFAULT_LANG for the sub-directory
 appropriate for the selected language.
+
+If the language is set to en_GB.ISO8859-1 then the sub-directories tried
+are:
+	{Choices}/app_name/en_GB.ISO8859-1/
+	{Choices}/app_name/en.ISO8859-1/
+	{Choices}/app_name/en_GB/
+	{Choices}/app_name/en/
+	{Choices}/app_name/
+in that order.
 
 rox_soap.h
 ----------
