@@ -1,6 +1,10 @@
 Versions of Diff
 ================
 
+1.0.2
+-----
+Fix for getting incomplete lines because of buffering.
+
 1.0.1
 -----
 Make sure AppRun can find rox_run.

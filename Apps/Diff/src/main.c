@@ -8,7 +8,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.4 2002/01/30 10:17:41 stephen Exp $
+ * $Id: main.c,v 1.5 2002/03/04 11:27:24 stephen Exp $
  */
 #include "config.h"
 
@@ -67,6 +67,8 @@ typedef struct diff_window {
   gchar *fname[2];
   int tag;
   int pid;
+  gboolean last_was_nl;
+  GdkColor *colour;
 } DiffWindow;
 
 static DiffWindow window;
@@ -307,6 +309,7 @@ static void make_window(DiffWindow *window)
   gtk_widget_show(text);
 
   window->diffs=text;
+  window->last_was_nl=TRUE;
 }
 
 #if USE_XML
@@ -773,19 +776,21 @@ static void write_window_to(GtkWidget *widget, const char *fname,
   fclose(out);
 }
 
-static void process_diff_line(GtkWidget *text, char *line)
+static void process_diff_line(GtkWidget *text, char *line, DiffWindow *win)
 {
-  GdkColor *col=NULL;
   GdkFont *font=NULL;
 
-  if(line[0]=='+')
-    col=&col_add;
-  else if(strncmp(line, "- ", 2)==0)
-    col=&col_del;
-  else if(line[0]=='!')
-    col=&col_chn;
-  else if(line[0]=='*' || strncmp(line, "--", 2)==0)
-    col=&col_ctl;
+  if(win->last_was_nl) {
+    win->colour=NULL;
+    if(line[0]=='+')
+      win->colour=&col_add;
+    else if(strncmp(line, "- ", 2)==0)
+      win->colour=&col_del;
+    else if(line[0]=='!')
+      win->colour=&col_chn;
+    else if(line[0]=='*' || strncmp(line, "--", 2)==0)
+      win->colour=&col_ctl;
+  }
   
   if(options.font_name)
     font=gdk_font_load(options.font_name);
@@ -793,8 +798,7 @@ static void process_diff_line(GtkWidget *text, char *line)
     font=text->style->font;
   gdk_font_ref(font);
 
-  gtk_text_insert(GTK_TEXT(text), font, col, NULL, line, strlen(line));
-  gtk_text_insert(GTK_TEXT(text), font, col, NULL, "\n", 1);
+  gtk_text_insert(GTK_TEXT(text), font, win->colour, NULL, line, strlen(line));
   
   gdk_font_unref(font);
 }
@@ -806,6 +810,7 @@ static void diff_reader(gpointer data, gint fd, GdkInputCondition condition)
   static int bufsize=0;
   int nbready, nbread;
   char *nl;
+  gchar *str;
 
   if(ioctl(fd, FIONREAD, &nbready)<0)
     return;
@@ -830,8 +835,13 @@ static void diff_reader(gpointer data, gint fd, GdkInputCondition condition)
       char *st=nl+1;
       nl=strchr(st, '\n');
       if(nl) {
-	*nl=0;
-	process_diff_line(win->diffs, st);
+	str=g_strndup(st, nl-st+1);
+	process_diff_line(win->diffs, str, win);
+	g_free(str);
+	win->last_was_nl=TRUE;
+      } else {
+	process_diff_line(win->diffs, st, win);
+	win->last_was_nl=FALSE;
       }
     } while(nl);
   }
@@ -874,6 +884,9 @@ static void show_diffs(DiffWindow *win)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.5  2002/03/04 11:27:24  stephen
+ * Added support for shared ROX-CLib.
+ *
  * Revision 1.4  2002/01/30 10:17:41  stephen
  * Added -h and -v options.
  *
