@@ -1,0 +1,10 @@
+#!/bin/sh
+
+APP_DIR=`dirname $0` export APP_DIR
+
+if [ x"$@" = x ] ; then
+  exec python $APP_DIR/doRead.py
+fi
+
+mime_type=`rox -m "$@"`
+exec python $APP_DIR/doSend.py "$@" $mime_type
