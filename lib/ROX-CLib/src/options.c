@@ -1,5 +1,5 @@
 /*
- * $Id: options.c,v 1.3 2004/10/23 11:49:59 stephen Exp $
+ * $Id: options.c,v 1.4 2004/10/29 13:36:07 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -154,7 +154,9 @@ void options_init_with_domain(const char *project, const char *domain)
 	option_hash = g_hash_table_new(g_str_hash, g_str_equal);
 	widget_builder = g_hash_table_new(g_str_hash, g_str_equal);
 
-	path = rox_choices_load("Options", project, DOMAIN);
+	path = rox_choices_load("Options.xml", project, DOMAIN);
+	if(!path)
+	  path = rox_choices_load("Options", project, DOMAIN);
 	if (path) {
 		/* Load in all the options set in the filer, storing them
 		 * temporarily in the loading hash table.
@@ -1078,7 +1080,7 @@ static void save_options(void)
 	GList	*next;
 	gchar	*save, *save_new;
 
-	save = rox_choices_save("Options", PROJECT, DOMAIN);
+	save = rox_choices_save("Options.xml", PROJECT, DOMAIN);
 	if (!save)
 		goto out;
 
@@ -1772,6 +1774,9 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: options.c,v $
+ * Revision 1.4  2004/10/29 13:36:07  stephen
+ * Added rox_choices_load()/save()
+ *
  * Revision 1.3  2004/10/23 11:49:59  stephen
  * Added window counting
  *
