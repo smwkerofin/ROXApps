@@ -17,13 +17,16 @@ LIBFILE.a = ${LIBDIR}/lib${LIBNAME}.a
 
 PROG = pkg
 
-SRCS = pkg.c error.c choices.c infowin.c
+SRCS = pkg.c error.c choices.c infowin.c rox_debug.c rox_dnd.c
+SRCS += gtksavebox.c rox_path.c
 
 OBJECTS = pkg.o 
 
-LIBOBJECTS = error.o choices.o infowin.o
+LIBOBJECTS = error.o choices.o infowin.o rox_debug.o rox_dnd.o
+LIBOBJECTS += gtksavebox.o rox_path.o
 
-INCLUDES = rox-clib.h error.h choices.h infowin.h
+INCLUDES = rox-clib.h error.h choices.h infowin.h rox_debug.h rox_dnd.h
+INCLUDES += gtksavebox.h rox_path.h
 
 ############ Things to keep the same
 
@@ -50,7 +53,7 @@ ${INCLUDEDIR}:  ${PLATFORM_DIR}
 	cp ${INCLUDES} ${INCLUDEDIR}
 
 ${LIBFILE.a}: ${LIBDIR} ${LIBOBJECTS}
-	ar -r ${LIBFILE.a} ${LIBOBJECTS}
+	ar -rc ${LIBFILE.a} ${LIBOBJECTS}
 
 clean:
 	rm -f *.o Makefile.bak
