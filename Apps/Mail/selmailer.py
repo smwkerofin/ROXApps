@@ -1,11 +1,8 @@
-from gtk import *
+import rox.loading
+from rox import g
 #from newmailer import NewMailer
 from mailers import Mailer
 from my_support import *
-
-TARGET_URI_LIST=0
-targets=[('text/uri-list', 0, TARGET_URI_LIST)]
-text_uri_list=atom_intern("text/uri-list")
 
 def set_mailer(widget, sm):
     mailer=widget.get_data('mailer')
@@ -14,30 +11,33 @@ def set_mailer(widget, sm):
 
     sm.update_win()
 
-class SelectMailer(GtkDialog):
+class SelectMailer(g.Dialog, rox.loading.XDSLoader):
     def __init__(self, mailers, defmailer=None):
+        g.Dialog.__init__(self)
+        rox.loading.XDSLoader.__init__(self, None)
         if defmailer==None:
             defmailer=mailers[0]
         self.current=defmailer
         self.inform=None
+        self.inform_args=None
         self.mailers=mailers
         self.updating=0
         self.list_size=0
             
-        GtkDialog.__init__(self)
+        g.Dialog.__init__(self)
         self.set_title('Select mail program')
 
         self.vbox.set_spacing(4)
-        hbox=GtkHBox(spacing=4)
+        hbox=g.HBox(spacing=4)
         self.vbox.pack_start(hbox)
 
-        label=GtkLabel('Mailers')
-        hbox.pack_start(label, FALSE)
+        label=g.Label('Mailers')
+        hbox.pack_start(label, g.FALSE)
 
-        self.mailer_menu=GtkOptionMenu()
-        hbox.pack_start(self.mailer_menu, FALSE)
+        self.mailer_menu=g.OptionMenu()
+        hbox.pack_start(self.mailer_menu, g.FALSE)
 
-        menu=GtkMenu()
+        menu=g.Menu()
         self.mailer_menu.set_menu(menu)
 
         mw=0
@@ -47,7 +47,7 @@ class SelectMailer(GtkDialog):
         for mailer in mailers:
             if mailer==defmailer:
                 set=i
-            item=GtkMenuItem(mailer.name)
+            item=g.MenuItem(mailer.name)
             item.set_data('mailer', mailer)
             item.show()
             size=item.size_request()
@@ -61,19 +61,19 @@ class SelectMailer(GtkDialog):
             i=i+1
             self.list_size+=1
 
-        self.mailer_menu.set_usize(mw+50, mh+4)
+        #self.mailer_menu.set_usize(mw+50, mh+4)
 
-        table=GtkTable(6, 2)
+        table=g.Table(6, 2)
         self.vbox.pack_start(table)
 
-        label=GtkLabel('Name')
-        table.attach(label, 0, 1, 0, 1, xoptions=FILL, yoptions=FILL,
+        label=g.Label('Name')
+        table.attach(label, 0, 1, 0, 1, xoptions=g.FILL, yoptions=g.FILL,
                      xpadding=2, ypadding=2)
 
-        self.name=GtkEntry()
-        self.name.set_text(defmailer.name)
-        #self.name.set_editable(FALSE)
-        table.attach(self.name, 1, 2, 0, 1, xpadding=2, ypadding=2)
+        self.name_ent=g.Entry()
+        self.name_ent.set_text(defmailer.name)
+        #self.name_ent.set_editable(g.FALSE)
+        table.attach(self.name_ent, 1, 2, 0, 1, xpadding=2, ypadding=2)
         
         def name_change(widget, data):
             sm=data
@@ -81,16 +81,18 @@ class SelectMailer(GtkDialog):
             sm.current.name=widget.get_text()
             sm.update_win()
 
-        self.name.connect('changed', name_change, self)
+        self.name_ent.connect('changed', name_change, self)
         
-        label=GtkLabel('Location')
-        table.attach(label, 0, 1, 1, 2, xoptions=FILL, yoptions=FILL,
+        label=g.Label('Location')
+        table.attach(label, 0, 1, 1, 2, xoptions=g.FILL, yoptions=g.FILL,
                      xpadding=2, ypadding=2)
 
-        self.loc=GtkEntry()
+        self.loc=g.Entry()
         self.loc.set_text(defmailer.loc)
-        #self.loc.set_editable(FALSE)
+        #self.loc.set_editable(g.FALSE)
         table.attach(self.loc, 1, 2, 1, 2, xpadding=2, ypadding=2)
+
+        self.xds_proxy_for(self.loc)
 
         def loc_change(widget, data):
             sm=data
@@ -100,33 +102,13 @@ class SelectMailer(GtkDialog):
 
         self.loc.connect('changed', loc_change, self)
         
-        self.loc.drag_dest_set(DEST_DEFAULT_ALL, targets,
-                               GDK.ACTION_COPY | GDK.ACTION_PRIVATE)
-        
-        def drag_drop(widget, context, x, y, time, data=None):
-            widget.drag_get_data(context, text_uri_list, time)
-            return TRUE
-
-        def drag_data_received(widget, context, x, y, sel_data, info, time, data):
-            if sel_data.data==None:
-                widget.drag_finish(context, FALSE, FALSE, time)
-                return
-
-            sm=data
-            if info==TARGET_URI_LIST:
-                sm.got_uri_list(widget, context, sel_data, time)
-            else:
-                widget.drag_finish(context, FALSE, FALSE, time)
-
-        self.loc.connect("drag_data_received", drag_data_received, self)
-        
-        label=GtkLabel('Read command')
-        table.attach(label, 0, 1, 2, 3, xoptions=FILL, yoptions=FILL,
+        label=g.Label('Read command')
+        table.attach(label, 0, 1, 2, 3, xoptions=g.FILL, yoptions=g.FILL,
                      xpadding=2, ypadding=2)
 
-        self.read=GtkEntry()
+        self.read=g.Entry()
         self.read.set_text(defmailer.read)
-        #self.read.set_editable(FALSE)
+        #self.read.set_editable(g.FALSE)
         table.attach(self.read, 1, 2, 2, 3, xpadding=2, ypadding=2)
 
         def read_change(widget, data):
@@ -137,17 +119,17 @@ class SelectMailer(GtkDialog):
 
         self.read.connect('changed', read_change, self)
 
-        self.read_expl=GtkLabel()
+        self.read_expl=g.Label('')
         self.read_expl.set_text(defmailer.read_command())
         table.attach(self.read_expl, 1, 2, 3, 4, xpadding=2, ypadding=2)
        
-        label=GtkLabel('Send command')
-        table.attach(label, 0, 1, 4, 5, xoptions=FILL, yoptions=FILL,
+        label=g.Label('Send command')
+        table.attach(label, 0, 1, 4, 5, xoptions=g.FILL, yoptions=g.FILL,
                      xpadding=2, ypadding=2)
 
-        self.send=GtkEntry()
+        self.send=g.Entry()
         self.send.set_text(defmailer.send)
-        #self.send.set_editable(FALSE)
+        #self.send.set_editable(g.FALSE)
         table.attach(self.send, 1, 2, 4, 5, xpadding=2, ypadding=2)
 
         def send_change(widget, data):
@@ -158,7 +140,7 @@ class SelectMailer(GtkDialog):
 
         self.send.connect('changed', send_change, self)
 
-        self.send_expl=GtkLabel()
+        self.send_expl=g.Label('')
         self.send_expl.set_text(defmailer.send_command('root@localhost',
                                                       'file_to_send',
                                                 'This is the file you wanted'))
@@ -170,16 +152,13 @@ class SelectMailer(GtkDialog):
 
         def set(widget, sm):
             if sm.inform!=None:
-                sm.inform(sm, sm.current)
-            else:
-                sm.hide()
+                sm.inform(sm, sm.current, sm.inform_args)
+            sm.hide()
                 
         def cancel(widget, sm):
             if sm.inform!=None:
-                sm.inform(sm, None)
-            else:
-                sm.hide()
-                #sm.destroy()
+                sm.inform(sm, None, sm.inform_args)
+            sm.hide()
 
         def newm(widget, sm):
             sm.update_current()
@@ -196,29 +175,34 @@ class SelectMailer(GtkDialog):
                 
         hbox=self.action_area
 
-        button=GtkButton("Cancel")
+        button=g.Button("Cancel")
         button.connect('clicked', cancel, self)
-        hbox.pack_end(button, expand=FALSE)
+        hbox.pack_end(button, expand=g.FALSE)
 
-        button=GtkButton("Set")
+        button=g.Button("Set")
         button.connect('clicked', set, self)
-        hbox.pack_end(button, expand=FALSE)
+        hbox.pack_end(button, expand=g.FALSE)
         
-        #button=GtkButton("Edit mailer")
+        #button=g.Button("Edit mailer")
         #button.connect('clicked', edit, self)
         #hbox.pack_end(button, expand=FALSE)
         
-        button=GtkButton("New mailer")
+        button=g.Button("New mailer")
         button.connect('clicked', newm, self)
-        hbox.pack_end(button, expand=FALSE)
+        hbox.pack_end(button, expand=g.FALSE)
         
         hbox.show_all()
+
+    def xds_load_from_file(self, path):
+        self.loc.set_text(path)
+        self.update_win()
         
-    def set_callback(self, fn):
+    def set_callback(self, fn, args):
         self.inform=fn
+        self.inform_args=args
 
     def add_mailer(self, mailer):
-        item=GtkMenuItem(mailer.name)
+        item=g.MenuItem(mailer.name)
         item.set_data('mailer', mailer)
         item.show()
         item.connect("activate", set_mailer, self)
@@ -243,7 +227,7 @@ class SelectMailer(GtkDialog):
         if self.updating>0:
             return
         self.updating=1
-        self.name.set_text(self.current.name)
+        self.name_ent.set_text(self.current.name)
         self.loc.set_text(self.current.loc)
         if self.current.read is None:
             self.read.set_text("%s")
@@ -258,19 +242,6 @@ class SelectMailer(GtkDialog):
         self.updating=0
 
     
-    def got_uri_list(self, widget, context, sel_data, time):
-        uris=extract_uris(sel_data.data)
-        if not uris:
-            widget.drag_finish(context, FALSE, FALSE, time)
-            return
-        for uri in uris:
-            path=get_local_path(uri)
-            if path:
-                self.loc.set_text(path)
-                self.update_win()
-                widget.drag_finish(context, TRUE, FALSE, time)
-                return
-
     def update_current(self):
         menu=self.mailer_menu.get_menu()
         item=menu.get_active()

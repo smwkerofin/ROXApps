@@ -6,7 +6,7 @@ from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesImpl
 from xml.dom.minidom import parse
 
-import gtk
+from rox import g
 
 class Checker:
     def __init__(self, cmd, int):
@@ -46,10 +46,10 @@ class Checker:
     def schedule(self):
         to=self.int*1000
         if self.time!=0:
-            gtk.timeout_remove(self.time)
+            g.timeout_remove(self.time)
         def run_check(self):
             return self.run()
-        self.time=gtk.timeout_add(int(to), run_check, self)
+        self.time=g.timeout_add(int(to), run_check, self)
 
 def getCheckers(fname):
     doc=parse(fname)

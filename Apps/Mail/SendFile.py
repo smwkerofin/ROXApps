@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 
 import findrox
+import rox
 import rox.choices
 
 import os.path
 import os
 import string
 
-from gtk import *
-from GDK import *
+from rox import g
+TRUE=g.TRUE
+FALSE=g.FALSE
 
 #import SendFile
 from my_support import run_prog
@@ -23,38 +25,38 @@ def check_child(pid):
         return 0
     return 1
     
-class SendFile(GtkWindow):
+class SendFile(rox.Window):
     def __init__(self, path, mime_type="application/data"):
-        GtkWindow.__init__(self)
+        rox.Window.__init__(self)
         self.set_title(os.path.basename(path))
         self.path=path
         self.mime_type=mime_type
 
-        vbox=GtkVBox(FALSE)
+        vbox=g.VBox(FALSE)
         self.add(vbox)
 
-        hbox=GtkHBox(FALSE)
+        hbox=g.HBox(FALSE)
         vbox.pack_start(hbox, FALSE, FALSE, 0)
 
-        label=GtkLabel("To:")
+        label=g.Label("To:")
         hbox.pack_start(label, FALSE, FALSE, 0)
-        mail_to=GtkEntry()
+        mail_to=g.Entry()
         hbox.pack_start(mail_to, TRUE, TRUE, 0)
         self.mail_to=mail_to
                 
-        hbox=GtkHBox(FALSE)
+        hbox=g.HBox(FALSE)
         vbox.pack_start(hbox, FALSE, FALSE, 0)
 
-        label=GtkLabel("Subject:")
+        label=g.Label("Subject:")
         hbox.pack_start(label, FALSE, FALSE, 0)
-        subject=GtkEntry()
+        subject=g.Entry()
         hbox.pack_start(subject, TRUE, TRUE, 0)
         self.subject=subject
                 
-        hbox=GtkHBox(FALSE)
+        hbox=g.HBox(FALSE)
         vbox.pack_start(hbox, FALSE, FALSE, 0)
 
-        uuencode=GtkCheckButton("Encode as binary")
+        uuencode=g.CheckButton("Encode as binary")
         hbox.pack_start(uuencode, FALSE, FALSE, 0)
         
         mime=self.mime_type.split('/')
@@ -65,7 +67,7 @@ class SendFile(GtkWindow):
 
         self.uuencode=uuencode
 
-        go=GtkButton("Send")
+        go=g.Button("Send")
         hbox.pack_start(go, FALSE, FALSE, 0)
 
         vbox.show_all()
@@ -89,6 +91,6 @@ class SendFile(GtkWindow):
                                      self.subject.get_text())
 
         child_pid=run_prog(cmd)
-        timeout_add(1000, check_child, child_pid);
+        g.timeout_add(1000, check_child, child_pid);
 
         self.destroy()

@@ -1,6 +1,10 @@
 Versions of Mail
 ================
 
+0.3.0
+-----
+Switch to ROX-Lib2 and GTK 2.
+
 0.1.4
 -----
 Added count of mail messages below icon.

@@ -1,8 +1,8 @@
 from sys import argv
 import os
 
-from gtk import *
-from GDK import *
+import findrox
+from rox import g
 
 from SendFile import SendFile
 
@@ -11,7 +11,7 @@ try:
 except:
     window = SendFile(argv[1])
 
-window.connect('destroy', mainquit)
+window.connect('destroy', g.mainquit)
 window.show()
 
-mainloop()
+g.mainloop()
