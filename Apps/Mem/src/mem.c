@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.14 2003/07/05 13:43:50 stephen Exp $
+ * $Id: mem.c,v 1.15 2004/04/12 13:35:06 stephen Exp $
  */
 #include "config.h"
 
@@ -34,10 +34,6 @@
 
 #include <gtk/gtk.h>
 
-#include <glibtop.h>
-#include <glibtop/mem.h>
-#include <glibtop/swap.h>
-
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
@@ -47,21 +43,13 @@
 #include <rox/rox_soap.h>
 #include <rox/rox_soap_server.h>
 
+#ifdef HAVE_LIBGTOP
+#include <glibtop.h>
+#endif
+
+#include "mem_stats.h"
+
 #define TIP_PRIVATE "For more information see the help file"
-
-/* Can we support swap?  On Solaris, versions of libgtop up to 1.1.2 don't
-   read swap figures correctly */
-#define SOLARIS_SWAP_BROKEN_UP_TO 1001002
-
-#if defined(__sparc__) && defined(__svr4__)
-#if LIBGTOP_VERSION_CODE>SOLARIS_SWAP_BROKEN_UP_TO
-#define SWAP_SUPPORTED_LIBGTOP 1 
-#else
-#define SWAP_SUPPORTED_LIBGTOP 0
-#endif
-#else
-#define SWAP_SUPPORTED_LIBGTOP 1
-#endif
 
 typedef enum applet_display {
   AD_TOTAL, AD_USED, AD_FREE, AD_PER
@@ -108,21 +96,6 @@ typedef struct mem_window {
   /*Options options;*/
 } MemWindow;
 
-#if !SWAP_SUPPORTED_LIBGTOP
-struct _swap_data {
-  uint64_t alloc, reserved, used, avail;
-  gboolean valid;
-};
-
-static struct _swap_data swap_data={
-  0ll, 0ll, 0ll, 0LL,
-  FALSE
-};
-static guint swap_update_tag=0;
-static pid_t swap_process=0;
-static gint swap_read_tag;
-#endif
-
 static GList *windows=NULL;
 
 static MemWindow *current_window=NULL;
@@ -141,10 +114,6 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
 static gboolean popup_menu(GtkWidget *window, gpointer udata);
 static void opts_changed(void);
-
-#if !SWAP_SUPPORTED_LIBGTOP
-static gboolean update_swap(gpointer);
-#endif
 
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
@@ -191,17 +160,29 @@ static void do_version(void)
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
-  printf("  Use libgtop for swap... %s\n",
-	 SWAP_SUPPORTED_LIBGTOP? "yes": "no");
-  if(!SWAP_SUPPORTED_LIBGTOP) {
+#ifdef HAVE_LIBGTOP
 #ifdef LIBGTOP_VERSION_CODE
-    printf("    libgtop version %d\n", LIBGTOP_VERSION_CODE);
+  printf("  libgtop version %d\n", LIBGTOP_VERSION_CODE);
 #else
-    printf("    libgtop version 1.0.x\n");
+  printf("  libgtop version 1.0.x\n");
 #endif
-    printf("    Broken on Solaris up to version %d\n",
-	   SOLARIS_SWAP_BROKEN_UP_TO);
-  }
+#else
+  printf("  libgtop not available\n");    
+#endif
+  printf("  Have kstat... %s\n",
+#ifdef HAVE_KSTAT
+	   "yes"
+#else
+	   "no"
+#endif
+	 );
+  printf("  Have swapctl... %s\n",
+#ifdef HAVE_SWAPCTL
+	   "yes"
+#else
+	   "no"
+#endif
+	 );
 }
 
 int main(int argc, char *argv[])
@@ -281,20 +262,6 @@ int main(int argc, char *argv[])
     g_free(fname);
   }
 
-#if !SWAP_SUPPORTED_LIBGTOP
-  swap_update_tag=gtk_timeout_add(10*1000,
-			 (GtkFunction) update_swap, NULL);
-  (void) update_swap(NULL);
-#endif
-  
-  dprintf(4, "set up glibtop");
-  glibtop_init_r(&glibtop_global_server,
-		 (1<<GLIBTOP_SYSDEPS_MEM)
-#if SWAP_SUPPORTED_LIBGTOP
-		 |(1<<GLIBTOP_SYSDEPS_SWAP)
-#endif
-		 , 0);
-
   if(replace_server || !rox_soap_ping(PROJECT)) {
     dprintf(1, "Making SOAP server");
     server=rox_soap_server_new(PROJECT, MEM_NAMESPACE_URL);
@@ -316,12 +283,14 @@ int main(int argc, char *argv[])
   if(show_options)
     options_show();
 
+  mem_stats_init();
   make_window(xid);
   
   gtk_main();
 
   if(server)
     rox_soap_server_delete(server);
+  mem_stats_shutdown();
 
   return 0;
 }
@@ -720,34 +689,20 @@ static const char *fmt_size(unsigned long long bytes)
   return buf;
 }
 
-#define MEM_FLAGS ((1<<GLIBTOP_MEM_TOTAL)|(1<<GLIBTOP_MEM_USED)|(1<<GLIBTOP_MEM_FREE))
-
-#if SWAP_SUPPORTED_LIBGTOP
-#define SWAP_FLAGS ((1<<GLIBTOP_SWAP_TOTAL)|(1<<GLIBTOP_SWAP_USED)|(1<<GLIBTOP_SWAP_FREE))
-#endif
-
 static gboolean update_values(MemWindow *mwin)
 {
   int ok=FALSE;
-  glibtop_mem mem;
-#if SWAP_SUPPORTED_LIBGTOP
-  glibtop_swap swap;
-#endif
-  unsigned long long total, used, avail;
+  MemValue total, used, avail;
   
   dprintf(4, "update_sec=%d, update_tag=%u", o_update_rate.int_value,
 	  mwin->update_tag);
   
-  errno=0;
-  glibtop_get_mem(&mem);
-  ok=(errno==0) && (mem.flags & MEM_FLAGS)==MEM_FLAGS;
+  ok=mem_stats_get_mem(&total, &avail);
     
   if(ok) {
     gfloat fused;
       
-    total=mem.total;
-    used=mem.total-mem.free;
-    avail=mem.free;
+    used=total-avail;
       
     fused=(100.f*used)/((gfloat) total);
     if(fused>100.f)
@@ -787,24 +742,12 @@ static gboolean update_values(MemWindow *mwin)
     gtk_widget_set_sensitive(GTK_WIDGET(mwin->mem_per), FALSE);
   }
 
-#if SWAP_SUPPORTED_LIBGTOP
-  errno=0;
-  glibtop_get_swap(&swap);
-  ok=(errno==0) && (swap.flags & SWAP_FLAGS)==SWAP_FLAGS;
-  total=swap.total;
-  used=swap.used;
-  avail=swap.free;
-  dprintf(3, "%llx: %lld %lld %lld, %lld %lld", swap.flags, swap.total,
-	  swap.used, swap.free, swap.pagein, swap.pageout);
-#else
-  ok=swap_data.valid;
-  total=swap_data.used+swap_data.avail;
-  used=swap_data.used;
-  avail=swap_data.avail;
-#endif
+  ok=mem_stats_get_swap(&total, &avail);
   
   if(ok) {
     gfloat fused;
+
+    used=total-avail;
       
     dprintf(2, "swap: %lld %lld %lld", total, used, avail);
     dprintf(2, "swap: %lldK %lldK %lldK", total>>10, used>>10, avail>>10);
@@ -950,70 +893,7 @@ static gboolean read_choices_xml(void)
 
 static void read_choices(void)
 {
-  gchar *fname;
-  
-  if(read_choices_xml())
-    return;
-
-  fname=choices_find_path_load("Config", PROJECT);
-  if(fname) {
-    FILE *in=fopen(fname, "r");
-    char buf[256], *line;
-    char *end;
-
-    g_free(fname);
-    if(!in)
-      return;
-
-    do {
-      line=fgets(buf, sizeof(buf), in);
-      if(line) {
-	dprintf(4, "line=%s", line);
-	end=strpbrk(line, "\n#");
-	if(end)
-	  *end=0;
-	if(*line) {
-	  char *sep;
-
-	  dprintf(4, "line=%s", line);
-	  sep=strchr(line, ':');
-	  if(sep) {
-	    dprintf(3, "%.*s: %s", sep-line, line, sep+1);
-	    if(strncmp(line, UPDATE_RATE, sep-line)==0) {
-	      default_options.update_sec=atoi(sep+1);
-	      if(default_options.update_sec<1)
-		default_options.update_sec=1;
-	      dprintf(3, "update_sec now %d", default_options.update_sec);
-	    } else if(strncmp(line, INIT_SIZE, sep-line)==0) {
-	      default_options.applet_init_size=(guint) atoi(sep+1);
-	      
-	    } else if(strncmp(line, SWAP_NUM, sep-line)==0) {
-	      /* Ignore */
-	      dprintf(1, "obselete option %s, ignored", SWAP_NUM);
-	      
-	    } else if(strncmp(line, SHOW_HOST, sep-line)==0) {
-	      default_options.show_host=(guint) atoi(sep+1);
-	      
-	    } else if(strncmp(line, GAUGE_WIDTH, sep-line)==0) {
-	      default_options.gauge_width=(guint) atoi(sep+1);
-	      
-	    } else if(strncmp(line, MEM_DISP, sep-line)==0) {
-	      default_options.mem_disp=(guint) atoi(sep+1);
-	      
-	    } else if(strncmp(line, SWAP_DISP, sep-line)==0) {
-	      default_options.swap_disp=(guint) atoi(sep+1);
-	      
-	    } else {
-
-	      dprintf(1, "unknown option %s, ignored", sep-line);
-	    }
-	  }
-	}
-      }
-    } while(line);
-
-    fclose(in);
-  }
+  read_choices_xml();
 }
 
 
@@ -1342,7 +1222,7 @@ static void soap_callback(ROXSOAP *serv, gboolean status,
 {
   gboolean *s=udata;
   
-  dprintf(3, "In soap_callback(%p, %d, %p, %p)", clock, status, reply,
+  dprintf(3, "In soap_callback(%p, %d, %p, %p)", serv, status, reply,
 	 udata);
   *s=status;
   gtk_main_quit();
@@ -1413,117 +1293,12 @@ static gboolean options_remote(void)
   return sent && ok;
 }
 
-#if !SWAP_SUPPORTED_LIBGTOP
-static void read_from_pipe(gpointer data, gint com, GdkInputCondition cond)
-{
-  char buf[BUFSIZ];
-  int nr;
-
-  nr=read(com, buf, BUFSIZ);
-  dprintf(3, "read %d from %d", nr, com);
-  
-  if(nr>0) {
-    buf[nr]=0;
-    
-    if(strncmp(buf, "total: ", 7)==0) {
-      long tmp;
-      char *start, *ptr;
-
-      start=buf+7;
-      tmp=strtol(start, &ptr, 10);
-      if(ptr<=start)
-	return;
-      swap_data.valid=FALSE;
-      swap_data.alloc=tmp<<10;
-
-      start=strstr(ptr, " + ");
-      if(!start)
-	return;
-      start+=3;
-      tmp=strtol(start, &ptr, 10);
-      if(ptr<=start)
-	return;
-      swap_data.reserved=tmp<<10;
-      
-      start=strstr(ptr, " = ");
-      if(!start)
-	return;
-      start+=3;
-      tmp=strtol(start, &ptr, 10);
-      if(ptr<=start)
-	return;
-      swap_data.used=tmp<<10;
-      
-      start=strstr(ptr, ", ");
-      if(!start)
-	return;
-      start+=2;
-      tmp=strtol(start, &ptr, 10);
-      if(ptr<=start)
-	return;
-      swap_data.avail=tmp<<10;
-
-      swap_data.valid=TRUE;
-    }
-  } else if(nr==0) {
-    int stat;
-    
-    waitpid(swap_process, &stat, 0);
-    dprintf(2, "status %d from %d, closing %d", stat, swap_process, com);
-    close(com);
-    if(WIFEXITED(stat) && WEXITSTATUS(stat))
-      dprintf(1, "%d exited with status %d", swap_process, WEXITSTATUS(stat));
-    else if(WIFSIGNALED(stat))
-      dprintf(1, "%d killed by signal %d %s", swap_process, WTERMSIG(stat),
-	      strsignal(WTERMSIG(stat)));
-    if(WIFEXITED(stat) || WIFSIGNALED(stat))
-      swap_process=0;
-    gdk_input_remove(swap_read_tag);
-    
-  } else {
-    dprintf(1, "error reading data from pipe: %s", strerror(errno));
-  }
-}
-
-static gboolean update_swap(gpointer unused)
-{
-  dprintf(2, "in update_swap");
-  
-  if(swap_process<=0) {
-    int com[2];
-
-    pipe(com);
-    dprintf(3, "pipes are %d, %d", com[0], com[1]);
-    swap_process=fork();
-
-    switch(swap_process) {
-    case -1:
-      dprintf(0, "failed to fork! %s", strerror(errno));
-      close(com[0]);
-      close(com[1]);
-      return;
-
-    case 0:
-      close(com[0]);
-      dup2(com[1], 1);
-      execl("/usr/sbin/swap", "swap", "-s", NULL);
-      _exit(1);
-
-    default:
-      dprintf(3, "child is %d, monitor %d", swap_process, com[0]);
-      close(com[1]);
-      swap_read_tag=gdk_input_add(com[0], GDK_INPUT_READ,
-				  read_from_pipe, NULL);
-      break;
-    }
-  }
-  
-  return TRUE;
-}
-#endif
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.15  2004/04/12 13:35:06  stephen
+ * Remove dead code.  Open options dialog from command line or SOAP message.  Stock items in menus.
+ *
  * Revision 1.14  2003/07/05 13:43:50  stephen
  * Fix swap measurement on Solaris. New icon provided by Geoff Youngs.
  * Use new options system.

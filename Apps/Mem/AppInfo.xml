@@ -4,7 +4,7 @@
   <Summary xml:lang="it">Mostra l'utilizzo della memoria e dello swap.</Summary>
   <About>
     <Purpose>Monitor memory and swap usage</Purpose>
-	<Version>2.1.0 (17 May 2004)</Version>
+	<Version>2.1.1 (5 September 2004)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
@@ -17,7 +17,7 @@
     <Homepage label="Sito web">http://www.kerofin.demon.co.uk/rox/</Homepage>
   </About>
   <Dependencies>
-    <AppDir><Name>ROX-CLib</Name><NeedsVersion>2.1.0</NeedsVersion></AppDir>
+    <AppDir><Name>ROX-CLib</Name><NeedsVersion>2.1.2</NeedsVersion></AppDir>
     <Library><Name>gtop-2.0</Name><NeedsVersion>2.0.1</NeedsVersion></Library>
   </Dependencies>
   <AppMenu>

@@ -1,6 +1,12 @@
 Mem
 ===
 
+2.1.1
+-----
+Change to new build system.
+Split stats gathering into its own file seperate from GUI.
+Can function without libgtop.
+
 2.1.0
 -----
 Get rid of some legacy code. 

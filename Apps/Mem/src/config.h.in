@@ -9,10 +9,18 @@
 
 #include <sys/types.h>
 
+#undef HAVE_UNSIGNED_LONG_LONG
+
 #undef HAVE_UNISTD_H
 #undef HAVE_LIBINTL_H
+#undef HAVE_SYS_SWAP_H
+#undef HAVE_KSTAT_H
+
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
+#undef HAVE_SWAPCTL
+#undef HAVE_KSTAT_OPEN
+#undef HAVE_LIBGTOP
 
 #define ROX_CLIB_VERSION ""
 
