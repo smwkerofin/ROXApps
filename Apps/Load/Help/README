@@ -1,0 +1,19 @@
+Load
+====
+
+Load is an applet for use in a ROX-Filer panel or pinboard.  It
+displays the system load average (the number of processes wanting to
+run at once) averaged over 1, 5 and 15 minutes.
+
+The data is obtained in a portable way using libgtop (specifically
+glibtop_get_loadavg). 
+
+Three bars are plotted (for 1, 5 and 15 minute average).  Values up to
+1 are plotted in green, above that in red.  Optionally the maximum
+scale of the graph may be shown, also the individual values.
+
+The latest version is at http://www.kerofin.demon.co.uk/rox/
+
+-- 
+Stephen Watson 
+stephen@kerofin.demon.co.uk

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# Point to QT
+QTDIR=/usr/local/qt export QTDIR
+PATH=$QTDIR/bin:$PATH export PATH
+MANPATH=$QTDIR/doc/man:$MANPATH export MANPATH
+LD_LIBRARY_PATH=$QTDIR/lib:$LD_LIBRARY_PATH export LD_LIBRARY_PATH
+
+# Run program
+exec /usr/local/qcad/qcad "$@"

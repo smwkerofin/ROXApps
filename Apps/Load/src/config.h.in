@@ -1,0 +1,10 @@
+/* The configure script will auto-generate config.h from config.h.in */
+
+#define PROJECT "Load"
+#define PROGRAM PROJECT
+#define PURPOSE "Display the system load"
+#define VERSION "0.1.3"
+#define AUTHOR  "Stephen Watson"
+#define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
+
+#include <sys/types.h>

@@ -1,0 +1,3 @@
+#!/bin/sh
+
+fortune | xsay -t=fortune
