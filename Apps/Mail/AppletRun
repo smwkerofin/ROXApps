@@ -141,9 +141,18 @@ menu.append(item)
 
 menu.show_all()
 
+def check_child(pid):
+    res=os.waitpid(pid, os.WNOHANG);
+    #print res
+    if res[0]>0:
+        return 0
+    return 1
+    
 def click(widget, event, data=None):
     if event.button==1:
-        run_prog(app_dir+"/AppRun")
+        pid=run_prog(app_dir+"/AppRun")
+        if pid>0:
+            timeout_add(1000, check_child, pid)
         return 1
     elif event.button==3:
         menu.popup(None, None, None, event.button, event.time)
