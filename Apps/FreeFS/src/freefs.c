@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.19 2002/04/29 08:19:39 stephen Exp $
+ * $Id: freefs.c,v 1.20 2002/08/24 16:40:31 stephen Exp $
  */
 #include "config.h"
 
@@ -808,10 +808,13 @@ static gboolean update_fs_values(FreeWindow *fwin)
 	gtk_label_set_text(GTK_LABEL(fwin->fs_free), fmt_size(avail));
 
       } else {
+	const char *mpt;
 	dprintf(5, "set text");
-	gtk_label_set_text(GTK_LABEL(fwin->fs_name),
-			   g_basename(find_mount_point(fwin->df_dir)));
-	/*gtk_label_set_text(GTK_LABEL(fwin->fs_name), find_mount_point(fwin->df_dir));*/
+	mpt=find_mount_point(fwin->df_dir);
+	if(strcmp(mpt, "/")==0)
+	  gtk_label_set_text(GTK_LABEL(fwin->fs_name), "/");
+	else
+	  gtk_label_set_text(GTK_LABEL(fwin->fs_name), g_basename(mpt));
       }
       dprintf(5, "set progress %f", fused);
 #ifdef GTK2
@@ -1607,6 +1610,10 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.20  2002/08/24 16:40:31  stephen
+ * Fix compilation problem with libxml2.
+ * Remove [] from libgtop test in configure.in
+ *
  * Revision 1.19  2002/04/29 08:19:39  stephen
  * Added menu of mounted file systems so you can choose which to monitor,
  * otherwise there was no way of changing the FS in the applet version.
