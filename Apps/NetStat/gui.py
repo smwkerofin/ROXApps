@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.6 2002/11/23 18:00:12 stephen Exp $
+# $Id: gui.py,v 1.7 2002/12/14 17:25:47 stephen Exp $
 
 import os
 import sys
@@ -9,6 +9,7 @@ import findrox
 import rox.choices
 
 from rox import g
+import pango
 
 import netstat
 import rox.Menu
@@ -20,7 +21,22 @@ if len(sys.argv)>2 and sys.argv[1]=='-a':
 else:
     xid=None
 
-#def mainquit():
+app_dir=os.path.dirname(sys.argv[0])
+version=''
+from xml.dom.minidom import parse
+doc=parse(os.path.join(app_dir, 'AppInfo.xml'))
+about=doc.getElementsByTagName("About")
+def get_text(node):
+    t=''
+    for sub in node.childNodes:
+        if sub.nodeType==node.TEXT_NODE:
+            t+=sub.data
+    return t
+for a in about:
+    for node in a.childNodes:
+        if node.nodeType==node.ELEMENT_NODE:
+            if node.tagName=='Version':
+                version=get_text(node)
 
 stats=netstat.NetStat()
 
@@ -63,12 +79,16 @@ disconnect=rox.options.Option('disconnect', adjust_cmd)
 medium_level=rox.options.Option('medium', levels[1])
 high_level=rox.options.Option('high', levels[0])
 
+ifdisp=None
+
 def options_changed():
     global iface, select_cmd
     #print 'in options_changed()'
     if interface.has_changed:
         #print 'iface=%s' % interface.value
         iface=interface.value
+        if ifdisp:
+            ifdisp.set_text(iface)
     if connect.has_changed:
         select_cmd=connect.value
     if disconnect.has_changed:
@@ -90,7 +110,8 @@ else:
 #win.connect('destroy', g.mainquit)
 
 # Choose a nice small size for our applet...
-win.set_size_request(48, 48)
+wsize=48
+win.set_size_request(wsize, wsize)
 win.set_border_width(4)
 
 style=win.get_style()
@@ -119,17 +140,12 @@ menu=rox.Menu.Menu('main', [
 
 import InfoWin
 iw=InfoWin.InfoWin('NetStat', 'Monitor network activity',
-           '0.0.2 (16th November 2002)',
+           version,
            'Stephen Watson', 'http://www.kerofin.demon.co.uk/rox/')
 iw.connect('delete_event', lambda iw: iw.hide())
 
 class MenuHelper:
     def show_info(unused):
-        import InfoWin
-        iw=InfoWin.InfoWin('NetStat', 'Monitor network activity',
-                           '0.0.2 (16th November 2002)',
-                           'Stephen Watson',
-                           'http://www.kerofin.demon.co.uk/rox/')
         iw.show()
     def do_quit(unused):
         rox.toplevel_unref()
@@ -198,6 +214,8 @@ off=cmap.alloc_color('#000000')
 
 colours=(high, medium, low, off)
 
+pfd=pango.FontDescription('Sans bold %d' % (wsize-16))
+
 def draw_arrow(drawable, gc, pts, act):
     tmp=gc.foreground
     col=red
@@ -211,14 +229,21 @@ def draw_arrow(drawable, gc, pts, act):
 
 def expose(widget, event):
     (x, y, width, height)=widget.get_allocation()
-    gc=widget.get_style().bg_gc[g.STATE_NORMAL]
+    style=widget.get_style()
+    gc=style.bg_gc[g.STATE_NORMAL]
+    #widget.window.draw_rectangle(gc, 1, 0, 0, width, height)
     #print dir(widget.window)
-    widget.window.draw_rectangle(gc, 1, 0, 0, width, height)
-    #gc=widget.get_style().black_gc
-    #print gc, dir(gc), gc.foreground
-    #widget.draw_string(font, gc, 4, 24, iface)
+    try:
+        area=None
+        style.apply_default_background(widget.window, g.TRUE, g.STATE_NORMAL,
+                                       area,
+                                       0, 0, width, height)
+    except:
+        print sys.exc_info()[:2]
+        widget.window.draw_rectangle(gc, 1, 0, 0, width, height)
+
     act=stats.getCurrent(iface)
-    gc=widget.get_style().bg_gc[g.STATE_NORMAL]
+    #gc=widget.get_style().bg_gc[g.STATE_NORMAL]
 
     top=2
     bot=height-2
@@ -238,6 +263,20 @@ def expose(widget, event):
         pts=((cx-2,bot), (cx-2,mid), (left,mid), (cx,top), (right,mid),
              (cx+2,mid), (cx+2,bot))
         draw_arrow(widget.window, gc, pts, act[1])
+
+    else:
+        tmp=gc.foreground
+        gc.foreground=red
+        layout=widget.create_pango_layout('?')
+        #layout.set_text('?', -1)
+        layout.set_font_description(pfd)
+        w, h=layout.get_pixel_size()
+        #print w, h, width, mid
+        x=(width-w)/2
+        y=(height-h)/2
+        widget.window.draw_layout(gc, x, y, layout)
+        gc.foreground=tmp
+        
     
 can.connect('expose_event', expose)
 

@@ -1,6 +1,10 @@
 NetStat
 =======
 
+0.0.7
+-----
+More interesting display if interface not configured.
+
 0.0.6
 -----
 Use longs to store stats, not ints (Thomas Leonard).
