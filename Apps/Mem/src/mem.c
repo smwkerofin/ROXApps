@@ -5,13 +5,12 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.13 2003/04/16 09:12:38 stephen Exp $
+ * $Id: mem.c,v 1.14 2003/07/05 13:43:50 stephen Exp $
  */
 #include "config.h"
 
 /* Select compilation options */
 #define DEBUG              1     /* Set to 1 for debug messages */
-#define TRY_SERVER         1     /* Use SOAP to open windows on request */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,21 +41,11 @@
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
-#define USE_XML 1
-
-#if TRY_SERVER && ROX_CLIB_VERSION>=201
-#define USE_SERVER 1
-#else
-#define USE_SERVER 0
-#endif
-
-#include <rox.h>
-#include "applet.h"
-#include "options.h"
-#if USE_SERVER
-#include "rox_soap.h"
-#include "rox_soap_server.h"
-#endif
+#include <rox/rox.h>
+#include <rox/applet.h>
+#include <rox/options.h>
+#include <rox/rox_soap.h>
+#include <rox/rox_soap_server.h>
 
 #define TIP_PRIVATE "For more information see the help file"
 
@@ -138,10 +127,8 @@ static GList *windows=NULL;
 
 static MemWindow *current_window=NULL;
 
-#if USE_SERVER
 static ROXSOAPServer *server=NULL;
 #define MEM_NAMESPACE_URL WEBSITE PROJECT
-#endif
 
 /* Call backs & stuff */
 static MemWindow *make_window(guint32 socket);
@@ -152,32 +139,38 @@ static void setup_options(void);
 static void menu_create_menu(GtkWidget *);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
+static gboolean popup_menu(GtkWidget *window, gpointer udata);
 static void opts_changed(void);
 
 #if !SWAP_SUPPORTED_LIBGTOP
 static gboolean update_swap(gpointer);
 #endif
-#if USE_SERVER
+
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
 static gboolean open_remote(guint32 xid);
-#endif
+static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata);
+static gboolean options_remote(void);
+
+static ROXSOAPServerActions actions[]={
+  {"Open", NULL, "Parent", rpc_Open, NULL},
+  {"Options", NULL, NULL, rpc_Options, NULL},
+  
+  {NULL}
+};
 
 static void usage(const char *argv0)
 {
-#if USE_SERVER
-  printf("Usage: %s [X-options] [gtk-options] [-vhnr] [-a XID]\n", argv0);
-#else
-  printf("Usage: %s [X-options] [gtk-options] [-vh] [-a XID]\n", argv0);
-#endif
+  printf("Usage: %s [X-options] [gtk-options] [-vhnro] [-a XID]\n", argv0);
+
   printf("where:\n\n");
   printf("  X-options\tstandard Xlib options\n");
   printf("  gtk-options\tstandard GTK+ options\n");
   printf("  -h\tprint this help message\n");
-#if USE_SERVER
   printf("  -n\tdon't attempt to contact existing server\n");
   printf("  -r\treplace existing server\n");
-#endif
+  printf("  -o\topen options window\n");
   printf("  -v\tdisplay version information\n");
   printf("  -a XID\tX window to create applet in\n");
 }
@@ -198,12 +191,6 @@ static void do_version(void)
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
-  printf("  Using XML... ");
-  if(USE_XML)
-    printf("yes (libxml version %d)\n", LIBXML_VERSION);
-  else {
-    printf("no (libxml version %d)\n", LIBXML_VERSION);
-  }
   printf("  Use libgtop for swap... %s\n",
 	 SWAP_SUPPORTED_LIBGTOP? "yes": "no");
   if(!SWAP_SUPPORTED_LIBGTOP) {
@@ -214,19 +201,6 @@ static void do_version(void)
 #endif
     printf("    Broken on Solaris up to version %d\n",
 	   SOLARIS_SWAP_BROKEN_UP_TO);
-  }
-  printf("  Using SOAP server... ");
-  if(USE_SERVER)
-    printf("yes\n");
-  else {
-    printf("no");
-    if(!TRY_SERVER)
-      printf(", disabled");
-    if(ROX_CLIB_VERSION<201)
-      printf(", ROX-CLib %d.%d.%d does not support it",
-	     ROX_CLIB_VERSION/10000, (ROX_CLIB_VERSION%10000)/100,
-	     ROX_CLIB_VERSION%100);
-    printf("\n");
   }
 }
 
@@ -240,13 +214,10 @@ int main(int argc, char *argv[])
   gchar *localedir;
 #endif
   int c, do_exit, nerr;
-#if USE_SERVER
-  const char *options="vha:nr";
+  const char *options="vha:nro";
   gboolean new_run=FALSE;
   gboolean replace_server=FALSE;
-#else
-  const char *options="vha:";
-#endif
+  gboolean show_options=FALSE;
 
   app_dir=g_getenv("APP_DIR");
 #ifdef HAVE_BINDTEXTDOMAIN
@@ -256,7 +227,7 @@ int main(int argc, char *argv[])
   g_free(localedir);
 #endif
 
-  rox_debug_init(PROJECT);
+  rox_init(PROJECT, &argc, &argv);
   
   /* Check for this argument by itself */
   if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
@@ -264,10 +235,6 @@ int main(int argc, char *argv[])
     exit(0);
   }
   
-  dprintf(5, "%d %s -> %s", argc, argv[1], argv[argc-1]);
-  gtk_init(&argc, &argv);
-  dprintf(5, "%d %s -> %s", argc, argv[1], argv[argc-1]);
-
   /* Process remaining arguments */
   nerr=0;
   do_exit=FALSE;
@@ -284,14 +251,15 @@ int main(int argc, char *argv[])
     case 'a':
       xid=atol(optarg);
       break;
-#if USE_SERVER
     case 'n':
       new_run=TRUE;
       break;
     case 'r':
       replace_server=TRUE;
       break;
-#endif
+    case 'o':
+      show_options=TRUE;
+      break;
     default:
       nerr++;
       break;
@@ -327,36 +295,39 @@ int main(int argc, char *argv[])
 #endif
 		 , 0);
 
-#if USE_SERVER
   if(replace_server || !rox_soap_ping(PROJECT)) {
     dprintf(1, "Making SOAP server");
     server=rox_soap_server_new(PROJECT, MEM_NAMESPACE_URL);
-    rox_soap_server_add_action(server, "Open", NULL, "Parent",
-			       rpc_Open, NULL);
+    rox_soap_server_add_actions(server, actions);
   } else if(!new_run) {
+    if(show_options) {
+      if(options_remote()) {
+	if(!xid)
+	  return 0;
+      } else {
+	rox_error("Failed to ask server to open options window");
+      } 
+    }
     if(open_remote(xid)) {
       dprintf(1, "success in open_remote(%lu), exiting", xid);
       return 0;
     }
   }
-#endif
+  if(show_options)
+    options_show();
+
   make_window(xid);
   
   gtk_main();
 
-#if USE_SERVER
   if(server)
     rox_soap_server_delete(server);
-#endif
 
   return 0;
 }
 
 static void setup_options(void)
 {
-  choices_init();
-  options_init(PROJECT);
-
   read_choices();  /* Read old format config */
 
   option_add_int(&o_update_rate, "update_rate",
@@ -404,9 +375,6 @@ static MemWindow *make_window(guint32 xid)
   GtkWidget *label;
   GtkWidget *align;
   GtkAdjustment *adj;
-  /*GtkWidget *pixmapwid;*/
-  static GdkPixbuf *pixbuf=NULL;
-  /*GtkStyle *style;*/
   static GtkTooltips *ttips=NULL;
   char hname[1024];
 
@@ -430,23 +398,6 @@ static MemWindow *make_window(guint32 xid)
 		       GTK_SIGNAL_FUNC(button_press), mwin);
     gtk_widget_realize(mwin->win);
     gtk_widget_add_events(mwin->win, GDK_BUTTON_PRESS_MASK);
-
-    /* Set the icon */
-    if(!pixbuf) {
-      gchar *fname;
-      fname=rox_resources_find(PROJECT, "AppIcon.png", ROX_RESOURCES_NO_LANG);
-      if(!fname)
-	fname=rox_resources_find(PROJECT, "AppIcon.xpm",
-				 ROX_RESOURCES_NO_LANG);
-      if(fname) {
-	GError *error=NULL;
-	pixbuf=gdk_pixbuf_new_from_file(fname, &error);
-	g_free(fname);
-      }
-    }
-    if(pixbuf) {
-      gtk_window_set_icon(GTK_WINDOW(mwin->win), pixbuf);
-    }
 
     gtk_tooltips_set_tip(ttips, mwin->win,
 			 "Mem shows the memory and swap usage on a host",
@@ -729,6 +680,8 @@ static MemWindow *make_window(guint32 xid)
   }
   if(!menu)
     menu_create_menu(mwin->win);
+  gtk_signal_connect(GTK_OBJECT(mwin->win), "popup-menu",
+		       GTK_SIGNAL_FUNC(popup_menu), mwin);
 
   /* check now */
   update_values(mwin);
@@ -912,7 +865,6 @@ static void do_update(void)
 #define MEM_DISP    "MemoryAppletDisplay"
 #define SWAP_DISP   "SwapAppletDisplay"
 
-#if USE_XML
 static gboolean read_choices_xml(void)
 {
   gchar *fname;
@@ -995,16 +947,13 @@ static gboolean read_choices_xml(void)
 
   return FALSE;
 }
-#endif
 
 static void read_choices(void)
 {
   gchar *fname;
   
-#if USE_XML
   if(read_choices_xml())
     return;
-#endif
 
   fname=choices_find_path_load("Config", PROJECT);
   if(fname) {
@@ -1248,12 +1197,19 @@ static void close_window(void)
 
 /* Pop-up menu */
 static GtkItemFactoryEntry menu_items[] = {
-  { N_("/Info"),		NULL, show_info_win, 0, NULL },
-  { N_("/Configure..."),	NULL, show_config_win, 0, NULL},
-  { N_("/Update Now"),	        NULL, do_update, 0, NULL },
-  { N_("/Close"), 	        NULL, close_window, 0, NULL },
+  { N_("/Info"),		NULL, show_info_win, 0,  "<StockItem>",
+                                GTK_STOCK_DIALOG_INFO},
   { "/",                        NULL, NULL,         0, "<Separator>"},
-  { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
+  { N_("/Configure..."),	NULL, show_config_win, 0, "<StockItem>",
+                                GTK_STOCK_PROPERTIES},
+  { N_("/Update Now"),	        NULL, do_update, 0,  "<StockItem>",
+                                GTK_STOCK_REFRESH},
+  { "/",                        NULL, NULL,         0, "<Separator>"},
+  { N_("/Close"), 	        NULL, close_window, 0,  "<StockItem>",
+                                GTK_STOCK_CLOSE},
+  { "/",                        NULL, NULL,         0, "<Separator>"},
+  { N_("/Quit"), 	        NULL, gtk_main_quit, 0,  "<StockItem>",
+                                GTK_STOCK_QUIT},
 };
 
 static void save_menus(void)
@@ -1325,8 +1281,23 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 
   return FALSE;
 }
+static gboolean popup_menu(GtkWidget *window, gpointer udata)
+{
+  MemWindow *mwin=(MemWindow *) udata;
 
-#if USE_SERVER
+  if(!menu) 
+    menu_create_menu(GTK_WIDGET(mwin->win));
+
+  if(mwin->is_applet)
+    applet_popup_menu(mwin->win, menu, NULL);
+  else
+    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
+		   0, gtk_get_current_event_time());
+
+  return TRUE;
+}
+
+
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata)
 {
@@ -1351,12 +1322,27 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   return NULL;
 }
 
-static void open_callback(ROXSOAP *serv, gboolean status, 
+static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata)
+{
+  xmlNodePtr parent;
+  gchar *str;
+  guint32 xid=0;
+
+  dprintf(3, "rpc_Options(%p, \"%s\", %p, %p)", server, action_name,
+	  args, udata);
+
+  options_show();
+
+  return NULL;
+}
+
+static void soap_callback(ROXSOAP *serv, gboolean status, 
 				  xmlDocPtr reply, gpointer udata)
 {
   gboolean *s=udata;
   
-  dprintf(3, "In open_callback(%p, %d, %p, %p)", clock, status, reply,
+  dprintf(3, "In soap_callback(%p, %d, %p, %p)", clock, status, reply,
 	 udata);
   *s=status;
   gtk_main_quit();
@@ -1385,7 +1371,7 @@ static gboolean open_remote(guint32 xid)
   sprintf(buf, "%lu", xid);
   xmlNewChild(node, NULL, "Parent", buf);
 
-  sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
+  sent=rox_soap_send(serv, doc, FALSE, soap_callback, &ok);
   dprintf(3, "sent %d", sent);
   /*xmlDocDump(stdout, doc);*/
 
@@ -1397,7 +1383,35 @@ static gboolean open_remote(guint32 xid)
   return sent && ok;
 }
 
-#endif
+static gboolean options_remote(void)
+{
+  ROXSOAP *serv;
+  xmlDocPtr doc;
+  xmlNodePtr node;
+  gboolean sent, ok;
+
+  serv=rox_soap_connect(PROJECT);
+  dprintf(3, "server for %s is %p", PROJECT, serv);
+  if(!serv)
+    return FALSE;
+
+  doc=rox_soap_build_xml("Options", MEM_NAMESPACE_URL, &node);
+  if(!doc) {
+    dprintf(3, "Failed to build XML doc");
+    rox_soap_close(serv);
+    return FALSE;
+  }
+
+  sent=rox_soap_send(serv, doc, FALSE, soap_callback, &ok);
+  dprintf(3, "sent %d", sent);
+
+  xmlFreeDoc(doc);
+  if(sent)
+    gtk_main();
+  rox_soap_close(serv);
+
+  return sent && ok;
+}
 
 #if !SWAP_SUPPORTED_LIBGTOP
 static void read_from_pipe(gpointer data, gint com, GdkInputCondition cond)
@@ -1510,6 +1524,10 @@ static gboolean update_swap(gpointer unused)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.14  2003/07/05 13:43:50  stephen
+ * Fix swap measurement on Solaris. New icon provided by Geoff Youngs.
+ * Use new options system.
+ *
  * Revision 1.13  2003/04/16 09:12:38  stephen
  * Re-enabled server code
  *

@@ -22,8 +22,12 @@ OBJECTS = mem.o
 
 ############ Things to keep the same
 
-${EXEC}: ${PLATFORM_DIR} ${OBJECTS}
-	${CC} -o ${EXEC} ${OBJECTS} ${LDFLAGS}
+${EXEC}: ${PROG}
+	[ -d "${PLATFORM_DIR}" ] || mkdir "${PLATFORM_DIR}"
+	mv "${PROG}" "${EXEC}"
+
+${PROG}: ${OBJECTS}
+	${CC} -o ${PROG} ${OBJECTS} ${LDFLAGS}
 
 ${PLATFORM_DIR}:
 	mkdir ${PLATFORM_DIR}
@@ -33,6 +37,9 @@ clean:
 
 depend:
 	makedepend -- $(CFLAGS) -- $(SRCS)
+
+zero-install: clean
+	strip "${EXEC}"
 
 Makefile: Makefile.in config.status
 	./config.status

@@ -5,14 +5,13 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.23 2003/06/22 09:06:08 stephen Exp $
+ * $Id: freefs.c,v 1.24 2004/02/14 13:49:26 stephen Exp $
  */
 #include "config.h"
 
 /* Select compilation options */
 #define APPLET_DND         0     /* Support drag & drop to the applet */
 #define DEBUG              1     /* Set to 1 for debug messages */
-#define TRY_SERVER         1     /* Use SOAP to open windows on request */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,22 +42,13 @@
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
-#define USE_XML 1
-#define USE_SERVER 1
-
-#include "rox.h"
-#include "choices.h"
-#include "infowin.h"
-#include "rox_debug.h"
-#include "rox_dnd.h"
-#include "rox_resources.h"
-#include "rox_filer_action.h"
-#include "applet.h"
-#if USE_SERVER
-#include "rox_soap.h"
-#include "rox_soap_server.h"
-#endif
-#include "options.h"
+#include <rox/rox.h>
+#include <rox/rox_dnd.h>
+#include <rox/rox_resources.h>
+#include <rox/rox_filer_action.h>
+#include <rox/applet.h>
+#include <rox/rox_soap.h>
+#include <rox/rox_soap_server.h>
 
 #define TIP_PRIVATE "For more information see the help file"
 
@@ -84,10 +74,8 @@ static GList *windows=NULL;
 
 static FreeWindow *current_window=NULL;
 
-#if USE_SERVER
 static ROXSOAPServer *server=NULL;
 #define FREEFS_NAMESPACE_URL WEBSITE PROJECT
-#endif
 
 static GList *fs_exclude=NULL; /* File system types not to offer on menu */
 
@@ -96,35 +84,40 @@ static FreeWindow *make_window(guint32 socket, const char *dir);
 static gboolean update_fs_values(FreeWindow *);
 static void do_update(void);
 static void init_options(void);
+static void show_config_win(int ignored);
 static void menu_create_menu(GtkWidget *);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
+static gboolean popup_menu(GtkWidget *window, gpointer udata);
 static gboolean handle_uris(GtkWidget *widget, GSList *uris, gpointer data,
 			   gpointer udata);
-#if USE_SERVER
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
 static gboolean open_remote(guint32 xid, const char *path);
-#endif
+static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata);
+static gboolean options_remote(void);
+
+static ROXSOAPServerActions actions[]={
+  {"Open", "Path", "Parent", rpc_Open, NULL},
+  {"Options", NULL, NULL, rpc_Options, NULL},
+
+  {NULL},
+};
 
 static void usage(const char *argv0)
 {
-#if USE_SERVER
-  printf("Usage: %s [X-options] [gtk-options] [-vhnr] [-a XID] [dir]\n",
+  printf("Usage: %s [X-options] [gtk-options] [-ovhnr] [-a XID] [dir]\n",
 	 argv0);
-#else
-  printf("Usage: %s [X-options] [gtk-options] [-vh] [-a XID] [dir]\n", argv0);
-#endif
   printf("where:\n\n");
   printf("  X-options\tstandard Xlib options\n");
   printf("  gtk-options\tstandard GTK+ options\n");
   printf("  -h\tprint this help message\n");
   printf("  -v\tdisplay version information\n");
+  printf("  -o\topen options window\n");
   printf("  -a XID\tX id of window to use in applet mode\n");
-#if USE_SERVER
   printf("  -n\tdon't attempt to contact existing server\n");
   printf("  -r\treplace existing server\n");
-#endif
   printf("  dir\tdirectory on file sustem to monitor\n");
 }
 
@@ -150,15 +143,6 @@ static void do_version(void)
   printf("  Support drag & drop to applet... %s\n", APPLET_DND? "yes": "no");
   printf("  Using XML... libxml version %d)\n", LIBXML_VERSION);
   
-  printf("  Using SOAP server... ");
-  if(USE_SERVER)
-    printf("yes\n");
-  else {
-    printf("no");
-    if(!TRY_SERVER)
-      printf(", disabled");
-    printf("\n");
-  }
 }
 
 int main(int argc, char *argv[])
@@ -171,13 +155,10 @@ int main(int argc, char *argv[])
   gchar *localedir;
 #endif
   int c, do_exit, nerr;
-#if USE_SERVER
-  const char *options="vha:nr";
+  const char *options="vha:nro";
   gboolean new_run=FALSE;
   gboolean replace_server=FALSE;
-#else
-  const char *options="vha:";
-#endif
+  gboolean show_options=FALSE;
 
   /* Check for this argument by itself */
   if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
@@ -211,14 +192,15 @@ int main(int argc, char *argv[])
       do_version();
       do_exit=TRUE;
       break;
-#if USE_SERVER
     case 'n':
       new_run=TRUE;
       break;
     case 'r':
       replace_server=TRUE;
       break;
-#endif
+    case 'o':
+      show_options=TRUE;
+      break;
     default:
       nerr++;
       break;
@@ -261,29 +243,39 @@ int main(int argc, char *argv[])
 		 (1<<GLIBTOP_SYSDEPS_FSUSAGE)|(1<<GLIBTOP_SYSDEPS_MOUNTLIST),
 		 0);
   
-#if USE_SERVER
   if(replace_server || !rox_soap_ping(PROJECT)) {
     dprintf(1, "Making SOAP server");
     server=rox_soap_server_new(PROJECT, FREEFS_NAMESPACE_URL);
-    rox_soap_server_add_action(server, "Open", "Path", "Parent",
-			       rpc_Open, NULL);
+    rox_soap_server_add_actions(server, actions);
+    
   } else if(!new_run) {
+    if(show_options) {
+      if(options_remote()) {
+	return 0;
+      } else {
+	rox_error("Could not connect to server, exiting");
+	exit(22);
+      }
+    }
     if(open_remote(xid, df_dir)) {
       dprintf(1, "success in open_remote(%lu), exiting", xid);
       return 0;
+    } else {
+      rox_error("Could not connect to server, running standalone");
     }
   }
-#endif
+
+  if(show_options) 
+    show_config_win(0);
+
   (void) make_window(xid, df_dir);
   g_free(df_dir);
   
   gtk_main();
 
-#if USE_SERVER
   dprintf(2, "server=%p", server);
   if(server)
     rox_soap_server_delete(server);
-#endif
 
   return 0;
 }
@@ -323,7 +315,6 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
   GtkWidget *align;
   GtkAdjustment *adj;
   GtkWidget *pixmapwid;
-  static GdkPixbuf *icon=NULL;
   static GtkTooltips *ttips=NULL;
   char tbuf[1024], *home;
   gchar *fname;
@@ -353,22 +344,6 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     gtk_widget_add_events(fwin->win, GDK_BUTTON_PRESS_MASK);
     rox_dnd_register_uris(fwin->win, 0, handle_uris, fwin);
 
-    /* Set the icon */
-    if(!icon) {
-      fname=rox_resources_find(PROJECT, "freefs.xpm", ROX_RESOURCES_NO_LANG);
-      if(fname) {
-	GError *err=NULL;
-
-	icon=gdk_pixbuf_new_from_file(fname, &err);
-	if(err) {
-	  dprintf(1, "Failed to load icon %s: %s", fname, err->message);
-	}
-	g_free(fname);
-      }
-    }
-    if(icon)
-      gtk_window_set_icon(GTK_WINDOW(fwin->win), icon);
-    
     gtk_tooltips_set_tip(ttips, fwin->win,
 			 "FreeFS shows the space usage on a single "
 			 "file system",
@@ -516,6 +491,9 @@ static FreeWindow *make_window(guint32 xid, const char *dir)
     fwin->is_applet=TRUE;
   }
 
+  gtk_signal_connect(GTK_OBJECT(fwin->win), "popup-menu",
+		     GTK_SIGNAL_FUNC(popup_menu), fwin);
+  
   dprintf(3, "update_fs_values(%s)", fwin->df_dir);
   update_fs_values(fwin);
 
@@ -887,18 +865,27 @@ static void show_config_win(int ignored)
 
 /* Pop-up menu */
 static GtkItemFactoryEntry menu_items[] = {
-  { N_("/Info"),		NULL, show_info_win, 0, NULL },
-  { N_("/Configure..."),	NULL, show_config_win, 0, NULL},
-  { N_("/Update Now"),	NULL, do_update, 0, NULL },
+  { N_("/Info"),		NULL, show_info_win, 0,
+                                "<StockItem>", GTK_STOCK_DIALOG_INFO},
+  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
+  { N_("/Configure..."),	NULL, show_config_win, 0, 
+                                "<StockItem>", GTK_STOCK_PREFERENCES},
+  { N_("/Update Now"),	        NULL, do_update, 0,   
+                                "<StockItem>", GTK_STOCK_REFRESH},
   { N_("/Open"),                NULL, NULL, 0, "<Branch>"},
-  { N_("/Open/Directory"),	NULL, do_opendir, 0, NULL },
-  { N_("/Open/FS root"),	NULL, do_opendir, 1, NULL },
+  { N_("/Open/Directory"),	NULL, do_opendir, 0,     
+                                "<StockItem>", GTK_STOCK_OPEN},
+  { N_("/Open/FS root"),	NULL, do_opendir, 1,       
+                                "<StockItem>", GTK_STOCK_OPEN},
   { N_("/Scan"),                NULL, NULL, 0, "<Branch>"},
   { N_("/Scan/By name"),	NULL, NULL, 0, NULL },
   { N_("/Scan/By mount point"),	NULL, NULL, 1, NULL },
-  { N_("/Close"), 	        NULL, close_window, 0, NULL },
   { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
-  { N_("/Quit"), 	NULL, gtk_main_quit, 0, NULL },
+  { N_("/Close"), 	        NULL, close_window, 0,      
+                                "<StockItem>", GTK_STOCK_CLOSE},
+  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
+  { N_("/Quit"), 	        NULL, gtk_main_quit, 0,      
+                                "<StockItem>", GTK_STOCK_QUIT},
 };
 
 static void save_menus(void)
@@ -1054,7 +1041,24 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   return FALSE;
 }
 
-#if USE_SERVER
+static gboolean popup_menu(GtkWidget *window, gpointer udata)
+{
+  FreeWindow *fwin=(FreeWindow *) udata;
+
+  if(!menu) 
+    menu_create_menu(GTK_WIDGET(fwin->win));
+  update_menus();
+
+  if(fwin->is_applet)
+    applet_popup_menu(fwin->win, menu, NULL);
+  else
+    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
+		   0, gtk_get_current_event_time());
+
+  return TRUE;
+  
+}
+
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata)
 {
@@ -1088,6 +1092,19 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   g_free(dir);
 
   dprintf(3, "rpc_Open complete");
+
+  return NULL;
+}
+
+static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
+			   GList *args, gpointer udata)
+{
+  dprintf(3, "rpc_Options(%p, \"%s\", %p, %p)", server, action_name,
+	  args, udata);
+
+  show_config_win(0);
+
+  dprintf(3, "rpc_Options complete");
 
   return NULL;
 }
@@ -1141,7 +1158,35 @@ static gboolean open_remote(guint32 xid, const char *path)
   return sent && ok;
 }
 
-#endif
+static gboolean options_remote(void)
+{
+  ROXSOAP *serv;
+  xmlDocPtr doc;
+  xmlNodePtr node;
+  gboolean sent, ok;
+
+  serv=rox_soap_connect(PROJECT);
+  dprintf(3, "server for %s is %p", PROJECT, serv);
+  if(!serv)
+    return FALSE;
+
+  doc=rox_soap_build_xml("Options", FREEFS_NAMESPACE_URL, &node);
+  if(!doc) {
+    dprintf(3, "Failed to build XML doc");
+    rox_soap_close(serv);
+    return FALSE;
+  }
+
+  sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
+  dprintf(3, "sent %d", sent);
+
+  xmlFreeDoc(doc);
+  if(sent)
+    gtk_main();
+  rox_soap_close(serv);
+
+  return sent && ok;
+}
 
 static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 			    gpointer data, gpointer udata)
@@ -1167,6 +1212,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.24  2004/02/14 13:49:26  stephen
+ * Use rox_init().  Fix load of icon.
+ *
  * Revision 1.23  2003/06/22 09:06:08  stephen
  * Use new options system. New icon provided by Geoff Youngs.
  *
