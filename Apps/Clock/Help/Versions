@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+1.2.1
+-----
+Make sure AppRun can find rox_run.
+
 1.2.0
 -----
 Minor fixes.
