@@ -1,6 +1,11 @@
 Load
 ====
 
+1.5.1
+-----
+Fixed text positioning.  Fix bug in displaying hostname.  Work on memory leak.
+New icon provided by Geoff Youngs.
+
 1.5.0
 -----
 

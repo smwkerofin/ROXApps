@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.18 2003/03/05 15:30:40 stephen Exp $
+ * $Id: load.c,v 1.19 2003/04/16 09:11:15 stephen Exp $
  *
  * Log at end of file
  */
@@ -107,6 +107,7 @@ static ColourInfo colour_info[]={
 #define MIN_HEIGHT    MIN_WIDTH
 #define MAX_BAR_WIDTH 32          /* Maximum size of bars */
 #define CHART_RES      2          /* Pixels per second for history */
+#define TEXT_MARGIN    2
 
 typedef struct history_data {
   double load[3];
@@ -581,7 +582,8 @@ static gboolean data_update(gpointer unused)
 static gboolean window_update(LoadWindow *lwin)
 {
   int w, h;
-  int bw, mbh, bh, bm=BOTTOM_MARGIN, tm=TOP_MARGIN, l2=0;
+  int bw, mbh, bh, bm=BOTTOM_MARGIN, tm=TOP_MARGIN, l1=BOTTOM_MARGIN, l2=0;
+  int theight;
   int bx, by, x, sbx;
   int cpu, other;
   double ld;
@@ -633,11 +635,11 @@ static gboolean window_update(LoadWindow *lwin)
     bx=w-2-3*bw-3*BAR_GAP-1;
   }
   if(opt_show_vals.int_value) {
-    int width, height;
+    int width;
 
     pango_layout_set_text(layout, "0", -1);
-    pango_layout_get_pixel_size(layout, &width, &height);
-    dprintf(3, "%d,%d", width, height);
+    pango_layout_get_pixel_size(layout, &width, &theight);
+    dprintf(3, "%d,%d", width, theight);
 
     ndec=(bw/width)-2;
     if(ndec<1)
@@ -645,12 +647,13 @@ static gboolean window_update(LoadWindow *lwin)
     if(ndec>3)
       ndec=3;
 
-    tm=height+2;
-    if(h-2*(height+4)-tm>2*bm)
-      bm=2*(height+4);
+    tm=TEXT_MARGIN;
+    if(h-2*(theight+TEXT_MARGIN)-tm>2*bm)
+      bm=2*(theight+TEXT_MARGIN);
     else
-      bm=height+4;
-    l2=bm-(height+4);
+      bm=theight+TEXT_MARGIN;
+    l1=h-bm;
+    l2=l1+theight+TEXT_MARGIN;
   }
   by=h-bm;
   if(by<48) 
@@ -714,7 +717,7 @@ static gboolean window_update(LoadWindow *lwin)
     if(opt_show_vals.int_value) {
       sprintf(buf, "%3.*f", ndec, ld);
       pango_layout_set_text(layout, buf, -1);
-      gdk_draw_layout(lwin->pixmap, lwin->gc, bx+2, h-2-l2, layout);
+      gdk_draw_layout(lwin->pixmap, lwin->gc, bx+2, l1, layout);
       if(l2>0) {
 	int xl=bx+2;
 	int lw;
@@ -722,7 +725,7 @@ static gboolean window_update(LoadWindow *lwin)
 	pango_layout_set_text(layout, bar_labels[i], -1);
 	pango_layout_get_pixel_size(layout, &lw, NULL);
 	xl=bx+bw/2-lw/2;
-	gdk_draw_layout(lwin->pixmap, lwin->gc, xl, h-2, layout);
+	gdk_draw_layout(lwin->pixmap, lwin->gc, xl, l2, layout);
       }
     }
 
@@ -783,17 +786,17 @@ static gboolean window_update(LoadWindow *lwin)
     gdk_draw_line(lwin->pixmap, lwin->gc, BAR_GAP, by, gorg, by);
     for(i=0, bx=gorg-2*i; bx>=BAR_GAP; i+=5, bx=gorg-CHART_RES*i)
       if(i%6==0) {
-	gdk_draw_line(lwin->pixmap, lwin->gc, bx, by, bx, by+bm-l2);
+	gdk_draw_line(lwin->pixmap, lwin->gc, bx, by, bx, by+bm-theight);
 	if(opt_show_vals.int_value) {
 	  int lw;
 	  sprintf(buf, "%d", i);
 	  pango_layout_set_text(layout, buf, -1);
 	  pango_layout_get_pixel_size(layout, &lw, NULL);
 	  gdk_draw_layout(lwin->pixmap, lwin->gc,
-			  bx-lw/2, h-2, layout);
+			  bx-lw/2, l2, layout);
 	}
       } else {
-	gdk_draw_line(lwin->pixmap, lwin->gc, bx, by, bx, by+(bm-l2)/2);
+	gdk_draw_line(lwin->pixmap, lwin->gc, bx, by, bx, by+(bm-theight)/2);
       }
   }
 
@@ -812,8 +815,8 @@ static gboolean window_update(LoadWindow *lwin)
     const char *host=hostname;
     int lw;
     
-    if(server->server_host)
-      host=server->server_host;
+    /*if(server->server_host)
+      host=server->server_host;*/
     
     pango_layout_set_text(layout, host, -1);
     pango_layout_get_pixel_size(layout, &lw, NULL);
@@ -824,7 +827,8 @@ static gboolean window_update(LoadWindow *lwin)
     gdk_draw_layout(lwin->pixmap, lwin->gc, x, tm, layout);
   }
   
-  gtk_widget_queue_draw(lwin->canvas);    
+  gtk_widget_queue_draw(lwin->canvas);
+  g_object_unref(G_OBJECT(layout));
 
   return TRUE;
 }
@@ -1304,6 +1308,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.19  2003/04/16 09:11:15  stephen
+ * Added options system from ROX-CLib
+ *
  * Revision 1.18  2003/03/05 15:30:40  stephen
  * First pass at conversion to GTK 2.
  *
