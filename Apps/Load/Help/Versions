@@ -1,14 +1,6 @@
 Load
 ====
 
-1.0.0
------
-No changes.  This is the stable version.
-
-0.1.10
-------
-Fixed bug in memory management.
-
 0.1.9
 -----
 Don't scale down if the history is still big.  Support menu accelerators.
