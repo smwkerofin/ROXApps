@@ -1,7 +1,7 @@
 Fetch
 =====
 
-04-Dec-2004
+04-Dec-2004 (0.1.0)
 ~~~~~~~~~~~
 Use download manager.  Possible fix to stalled downloads (message
 saying download finished stuck in pipe!).
