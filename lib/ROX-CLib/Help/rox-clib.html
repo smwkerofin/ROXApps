@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <!-- $Id: rox-clib.html,v 1.7 2004/04/07 19:27:43 stephen Exp $ -->
+    <!-- $Id: rox-clib.html,v 1.8 2004/04/10 10:30:52 stephen Exp $ -->
     <title>ROX-CLib</title>
   </head>
 
@@ -68,7 +68,7 @@ to your link line, e.g.
 
     <h3>Library reference</h3>
 
-    <p>Organized by header file.
+    <p>Organized by header file.  Last updated for version 2.1.2.
 
     <ul>
       <li><a href="#rox.h">rox.h</a></li>
@@ -87,6 +87,7 @@ to your link line, e.g.
       <li><a href="#options.h">options.h</a></li>
       <li><a href="#basedir.h">basedir.h</a></li>
       <li><a href="#mime.h">mime.h</a></li>
+      <li><a href="#appinfo.h">appinfo.h</a></li>
     </ul>
 
     <h4><a name="rox.h">rox.h</a></h4>
@@ -305,32 +306,59 @@ a saved file would go without actually altering the filesystem).
 
     <p>RISC OS style information window.
 
-    <p>InfoWin is a GTK+ widget, derived from GtkDialog.
+    <p>ROXInfoWin is a GTK+ widget, derived from GtkDialog.  
+<strong>Changed in ROX-CLib 2.1.2:</strong> InfoWin was renamed
+				  ROXInfoWin and the functions renamed
+				  accordingly.  Functions remain
+				  available under the old names for
+				  binary compatability, but should not
+				  be used in new code.
     <dl>
       <dt>Functions
       <dd>
 	<dl>
+	  <dt><code>GtkWidget* rox_info_win_new(const gchar *<var>program</var>, 
+	      const gchar *<var>purpose</var>,
+	      const gchar *<var>version</var>, const gchar *<var>author</var>,
+	      const gchar *<var>website</var>)</code>
+
+	    <dd><p>Create a new ROXInfoWin object.  The data in the
+	      window is taken from the function arguments.
+			<code>rox_info_win_new_from_appinfo</code> is prefered.</p>
+
+	  <dt><code>GtkWidget* rox_info_win_new_from_appinfo(const gchar *<var>program</var>)</code>
+
+	    <dd><p>Create a new ROXInfoWin object.  The data in the
+	      window is taken from the file $APP_DIR/AppInfo.xml, if
+							    it exists.</p>
+
+	  <dt><code>void rox_info_win_add_browser_command(ROXInfoWin *<var>iw</var>, 
+	      const gchar *<var>cmd</var>)</code>
+
+	  <dd><p>Adds a command which will visit a named web site.
+	      The command will be called with a single argument, the
+	      URL passed in <code>rox_info_win_new()</code> or defined
+					in $APP_DIR/AppInfo.xml. 
+	    </p>
+
 	  <dt><code>GtkWidget* info_win_new(const gchar *<var>program</var>, 
 	      const gchar *<var>purpose</var>,
 	      const gchar *<var>version</var>, const gchar *<var>author</var>,
 	      const gchar *<var>website</var>)</code>
 
-	    <dd><p>Create a new InfoWin object.  The data in the
-	      window is taken from the function arguments.</p>
+	    <dd><p><strong>Deprecated.</strong>  Use 
+<code>rox_info_win_new_from_appinfo()</code> instead.</p>
 
 	  <dt><code>GtkWidget* info_win_new_from_appinfo(const gchar *<var>program</var>)</code>
+	    <dd><p><strong>Deprecated.</strong>  Use 
+<code>rox_info_win_new_from_appinfo()</code> instead.</p>
 
-	    <dd><p>Create a new InfoWin object.  The data in the
-	      window is taken from the file $APP_DIR/AppInfo.xml, if
-							    it exists.</p>
 
-	  <dt><code>void info_win_add_browser_command(InfoWin *<var>iw</var>, 
+	  <dt><code>void info_win_add_browser_command(ROXInfoWin *<var>iw</var>, 
 	      const gchar *<var>cmd</var>)</code>
 
-	  <dd><p>Adds a command which will visit a named web site.
-	      The command will be called with a single argument, then
-	      URL passed in <code>info_new_win()</code>. 
-	    </p>
+	    <dd><p><strong>Deprecated.</strong>  Use 
+<code>rox_info_win_add_browser_command()</code> instead.</p>
 
 	</dl>
 
@@ -1315,7 +1343,7 @@ of the file to determine the type.  This is the default.</p>
     <address><a href="mailto:stephen@kerofin.demon.co.uk">Stephen Watson</a></address>
 <!-- Created: Tue Nov 26 10:46:50 GMT 2002 -->
 <!-- hhmts start -->
-Last modified: Sat Apr 10 11:28:47 BST 2004
+Last modified: Sat May 22 16:51:22 BST 2004
 <!-- hhmts end -->
   </body>
 </html>

@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.c,v 1.8 2003/12/13 19:25:39 stephen Exp $
+ * $Id: infowin.c,v 1.9 2004/03/10 22:39:30 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -16,15 +16,15 @@
 #include "infowin.h"
 
 #define DEBUG 1
-#include <rox.h>
+#include "rox.h"
 #include "rox_debug.h"
 #include "rox_filer_action.h"
 
-static void info_win_finalize (GObject *object);
+static void rox_info_win_finalize (GObject *object);
 
 static GtkDialogClass *parent_class=NULL;
 
-static void info_win_class_init(InfoWinClass *iwc)
+static void rox_info_win_class_init(InfoWinClass *iwc)
 {
   GObjectClass *object_class;
 
@@ -34,7 +34,7 @@ static void info_win_class_init(InfoWinClass *iwc)
 
   /* Set up signals here... */
 
-  object_class->finalize=info_win_finalize;
+  object_class->finalize=rox_info_win_finalize;
 }
 
 /* Make a destroy-frame into a close */
@@ -141,7 +141,7 @@ static GtkWidget *get_app_icon(void)
   return NULL;
 }
   
-static void info_win_init(InfoWin *iw)
+static void rox_info_win_init(InfoWin *iw)
 {
   GtkWidget *label;
   GtkWidget *frame;
@@ -167,75 +167,75 @@ static void info_win_init(InfoWin *iw)
     gtk_widget_show(icon);
   }
 
-  iw->table=gtk_table_new(INFO_WIN_NSLOT, 2, FALSE);
+  iw->table=gtk_table_new(ROX_INFO_WIN_NSLOT, 2, FALSE);
   gtk_box_pack_start(GTK_BOX(hbox), iw->table, TRUE, TRUE, 2);
   gtk_widget_show(iw->table);
 
   label=gtk_label_new(_("Program"));
   gtk_widget_show(label);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), label, 0, 1,
-			    INFO_WIN_PROGRAM, INFO_WIN_PROGRAM+1);
+			    ROX_INFO_WIN_PROGRAM, ROX_INFO_WIN_PROGRAM+1);
 
   frame=gtk_frame_new(NULL);
   gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_IN);
   gtk_widget_show(frame);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), frame, 1, 2,
-			    INFO_WIN_PROGRAM, INFO_WIN_PROGRAM+1);
+			    ROX_INFO_WIN_PROGRAM, ROX_INFO_WIN_PROGRAM+1);
 
-  iw->slots[INFO_WIN_PROGRAM]=frame;
+  iw->slots[ROX_INFO_WIN_PROGRAM]=frame;
 
   label=gtk_label_new(_("Purpose"));
   gtk_widget_show(label);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), label, 0, 1,
-			    INFO_WIN_PURPOSE, INFO_WIN_PURPOSE+1);
+			    ROX_INFO_WIN_PURPOSE, ROX_INFO_WIN_PURPOSE+1);
 
   frame=gtk_frame_new(NULL);
   gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_IN);
   gtk_widget_show(frame);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), frame, 1, 2,
-			    INFO_WIN_PURPOSE, INFO_WIN_PURPOSE+1);
+			    ROX_INFO_WIN_PURPOSE, ROX_INFO_WIN_PURPOSE+1);
 
-  iw->slots[INFO_WIN_PURPOSE]=frame;
+  iw->slots[ROX_INFO_WIN_PURPOSE]=frame;
 
   label=gtk_label_new(_("Version"));
   gtk_widget_show(label);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), label, 0, 1,
-			    INFO_WIN_VERSION, INFO_WIN_VERSION+1);
+			    ROX_INFO_WIN_VERSION, ROX_INFO_WIN_VERSION+1);
 
   frame=gtk_frame_new(NULL);
   gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_IN);
   gtk_widget_show(frame);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), frame, 1, 2,
-			    INFO_WIN_VERSION, INFO_WIN_VERSION+1);
+			    ROX_INFO_WIN_VERSION, ROX_INFO_WIN_VERSION+1);
 
-  iw->slots[INFO_WIN_VERSION]=frame;
+  iw->slots[ROX_INFO_WIN_VERSION]=frame;
 
   label=gtk_label_new(_("Author"));
   gtk_widget_show(label);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), label, 0, 1,
-			    INFO_WIN_AUTHOR, INFO_WIN_AUTHOR+1);
+			    ROX_INFO_WIN_AUTHOR, ROX_INFO_WIN_AUTHOR+1);
 
   frame=gtk_frame_new(NULL);
   gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_IN);
   gtk_widget_show(frame);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), frame, 1, 2,
-			    INFO_WIN_AUTHOR, INFO_WIN_AUTHOR+1);
+			    ROX_INFO_WIN_AUTHOR, ROX_INFO_WIN_AUTHOR+1);
 
-  iw->slots[INFO_WIN_AUTHOR]=frame;
+  iw->slots[ROX_INFO_WIN_AUTHOR]=frame;
 
   label=gtk_label_new(_("Web site"));
   gtk_widget_show(label);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), label, 0, 1,
-			    INFO_WIN_WEBSITE, INFO_WIN_WEBSITE+1);
+			    ROX_INFO_WIN_WEBSITE, ROX_INFO_WIN_WEBSITE+1);
 
   button=gtk_button_new();
   gtk_widget_show(button);
   gtk_table_attach_defaults(GTK_TABLE(iw->table), button, 1, 2,
-			    INFO_WIN_WEBSITE, INFO_WIN_WEBSITE+1);
+			    ROX_INFO_WIN_WEBSITE, ROX_INFO_WIN_WEBSITE+1);
   g_signal_connect(G_OBJECT (button), "clicked",
                         G_CALLBACK(goto_website), iw);
 
-  iw->slots[INFO_WIN_WEBSITE]=button;
+  iw->slots[ROX_INFO_WIN_WEBSITE]=button;
 
   hbox=GTK_DIALOG(iw)->action_area;
 
@@ -246,7 +246,7 @@ static void info_win_init(InfoWin *iw)
   gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 2);
 }
 
-GType info_win_get_type(void)
+GType rox_info_win_get_type(void)
 {
   static GType iw_type = 0;
 
@@ -255,12 +255,12 @@ GType info_win_get_type(void)
 	sizeof (InfoWinClass),
 	NULL,			/* base_init */
 	NULL,			/* base_finalise */
-	(GClassInitFunc) info_win_class_init,
+	(GClassInitFunc) rox_info_win_class_init,
 	NULL,			/* class_finalise */
 	NULL,			/* class_data */
 	sizeof(InfoWinClass),
 	0,			/* n_preallocs */
-	(GtkObjectInitFunc) info_win_init,
+	(GtkObjectInitFunc) rox_info_win_init,
       };
 
       iw_type = g_type_register_static(GTK_TYPE_DIALOG, "InfoWin", &iw_info,
@@ -270,39 +270,44 @@ GType info_win_get_type(void)
   return iw_type;
 }
 
-GtkWidget* info_win_new(const gchar *program, const gchar *purpose,
+GtkWidget* rox_info_win_new(const gchar *program, const gchar *purpose,
 				const gchar *version, const gchar *author,
 				const gchar *website)
 {
-  GtkWidget *widget=GTK_WIDGET(gtk_type_new(info_win_get_type()));
+  GtkWidget *widget=GTK_WIDGET(gtk_type_new(rox_info_win_get_type()));
   GtkWidget *label;
   InfoWin *iw=INFO_WIN(widget);
+  gchar *title;
+
+  title=g_strdup_printf(_("Information on %s"), program);
+  gtk_window_set_title(GTK_WINDOW(iw), title);
+  g_free(title);
 
   label=gtk_label_new(program);
   gtk_widget_show(label);
-  gtk_container_add(GTK_CONTAINER(iw->slots[INFO_WIN_PROGRAM]), label);
+  gtk_container_add(GTK_CONTAINER(iw->slots[ROX_INFO_WIN_PROGRAM]), label);
 
   label=gtk_label_new(purpose);
   gtk_widget_show(label);
-  gtk_container_add(GTK_CONTAINER(iw->slots[INFO_WIN_PURPOSE]), label);
+  gtk_container_add(GTK_CONTAINER(iw->slots[ROX_INFO_WIN_PURPOSE]), label);
 
   label=gtk_label_new(version);
   gtk_widget_show(label);
-  gtk_container_add(GTK_CONTAINER(iw->slots[INFO_WIN_VERSION]), label);
+  gtk_container_add(GTK_CONTAINER(iw->slots[ROX_INFO_WIN_VERSION]), label);
 
   label=gtk_label_new(author);
   gtk_widget_show(label);
-  gtk_container_add(GTK_CONTAINER(iw->slots[INFO_WIN_AUTHOR]), label);
+  gtk_container_add(GTK_CONTAINER(iw->slots[ROX_INFO_WIN_AUTHOR]), label);
 
   iw->web_site=g_strdup(website);
   label=gtk_label_new(website);
   gtk_widget_show(label);
-  gtk_container_add(GTK_CONTAINER(iw->slots[INFO_WIN_WEBSITE]), label);
+  gtk_container_add(GTK_CONTAINER(iw->slots[ROX_INFO_WIN_WEBSITE]), label);
 
   return widget;
 }
 
-void info_win_add_browser_command(InfoWin *iw, const gchar *cmd)
+void rox_info_win_add_browser_command(InfoWin *iw, const gchar *cmd)
 {
   g_return_if_fail(iw!=NULL);
   g_return_if_fail(IS_INFO_WIN(iw));
@@ -311,7 +316,7 @@ void info_win_add_browser_command(InfoWin *iw, const gchar *cmd)
   iw->browser_cmds=g_list_prepend(iw->browser_cmds, (void *) cmd);
 }
 
-static void info_win_finalize (GObject *object)
+static void rox_info_win_finalize (GObject *object)
 {
   InfoWin *iw;
   
@@ -439,14 +444,14 @@ static GList *expand_languages(GList *languages)
   return nelangs;
 }
 
-GtkWidget *info_win_new_from_appinfo(const char *program)
+GtkWidget *rox_info_win_new_from_appinfo(const char *program)
 {
   gchar *purpose=NULL, *version=NULL, *author=NULL, *website=NULL;
   const gchar *appdir;
   gchar *path;
   GtkWidget *window;
 
-  dprintf(3, "info_win_new_from_appinfo(%s)", program);
+  dprintf(3, "rox_info_win_new_from_appinfo(%s)", program);
 
   appdir=g_getenv("APP_DIR");
   if(appdir) { 
@@ -531,7 +536,7 @@ GtkWidget *info_win_new_from_appinfo(const char *program)
     g_free(path);
   }
 
-  window=info_win_new(program, purpose, version, author, website);
+  window=rox_info_win_new(program, purpose, version, author, website);
 
   if(purpose)
     g_free(purpose);
@@ -545,8 +550,34 @@ GtkWidget *info_win_new_from_appinfo(const char *program)
   return window;
 }
 
+/* Binary compatability */
+GType info_win_get_type(void)
+{
+  return rox_info_win_get_type();
+}
+
+GtkWidget* info_win_new(const gchar *program, const gchar *purpose,
+				const gchar *version, const gchar *author,
+				const gchar *website)
+{
+  return rox_info_win_new(program, purpose, version, author, website);
+}
+
+GtkWidget* info_win_new_from_appinfo(const gchar *program)
+{
+  return rox_info_win_new_from_appinfo(program);
+}
+
+void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
+{
+  return rox_info_win_add_browser_command(iw, cmd);
+}
+
 /*
  * $Log: infowin.c,v $
+ * Revision 1.9  2004/03/10 22:39:30  stephen
+ * Get icon using rox_get_program_icon
+ *
  * Revision 1.8  2003/12/13 19:25:39  stephen
  * InfoWin dismiss button is now a stock close.
  *
