@@ -12,7 +12,7 @@ fi
 AC_SUBST(GTK_CONFIG)
 
 if test -z "$ROX_RUN"; then
-  AC_CHECK_PROG(ROX_RUN, rox_run, rox_run)
+  AC_CHECK_PROG(ROX_RUN, rox_run, rox_run, "$APP_DIR/rox_run")
 fi
 AC_SUBST(ROX_RUN)
 

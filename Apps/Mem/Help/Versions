@@ -1,6 +1,10 @@
 Mem
 ===
 
+0.1.4
+-----
+Small changes to compilation system.
+
 0.1.3
 -----
 Run autoconf if configure script not found.

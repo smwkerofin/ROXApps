@@ -1,6 +1,10 @@
 Tail
 ====
 
+1.1.1
+-----
+Small changes to compilation system.
+
 1.1.0
 -----
 Switch over to ROX-CLib.

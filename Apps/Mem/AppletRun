@@ -16,6 +16,10 @@ esac
 
 PLATFORM=`uname -s`-$ARCH
 
+if [ $ARCH = sun4u ] ; then
+    unset LD_PRELOAD
+fi
+
 case $1 in
     --debug) shift ; DEBUGGER=gdb ;;
     --compile)
