@@ -1,6 +1,6 @@
-# $Id: main.py,v 1.1.1.1 2003/05/09 14:02:09 stephen Exp $
+# $Id: main.py,v 1.2 2004/03/04 17:35:10 stephen Exp $
 
-import findrox
+import findrox; findrox.version(1, 9, 13)
 
 import os, sys
 import stat
