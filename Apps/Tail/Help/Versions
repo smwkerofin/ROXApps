@@ -1,6 +1,10 @@
 Tail
 ====
 
+1.3.2
+-----
+Fix the autocompilation broke in 1.3.1
+
 1.3.1
 -----
 Italian translation of AppInfo provided by Yuri Bongiorno.
