@@ -1,6 +1,10 @@
 Mem
 ===
 
+1.2.0
+-----
+New stable release.
+
 1.1.2
 -----
 Fix compilation problem with libxml2.
