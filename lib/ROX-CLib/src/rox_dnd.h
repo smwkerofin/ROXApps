@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.h,v 1.1 2001/07/17 14:44:50 stephen Exp $
+ * $Id: rox_dnd.h,v 1.2 2001/07/23 12:58:21 stephen Exp $
  */
 
 #ifndef _rox_dnd_h
@@ -36,14 +36,18 @@ extern void rox_dnd_register_full(GtkWidget *widget,
 				  
 /*
  * Scans list of URIs and picks out only those that refer to local files.
- * Free result with g_slist_free after freeing data with g_free
+ * Free result with rox_dnd_local_free
  */
 extern GSList *rox_dnd_filter_local(GSList *uris);
+extern void rox_dnd_local_free(GSList *paths);
 
 #endif
 
 /*
  * $Log: rox_dnd.h,v $
+ * Revision 1.2  2001/07/23 12:58:21  stephen
+ * XDS needs to pass the path (or uri) to the callback
+ *
  * Revision 1.1  2001/07/17 14:44:50  stephen
  * Added DnD stuff (plus path utils and debug util)
  *
