@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.4 2004/03/10 22:40:35 stephen Exp $
+ * $Id: rox.c,v 1.5 2004/05/22 17:03:57 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -51,6 +51,7 @@ void rox_init(const char *program, int *argc, char ***argv)
   }
   
   rox_dnd_init();
+  mime_init();
 }
 
 const gchar *rox_get_program_name(void)
@@ -116,6 +117,9 @@ const char *rox_clib_gtk_version_string(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.5  2004/05/22 17:03:57  stephen
+ * Added AppInfo parser
+ *
  * Revision 1.4  2004/03/10 22:40:35  stephen
  * Get the .DirIcon in rox_init and set it as default icon for windows
  *
