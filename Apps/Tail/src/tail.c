@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.18 2004/04/13 11:17:26 stephen Exp $
+ * $Id: tail.c,v 1.19 2004/08/05 17:49:16 stephen Exp $
  */
 
 #include "config.h"
@@ -89,7 +89,7 @@ static void save_menus(void)
 {
   char	*menurc;
 	
-  menurc = choices_find_path_save(MENU_FNAME, PROJECT, TRUE);
+  menurc = rox_choices_save(MENU_FNAME, PROJECT, "kerofin.demon.co.uk");
   if (menurc) {
     gtk_accel_map_save(menurc);
     g_free(menurc);
@@ -124,7 +124,7 @@ static GtkWidget *get_main_menu(GtkWidget *window, const gchar *name)
 
   menu=gtk_item_factory_get_widget (item_factory, name);
   
-  menurc=choices_find_path_load(MENU_FNAME, PROJECT);
+  menurc=rox_choices_load(MENU_FNAME, PROJECT, "kerofin.demon.co.uk");
   if(menurc) {
     gtk_accel_map_load(menurc);
     g_free(menurc);
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
     exit(0);
   }
   
-  rox_init(PROJECT, &argc, &argv);
+  rox_init_with_domain(PROJECT, "kerofin.demon.co.uk", &argc, &argv);
   
   /* What is the directory where our resources are? (set by AppRun) */
   app_dir=g_getenv("APP_DIR");
@@ -228,16 +228,13 @@ int main(int argc, char *argv[])
   if(do_exit)
     exit(0);
 
-  rcfile=choices_find_path_load("gtkrc", PROJECT);
+  rcfile=rox_choices_load("gtkrc", PROJECT, "kerofin.demon.co.uk");
   if(rcfile) {
     gtk_rc_parse(rcfile);
     g_free(rcfile);
   }
 
   win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_signal_connect(GTK_OBJECT(win), "destroy", 
-		     GTK_SIGNAL_FUNC(gtk_main_quit), 
-		     "WM destroy");
   gtk_window_set_title(GTK_WINDOW(win), fixed_title? fixed_title: "Tail");
   gtk_window_set_wmclass(GTK_WINDOW(win), "Tail", PROJECT);
   rox_dnd_register_uris(win, 0, got_uri_list, NULL);
@@ -279,6 +276,7 @@ int main(int argc, char *argv[])
   }
   
   gtk_widget_show(win);
+  rox_add_window(win);
 
   if(argv[optind] && strcmp(argv[optind], "-")!=0)
     set_file(argv[optind]);
@@ -290,7 +288,7 @@ int main(int argc, char *argv[])
   /* Create the pop-up menu now so the menu accelerators are loaded */
   menu=get_main_menu(GTK_WIDGET(win), MENU_NAME);
 
-  gtk_main();
+  rox_main_loop();
 
   return 0;
 }
@@ -477,33 +475,16 @@ static void set_fd(int nfd)
   window_updated((time_t) -1);
 }
 
-/* Make a destroy-frame into a close */
-static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
-			      gpointer data)
-{
-  /* Change this destroy into a hide */
-  gtk_widget_hide(GTK_WIDGET(data));
-  return TRUE;
-}
-
 static void show_info_win(void)
 {
-  static GtkWidget *infowin=NULL;
+  GtkWidget *infowin;
   
-  if(!infowin) {
-    infowin=info_win_new_from_appinfo(PROGRAM);
-    gtk_window_set_wmclass(GTK_WINDOW(infowin), "Info", PROGRAM);
-  }
+  infowin=rox_info_win_new_from_appinfo(PROGRAM);
+  rox_add_window(infowin);
 
   gtk_window_set_position(GTK_WINDOW(infowin), GTK_WIN_POS_MOUSE);
   gtk_widget_show(infowin);
 }
-
-static void hide_window(GtkWidget *widget, gpointer data)
-{
-  gtk_widget_hide(errwin);
-}
-
 
 static gint save_to_file(GtkSavebox *savebox, gchar *pathname)
 {
@@ -579,13 +560,13 @@ static void file_saveas_proc(void)
   rox_debug_printf(2, "set pathname to %s", "tail.txt");
   gtk_savebox_set_pathname(GTK_SAVEBOX(savebox), "tail.txt");
 
-  ipath=choices_find_path_load("text_plain.png", "MIME-icons");
+  ipath=rox_choices_load("text_plain.png", "MIME-icons", "rox.sourceforge.net");
   if(!ipath)
-    ipath=choices_find_path_load("text.png", "MIME-icons");
+    ipath=rox_choices_load("text_plain.png", "MIME-icons", NULL);
   if(!ipath)
-    ipath=choices_find_path_load("text_plain.xpm", "MIME-icons");
+    ipath=rox_choices_load("text.png", "MIME-icons", "rox.sourceforge.net");
   if(!ipath)
-    ipath=choices_find_path_load("text.xpm", "MIME-icons");
+    ipath=rox_choices_load("text.png", "MIME-icons", NULL);
   if(ipath) {
     pixbuf=gdk_pixbuf_new_from_file(ipath, &err);
     g_free(ipath);
@@ -696,6 +677,10 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.19  2004/08/05 17:49:16  stephen
+ * Updated compilation system to use libdir.
+ * Don't show more that 256KB when loading file (doesn't work via stdin).
+ *
  * Revision 1.18  2004/04/13 11:17:26  stephen
  * Update for new ROX-CLib
  *

@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.15 2004/04/12 13:35:06 stephen Exp $
+ * $Id: mem.c,v 1.16 2004/09/05 11:37:51 stephen Exp $
  */
 #include "config.h"
 
@@ -107,7 +107,7 @@ static ROXSOAPServer *server=NULL;
 static MemWindow *make_window(guint32 socket);
 static gboolean update_values(MemWindow *);
 static void do_update(void);
-static void read_choices(void);
+static gboolean read_choices(void);
 static void setup_options(void);
 static void menu_create_menu(GtkWidget *);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
@@ -170,7 +170,7 @@ static void do_version(void)
   printf("  libgtop not available\n");    
 #endif
   printf("  Have kstat... %s\n",
-#ifdef HAVE_KSTAT
+#ifdef HAVE_KSTAT_OPEN
 	   "yes"
 #else
 	   "no"
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
   g_free(localedir);
 #endif
 
-  rox_init(PROJECT, &argc, &argv);
+  rox_init_with_domain(PROJECT, "kerofin.demon.co.uk", &argc, &argv);
   
   /* Check for this argument by itself */
   if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
   mem_stats_init();
   make_window(xid);
   
-  gtk_main();
+  rox_main_loop();
 
   if(server)
     rox_soap_server_delete(server);
@@ -322,10 +322,7 @@ static void remove_window(MemWindow *win)
   gtk_timeout_remove(win->update_tag);
   g_free(win);
 
-  dprintf(1, "windows=%p, number of active windows=%d", windows,
-	  g_list_length(windows));
-  if(g_list_length(windows)<1)
-    gtk_main_quit();
+  rox_debug_printf(1, "rox_get_n_windows()=%d", rox_get_n_windows());
 }
 
 static void window_gone(GtkWidget *widget, gpointer data)
@@ -668,6 +665,7 @@ static MemWindow *make_window(guint32 xid)
   windows=g_list_append(windows, mwin);
   current_window=mwin;
   gtk_widget_ref(mwin->win);
+  rox_add_window(mwin->win);
 
   return mwin;
 }
@@ -808,11 +806,11 @@ static void do_update(void)
 #define MEM_DISP    "MemoryAppletDisplay"
 #define SWAP_DISP   "SwapAppletDisplay"
 
-static gboolean read_choices_xml(void)
+static gboolean read_choices(void)
 {
   gchar *fname;
 
-  fname=choices_find_path_load("Config.xml", PROJECT);
+  fname=rox_choices_load("Config.xml", PROJECT, "www.kerofin.demon.co.uk");
 
   if(fname) {
     xmlDocPtr doc;
@@ -891,35 +889,14 @@ static gboolean read_choices_xml(void)
   return FALSE;
 }
 
-static void read_choices(void)
-{
-  read_choices_xml();
-}
-
-
 static void show_info_win(void)
 {
-  static GtkWidget *infowin=NULL;
+  GtkWidget *infowin;
   
-  if(!infowin) {
-    infowin=info_win_new(PROGRAM, PURPOSE, VERSION, AUTHOR, WEBSITE);
-  }
+  infowin=rox_info_win_new_from_appinfo(PROGRAM);
+  rox_add_window(infowin);
 
   gtk_widget_show(infowin);
-}
-
-/* Make a destroy-frame into a close */
-static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
-			      gpointer data)
-{
-  /* Change this destroy into a hide */
-  gtk_widget_hide(GTK_WIDGET(data));
-  return TRUE;
-}
-
-static void hide_window(GtkWidget *widget, gpointer data)
-{
-  gtk_widget_hide(GTK_WIDGET(data));
 }
 
 static void opts_changed(void)
@@ -1088,7 +1065,7 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Close"), 	        NULL, close_window, 0,  "<StockItem>",
                                 GTK_STOCK_CLOSE},
   { "/",                        NULL, NULL,         0, "<Separator>"},
-  { N_("/Quit"), 	        NULL, gtk_main_quit, 0,  "<StockItem>",
+  { N_("/Quit"), 	        NULL, rox_main_quit, 0,  "<StockItem>",
                                 GTK_STOCK_QUIT},
 };
 
@@ -1096,7 +1073,7 @@ static void save_menus(void)
 {
   char	*menurc;
 	
-  menurc = choices_find_path_save("menus", PROJECT, TRUE);
+  menurc = rox_choices_save("menus", PROJECT, "www.kerofin.demon.co.uk");
   if (menurc) {
     gtk_accel_map_save(menurc);
     g_free(menurc);
@@ -1121,7 +1098,7 @@ static void menu_create_menu(GtkWidget *window)
 	/* Attach the new accelerator group to the window. */
   gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
-  menurc=choices_find_path_load("menus", PROJECT);
+  menurc=rox_choices_load("menus", PROJECT, "www.kerofin.demon.co.uk");
   if(menurc) {
     gtk_accel_map_load(menurc);
     g_free(menurc);
@@ -1296,6 +1273,11 @@ static gboolean options_remote(void)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.16  2004/09/05 11:37:51  stephen
+ * Change to new build system.
+ * Split stats gathering into its own file seperate from GUI.
+ * Can function without libgtop.
+ *
  * Revision 1.15  2004/04/12 13:35:06  stephen
  * Remove dead code.  Open options dialog from command line or SOAP message.  Stock items in menus.
  *

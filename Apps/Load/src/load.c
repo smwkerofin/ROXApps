@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.23 2004/08/18 17:24:55 stephen Exp $
+ * $Id: load.c,v 1.24 2004/08/19 19:27:44 stephen Exp $
  *
  * Log at end of file
  */
@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
   gboolean show_options=FALSE;
   int ncpu;
 
-  rox_init("Load", &argc, &argv);
+  rox_init_with_domain("Load", "kerofin.demon.co.uk", &argc, &argv);
 
 #ifdef HAVE_SETLOCALE
   setlocale(LC_TIME, "");
@@ -346,7 +346,7 @@ int main(int argc, char *argv[])
   if(show_options)
     show_config_win();
   
-  gtk_main();
+  rox_main_loop();
 
   if(sserver)
     rox_soap_server_delete(sserver);
@@ -418,10 +418,7 @@ static void remove_window(LoadWindow *win)
   gdk_gc_unref(win->gc);
   g_free(win);
 
-  dprintf(1, "windows=%p, number of active windows=%d", windows,
-	  g_list_length(windows));
-  if(g_list_length(windows)<1)
-    gtk_main_quit();
+  rox_debug_printf(1, "rox_get_n_windows()=%d", rox_get_n_windows());
 }
 
 static void window_gone(GtkWidget *widget, gpointer data)
@@ -515,6 +512,7 @@ static LoadWindow *make_window(guint32 xid)
   windows=g_list_append(windows, lwin);
   current_window=lwin;
   gtk_widget_ref(lwin->win);
+  rox_add_window(lwin->win);
 
   return lwin;
 }
@@ -946,7 +944,7 @@ static gboolean read_config_xml(void)
 {
   guchar *fname;
 
-  fname=choices_find_path_load("config.xml", PROJECT);
+  fname=rox_choices_load("config.xml", PROJECT, "kerofin.demon.co.uk");
 
   if(fname) {
     xmlDocPtr doc;
@@ -1160,7 +1158,7 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Close"), 	NULL, close_window, 0,   "<StockItem>",
                                                 GTK_STOCK_CLOSE},
   { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
-  { N_("/Quit"),	NULL, gtk_main_quit, 0,   "<StockItem>",
+  { N_("/Quit"),	NULL, rox_main_quit, 0,   "<StockItem>",
                                                 GTK_STOCK_QUIT},
 };
 
@@ -1168,7 +1166,7 @@ static void save_menus(void)
 {
   char	*menurc;
 	
-  menurc = choices_find_path_save("menus", PROJECT, TRUE);
+  menurc = rox_choices_save("menus", PROJECT, "kerofin.demon.co.uk");
   if (menurc) {
     gtk_accel_map_save(menurc);
     g_free(menurc);
@@ -1195,7 +1193,7 @@ static void menu_create_menu(GtkWidget *window)
 
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
 
-  menurc=choices_find_path_load("menus", PROJECT);
+  menurc=rox_choices_load("menus", PROJECT, "kerofin.demon.co.uk");
   if(menurc) {
     gtk_accel_map_load(menurc);
     g_free(menurc);
@@ -1359,10 +1357,10 @@ static gboolean options_remote(void)
 
 static void show_info_win(void)
 {
-  if(!infowin) {
-    infowin=info_win_new_from_appinfo(PROGRAM);
-    gtk_window_set_wmclass(GTK_WINDOW(infowin), "Info", PROJECT);
-  }
+  GtkWidget *infowin;
+  
+  infowin=rox_info_win_new_from_appinfo(PROGRAM);
+  rox_add_window(infowin);
 
   gtk_window_set_position(GTK_WINDOW(infowin), GTK_WIN_POS_MOUSE);
   gtk_widget_show(infowin);
@@ -1370,6 +1368,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.24  2004/08/19 19:27:44  stephen
+ * Draw lines on the graph to indicate the levels.
+ *
  * Revision 1.23  2004/08/18 17:24:55  stephen
  * Eliminate use of libgtop
  *

@@ -74,7 +74,7 @@ AC_CHECK_LIB(kstat, kstat_open)
 AC_CHECK_FUNCS(kstat_open swapctl)
 
 dnl Check for ROX-CLib and version
-ROX_CLIB(2, 1, 2)
+ROX_CLIB(2, 1, 4)
 
 dnl Extract version info from AppInfo.xml
 ROX_SELF_VERSION
