@@ -18,7 +18,7 @@ dnl Checks for library functions.
 dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(version information)
 changequote(,)dnl
-VERSION=`sed -n 's/^.*<Version>\([.0-9]*\).*<\/Version>.*$/\1/p' ../AppInfo.xml`
+VERSION=`sed -n 's/^.*<Version>\([^<]*\)<\/Version>.*$/\1/p' ../AppInfo.xml`
 changequote([,])dnl
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
 AC_MSG_RESULT(version $VERSION)
