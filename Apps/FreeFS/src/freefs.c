@@ -5,13 +5,12 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.13 2001/11/12 14:42:10 stephen Exp $
+ * $Id: freefs.c,v 1.14 2001/12/12 10:18:22 stephen Exp $
  */
 #include "config.h"
 
 /* Select compilation options */
 #define TRY_DND            1     /* Enable the drag and drop stuff */
-#define APPLET_MENU        1     /* Use a menu for the applet version */
 #define APPLET_DND         0     /* Support drag & drop to the applet */
 #define DEBUG              1     /* Set to 1 for debug messages */
 
@@ -60,11 +59,13 @@
 #endif
 #include "rox_resources.h"
 #include "rox_filer_action.h"
+#include "applet.h"
 
 #define TIP_PRIVATE "For more information see the help file"
 
 /* GTK+ objects */
 static GtkWidget *win=NULL;
+static GtkWidget *plug=NULL;
 static GtkWidget *fs_name=NULL, *fs_total, *fs_used, *fs_free, *fs_per;
 static GtkWidget *menu=NULL;
 static guint update_tag=0;
@@ -284,9 +285,9 @@ int main(int argc, char *argv[])
     menu_create_menu(win);
   } else {
     /* We are an applet, plug ourselves in */
-    GtkWidget *plug;
     int i;
-    
+
+    dprintf(3, "xid=0x%x", xid);
     plug=gtk_plug_new(xid);
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
@@ -342,12 +343,11 @@ int main(int argc, char *argv[])
 			 "This shows the relative usage of the file system",
 			 TIP_PRIVATE);
 
-#if APPLET_MENU
     menu_create_menu(plug);
-#endif
 
     dprintf(5, "show plug");
     gtk_widget_show(plug);
+    (void) applet_get_panel_location(plug);
     dprintf(5, "made applet");
   }
 
@@ -928,8 +928,9 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),		NULL, show_info_win, 0, NULL },
   { N_("/Configure..."),	NULL, show_config_win, 0, NULL},
   { N_("/Update Now"),	NULL, do_update, 0, NULL },
-  { N_("/Open directory"),	NULL, do_opendir, 0, NULL },
-  { N_("/Open FS root"),	NULL, do_opendir, 1, NULL },
+  { N_("/Open"),                NULL, NULL, 0, "<Branch>"},
+  { N_("/Open/Directory"),	NULL, do_opendir, 0, NULL },
+  { N_("/Open/FS root"),	NULL, do_opendir, 1, NULL },
   { N_("/Quit"), 	NULL, gtk_main_quit, 0, NULL },
 };
 
@@ -981,16 +982,16 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   gboolean are_applet=(win==0);
   
   if(bev->type==GDK_BUTTON_PRESS) {
-    if(bev->button==3
-#if !APPLET_MENU
-       && !are_applet
-#endif
-       ) {
+    if(bev->button==3) {
       if(!menu)
 	menu_create_menu(window);
 
-      gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
+      if(are_applet) {
+	applet_show_menu(menu, bev);
+      } else {
+	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		     bev->button, bev->time);
+      }
       return TRUE;
     } else if(bev->button==1 && are_applet) {
       gchar *cmd;
@@ -1033,6 +1034,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.14  2001/12/12 10:18:22  stephen
+ * Added option to open a viewer for the root of the FS being monitored
+ *
  * Revision 1.13  2001/11/12 14:42:10  stephen
  * Change to XML handling: requires 2.4 or later.  Use old style config otherwise.
  *

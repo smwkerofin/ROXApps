@@ -1,6 +1,10 @@
 Versions of FreeFS
 ==================
 
+1.1.7
+-----
+New applet menu positioning code (from ROX-CLib).
+
 1.1.6
 -----
 Added option to open a viewer for the root of the FS being monitored, mainly
