@@ -1,6 +1,13 @@
 Changes to ROX-CLib by Version
 ==============================
 
+1.1.2
+-----
+Handle %-escaped URIs in drag and drop.  
+Italian translation of the AppInfo file submitted by Yuri Bongiorno.
+Show apps icon (if we can find it) in the info win, plus bug fixes (Geoff 
+Youngs).
+
 1.1.1
 -----
 Fixed reference in options.c from error() to rox_error()
