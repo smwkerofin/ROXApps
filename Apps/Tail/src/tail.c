@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.11 2001/10/04 13:39:18 stephen Exp $
+ * $Id: tail.c,v 1.12 2002/01/30 10:24:39 stephen Exp $
  */
 
 #include "config.h"
@@ -181,6 +181,7 @@ static void do_version(void)
   printf("Distributed under the terms of the GNU General Public License.\n");
   printf("(See the file COPYING in the Help directory).\n");
   printf("%s last compiled %s\n", __FILE__, __DATE__);
+  printf("ROX-CLib version %s\n", rox_clib_version_string());
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
@@ -714,6 +715,9 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.12  2002/01/30 10:24:39  stephen
+ * Add -h and -v options.
+ *
  * Revision 1.11  2001/10/04 13:39:18  stephen
  * Switch over to ROX-CLib.
  * Can specify a title with -t option.
