@@ -1,0 +1,17 @@
+Some of this library has been taken from ROX-Filer itself, specifically the 
+choices system and the drag & drop code.  Bugs introduced during this process
+are my fault, sorry.
+
+Module			Author
+
+choices			Thomas Leonard
+gtksavebox
+
+rox_dnd			Thomas Leonard, Stephen Watson (I think)
+
+error			Stephen Watson
+infowin
+pkg
+rox_debug
+rox_path
+
