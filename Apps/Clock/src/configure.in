@@ -78,8 +78,9 @@ AC_MSG_CHECKING(ROX-CLib)
 if "$ROX_RUN" ROX-CLib ; then
   verstr=`"$ROX_RUN" ROX-CLib -v`
   ver=`echo $verstr | cut -d " " -f 2`
+  set `echo $ver | tr '.' ' '`
   changequote(,)dnl
-  ROX_CLIB_VERSION=`echo $ver | sed -e "s/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)/10000*\1+100*\2+\3/" | bc`
+  ROX_CLIB_VERSION=`expr $1 \* 10000 + $2 \* 100 + $3`
   changequote([,])dnl
   AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ROX_CLIB_VERSION)
   AC_MSG_RESULT(version $ver)

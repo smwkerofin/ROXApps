@@ -4,6 +4,7 @@ Changes to Clock
 1.5.2
 -----
 Italian translation of AppInfo provided by Yuri Bongiorno.
+Safer way to parse ROX-CLib's version number by Christopher Arndt.
 
 1.5.1
 -----
