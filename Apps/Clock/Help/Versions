@@ -1,6 +1,12 @@
 Changes to Clock
 ================
 
+2.1.0
+-----
+Get rid of some legacy code. 
+Use ROX-CLib 2.1.0.
+Stock icons in the menu.
+
 2.0.0
 -----
 Stable release to go with ROX-CLib 2.0.0.

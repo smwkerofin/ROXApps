@@ -5,13 +5,11 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.26 2003/03/25 14:32:28 stephen Exp $
+ * $Id: clock.c,v 1.27 2003/06/21 13:09:10 stephen Exp $
  */
 #include "config.h"
 
 #define DEBUG              1
-#define INLINE_FONT_SEL    0
-#define TRY_SERVER         1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,34 +39,16 @@
 
 #include <gtk/gtk.h>
 
-#if USE_GDK_PIXBUF
-#include <gdk-pixbuf/gdk-pixbuf.h>
-#endif
-
 #include <libxml/xmlversion.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
-#if LIBXML_VERSION>=20400
-#define USE_XML 1
-#else
-#define USE_XML 0
-#endif
-
-#if USE_XML && TRY_SERVER
-#define USE_SERVER 1
-#else
-#define USE_SERVER 0
-#endif
-
-#include "rox.h"
-#include "rox_debug.h"
-#include "applet.h"
-#if USE_SERVER
-#include "rox_soap.h"
-#include "rox_soap_server.h"
-#endif
-#include "options.h"
+#include <rox/rox.h>
+#include <rox/rox_debug.h>
+#include <rox/applet.h>
+#include <rox/rox_soap.h>
+#include <rox/rox_soap_server.h>
+#include <rox/options.h>
 
 #include "alarm.h"
 
@@ -145,12 +125,8 @@ static GtkWidget *user_fmt=NULL;    /* Entering the user-defined format */
 static GtkWidget *mode_flags[MODE_NFLAGS];
 static GtkWidget *interval=NULL;
 static GtkWidget *init_size=NULL;
-#if INLINE_FONT_SEL
-static GtkWidget *font_sel=NULL;
-#else
-static GtkWidget *font_window;
-static GtkWidget *font_name;
-#endif
+/*static GtkWidget *font_window;
+  static GtkWidget *font_name;*/
 
 static Option o_format;
 static Option o_user_format;
@@ -170,7 +146,6 @@ typedef struct clock_window {
   gboolean applet_mode;
   GtkWidget *digital_out; /* Text below clock face */
   GtkWidget *canvas;      /* Displays clock face */
-  /*GdkPixmap *pixmap;      /* Draw face here, copy to canvas */
   guint update_tag;            /* Handle for the timeout */
   GdkGC *gc;
 } ClockWindow;
@@ -179,10 +154,8 @@ static GList *windows=NULL;
 
 static ClockWindow *current_window=NULL;
 
-#if USE_SERVER
 static ROXSOAPServer *server=NULL;
 #define CLOCK_NAMESPACE_URL WEBSITE PROJECT
-#endif
 
 static ClockWindow *make_window(guint32 socket);
 static void remove_window(ClockWindow *win);
@@ -198,36 +171,27 @@ static void menu_create_menu(GtkWidget *window);
                                     /* create the pop-up menu */
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win); /* button press on canvas */
+static gboolean popup_menu(GtkWidget *window, gpointer udata);
 static void show_info_win(void);
 static void show_conf_win(void);
 static gboolean check_alarms(gpointer data);
-#if USE_SERVER
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
 static gboolean open_remote(guint32 xid);
-#endif
 
 static void setup_options(void);
 static void read_config(void);
-#if USE_XML
 static gboolean read_config_xml(void);
-#endif
 static void setup_config(void);
 
 static void usage(const char *argv0)
 {
-#if USE_SERVER
   printf("Usage: %s [X-options] [gtk-options] [-nrvh] [XID]\n", argv0);
-#else
-  printf("Usage: %s [X-options] [gtk-options] [-vh] [XID]\n", argv0);
-#endif
   printf("where:\n\n");
   printf("  X-options\tstandard Xlib options\n");
   printf("  gtk-options\tstandard GTK+ options\n");
-#if USE_SERVER
   printf("  -n\tdon't attempt to contact existing server\n");
   printf("  -r\treplace existing server\n");
-#endif
   printf("  -h\tprint this help message\n");
   printf("  -v\tdisplay version information\n");
   printf("  XID\tthe X id of the window to use for applet mode\n");
@@ -246,24 +210,8 @@ static void do_version(void)
 
   printf("\nCompile time options:\n");
   printf("  Debug output... %s\n", DEBUG? "yes": "no");
-  printf("  Inline font selection... %s\n", INLINE_FONT_SEL? "yes": "no");
-  printf("  Using XML... ");
-  if(USE_XML)
-    printf("yes (libxml version %d)\n", LIBXML_VERSION);
-  else {
-    printf("no (libxml version %d)\n", LIBXML_VERSION);
-  }
-  printf("  Using SOAP server... ");
-  if(USE_SERVER)
-    printf("yes\n");
-  else {
-    printf("no");
-    if(!TRY_SERVER)
-      printf(", disabled");
-    if(!USE_XML)
-      printf(", XML not available");
-    printf("\n");
-  }
+  printf("  Using XML... yes (libxml version %d)\n", LIBXML_VERSION);
+  printf("  Using SOAP server... yes\n");
 }
 
 int main(int argc, char *argv[])
@@ -275,13 +223,9 @@ int main(int argc, char *argv[])
 #ifdef HAVE_BINDTEXTDOMAIN
   gchar *localedir;
 #endif
-#if USE_SERVER
   const char *options="vhnr";
   gboolean new_run=FALSE;
   gboolean replace_server=FALSE;
-#else
-  const char *options="vh";
-#endif
 
   /* First things first, set the locale information for time, so that
      strftime will give us a sensible date format... */
@@ -297,22 +241,17 @@ int main(int argc, char *argv[])
   g_free(localedir);
 #endif
 
-  rox_debug_init("Clock");
-  dprintf(1, "Debug system inited");
-
   /* Check for this argument by itself */
   if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
     do_version();
     exit(0);
   }
   
-  dprintf(2, "Initialise Choices");
-  choices_init();
-  options_init("Clock");
+  rox_init("Clock", &argc, &argv);
+  dprintf(1, "ROX system inited");
+
   
   /* Initialise X/GDK/GTK */
-  dprintf(2, "Initialise X/GDK/GTK");
-  gtk_init(&argc, &argv);
   gdk_rgb_init();
   gtk_widget_push_visual(gdk_rgb_get_visual());
   gtk_widget_push_colormap(gdk_rgb_get_cmap());
@@ -330,14 +269,12 @@ int main(int argc, char *argv[])
       do_version();
       do_exit=TRUE;
       break;
-#if USE_SERVER
     case 'n':
       new_run=TRUE;
       break;
     case 'r':
       replace_server=TRUE;
       break;
-#endif
     default:
       nerr++;
       break;
@@ -357,7 +294,6 @@ int main(int argc, char *argv[])
   dprintf(4, "argc=%d", argc);
   xid=(!argv[optind] || !atol(argv[optind]))? 0: atol(argv[optind]);
   
-#if USE_SERVER
   if(replace_server || !rox_soap_ping(PROJECT)) {
     dprintf(1, "Making SOAP server");
     server=rox_soap_server_new(PROJECT, CLOCK_NAMESPACE_URL);
@@ -368,7 +304,7 @@ int main(int argc, char *argv[])
       return 0;
     }
   }
-#endif
+
   cwin=make_window(xid);
 
   gtk_widget_show(cwin->win);
@@ -381,10 +317,8 @@ int main(int argc, char *argv[])
   if(save_alarms)
     alarm_save();
 
-#if USE_SERVER
   if(server)
     rox_soap_server_delete(server);
-#endif
 
   return 0;
 }
@@ -406,10 +340,8 @@ static void remove_window(ClockWindow *win)
     current_window=NULL;
   
   windows=g_list_remove(windows, win);
-  /*gtk_widget_hide(win->win);*/
 
   gtk_timeout_remove(win->update_tag);
-  /*gdk_pixmap_unref(win->pixmap);*/
   gdk_gc_unref(win->gc);
   g_free(win);
 
@@ -461,6 +393,8 @@ static ClockWindow *make_window(guint32 socket)
     /* We want to pop up a menu on a button press */
     gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), cwin);
+    gtk_signal_connect(GTK_OBJECT(plug), "popup-menu",
+		       GTK_SIGNAL_FUNC(popup_menu), cwin);
     gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
 
     
@@ -490,6 +424,8 @@ static ClockWindow *make_window(guint32 socket)
     /* We want to pop up a menu on a button press */
     gtk_signal_connect(GTK_OBJECT(cwin->win), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), cwin);
+    gtk_signal_connect(GTK_OBJECT(cwin->win), "popup-menu",
+		       GTK_SIGNAL_FUNC(popup_menu), cwin);
     gtk_widget_add_events(cwin->win, GDK_BUTTON_PRESS_MASK);
     gtk_widget_realize(cwin->win);
 
@@ -850,7 +786,6 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
   return TRUE;
 }
 
-#if USE_XML
 static gboolean read_config_xml(void)
 {
   guchar *fname;
@@ -954,17 +889,14 @@ static gboolean read_config_xml(void)
 
   return FALSE;
 }
-#endif
 
 /* Read in the config */
 static void read_config(void)
 {
   guchar *fname;
 
-#if USE_XML
   if(read_config_xml())
     return;
-#endif
   
   fname=choices_find_path_load("options", PROJECT);
 
@@ -1073,12 +1005,16 @@ static void close_window(void)
 
 /* Pop-up menu */
 static GtkItemFactoryEntry menu_items[] = {
-  { N_("/Info"),		NULL, show_info_win, 0, NULL },
-  { N_("/Configure..."),       	NULL, show_conf_win, 0, NULL },
+  { N_("/Info"),		NULL, show_info_win, 0, "<StockItem>",
+                                GTK_STOCK_DIALOG_INFO},
+  { N_("/Configure..."),       	NULL, show_conf_win, 0, "<StockItem>",
+                                GTK_STOCK_PROPERTIES},
   { N_("/Alarms..."),		NULL, alarm_show_window, 0, NULL },
-  { N_("/Close"), 	        NULL, close_window, 0, NULL },
+  { N_("/Close"), 	        NULL, close_window, 0, "<StockItem>",
+                                GTK_STOCK_CLOSE},
   { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
-  { N_("/Quit"), 	        NULL, gtk_main_quit, 0, NULL },
+  { N_("/Quit"), 	        NULL, gtk_main_quit, 0, "<StockItem>",
+                                GTK_STOCK_QUIT},
 };
 
 static void save_menus(void)
@@ -1162,7 +1098,31 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   return FALSE;
 }
 
-#if USE_SERVER
+/* Button press in canvas */
+static gboolean popup_menu(GtkWidget *window, gpointer udata)
+{
+  ClockWindow *cwin=(ClockWindow *) udata;
+
+  if(!menu) 
+    menu_create_menu(GTK_WIDGET(cwin->win));
+
+  if(!save_alarms || !load_alarms) {
+    GList *children=GTK_MENU_SHELL(menu)->children;
+    GtkWidget *alarms=GTK_WIDGET(g_list_nth(children, 2));
+      
+    gtk_widget_set_sensitive(alarms, FALSE);
+  }
+
+  if(cwin->applet_mode)
+    applet_popup_menu(cwin->win, menu, NULL);
+  else
+    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
+		   0, gtk_get_current_event_time());
+
+  return TRUE;
+  
+}
+
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata)
 {
@@ -1230,14 +1190,12 @@ static gboolean open_remote(guint32 xid)
   return sent && ok;
 }
 
-#endif
-
 /* Show the info window */
 static void show_info_win(void)
 {
   if(!infowin) {
     /* Need to make it first */
-    infowin=info_win_new(PROJECT, PURPOSE, VERSION, AUTHOR, WEBSITE);
+    infowin=info_win_new_from_appinfo(PROJECT);
     gtk_signal_connect(GTK_OBJECT(infowin), "delete_event", 
 		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
 		     infowin);
@@ -1248,6 +1206,10 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.27  2003/06/21 13:09:10  stephen
+ * Convert to new options system.  Use pango for fonts.
+ * New option for no-face.
+ *
  * Revision 1.26  2003/03/25 14:32:28  stephen
  * Re-enabled SOAP server, to test new ROX-CLib code.
  *

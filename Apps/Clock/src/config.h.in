@@ -19,7 +19,6 @@
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
 
-/*#undef HAVE_XML*/
 #undef HAVE_ALTZONE
 #define ROX_CLIB_VERSION ""
 
