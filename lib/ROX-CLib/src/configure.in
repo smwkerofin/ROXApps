@@ -6,6 +6,16 @@ dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
 
+if test -z "$GTK_CONFIG"; then
+  GTK_CONFIG=gtk-config
+fi
+AC_SUBST(GTK_CONFIG)
+
+AC_CHECK_PROG(XML_CONFIG, xml2-config, xml2-config, false)
+if test "$XML_CONFIG" != "false"; then
+  AC_DEFINE(HAVE_XML)
+fi
+
 dnl Checks for libraries.
 AC_CHECK_LIB(nsl, gethostbyname)
 
