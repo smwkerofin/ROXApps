@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# choice_install prog source leaf
+
+if [ "x$CHOICESPATH" = x ]; then
+    CHOICESPATH=$HOME/Choices:/usr/local/share/Choices:/usr/share/Choices
+fi
+
+choices_write=`echo $CHOICESPATH | cut -f1 -d:`
+if [ ! -d $choices_write ]; then
+    echo $choices_write not found or not a directory
+    exit 1
+fi
+
+prog=$1
+source=$2
+leaf=$3
+
+if [ ! -d $choices_write/$prog ] ; then
+    if [ -f $choices_write/$prog ] ; then
+	echo $choices_write/$prog exists but is not a directory
+	exit 2
+    else
+	mkdir $choices_write/$prog
+	cp $source $choices_write/$prog/$leaf
+    fi
+
+else
+    if [ ! -f $choices_write/$prog/$leaf ] ; then
+	cp $source $choices_write/$prog/$leaf
+    fi
+fi
