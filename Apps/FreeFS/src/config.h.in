@@ -8,3 +8,9 @@
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 
 #include <sys/types.h>
+
+#undef HAVE_UNISTD_H
+#undef HAVE_REALPATH
+
+#define _(String) (String)
+#define N_(String) (String)
