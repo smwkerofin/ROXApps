@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.10 2003/06/22 09:04:41 stephen Exp $
+ * $Id: main.c,v 1.11 2004/04/13 10:25:32 stephen Exp $
  */
 #include "config.h"
 
@@ -476,7 +476,7 @@ static void read_config(void)
  */
 static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),       NULL, show_info_win, 0, "<StockItem>",
-                                               GTK_STOCK_INFO_DIALOG },
+                                               GTK_STOCK_DIALOG_INFO },
   { N_("/Choices..."), NULL, show_choices_win, 0, "<StockItem>",
                                                GTK_STOCK_PREFERENCES },
   { N_("/Quit"),       NULL, gtk_main_quit, 0, "<StockItem>",
@@ -905,6 +905,9 @@ static void show_choices_win(void)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.11  2004/04/13 10:25:32  stephen
+ * Remove dead code.  Stock items in menus.
+ *
  * Revision 1.10  2003/06/22 09:04:41  stephen
  * Use new options system.  Can set font for text windows
  *
