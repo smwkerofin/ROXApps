@@ -13,11 +13,36 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 
+dnl Forward support for GTK2
+AC_ARG_WITH(gtk2,
+[  --with-gtk2		  Use Gtk+-2.0 API instead of Gtk+-1.2], gtk2=1, gtk2=0)
+
+if test -z "$PKG_CONFIG"; then
+  PKG_CONFIG=pkg-config
+fi
+AC_SUBST(PKG_CONFIG)
+AC_DEFINE_UNQUOTED(PKG_CONFIG, "$PKG_CONFIG")
+
 if test -z "$GTK_CONFIG"; then
   GTK_CONFIG=gtk-config
 fi
 AC_SUBST(GTK_CONFIG)
-AC_DEFINE_UNQUOTED(GTK_CONFIG, "$GTK_CONFIG")
+AC_DEFINE_UNQUOTED(GTK_CONFIG, "GTK_CONFIG")
+
+if test "$gtk2" = "1"; then
+  AC_MSG_WARN([Using EXPERIMENTAL Gtk+-2.0 API])
+  AC_DEFINE(GTK2)
+  gtk2=1
+  GTK_CFLAGS="$PKG_CONFIG gtk+-2.0 --cflags"
+  GTK_LIBS="$PKG_CONFIG gtk+-2.0 --libs"
+else
+  GTK_CFLAGS="$GTK_CONFIG --cflags"
+  GTK_LIBS="$GTK_CONFIG --libs"
+fi
+AC_SUBST(GTK_CFLAGS)
+AC_SUBST(GTK_LIBS)
+AC_DEFINE_UNQUOTED(GTK_CFLAGS, "$GTK_CFLAGS")
+AC_DEFINE_UNQUOTED(GTK_LIBS, "$GTK_LIBS")
 
 AC_CHECK_PROG(XML_CONFIG, xml2-config, xml2-config, false)
 if test "$XML_CONFIG" != "false"; then

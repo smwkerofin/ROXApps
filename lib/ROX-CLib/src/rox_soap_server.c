@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: rox_soap_server.c,v 1.1 2002/03/19 08:29:21 stephen Exp $
  *
  * rox_soap_server.c - Provide ROX-Filer like SOAP server
  *
@@ -87,8 +87,13 @@ ROXSOAPServer *rox_soap_server_new(const char *program_name,
 		      gdk_x11_xatom_to_atom(XA_WINDOW), 32,
 		      GDK_PROP_MODE_REPLACE,
 		      (void *) &xwindow, 1);
+#ifdef GTK2
+  g_signal_connect(server->ipc_window, "client-event",
+		     G_CALLBACK(client_event), server);
+#else
   gtk_signal_connect(GTK_OBJECT(server->ipc_window), "client-event",
 		     GTK_SIGNAL_FUNC(client_event), server);
+#endif
   gdk_property_change(GDK_ROOT_PARENT(), server->atom,
 		      gdk_x11_xatom_to_atom(XA_WINDOW), 32,
 		      GDK_PROP_MODE_REPLACE,
@@ -203,6 +208,8 @@ static xmlNodePtr soap_invoke(ROXSOAPServer *server, xmlNode *method)
 		    method->name);
 	  goto out;
 	}
+
+      dprintf(3, "Append '%s' to argument list for %s", *arg, method->name);
       
       args = g_list_append(args, node);
     }
@@ -214,10 +221,13 @@ static xmlNodePtr soap_invoke(ROXSOAPServer *server, xmlNode *method)
       
       node = get_subnode(method, server->ns_url, *arg);
       
+      dprintf(3, "Append '%s' to argument list for %s", *arg, method->name);
+      
       args = g_list_append(args, node);
     }
   }
 
+  dprintf(2, "Calling method %s for %s", method->name, server->ns_url);
   retval = call->method(server, method->name, args, call->udata);
  out:
   g_list_free(args);

@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.3 2001/08/20 15:28:24 stephen Exp $
+ * $Id: rox_dnd.c,v 1.4 2001/08/29 13:36:36 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -111,10 +111,17 @@ void rox_dnd_register_full(GtkWidget *widget,
   rdata->udata=udata;
   rdata->uri=NULL;
 
+#if GTK2
+  g_signal_connect(widget, "drag_drop",
+		     G_CALLBACK(drag_drop), rdata);
+  g_signal_connect(widget, "drag_data_received",
+		     G_CALLBACK(drag_data_received), rdata);
+#else
   gtk_signal_connect(GTK_OBJECT(widget), "drag_drop",
 		     GTK_SIGNAL_FUNC(drag_drop), rdata);
   gtk_signal_connect(GTK_OBJECT(widget), "drag_data_received",
 		     GTK_SIGNAL_FUNC(drag_data_received), rdata);
+#endif
 }
 
 /* Is the sender willing to supply this target type? */
@@ -386,6 +393,9 @@ static void drag_data_received(GtkWidget      	*widget,
 }
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.4  2001/08/29 13:36:36  stephen
+ * fixed call to gtk_drag_dest_set so we don't get the drop data twice
+ *
  * Revision 1.3  2001/08/20 15:28:24  stephen
  * Added rox_dnd_local_free
  *

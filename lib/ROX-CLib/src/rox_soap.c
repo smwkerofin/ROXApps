@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.3 2001/12/21 10:01:46 stephen Exp $
+ * $Id: rox_soap.c,v 1.4 2002/03/19 08:29:20 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -505,9 +505,14 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   dprintf(3, "event->data.l={%p, %p}", event.data.l[0], event.data.l[1]);
 	
   gtk_widget_add_events(ipc_window, GDK_PROPERTY_CHANGE_MASK);
+#ifdef GTK2
+  g_signal_connect(ipc_window, "property-notify-event",
+		     G_CALLBACK(soap_done), sdata);
+#else
   gtk_signal_connect(GTK_OBJECT(ipc_window), "property-notify-event",
 		     GTK_SIGNAL_FUNC(soap_done), sdata);
-
+#endif
+  
   dprintf(2, "sending message %p to %p", event.message_type,
 	  filer->existing_ipc_window);
   gdk_event_send_client_message((GdkEvent *) &event,
@@ -689,6 +694,10 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.4  2002/03/19 08:29:20  stephen
+ * Added SOAP server (rox_soap_server.h).  SOAP client can connect to programs
+ * other than ROX-Filer.
+ *
  * Revision 1.3  2001/12/21 10:01:46  stephen
  * Updated version number, but not yet ready for new release.
  * Added debug to rox_soap (and protect if no XML)

@@ -16,6 +16,9 @@
 #endif
 
 #undef GTK_CONFIG
+#undef PKG_CONFIG
+#undef GTK_CFLAGS
+#undef GTK_LIBS
 #undef XML_CONFIG
 
 #undef HAVE_LIBNSL

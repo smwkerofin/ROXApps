@@ -1,7 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.c,v 1.2 2001/11/05 13:59:18 stephen Exp $
+ * $Id: infowin.c,v 1.3 2002/02/13 11:00:37 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -19,6 +19,7 @@
 #include "rox_debug.h"
 #include "rox_filer_action.h"
 
+#ifndef GTK2
 static void info_win_finalize (GtkObject *object);
 
 static GtkDialogClass *parent_class=NULL;
@@ -284,8 +285,18 @@ static void info_win_finalize (GtkObject *object)
   (* GTK_OBJECT_CLASS (parent_class)->finalize) (object);
 }
 
+#else
+#error "Not yet implemented the GTK+ 2.0 infowin"
+#endif
+
 /*
  * $Log: infowin.c,v $
+ * Revision 1.3  2002/02/13 11:00:37  stephen
+ * Better way of accessing web site (by running a URI file).  Improvement to
+ * language checking in rox_resources.c.  Visit by the const fairy in choices.h.
+ * Updated pkg program to check for libxml2.  Added rox.c to access ROX-CLib's
+ * version number.
+ *
  * Revision 1.2  2001/11/05 13:59:18  stephen
  * Changed printf to dprintf
  *

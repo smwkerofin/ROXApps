@@ -1,5 +1,5 @@
 /*
- * $Id: pkg.c,v 1.2 2002/02/13 11:00:37 stephen Exp $
+ * $Id: pkg.c,v 1.3 2002/02/25 09:50:23 stephen Exp $
  */
 
 #include <stdio.h>
@@ -163,8 +163,7 @@ static int do_cflags(const char *app_dir, const char *platform)
   tmp=g_strdup_printf("-I%s/%s/include ", app_dir, platform);
   line=g_string_new(tmp);
   g_free(tmp);
-  sprintf(cmd, "%s --cflags", GTK_CONFIG);
-  line=run_command(line, cmd);
+  line=run_command(line, GTK_CFLAGS);
 #ifdef HAVE_XML
   sprintf(cmd, "%s --cflags", XML_CONFIG);
   line=run_command(line, cmd);
@@ -185,8 +184,7 @@ static int do_libs(const char *app_dir, const char *platform)
   tmp=g_strdup_printf("-L%s/%s/lib -l%s ", app_dir, platform, LIBNAME);
   line=g_string_new(tmp);
   g_free(tmp);
-  sprintf(cmd, "%s --libs", GTK_CONFIG);
-  line=run_command(line, cmd);
+  line=run_command(line, GTK_LIBS);
 #ifdef HAVE_XML
   sprintf(cmd, "%s --libs", XML_CONFIG);
   line=run_command(line, cmd);
@@ -216,7 +214,7 @@ static int do_help(const char *app_dir, const char *platform)
 
   printf("\nCompile time options:\n");
 #ifdef GTK2
-  printf("\tGTK+ 2.x, using %s\n", GTK_CONFIG);
+  printf("\tGTK+ 2.x, using %s\n", PKG_CONFIG);
 #else
   printf("\tGTK+ 1.2.x, using %s\n", GTK_CONFIG);
 #endif
@@ -238,6 +236,9 @@ static int do_version(const char *app_dir, const char *platform)
 
 /*
  * $Log: pkg.c,v $
+ * Revision 1.3  2002/02/25 09:50:23  stephen
+ * Fixed bug in determining XML config
+ *
  * Revision 1.2  2002/02/13 11:00:37  stephen
  * Better way of accessing web site (by running a URI file).  Improvement to
  * language checking in rox_resources.c.  Visit by the const fairy in choices.h.
