@@ -1,6 +1,11 @@
 Versions of FreeFS
 ==================
 
+0.1.6
+-----
+getopt lives in different places on different OS's.  Clicking button-1 on 
+applet runs full program.  Auto-compile in applet mode.
+
 0.1.5
 -----
 Should auto-compile.  Added option to set initial size of applet.  Allow menu
