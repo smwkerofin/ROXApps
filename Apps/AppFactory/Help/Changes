@@ -1,6 +1,10 @@
 AppFactory
 ==========
 
+29-Oct-2004
+~~~~~~~~~~~
+Switch to rox_choices_load/save and rox_info_win.
+
 07-Oct-2004
 ~~~~~~~~~~~
 Use $MAKE instead of make when building.

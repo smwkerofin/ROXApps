@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.14 2004/08/05 17:13:26 stephen Exp $
+ * $Id: main.c,v 1.15 2004/08/27 18:37:10 stephen Exp $
  */
 #include "config.h"
 
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
     exit(0);
   }
   
-  rox_init("AppFactory", &argc, &argv);
+  rox_init_with_domain("AppFactory", "kerofin.demon.co.uk", &argc, &argv);
 
   /* First things first, set the locale information for time, so that
      strftime will give us a sensible date format... */
@@ -144,13 +144,6 @@ int main(int argc, char *argv[])
   author=g_get_real_name();
   read_config_xml();
   setup_config();
-
-#if 0
-  /* Initialise X/GDK/GTK things */
-  gdk_rgb_init();
-  gtk_widget_push_visual(gdk_rgb_get_visual());
-  gtk_widget_push_colormap(gdk_rgb_get_cmap());
-#endif
 
   /* Process remaining arguments */
   nerr=0;
@@ -279,7 +272,8 @@ int main(int argc, char *argv[])
   gtk_widget_show(win);
 
   /* Main processing loop */
-  gtk_main();
+  rox_add_window(win);
+  rox_main_loop();
 
   return 0;
 }
@@ -599,7 +593,7 @@ static gboolean read_config_xml(void)
 {
   guchar *fname;
 
-  fname=choices_find_path_load("options.xml", PROJECT);
+  fname=rox_choices_load("options.xml", PROJECT, "kerofin.demon.co.uk");
 
   if(fname) {
     xmlDocPtr doc;
@@ -674,7 +668,7 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Configure..."),	NULL, show_config_win, 0, "<StockItem>",
                                  GTK_STOCK_PROPERTIES},
   { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
-  { N_("/Quit"), 	        NULL, gtk_main_quit, 0,  "<StockItem>",
+  { N_("/Quit"), 	        NULL, rox_main_quit, 0,  "<StockItem>",
                                  GTK_STOCK_QUIT},
 };
 
@@ -683,7 +677,7 @@ static void save_menus(void)
 {
   char	*menurc;
 	
-  menurc = choices_find_path_save("menus", PROJECT, TRUE);
+  menurc = rox_choices_save("menus", PROJECT, "kerofin.demon.co.uk");
   if (menurc) {
     gtk_accel_map_save(menurc);
     g_free(menurc);
@@ -712,7 +706,7 @@ static GtkWidget *menu_create_menu(GtkWidget *window)
   /* Load any user-defined menu accelerators */
   menu = gtk_item_factory_get_widget(item_factory, "<system>");
 
-  menurc=choices_find_path_load("menus", PROJECT);
+  menurc=rox_choices_load("menus", PROJECT, "kerofin.demon.co.uk");
   if(menurc) {
     gtk_accel_map_load(menurc);
     g_free(menurc);
@@ -746,16 +740,12 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 /* Show the info window */
 static void show_info_win(void)
 {
-  static GtkWidget *infowin=NULL;
+  GtkWidget *infowin;
   
-  if(!infowin) {
-    /* Need to make it first.  The arguments are macros defined
-     in config.h.in  */
-    infowin=info_win_new(PROJECT, PURPOSE, VERSION, AUTHOR, WEBSITE);
-    gtk_signal_connect(GTK_OBJECT(infowin), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     infowin);
-  }
-
+  infowin=rox_info_win_new_from_appinfo(PROJECT);
+  rox_add_window(infowin);
   gtk_widget_show(infowin);
 }
+/*
+ * $Log$
+ */
