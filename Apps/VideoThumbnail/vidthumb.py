@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.6 2004/05/08 18:40:29 stephen Exp $
+# $Id: vidthumb.py,v 1.7 2004/08/05 17:37:39 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -18,7 +18,7 @@ being processed.
 
 import os, sys
 import md5
-import rox
+import rox, rox.mime
 
 import thumb
 
@@ -31,6 +31,12 @@ take_first=options.take_first.int_value
 
 # Width of the film strip effect to put at each side
 bwidth=options.ssize.int_value
+
+# How best to select the frame for a given type.  Worked out by trial and error
+first_by_types={
+    'video/mpeg': True,
+    'video/x-ms-wmv': False
+}
 
 debug=os.environ.get('VIDTHUMB_DEBUG', 0)
 
@@ -116,13 +122,24 @@ class VidThumb(thumb.Thumbnailler):
                 return True
                 
             os.system(cmd)
-            if take_first:
+
+            mtype=rox.mime.get_type(fname)
+            #print >>sys.stderr, mtype, first_by_types
+            try:
+                #print >>sys.stderr, str(mtype)
+                first=first_by_types[str(mtype)]
+            except:
+                #print >>sys.stderr, 'oops'
+                first=take_first
+            #print >>sys.stderr, first
+            
+            if first:
                 id=1
             else:
                 id=2
             ofile='%08d.png' % id
             if not frame_ok(ofile):
-                if not take_first:
+                if not first:
                     id=1
                     ofile='%08d.png' % id
                     if not frame_ok(ofile):

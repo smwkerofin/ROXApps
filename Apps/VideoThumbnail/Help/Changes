@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+21-Aug-2004 (0.1.4)
+-----------
+Frame selection now dependant on the type of file.
+
 30-Jun-2004 (0.1.3)
 -----------
 Added option to control which of the two generated frames we should use.
