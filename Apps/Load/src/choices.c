@@ -1,8 +1,8 @@
 /*
- * $Id: choices.c,v 1.12 2000/09/16 18:15:37 tal197 Exp $
+ * $Id$
  *
  * ROX-Filer, filer for the ROX desktop project
- * Copyright (C) 2000, Thomas Leonard, <tal197@users.sourceforge.net>.
+ * Copyright (C) 2001, the ROX-Filer team.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -150,12 +150,12 @@ void choices_free_list(GPtrArray *list)
  * choices_find_path_load("menus", "ROX-Filer")
  *		 		-> "/usr/local/share/Choices/ROX-Filer/menus".
  *
- * The return values may be NULL - use built-in defaults - otherwise
+ * The return values may be NULL - use built-in defaults.
  * g_free() the result.
  */
 guchar *choices_find_path_load(char *leaf, char *dir)
 {
-	gchar		**cdir = dir_list;
+	gchar	**cdir = dir_list;
 
 	g_return_val_if_fail(dir_list != NULL, NULL);
 
@@ -180,19 +180,15 @@ guchar *choices_find_path_load(char *leaf, char *dir)
  * disabled. If 'create' is TRUE then intermediate directories will
  * be created (set this to FALSE if you just want to find out where
  * a saved file would go without actually altering the filesystem).
+ *
+ * g_free() the result.
  */
 guchar *choices_find_path_save(char *leaf, char *dir, gboolean create)
 {
-	static gchar	*path = NULL;
+	gchar	*path, *retval;
 	
 	g_return_val_if_fail(dir_list != NULL, NULL);
 
-	if (path)
-	{
-		g_free(path);
-		path = NULL;
-	}
-	
 	if (saving_disabled)
 		return NULL;
 
@@ -210,9 +206,10 @@ guchar *choices_find_path_save(char *leaf, char *dir, gboolean create)
 			g_warning("mkdir(%s): %s\n", path, g_strerror(errno));
 	}
 
-	path = g_strconcat(path, "/", leaf, NULL);
+	retval = g_strconcat(path, "/", leaf, NULL);
+	g_free(path);
 
-	return path;
+	return retval;
 }
 
 
