@@ -14,6 +14,10 @@ To set the file to display, either:
 Note that if you delete the monitored file, the disc space will not be
 reclaimed until Tail stops monitoring it.
 
+Two command line options are supported:
+  -c        Don't show the status line
+  -t title  Set the window title (normally "Tail: filename")
+
 The latest version is at http://www.kerofin.demon.co.uk/rox/
 
 -- 
