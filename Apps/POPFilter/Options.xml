@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<options>
+  <section title='Login'>
+    <label>These will only take effect on the next connection</label>
+    <entry name='MailHost' label='Mail server'>Host to collect mail
+from</entry>
+    <numentry name='POP3port' label='Port number' min='1' max='65535'
+	      width='4'>TCP port to connect to</numentry>
+    <entry name='Account' label='Account'>Your account name</entry>
+    <secretentry name='Password' label='Password'>Your password</secretentry>
+  </section>
+  <section title='Filtering'>
+    <toggle name='ValidateName' label='Validate local name'>
+If this is on the 'To' name is checked to see 
+if it is present on the system</toggle>
+    <numentry name='MaxSize' label='Maximum size (K)' min='0' max='65535'>
+Maximum size of message to download, 
+in kilobytes</numentry>
+  </section>
+</options>

@@ -1,0 +1,58 @@
+POPFilter
+=========
+
+POPFilter is designed to scan a POP3 mailbox and delete unwanted mail.
+
+POPFilter comes with ABSOLUTELY NO WARRANTY.
+
+Use of this program may result in the permanent loss of email messages, either
+from mis-configuration of the program or from bugs in the program itself.  Be
+especially aware of badly set-up kill file rules that may delete more than 
+you expect.
+
+Configuration
+-------------
+
+POPFilter needs to know about your POP3 server.  Click on the "Options"
+button and enter the following data:
+
+Login
+  Mail server:  POP3 host you connect to to collect mail
+  Port number:  Almost always 110
+  Account:      Name you use when loggin in, either username, hostname
+		or username@hostname
+  Password:	Password used to log into the mail server
+
+Filtering
+  Validate local name: If set, this checks the recipient's name (the
+		       To: line) against valid user names on the local
+		       system.
+
+You can then click on "Kill file" to set a list of regular expressions
+to match against the sender of the message (the From: line).  
+
+Use
+---
+
+Once the data is set up, click on Reconnect to connect to your mail
+server.  If all goes well you should have a list of mail messages.
+Pay attention to the right hand column.  If this is the word "Kill"
+then POPFilter will try to delete the message, otherwise if it is
+"Leave" then it will be untouched.  If a cell has a red background it
+is because POPFilter found a matching kill rule for that message.
+
+You can override POPFilter's decisions by selecting list entries and
+clicking on "Kill selected" or "Leave selected".
+
+When you are happy with the choice of actions, click on "Process
+actions".  If there are messages scheduled for deletion, POPFilter
+will ask you to confirm them.  THIS IS THE POINT OF NO RETURN.  When
+they are gone they're gone.  You cannot get them back.
+
+Some POP3 servers may time out if you take too long to make your
+decisions.  Reconnect, then try again.
+
+Author
+------
+Stephen Watson stephen@kerofin.demon.co.uk
+http://www.kerofin.demon.co.uk/rox/
