@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.6 2002/07/31 17:17:44 stephen Exp $
+ * $Id: rox_soap.c,v 1.7 2003/03/05 15:31:23 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -83,6 +83,8 @@ static gchar *host_name;
 
 static char *last_error=NULL;
 static char last_error_buffer[1024];
+
+static GSList *dead_windows=NULL;
 
 static GdkWindow *get_existing_ipc_window(GdkAtom);
 
@@ -420,8 +422,8 @@ static void soap_done(GtkWidget *widget, GdkEventProperty *event,
   if(sdata->prop != event->atom)
     return;
 
-  /*dprintf(3, "soap_done, remove %u", sdata->timeout_tag);
-    gtk_timeout_remove(sdata->timeout_tag);*/
+  dprintf(3, "soap_done, remove %u", sdata->timeout_tag);
+  gtk_timeout_remove(sdata->timeout_tag);
   /* Clear the timeout tag, serves as a flag to indicate we were succesful */
   sdata->timeout_tag=0;
 
@@ -451,9 +453,10 @@ static void soap_done(GtkWidget *widget, GdkEventProperty *event,
   if(reply)
     xmlFreeDoc(reply);
   
-  dprintf(3, "unref %p", sdata->widget);
-  gtk_widget_unref(sdata->widget);
-  /*g_free(sdata);*/
+  /*dprintf(3, "unref %p", sdata->widget);
+  gtk_widget_unref(sdata->widget);*/
+  dead_windows=g_slist_prepend(dead_windows, sdata->widget);
+  g_free(sdata);
 }
 
 gboolean too_slow(gpointer data)
@@ -470,7 +473,7 @@ gboolean too_slow(gpointer data)
       sdata->callback(sdata->filer, FALSE, NULL, sdata->data);
   }
   
-  gtk_widget_unref(sdata->widget);
+  /*gtk_widget_unref(sdata->widget);*/
 
   return FALSE;
 }
@@ -563,8 +566,8 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   dprintf(3, "sent message to %p",
 	  GDK_WINDOW_XWINDOW(filer->existing_ipc_window));
 
-  g_signal_connect(ipc_window, "destroy",
-		     G_CALLBACK(destroy_ipc_window), sdata);
+  /*g_signal_connect(ipc_window, "destroy",
+    G_CALLBACK(destroy_ipc_window), sdata);*/
   sdata->timeout_tag=gtk_timeout_add(filer->timeout, too_slow, sdata);
 }
 
@@ -709,6 +712,10 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.7  2003/03/05 15:31:23  stephen
+ * First pass a conversion to GTK 2
+ * Known problems in SOAP code.
+ *
  * Revision 1.6  2002/07/31 17:17:44  stephen
  * Use approved method of including libxml headers.
  *

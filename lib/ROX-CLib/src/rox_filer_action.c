@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.8 2002/07/31 17:17:21 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.9 2003/03/05 15:31:23 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -370,6 +370,7 @@ static void string_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
 	  if(sub) {
 	    char *type;
 	    type=xmlNodeGetContent(sub);
+	    dprintf(3, "result is %s", type);
 	    filer_reply_str=g_strdup(type);
 	    g_free(type);
 	    break;
@@ -463,6 +464,10 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.9  2003/03/05 15:31:23  stephen
+ * First pass a conversion to GTK 2
+ * Known problems in SOAP code.
+ *
  * Revision 1.8  2002/07/31 17:17:21  stephen
  * Use approved method of including libxml headers.
  *

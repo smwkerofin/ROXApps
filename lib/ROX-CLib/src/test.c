@@ -1,5 +1,5 @@
 /*
- * $Id: test.c,v 1.5 2002/07/31 17:17:55 stephen Exp $
+ * $Id: test.c,v 1.6 2003/03/05 15:31:23 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
   ROXSOAP *prog;
   xmlDocPtr doc;
   xmlNodePtr act;
+  gboolean state;
   
   gtk_init(&argc, &argv);
   rox_debug_init("test");
@@ -49,8 +50,8 @@ int main(int argc, char *argv[])
   printf("error=%s\n", rox_filer_get_last_error());
   printf("Waiting..\n");
   sleep(5);
-  printf("Examine(/tmp)\n");
-  rox_filer_examine("/tmp");
+  printf("Examine(/tmp/stephen)\n");
+  rox_filer_examine("/tmp/stephen");
   printf("error=%s\n", rox_filer_get_last_error());
   printf("Waiting..\n");
   sleep(5);
@@ -108,10 +109,11 @@ int main(int argc, char *argv[])
 			 &act);
   printf("error=%s\n", rox_soap_get_last_error());
   printf("Send action %s\n", "Open");
-  rox_soap_send(prog, doc, FALSE, clock_open_callback, NULL);
-  printf("error=%s\n", rox_soap_get_last_error());
+  state=rox_soap_send(prog, doc, FALSE, clock_open_callback, NULL);
+  printf("state=%d, error=%s\n", state, rox_soap_get_last_error());
   xmlFreeDoc(doc);
-  gtk_main();
+  if(state)
+    gtk_main();
   rox_soap_close(prog);
   
   return 0;

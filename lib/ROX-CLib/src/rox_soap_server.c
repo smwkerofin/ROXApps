@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap_server.c,v 1.3 2002/07/31 17:17:30 stephen Exp $
+ * $Id: rox_soap_server.c,v 1.4 2003/03/05 15:31:23 stephen Exp $
  *
  * rox_soap_server.c - Provide ROX-Filer like SOAP server
  *
@@ -292,13 +292,19 @@ static char *read_property(GdkWindow *window, GdkAtom prop, gint *out_length)
   gint	grab_len = 4096;
   gint	length;
   guchar	*data;
+  gchar *name;
 
+  name=gdk_atom_name(prop);
+  dprintf(3, "read property %s on %p", name, window);
+  g_free(name);
   while (TRUE) {
     if (!(gdk_property_get(window, prop,
 			   gdk_x11_xatom_to_atom(XA_STRING), 0, grab_len,
 			   FALSE, NULL, NULL,
 			   &length, &data) && data))
       return NULL;	/* Error? */
+
+    dprintf(3, "grab_len=%d, length=%d", grab_len, length);
 
     if (length >= grab_len) {
       /* Didn't get all of it - try again */
@@ -341,9 +347,11 @@ static gboolean client_event(GtkWidget *window,
   if (!data)
     return TRUE;
 
+  dprintf(3, "got data, now parsing");
   doc = xmlParseMemory(g_strndup(data, length), length);
   g_free(data);
 
+  dprintf(3, "Calling run_soap");
   reply = run_soap(server, doc);
   xmlFreeDoc(doc);
 
