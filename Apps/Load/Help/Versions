@@ -1,6 +1,11 @@
 Load
 ====
 
+1.1.4
+-----
+Uses XML for config, if XML 2.4 or later.
+Can select a font for display.
+
 1.1.3
 -----
 Small changes to compilation system.

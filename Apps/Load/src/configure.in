@@ -40,6 +40,12 @@ AC_SUBST(LIBGTOP_EXTRA_LIBS)
 AC_SUBST(LIBGTOP_LIBS)
 AC_SUBST(LIBGTOP_INCS)
 
+AC_CHECK_PROG(XML_CONFIG, xml2-config, xml2-config, false)
+dnl AC_DEFINE_UNQUOTED(XML_CONFIG, "$XML_CONFIG")
+if test "$XML_CONFIG" != "false"; then
+  AC_DEFINE(HAVE_XML)
+fi
+
 dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC

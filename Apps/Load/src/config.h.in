@@ -7,6 +7,8 @@
 #define AUTHOR  "Stephen Watson"
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 
+#undef HAVE_GETHOSTNAME
+#undef HAVE_XML
+
 #include <sys/types.h>
 
-#define HAVE_GETHOSTNAME

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.7 2001/09/25 14:59:22 stephen Exp $
+ * $Id: load.c,v 1.8 2001/10/04 13:47:47 stephen Exp $
  *
  * Log at end of file
  */
@@ -14,6 +14,7 @@
 
 #define APPLET_MENU        1
 #define DEBUG              1
+#define INLINE_FONT_SEL    0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +33,17 @@
 #include <glibtop.h>
 #include <glibtop/cpu.h>
 #include <glibtop/loadavg.h>
+
+#ifdef HAVE_XML
+#include <tree.h>
+#include <parser.h>
+#endif
+
+#if defined(HAVE_XML) && LIBXML_VERSION>=20400
+#define USE_XML 1
+#else
+#define USE_XML 0
+#endif
 
 /*#include "rox-clib.h"*/
 #include "choices.h"
@@ -104,6 +116,7 @@ typedef struct options {
   GdkColor *fore_colour;
   GdkColor *back_colour;
 #endif
+  gchar *font_name;
 } Options;
 
 static Options options={
@@ -111,8 +124,9 @@ static Options options={
 #if 0
   {colours+COL_NORMAL0, colours+COL_NORMAL1, colours+COL_NORMAL2},
   {colours+COL_HIGH0, colours+COL_HIGH1, colours+COL_HIGH2},
-  colours+COL_FG, colours+COL_BG
+  colours+COL_FG, colours+COL_BG,
 #endif
+  NULL
 };
 
 typedef struct option_widgets {
@@ -125,6 +139,12 @@ typedef struct option_widgets {
   GtkWidget *colour_menu;
   GtkWidget *colour_show;
   GtkWidget *colour_dialog;
+#if INLINE_FONT_SEL
+  GtkWidget *font_sel;
+#else
+  GtkWidget *font_window;
+  GtkWidget *font_name;
+#endif
 } OptionWidgets;
 
 typedef struct history_data {
@@ -154,6 +174,10 @@ static void show_info_win(void);
 
 static void read_config(void);
 static void write_config(void);
+#if USE_XML
+static gboolean read_config_xml(void);
+static void write_config_xml(void);
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -256,6 +280,7 @@ int main(int argc, char *argv[])
 		      (GtkSignalFunc) configure_event, NULL);
   gtk_widget_set_events (canvas, GDK_EXPOSURE_MASK);
   gtk_widget_realize(canvas);
+  gtk_widget_set_name(canvas, "load display");
   gc=gdk_gc_new(canvas->window);
   gdk_gc_set_background(gc, colours+COL_BG);
 
@@ -315,7 +340,7 @@ static void do_update(void)
   int bx, by, x, sbx;
   int cpu, other;
   double ld;
-  GdkFont *font;
+  GdkFont *font=NULL;
   glibtop_loadavg load;
   int i, j;
   char buf[32];
@@ -323,6 +348,7 @@ static void do_update(void)
   int ndec=1, host_x=0;
   time_t now;
   History *hist;
+  GtkStyle *style;
 
   dprintf(4, "gc=%p canvas=%p pixmap=%p", gc, canvas, pixmap);
 
@@ -331,13 +357,32 @@ static void do_update(void)
 
   h=canvas->allocation.height;
   w=canvas->allocation.width;
-  font=canvas->style->font;
   
-  gdk_gc_set_foreground(gc, colours+COL_BG);
-  gdk_draw_rectangle(pixmap, gc, TRUE, 0, 0, w, h);
+  if(!font && options.font_name) {
+    font=gdk_font_load(options.font_name);
+  }
+  if(!font) 
+    font=canvas->style->font;
+  gdk_font_ref(font);
+  
+  style=gtk_widget_get_style(canvas);
+  dprintf(3, "style=%p bg_gc[GTK_STATE_NORMAL]=%p", style,
+	  style->bg_gc[GTK_STATE_NORMAL]);
+  if(style && style->bg_gc[GTK_STATE_NORMAL]) {
+    gtk_style_apply_default_background(style, pixmap, TRUE, GTK_STATE_NORMAL,
+				       NULL, 0, 0, w, h);
+  } else {
+    /* Blank out to the background colour */
+    gdk_gc_set_foreground(gc, colours+COL_BG);
+    gdk_draw_rectangle(pixmap, gc, TRUE, 0, 0, w, h);
+  }
 
   bx=2;
   bw=(w-2-3*BAR_GAP)/3;
+  if(bw>MAX_BAR_WIDTH) {
+    bw=MAX_BAR_WIDTH;
+    bx=w-2-3*bw-3*BAR_GAP-1;
+  }
   if(options.show_vals) {
     int width, height;
 
@@ -359,10 +404,6 @@ static void do_update(void)
   mbh=by-tm;
   if(mbh<48)
     mbh=by-2;
-  if(bw>MAX_BAR_WIDTH) {
-    bw=MAX_BAR_WIDTH;
-    bx=w-2-3*bw-3*BAR_GAP-1;
-  }
   dprintf(4, "w=%d bw=%d", w, bw);
   sbx=bx;
 
@@ -504,6 +545,8 @@ static void do_update(void)
 		  0, 0,
 		  0, 0,
 		  w, h);
+
+  gdk_font_unref(font);
 }
 
 static void resize_history(int width)
@@ -569,8 +612,70 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event)
   return TRUE;
 }
 
+#if USE_XML
+static void write_config_xml(void)
+{
+  gchar *fname;
+  gboolean ok;
+
+  fname=choices_find_path_save("config.xml", PROJECT, TRUE);
+  dprintf(2, "save to %s", fname? fname: "NULL");
+
+  if(fname) {
+    xmlDocPtr doc;
+    xmlNodePtr tree, sub;
+    FILE *out;
+    int i;
+    char buf[80];
+
+    doc = xmlNewDoc("1.0");
+    doc->children=xmlNewDocNode(doc, NULL, PROJECT, NULL);
+    xmlSetProp(doc->children, "version", VERSION);
+
+    tree=xmlNewChild(doc->children, NULL, "update", NULL);
+    sprintf(buf, "%d", options.update_ms);
+    xmlSetProp(tree, "value", buf);
+    
+    tree=xmlNewChild(doc->children, NULL, "show", NULL);
+    sprintf(buf, "%d", options.show_max);
+    xmlSetProp(tree, "max", buf);
+    sprintf(buf, "%d", options.show_vals);
+    xmlSetProp(tree, "vals", buf);
+    sprintf(buf, "%d", options.show_host);
+    xmlSetProp(tree, "host", buf);
+    
+    if(options.font_name)
+      tree=xmlNewChild(doc->children, NULL, "font", options.font_name);
+    
+    tree=xmlNewChild(doc->children, NULL, "applet", NULL);
+    sprintf(buf, "%d", options.init_size);
+    xmlSetProp(tree, "initial-size", buf);
+    
+    tree=xmlNewChild(doc->children, NULL, "colours", NULL);
+    for(i=0;  colour_info[i].colour>=0; i++) {
+      GdkColor *col=colours+colour_info[i].colour;
+
+      sub=xmlNewChild(tree,  NULL, "colour", colour_info[i].use);
+      xmlSetProp(sub, "name", colour_info[i].vname);
+      sprintf(buf, "0x%04x", col->red);
+      xmlSetProp(sub, "red", buf);
+      sprintf(buf, "0x%04x", col->green);
+      xmlSetProp(sub, "green", buf);
+      sprintf(buf, "0x%04x", col->blue);
+      xmlSetProp(sub, "blue", buf);
+    }
+  
+    ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
+
+    xmlFreeDoc(doc);
+    g_free(fname);
+  }
+}
+#endif
+
 static void write_config(void)
 {
+#if !USE_XML
   gchar *fname;
 
   fname=choices_find_path_save("config", PROJECT, TRUE);
@@ -596,6 +701,8 @@ static void write_config(void)
       fprintf(out, "show_vals=%d\n", options.show_vals);
       fprintf(out, "show_host=%d\n", options.show_host);
       fprintf(out, "init_size=%d\n", (int) options.init_size);
+      if(options.font_name)
+	fprintf(out, "font_name=%s\n", options.font_name);
 
       for(i=0; colour_info[i].colour>=0; i++) {
 	GdkColor *col=colours+colour_info[i].colour;
@@ -609,11 +716,158 @@ static void write_config(void)
 
     g_free(fname);
   }
+#else
+  write_config_xml();
+#endif
 }
+
+#if USE_XML
+static gboolean read_config_xml(void)
+{
+  guchar *fname;
+
+  fname=choices_find_path_load("config.xml", PROJECT);
+
+  if(fname) {
+    xmlDocPtr doc;
+    xmlNodePtr node, root;
+    const xmlChar *string;
+
+    doc=xmlParseFile(fname);
+    if(!doc) {
+      g_free(fname);
+      return FALSE;
+    }
+
+    root=xmlDocGetRootElement(doc);
+    if(!root) {
+      g_free(fname);
+      xmlFreeDoc(doc);
+      return FALSE;
+    }
+
+    if(strcmp(root->name, PROJECT)!=0) {
+      g_free(fname);
+      xmlFreeDoc(doc);
+      return FALSE;
+    }
+
+    for(node=root->xmlChildrenNode; node; node=node->next) {
+      xmlChar *str;
+      
+      if(node->type!=XML_ELEMENT_NODE)
+	continue;
+
+      if(strcmp(node->name, "update")==0) {
+ 	str=xmlGetProp(node, "value");
+	if(!str)
+	  continue;
+	options.update_ms=atol(str);
+	free(str);
+
+      } else if(strcmp(node->name, "show")==0) {
+	str=xmlGetProp(node, "max");
+	if(str) {
+	  options.show_max=atoi(str);
+	  free(str);
+	}
+	str=xmlGetProp(node, "vals");
+	if(str) {
+	  options.show_vals=atoi(str);
+	  free(str);
+	}
+	str=xmlGetProp(node, "host");
+	if(str) {
+	  options.show_host=atoi(str);
+	  free(str);
+	}
+
+      } else if(strcmp(node->name, "font")==0) {
+	str=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+	if(!str)
+	  continue;
+	if(options.font_name)
+	  g_free(options.font_name);
+	options.font_name=g_strdup(str);
+	free(str);
+
+      } else if(strcmp(node->name, "applet")==0) {
+ 	str=xmlGetProp(node, "initial-size");
+	if(!str)
+	  continue;
+	options.init_size=atoi(str);
+	free(str);
+
+      } else if(strcmp(node->name, "colours")==0) {
+	xmlNodePtr sub;
+
+	for(sub=node->xmlChildrenNode; sub; sub=sub->next) {
+	  if(sub->type!=XML_ELEMENT_NODE)
+	    continue;
+
+	  if(strcmp(sub->name, "colour")==0) {
+	    int i;
+	    GdkColor *col=NULL;
+	    
+	    str=xmlGetProp(sub, "name");
+	    if(!str)
+	      continue;
+	    for(i=0; colour_info[i].colour>=0; i++) {
+	      if(strcmp(str, colour_info[i].vname)==0) {
+		col=colours+colour_info[i].colour;
+		break;
+	      }
+	    }
+	    g_free(str);
+	    if(col) {
+	      unsigned long r=col->red, g=col->green, b=col->blue;
+
+	      str=xmlGetProp(sub, "red");
+	      if(str) {
+		r=strtoul(str, NULL, 16);
+		g_free(str);
+	      }
+	      str=xmlGetProp(sub, "green");
+	      if(str) {
+		g=strtoul(str, NULL, 16);
+		g_free(str);
+	      }
+	      str=xmlGetProp(sub, "blue");
+	      if(str) {
+		b=strtoul(str, NULL, 16);
+		g_free(str);
+	      }
+
+	      col->red=r;
+	      col->green=g;
+	      col->blue=b;
+
+	      dprintf(2, "colour %s=(0x%x, 0x%x, 0x%x)", colour_info[i].vname,
+		      col->red, col->green, col->blue);
+	    }
+	  }
+	}
+      }
+    }
+    
+    xmlFreeDoc(doc);
+    
+    g_free(fname);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+#endif
 
 static void read_config(void)
 {
   guchar *fname;
+
+#if USE_XML
+  if(read_config_xml())
+    return;
+#endif
 
   fname=choices_find_path_load("config", PROJECT);
 
@@ -664,6 +918,10 @@ static void read_config(void)
 	      options.show_host=atoi(val);
 	    } else if(strcmp(var, "init_size")==0) {
 	      options.init_size=(guint) atoi(val);
+	    } else if(strcmp(var, "font_name")==0) {
+	      if(options.font_name)
+		g_free(options.font_name);
+	      options.font_name=g_strdup(val);
 	    } else {
 	      int i;
 
@@ -750,6 +1008,7 @@ static void set_config(GtkWidget *widget, gpointer data)
   gfloat s;
   int i;
   GdkColormap *cmap;
+  gchar *text;
 
   s=gtk_spin_button_get_value_as_float(GTK_SPIN_BUTTON(ow->update_s));
   options.update_ms=(guint) (s*1000);
@@ -766,6 +1025,16 @@ static void set_config(GtkWidget *widget, gpointer data)
   update=gtk_timeout_add(options.update_ms,
 				     (GtkFunction) do_update, NULL);
 
+  if(options.font_name)
+    g_free(options.font_name);
+#if INLINE_FONT_SEL
+  options.font_name=
+    gtk_font_selection_get_font_name(GTK_FONT_SELECTION(ow->font_sel));
+#else
+  gtk_label_get(GTK_LABEL(ow->font_name), &text);
+  options.font_name=g_strdup(text);
+#endif
+  
   cmap=gdk_rgb_get_cmap();
   for(i=0; colour_info[i].colour>=0; i++) {
     GdkColor *col=colours+colour_info[i].colour;
@@ -785,6 +1054,33 @@ static void save_config(GtkWidget *widget, gpointer data)
   set_config(widget, data);
   write_config();
 }
+
+#if !INLINE_FONT_SEL
+static void set_font(GtkWidget *widget, gpointer data)
+{
+  OptionWidgets *ow=(OptionWidgets *) data;
+  gchar *name;
+
+  name=gtk_font_selection_dialog_get_font_name(GTK_FONT_SELECTION_DIALOG(ow->font_window));
+  if(name) {
+    gtk_label_set_text(GTK_LABEL(ow->font_name), name);
+    g_free(name);
+    gtk_widget_hide(ow->font_window);
+  }
+}
+
+static void show_font_window(GtkWidget *widget, gpointer data)
+{
+  OptionWidgets *ow=(OptionWidgets *) data;
+  gchar *name;
+
+  gtk_label_get(GTK_LABEL(ow->font_name), &name);
+  gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(ow->font_window),
+					  name);
+
+  gtk_widget_show(ow->font_window);
+}
+#endif
 
 static void append_option_menu_item(GtkWidget *base, GtkWidget *optmen,
 				    const char *label, int index,
@@ -1070,6 +1366,39 @@ static void show_config_win(void)
     ow.colour_show=but;
     show_colour(ow.colour_show, colour_info[0].rgb);
 
+    hbox=gtk_hbox_new(FALSE, 0);
+    gtk_widget_show(hbox);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 2);
+
+    label=gtk_label_new("Display font");
+    gtk_widget_show(label);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 2);
+
+#if INLINE_FONT_SEL
+    ow.font_sel=gtk_font_selection_new();
+    gtk_font_selection_set_preview_text(GTK_FONT_SELECTION(ow.font_sel),
+					"0.123 Max 2 localhost");
+    gtk_widget_show(ow.font_sel);
+    gtk_box_pack_start(GTK_BOX(hbox), ow.font_sel, FALSE, FALSE, 2);
+#else
+    ow.font_name=gtk_label_new(options.font_name? options.font_name: "");
+    gtk_widget_show(ow.font_name);
+    gtk_box_pack_start(GTK_BOX(hbox), ow.font_name, FALSE, FALSE, 2);
+
+    ow.font_window=gtk_font_selection_dialog_new("Choose display font");
+    gtk_font_selection_dialog_set_preview_text(GTK_FONT_SELECTION_DIALOG(ow.font_window),
+					"0.123 Max 2 localhost");
+    gtk_signal_connect(GTK_OBJECT(GTK_FONT_SELECTION_DIALOG(ow.font_window)->ok_button), 
+		       "clicked", GTK_SIGNAL_FUNC(set_font), &ow);
+
+    but=gtk_button_new_with_label("Change");
+    gtk_widget_show(but);
+    gtk_box_pack_start(GTK_BOX(hbox), but, FALSE, FALSE, 2);
+    gtk_signal_connect(GTK_OBJECT(but), "clicked",
+		       GTK_SIGNAL_FUNC(show_font_window), &ow);
+
+#endif
+    
     hbox=GTK_DIALOG(confwin)->action_area;
 
     but=gtk_button_new_with_label("Save");
@@ -1109,7 +1438,17 @@ static void show_config_win(void)
 
     gtk_widget_hide(ow.colour_dialog);
   }
-  
+#if INLINE_FONT_SEL
+  if(options.font_name)
+    gtk_font_selection_set_font_name(GTK_FONT_SELECTION(ow.font_sel),
+				     options.font_name);
+#else
+  if(options.font_name) {
+    gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(ow.font_window),
+				     options.font_name);
+    gtk_label_set_text(GTK_LABEL(ow.font_name), options.font_name);
+  }
+#endif
   gtk_widget_show(confwin);
 }
 
@@ -1202,6 +1541,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.8  2001/10/04 13:47:47  stephen
+ * Can change foreground & background colours as well.
+ *
  * Revision 1.7  2001/09/25 14:59:22  stephen
  * Create menu early to enable accelerators.
  * Time index the history so we can plot it right when the sample rate varies.
