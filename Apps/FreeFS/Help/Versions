@@ -3,7 +3,8 @@ Versions of FreeFS
 
 2.1.0
 -----
-New version for ROX-CLib 2.1.0.
+New version for ROX-CLib 2.1.0.  Remove dead code.  Open options dialog from 
+command line or SOAP message.  Stock items in menus. 
 
 2.0.0
 -----
