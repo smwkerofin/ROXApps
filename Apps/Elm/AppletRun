@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import findrox
+
 from gtk import *
 import sys
 
@@ -16,7 +18,7 @@ def mail_file():
 
 mailfile=mail_file()
 app_dir=os.path.dirname(sys.argv[0])
-mail=0
+mail=-1
 
 # Find the XID of the socket which this applet will plug into.
 xid = int(sys.argv[1])
@@ -25,7 +27,7 @@ plug = GtkPlug(xid)
 plug.connect('destroy', mainquit)
 
 # Choose a nice small size for our applet...
-plug.set_usize(64, -1)
+plug.set_usize(48, -1)
 plug.set_border_width(4)
 
 # Now, fill the plug with all our widgets.
@@ -39,6 +41,7 @@ vbox.pack_start(view)
 nomail_pixmap=GtkPixmap(plug, app_dir+"/pixmaps/nomail.xpm", None);
 mail_pixmap=GtkPixmap(plug, app_dir+"/pixmaps/mail.xpm", None);
 
+view.add(mail_pixmap)
 view.add(nomail_pixmap)
 
 def click(widget, event, data=None):
@@ -89,29 +92,24 @@ def update():
     global mail
     if file_size(mailfile)>0:
         if mail==0:
-            view.remove(nomail_pixmap)
-            view.add(mail_pixmap)
-            view.show_all()
+            nomail_pixmap.hide()
+            mail_pixmap.show()
             mail=1
             gdk_beep()
     else:
         if mail!=0:
-            view.remove(mail_pixmap)
-            view.add(nomail_pixmap)
-            view.show_all()
+            mail_pixmap.hide()
+            nomail_pixmap.show()
             mail=0
     #print "update, mail=", mail, " (size=", file_size(mailfile), ")"
     return TRUE
 
-#print "calling update"
-update()
-#print "called update"
 
 timeout_add(5000, update)
 #print "added timeout"
 
 # Show everything and wait for events...
 plug.show_all()
-#print "shown all"
+update()
 mainloop()
 
