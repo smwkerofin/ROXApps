@@ -39,6 +39,10 @@ ${PLATFORM_DIR}/bin/rox_run: rox_run.sh
 	cat rox_run.sh > $@
 	chmod +x $@
 
+${PLATFORM_DIR}/bin/install_on_path: install_on_path.sh
+	cat install_on_path.sh > $@
+	chmod +x $@
+
 ${PLATFORM_DIR}:
 	mkdir ${PLATFORM_DIR}
 
@@ -48,7 +52,7 @@ ${PLATFORM_DIR}/bin: ${PLATFORM_DIR}
 ${LIBDIR}:  ${PLATFORM_DIR}
 	-mkdir ${LIBDIR}
 
-${INCLUDEDIR}:  ${PLATFORM_DIR}
+${INCLUDEDIR}:  ${PLATFORM_DIR} ${INCLUDES}
 	-mkdir ${INCLUDEDIR}
 	cp ${INCLUDES} ${INCLUDEDIR}
 
