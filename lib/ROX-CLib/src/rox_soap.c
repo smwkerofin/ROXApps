@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.11 2004/05/05 19:24:18 stephen Exp $
+ * $Id: rox_soap.c,v 1.12 2004/05/12 18:25:11 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -413,7 +413,7 @@ static void soap_done(GtkWidget *widget, GdkEventProperty *event,
     return;
 
   dprintf(3, "soap_done, remove %u", sdata->timeout_tag);
-  gtk_timeout_remove(sdata->timeout_tag);
+  g_source_remove(sdata->timeout_tag);
   /* Clear the timeout tag, serves as a flag to indicate we were succesful */
   sdata->timeout_tag=0;
 
@@ -561,7 +561,7 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
 
   /*g_signal_connect(ipc_window, "destroy",
     G_CALLBACK(destroy_ipc_window), sdata);*/
-  sdata->timeout_tag=gtk_timeout_add(filer->timeout, too_slow, sdata);
+  sdata->timeout_tag=g_timeout_add(filer->timeout, too_slow, sdata);
 
   return TRUE;
 }
@@ -707,6 +707,9 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.12  2004/05/12 18:25:11  stephen
+ * Don't create the ipc_window until we are sure we need it
+ *
  * Revision 1.11  2004/05/05 19:24:18  stephen
  * Extra debug (problem when target for SOAP doesn't exist)
  *
