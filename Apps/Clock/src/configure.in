@@ -11,6 +11,11 @@ if test -z "$GTK_CONFIG"; then
 fi
 AC_SUBST(GTK_CONFIG)
 
+if test -z "$ROX_RUN"; then
+  AC_CHECK_PROG(ROX_RUN, rox_run, rox_run)
+fi
+AC_SUBST(ROX_RUN)
+
 dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
@@ -43,7 +48,7 @@ AC_CHECK_FUNCS(setlocale fstat stat bindtextdomain gettext)
 dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(extracting version information)
 changequote(,)dnl
-VERSION=`sed -n 's/^.*<Version>\([.0-9]*\).*<\/Version>.*$/\1/p' ../AppInfo.xml`
+VERSION=`sed -n 's/^.*<Version>\([^<]*\)<\/Version>.*$/\1/p' ../AppInfo.xml`
 changequote([,])dnl
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
 AC_MSG_RESULT(version $VERSION)

@@ -1,9 +1,11 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.5 2001/06/29 10:42:48 stephen Exp $
+ * $Id: alarm.c,v 1.6 2001/07/18 10:41:54 stephen Exp $
  */
 #include "config.h"
+
+#define DEBUG              1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,13 +23,8 @@
 #include <gtk/gtk.h>
 
 #include "choices.h"
+#include "rox_debug.h"
 #include "alarm.h"
-
-extern void dprintf(int level, const char *fmt, ...);
-void debug_free(gpointer p, const char *file, int line);
-#if 0
-#define g_free(p) debug_free((gpointer) p, __FILE__, __LINE__);
-#endif
 
 typedef enum repeat_mode {
   REPEAT_NONE,
@@ -730,6 +727,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.6  2001/07/18 10:41:54  stephen
+ * Use new dprintf and do much debug output
+ *
  * Revision 1.5  2001/06/29 10:42:48  stephen
  * Added debugging statements, fixed merging in another alarms file
  * (which was g_free'ing memory twice!) and don't do it so often.

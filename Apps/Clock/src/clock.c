@@ -5,9 +5,13 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.12 2001/06/29 10:41:25 stephen Exp $
+ * $Id: clock.c,v 1.13 2001/07/18 10:42:29 stephen Exp $
  */
 #include "config.h"
+
+#define DEBUG              1
+#define SUPPORT_OLD_CONFIG 0
+#define APPLET_MENU        1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,18 +34,15 @@
 #endif
 
 #include <gtk/gtk.h>
-#include "infowin.h"
 
 #if USE_GDK_PIXBUF
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #endif
 
 #include "choices.h"
+#include "rox_debug.h"
+#include "infowin.h"
 #include "alarm.h"
-
-#define DEBUG              1
-#define SUPPORT_OLD_CONFIG 0
-#define APPLET_MENU        1
 
 static gboolean applet_mode=FALSE;
 
@@ -186,13 +187,6 @@ static void check_config(void);
 static void read_old_config(void);
 #endif
 
-void dprintf(int level, const char *fmt, ...);
-
-void debug_free(gpointer p, const char *file, int line);
-#if 0
-#define g_free(p) debug_free((gpointer) p, __FILE__, __LINE__);
-#endif
-
 int main(int argc, char *argv[])
 {
   GtkWidget *win=NULL;
@@ -219,6 +213,8 @@ int main(int argc, char *argv[])
   textdomain(PROJECT);
   g_free(localedir);
 #endif
+
+  rox_debug_init("Clock");
   
   /* Initialise X/GDK/GTK */
   gtk_init(&argc, &argv);
@@ -232,7 +228,7 @@ int main(int argc, char *argv[])
   if(load_alarms)
     alarm_load();
 
-  dprintf(4, "argc=%d\n", argc);
+  dprintf(4, "argc=%d", argc);
   if(argc<2 || !atol(argv[1])) {
     /* No arguments, or the first argument was not a (non-zero) number.
        We are not an applet, so create a window */
@@ -338,30 +334,6 @@ int main(int argc, char *argv[])
     alarm_save();
 
   return 0;
-}
-
-void dprintf(int level, const char *fmt, ...)
-{
-#if DEBUG
-  va_list list;
-  static int dlevel=-1;
-
-  if(dlevel==-1) {
-    gchar *val=g_getenv("CLOCK_DEBUG_LEVEL");
-    if(val)
-      dlevel=atoi(val);
-    if(dlevel<0)
-      dlevel=0;
-  }
-
-  if(level>dlevel)
-    return;
-
-  va_start(list, fmt);
-  /*vfprintf(stderr, fmt, list);*/
-  g_logv(PROJECT, G_LOG_LEVEL_DEBUG, fmt, list);
-  va_end(list);  
-#endif
 }
 
 /* Called when the display mode changes */
@@ -1368,15 +1340,11 @@ static void show_info_win(void)
   gtk_widget_show(infowin);
 }
 
-#undef g_free
-void debug_free(gpointer p, const char *file, int line)
-{
-  dprintf(5, "free %08p at %s:%d", p, file, line);
-  g_free(p);
-}
-
 /*
  * $Log: clock.c,v $
+ * Revision 1.13  2001/07/18 10:42:29  stephen
+ * Improved debug output
+ *
  * Revision 1.12  2001/06/29 10:41:25  stephen
  * Fix use of colourmap when we are running under a theme.
  * Add (saved) menu acellerators
