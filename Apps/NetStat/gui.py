@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.3 2002/10/30 13:43:10 stephen Exp $
+# $Id: gui.py,v 1.4 2002/11/16 12:31:09 stephen Exp $
 
 import os
 import sys
@@ -87,7 +87,7 @@ menu=g.Menu()
 item=g.MenuItem("Info")
 import InfoWin
 iw=InfoWin.InfoWin('NetStat', 'Monitor network activity',
-           '0.0.1 (4th Octobber 2002)',
+           '0.0.2 (16th November 2002)',
            'Stephen Watson', 'http://www.kerofin.demon.co.uk/rox/')
 iw.connect('delete_event', lambda iw: iw.hide())
 def show_infowin(widget, data):
