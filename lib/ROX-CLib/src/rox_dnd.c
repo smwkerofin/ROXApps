@@ -1,17 +1,21 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id$
+ * $Id: rox_dnd.c,v 1.1 2001/07/17 14:44:50 stephen Exp $
  */
 
 #include "rox-clib.h"
 
 #include <stdlib.h>
 
+#include <unistd.h>
+
+#include <glib.h>
 #include <gtk/gtk.h>
 
 #include "rox_dnd.h"
 #include "rox_path.h"
+#include "error.h"
 
 struct dnd_data {
   GdkDragContext *context;
@@ -29,6 +33,7 @@ struct rox_data {
   rox_dnd_handle_xds  xds;
   DnDData data;
   gpointer udata;
+  gchar *uri;
 };
 
 typedef struct rox_data ROXData;
@@ -53,6 +58,9 @@ static GdkAtom XdndDirectSave0;
 static GdkAtom xa_text_plain;
 static GdkAtom text_uri_list;
 static GdkAtom application_octet_stream;
+static gboolean init_done=FALSE;
+
+#define check_init() do { if(!init_done) rox_dnd_init();} while(0)
 
 void rox_dnd_init(void)
 {
@@ -61,6 +69,8 @@ void rox_dnd_init(void)
   text_uri_list = gdk_atom_intern("text/uri-list", FALSE);
   application_octet_stream = gdk_atom_intern("application/octet-stream",
 					     FALSE);
+
+  init_done=TRUE;
 }
 
 void rox_dnd_register_full(GtkWidget *widget,
@@ -76,9 +86,19 @@ void rox_dnd_register_full(GtkWidget *widget,
   static const int ntarget=sizeof(target_table)/sizeof(target_table[0]);
   
   ROXData *rdata;
-  
-  gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_ALL, target_table, ntarget,
-		    GDK_ACTION_COPY|GDK_ACTION_PRIVATE);
+  guint dest_flags=GDK_ACTION_COPY|GDK_ACTION_PRIVATE;
+
+  check_init();
+
+  if(uris && xds) 
+    gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_ALL, target_table, ntarget,
+		      dest_flags);
+  else if(uris)
+    gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_ALL, target_table, 1,
+		      dest_flags);
+  else if(xds)
+    gtk_drag_dest_set(widget, GTK_DEST_DEFAULT_ALL, target_table+1, 1,
+		      dest_flags);
 
   rdata=g_new(ROXData, 1);
 
@@ -86,6 +106,7 @@ void rox_dnd_register_full(GtkWidget *widget,
   rdata->uris=uris;
   rdata->xds=xds;
   rdata->udata=udata;
+  rdata->uri=NULL;
 
   gtk_signal_connect(GTK_OBJECT(widget), "drag_drop",
 		     GTK_SIGNAL_FUNC(drag_drop), rdata);
@@ -123,6 +144,17 @@ static char *get_xds_prop(GdkDragContext *context)
   }
 
   return NULL;
+}
+
+/* Set the XdndDirectSave0 property on the source window for this context */
+static void set_xds_prop(GdkDragContext *context, char *text)
+{
+	gdk_property_change(context->source_window,
+			XdndDirectSave0,
+			xa_text_plain, 8,
+			GDK_PROP_MODE_REPLACE,
+			text,
+			strlen(text));
 }
 
 /* Convert a list of URIs into a list of strings.
@@ -174,10 +206,21 @@ static gboolean drag_drop(GtkWidget 	  *widget,
   char *leafname=NULL;
   char *path=NULL;
   GdkAtom target = GDK_NONE;
+  ROXData *rdata=(ROXData *) data;
 
   if(provides(context, XdndDirectSave0)) {
     leafname = get_xds_prop(context);
     if (leafname) {
+      gchar *uri;
+      char host[1025];
+
+      gethostname(host, sizeof(host));
+      uri=g_strconcat("file://", host, "/tmp/", leafname, NULL);
+      set_xds_prop(context, uri);
+      if(rdata->uri)
+	g_free(rdata->uri);
+      rdata->uri;
+      
       target = XdndDirectSave0;
       g_dataset_set_data_full(context, "leafname", leafname, g_free);
     }
@@ -245,14 +288,55 @@ GSList *rox_dnd_filter_local(GSList *uris)
   return filt;
 }
 
-/* XDS not yet implemented... */
+/* XDS not yet tested... */
 static void got_xds(GtkWidget 		*widget,
 			 GdkDragContext 	*context,
 			 GtkSelectionData 	*selection_data,
 			 guint32             	time,
 			 ROXData *rdata)
 {
-  gtk_drag_finish(context, FALSE, FALSE, time);
+  char response=*selection_data->data;
+  gboolean saved=FALSE;
+  DnDData data;
+
+  switch(response) {
+  case 'F':
+    /* Sender couldn't save there - ask for another
+     * type if possible.
+     */
+    if (provides(context, text_uri_list)) {
+      gtk_drag_get_data(widget, context, text_uri_list, time);
+      return;
+    } else {
+      rox_error("Drag & drop error: sender can't provide data");
+    }
+    break;
+
+  case 'S':
+    saved=TRUE;
+    
+    if(rdata->xds) {
+      data.context=context;
+      data.selection_data=selection_data;
+      data.time=time;
+    
+      rdata->xds(widget, rdata->uri, &data, rdata->udata);
+    } 
+    break;
+    
+  case 'E':
+    break;
+
+  default:
+    rox_error("XDS protocol error, '%c' should be S, F or E", response);
+    break;
+  }
+
+  
+  if(!saved)
+    gtk_drag_finish(context, FALSE, FALSE, time);
+  else
+    gtk_drag_finish(context, TRUE, FALSE, time);
 }
 
 /* Called when some data arrives from the remote app (which we asked for
@@ -288,7 +372,10 @@ static void drag_data_received(GtkWidget      	*widget,
   }
 }
 /*
- * $Log$
+ * $Log: rox_dnd.c,v $
+ * Revision 1.1  2001/07/17 14:44:50  stephen
+ * Added DnD stuff (plus path utils and debug util)
+ *
  */
 
 /* I always prefered RQ to D&D personally... */
