@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.3 2001/05/24 09:10:04 stephen Exp $
+ * $Id: alarm.c,v 1.4 2001/06/14 12:29:32 stephen Exp $
  */
 #include "config.h"
 
@@ -22,6 +22,8 @@
 
 #include "choices.h"
 #include "alarm.h"
+
+extern void dprintf(const char *fmt, ...);
 
 typedef enum repeat_mode {
   REPEAT_NONE,
@@ -74,6 +76,9 @@ static void alarm_delete(Alarm *alarm)
 void alarm_load(void)
 {
   gchar *fname;
+#ifdef HAVE_SYS_STAT_H
+    struct stat statb;
+#endif
 
   fname=choices_find_path_load("alarms", PROJECT);
 
@@ -98,6 +103,7 @@ void alarm_load(void)
 	sep=strchr(line, ':');
 	if(sep) {
 	  char *rep;
+	  Alarm *nalarm;
 	  
 	  *sep=0;
 	  rep=sep+1;
@@ -107,20 +113,26 @@ void alarm_load(void)
 	  if(sep) {
 	    *sep=0;
 	    
-	    alarms=g_list_append(alarms,
-				 alarm_new((time_t) atol(line), atoi(rep),
-					   sep+1));
+	    nalarm=alarm_new((time_t) atol(line), atoi(rep), sep+1);
 	  } else {
-	    alarms=g_list_append(alarms,
-				 alarm_new((time_t) atol(line), REPEAT_NONE,
-					   rep));
+	    nalarm=alarm_new((time_t) atol(line), REPEAT_NONE, rep);
 	  }
+	  dprintf("read alarm: %s at %ld (%d)", nalarm->message,
+		  nalarm->when, nalarm->repeat);
+	  alarms=g_list_append(alarms, nalarm);
 	}
 	
       } while(!feof(in));
       
       fclose(in);
+#ifdef HAVE_STAT
+      if(stat(fname, &statb)==0)
+	alarms_saved=statb.st_mtime;
+      else
+	time(&alarms_saved);
+#else
       time(&alarms_saved);
+#endif
     }
 
     g_free(fname);
@@ -190,9 +202,13 @@ static gint find_alarm(gconstpointer el, gconstpointer udat)
   const Alarm *elem=(const Alarm *) el;
   const Alarm *user=(const Alarm *) udat;
 
+  dprintf("compare: %ld %d %s", elem->when, elem->repeat, elem->message);
+  dprintf("     to: %ld %d %s", user->when, user->repeat, user->message);
+
   if(elem->when==user->when && elem->repeat==user->repeat &&
      strcmp(elem->message, user->message)==0)
     return 0;
+  /*dprintf("nope");*/
 
   return -1;
 }
@@ -213,15 +229,21 @@ static void check_alarms_file(void)
       if(statb.st_mtime>alarms_saved) {
 	GList *old, *rover;
 
+	dprintf("re-reading alarm file because %ld>%ld",
+		statb.st_mtime, alarms_saved);
 	old=alarms;
 	alarms=NULL;
 	alarm_load();
+	alarms_saved=statb.st_mtime; /* May have clock sync problems over
+				      a networked FS */
 
 	for(rover=old; rover; rover=g_list_next(rover)) {
 	  if(g_list_find_custom(alarms, rover->data, find_alarm)) {
-	    alarm_delete((Alarm *) old->data);
+	    dprintf("delete old %s", ((Alarm *) rover->data)->message);
+	    alarm_delete((Alarm *) rover->data);
 	  } else {
-	    alarms=g_list_append(alarms, old->data);
+	    dprintf("merge in %s", ((Alarm *) rover->data)->message);
+	    alarms=g_list_append(alarms, rover->data);
 	  }
 	}
 
@@ -237,6 +259,9 @@ static void check_alarms_file(void)
 void alarm_save(void)
 {
   gchar *fname;
+#ifdef HAVE_SYS_STAT_H
+  struct stat statb;
+#endif
 
   fname=choices_find_path_save("alarms", PROJECT, TRUE);
 
@@ -263,7 +288,15 @@ void alarm_save(void)
       }
 
       fclose(out);
+#ifdef HAVE_STAT
+      if(stat(fname, &statb)==0)
+	alarms_saved=statb.st_mtime;
+      else
+	time(&alarms_saved);
+#else
       time(&alarms_saved);
+#endif
+      dprintf("wrote %s at %ld", fname, alarms_saved);
     }
     g_free(fname);
   }
@@ -302,6 +335,8 @@ static void show_message(const Alarm *alarm)
 
   tms=localtime(&alarm->when);
   strftime(buf, 64, "%c", tms);
+  dprintf("show_message(%p): %ld (%d) %s %s", alarm, alarm->when,
+	  alarm->repeat, buf, alarm->message);
   
   label=gtk_label_new(buf);
   gtk_widget_show(label);
@@ -349,9 +384,11 @@ int alarm_check(void)
 	if(next<=0)
 	  break;
       } while(next<now);
-      if(next>0)
+      if(next>0) {
+	dprintf("re-schedule %s for %ld", alarm->message, next);
 	alarms=g_list_append(alarms, alarm_new(next, alarm->repeat,
 					       alarm->message));
+      }
       alarm_delete(alarm);
       rover=alarms;
       continue;
@@ -674,6 +711,10 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.4  2001/06/14 12:29:32  stephen
+ * return number of alarms raised so that the caller knows something has
+ * changed.
+ *
  * Revision 1.3  2001/05/24 09:10:04  stephen
  * Fixed bug in repeating alarms
  *
