@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<AppInfo>
+  <About>
+    <Purpose>Display system load</Purpose>
+	<Version>0.1.6</Version>
+    <Authors>Stephen Watson</Authors>
+    <License>GNU General Public License</License>
+    <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
+  </About>
+  <Summary>Display the system load average.</Summary>
+</AppInfo>

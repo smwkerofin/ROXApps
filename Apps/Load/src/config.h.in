@@ -3,7 +3,7 @@
 #define PROJECT "Load"
 #define PROGRAM PROJECT
 #define PURPOSE "Display the system load"
-#define VERSION "0.1.5"
+#define VERSION ""
 #define AUTHOR  "Stephen Watson"
 #define WEBSITE "http://www.kerofin.demon.co.uk/rox/"
 
