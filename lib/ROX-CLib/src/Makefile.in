@@ -64,7 +64,7 @@ INCLUDES += options.h basedir.h mime.h appinfo.h mime_handler.h
 
 all: ${EXEC} ${PLATFORM_DIR}/bin/rox_run ${PLATFORM_DIR}/bin/install_on_path
 all: ${PLATFORM_DIR}/bin/test ${PLATFORM_DIR}/bin/rox_pinboard
-all: ${PLATFORM_DIR}/bin/libdir
+all: ${PLATFORM_DIR}/bin/libdir ${PLATFORM_DIR}/bin/appdir
 ifeq (${SHARED}, yes)
 all: ${LIBFILE.la}
 endif
@@ -104,7 +104,11 @@ ${PLATFORM_DIR}/bin/install_on_path: install_on_path.sh
 	chmod +x $@
 
 ${PLATFORM_DIR}/bin/libdir: libdir.sh
-	cat libdir.sh > $@
+	sed -e "s/@DEFAULT_PATH@/$$LIBDIRPATH/" libdir.sh > $@
+	chmod +x $@
+
+${PLATFORM_DIR}/bin/appdir: libdir.sh
+	sed -e 's/@DEFAULT_PATH@/$$APPDIRPATH/' libdir.sh > $@
 	chmod +x $@
 
 ${PLATFORM_DIR}:

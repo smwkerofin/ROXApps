@@ -2,10 +2,30 @@
 #
 # Locate a named AppDir in LIBDIRPATH, optionally checking version
 #
-# $Id$
+# $Id: libdir.sh,v 1.1 2004/05/31 10:47:35 stephen Exp $
+
+prog=`basename $0`
+
+if [ x"$LIBDIRPATH" = x ]; then
+  LIBDIRPATH="$HOME/lib:/usr/local/lib:/usr/lib"
+  export LIBDIRPATH
+fi
+
+if [ x"$APPDIRPATH" = x ]; then
+  APPDIRPATH="$HOME/Apps:/usr/local/apps:/usr/apps"
+  export APPDIRPATH
+fi
+
+path="@DEFAULT_PATH@"
 
 usage() {
-  echo "libdir [--version x.y.z] App" >&2
+  echo "$prog [--version x.y.z] [--libdir|--appdir|--path PATH] App" >&2
+  echo "  --version x.y.z    only look for verison x.y.z or later" >&2
+  echo "  --libdir           use LIBDIRPATH $LIBDIRPATH" >&2
+  echo "  --appdir           use APPDIRPATH $APPDIRPATH" >&2
+  echo "  --path PATH        use given PATH" >&2
+  echo "   (default is $path)"
+
   exit 3
 }
 
@@ -15,14 +35,24 @@ fi
 
 rver=
 
-if [ x"$LIBDIRPATH" = x ]; then
-  LIBDIRPATH="$HOME/lib:/usr/local/lib:/usr/lib"
-  export LIBDIRPATH
-fi
-
 case "$1" in 
   --version) 
    rver=$2
+   shift 2;;
+  --appdir)
+   path="$APPDIRPATH"
+   shift;;
+  --libdir)
+   path="$LIBDIRPATH"
+   shift;;
+  --path)
+   path="$2"
+   shift 2;;
+  --append-path)
+   path="$PATH:$2"
+   shift 2;;
+  --prepend-path)
+   path="$2:$PATH"
    shift 2;;
 esac
 if [ x"$1" = x ]; then
@@ -54,7 +84,7 @@ test_version() {
 }
 
 IFS=:
-for dir in $LIBDIRPATH; do
+for dir in $path; do
   if [ -x "$dir/$app/AppRun" ]; then
     found=1
     if [ x"$rver" = x ]; then
