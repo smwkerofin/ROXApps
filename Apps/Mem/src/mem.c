@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.9 2002/04/12 10:25:25 stephen Exp $
+ * $Id: mem.c,v 1.10 2002/04/29 08:58:31 stephen Exp $
  */
 #include "config.h"
 
@@ -40,8 +40,8 @@
 #include <glibtop/swap.h>
 
 #ifdef HAVE_XML
-#include <tree.h>
-#include <parser.h>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
 #endif
 
 #if defined(HAVE_XML) && LIBXML_VERSION>=20400
@@ -1761,6 +1761,9 @@ static gboolean update_swap(gpointer unused)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.10  2002/04/29 08:58:31  stephen
+ * Use replacement applet menu positioning code (from ROX-CLib).
+ *
  * Revision 1.9  2002/04/12 10:25:25  stephen
  * Multiple windows.  Acts as a server, using SOAP, so there only needs to be
  * one instance running.

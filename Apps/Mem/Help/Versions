@@ -1,6 +1,10 @@
 Mem
 ===
 
+1.1.2
+-----
+Fix compilation problem with libxml2.
+
 1.1.1
 -----
 Use replacement applet menu positioning code (from ROX-CLib).
