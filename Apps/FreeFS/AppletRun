@@ -1,6 +1,4 @@
 #!/bin/sh
-#
-# Need to keep synchronized with AppRun
 
 PROG=freefs
 
@@ -9,12 +7,14 @@ APP_DIR=`cd "$APP_DIR";pwd`; export APP_DIR
 
 "$APP_DIR/choice_install" FreeFS "$APP_DIR/gtkrc" gtkrc
 
-ARCH=`uname -m`
-case $ARCH in
+if [ x"$PLATFORM" = x"" ]; then
+  ARCH=`uname -m`
+  case $ARCH in
 	i?86) ARCH=ix86 ;;
-esac
+  esac
 
-PLATFORM=`uname -s`-$ARCH
+  PLATFORM=`uname -s`-$ARCH export PLATFORM
+fi
 
 if [ -z "$LD_LIBRARY_PATH" ]; then
     LD_LIBRARY_PATH=`"$APP_DIR/rox_run" ROX-CLib --runtime`
@@ -23,7 +23,10 @@ else
 fi
 export LD_LIBRARY_PATH
 
+DEBUGGER=""
+
 case $1 in
+    --debug) shift ; DEBUGGER=gdb ;;
     --compile)
 	if [ ! -d "$APP_DIR/src" ] ; then
 	    echo "ERROR from $0:" >&2
@@ -36,8 +39,8 @@ case $1 in
 	    (cd "$APP_DIR/src"; autoconf)
 	fi
 	rm -f "$APP_DIR/src/config.cache"
-	cd "$APP_DIR/src" && ./configure --with-platform=$PLATFORM \
-			&& make clean && make \
+	cd "$APP_DIR/src" && ./configure --with-platform="$PLATFORM" \
+			&& make clean && make  \
 			&& echo Done >&2 && exit 0
 	echo Compile failed >&2
 	echo Press Return... >&2
@@ -48,12 +51,10 @@ esac
 BIN=$APP_DIR/$PLATFORM/$PROG
 
 if [ -x "$BIN" ] ; then
-    exec "$BIN" -a "$@" $HOME
+    exec $DEBUGGER "$BIN" "$@"
 else
     echo "ERROR from $0:" >&2
     echo "I cannot find an executable file for your host type ($PLATFORM)." >&2
-    #echo "Try using the --compile option." >&2
-    #exit 1
     echo "Trying to compile..." >&2
     if [ -n "$DISPLAY" ]; then
 	xterm -e "$0" --compile
@@ -61,6 +62,7 @@ else
 	"$0" --compile
     fi
     if [ -x "$BIN" ]; then
-	exec "$BIN" -a "$@" $HOME
+	exec "$BIN" "$@"
     fi
+    exit 1
 fi

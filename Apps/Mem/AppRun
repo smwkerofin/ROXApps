@@ -7,15 +7,13 @@ APP_DIR=`cd "$APP_DIR";pwd`; export APP_DIR
 
 "$APP_DIR/choice_install" $PROG "$APP_DIR"/gtkrc gtkrc
 
-ARCH=`uname -m`
-case $ARCH in
+if [ x"$PLATFORM" = x ]; then
+  ARCH=`uname -m`
+  case $ARCH in
 	i?86) ARCH=ix86 ;;
-esac
+  esac
 
-PLATFORM=`uname -s`-$ARCH export PLATFORM
-
-if [ $ARCH = sun4u ] ; then
-    unset LD_PRELOAD
+  PLATFORM=`uname -s`-$ARCH export PLATFORM
 fi
 
 if [ -z "$LD_LIBRARY_PATH" ]; then
