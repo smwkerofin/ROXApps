@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<AppInfo>
+  <About>
+    <Purpose>Monitor file system usage</Purpose>
+	<Version>0.1.4</Version>
+    <Authors>Stephen Watson</Authors>
+    <License>GNU General Public License</License>
+    <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
+  </About>
+  <Summary>Display usage of a file system.</Summary>
+</AppInfo>
