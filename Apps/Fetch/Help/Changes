@@ -1,6 +1,10 @@
 Fetch
 =====
 
+05-Mar-2005
+~~~~~~~~~~~
+Take care when filename has no '.' in it.
+
 31-Jan-2005
 ~~~~~~~~~~~
 Use the signal sent by DownloadManager when a slot becomes available.
@@ -76,4 +80,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id$
+$Id: Changes,v 1.18 2005/02/19 11:49:15 stephen Exp $
