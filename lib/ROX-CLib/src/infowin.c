@@ -1,8 +1,9 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id$
+ * $Id: infowin.c,v 1.1.1.1 2001/05/29 14:09:59 stephen Exp $
  */
+#include "rox-clib.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +13,8 @@
 
 #include <gtk/gtk.h>
 #include "infowin.h"
+
+#include "rox_debug.h"
 
 static void info_win_finalize (GtkObject *object);
 
@@ -76,13 +79,13 @@ static void goto_website(GtkWidget *widget, gpointer data)
     const char *cmd=(const char *) cmds->data;
     
     if(cmd[0]=='/') {
-      printf("%s %s\n", cmd, iw->web_site);
+      dprintf(3, "%s %s", cmd, iw->web_site);
       execl(cmd, cmd, iw->web_site, NULL);
     } else {
       strcpy(cpath, path);
       for(dir=strtok(cpath, ":"); dir; dir=strtok(NULL, ":")) {
 	file=g_strconcat(dir, "/", cmd, NULL);
-	printf("%s %s\n", file, iw->web_site);
+	dprintf(3, "%s %s", file, iw->web_site);
 	execl(file, cmd, iw->web_site, NULL);
 	g_free(file);
       }
@@ -264,5 +267,8 @@ static void info_win_finalize (GtkObject *object)
 }
 
 /*
- * $Log$
+ * $Log: infowin.c,v $
+ * Revision 1.1.1.1  2001/05/29 14:09:59  stephen
+ * Initial version of the library
+ *
  */
