@@ -1,4 +1,4 @@
-# $Id$
+# $Id: linux.py,v 1.1 2003/06/09 17:29:11 stephen Exp $
 
 """netstat implementation for Linux"""
 
@@ -49,8 +49,16 @@ def stat():
         return None
     return res
 
+states={1: 'Established', 2: 'SYN sent', 3: 'SYN received',
+        4: 'FIN wait 1', 5: 'FIN wait 2', 6: 'Time wait',
+        7: 'Close', 8: 'Close wait', 9: 'Last ACK',
+        10: 'Listen', 11: 'Closing'
+        }
 def get_state(state):
-    return int(state, 16)
+    s=int(state, 16)
+    if states.has_key(s):
+        return states[s]
+    return s
 
 def dotquad(addr):
     a=addr & 0xff
