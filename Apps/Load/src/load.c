@@ -1,9 +1,13 @@
 /*
- * %W% %E%
+ * Plot system load average
  *
  * Stephen Watson <stephen@kerofin.demon.co.uk>
  *
  * GPL applies.
+ *
+ * $Id$
+ *
+ * Log at end of file
  */
 
 #include <stdio.h>
@@ -26,9 +30,6 @@
 #include "config.h"
 #include "choices.h"
 
-/* For SCCS (but ignored by gcc) */
-#pragma ident "%W% %E%"
-
 static GtkWidget *menu=NULL;
 static GtkWidget *infowin=NULL;
 static GtkWidget *canvas = NULL;
@@ -38,7 +39,7 @@ static GdkColormap *cmap = NULL;
 static GdkColor colours[]={
   {0, 0xffff,0xffff,0xffff},
   {0, 0xffff,0,0},
-  {0, 0, 0x8000, 0},
+  {0, 0, 0xcccc, 0},
   {0, 0,0,0xffff},
   {0, 0x8888, 0x8888, 0x8888},
   {0, 0, 0, 0}
@@ -71,7 +72,8 @@ typedef struct option_widgets {
 
 static glibtop *server=NULL;
 static double max_load=1.0;
-static guint update;
+static double red_line=1.0;
+static guint update=0;
 static time_t config_time=0;
 
 static void do_update(void);
@@ -96,29 +98,36 @@ int main(int argc, char *argv[])
   server=glibtop_init_r(&glibtop_global_server,
 			(1<<GLIBTOP_SYSDEPS_CPU)|(1<<GLIBTOP_SYSDEPS_LOADAVG),
 			0);
+  if(server->ncpu>0)
+    red_line=(double) server->ncpu;
+  /*printf("ncpu=%d %f\n", server->ncpu, red_line);*/
 
   gtk_init(&argc, &argv);
 
   choices_init();
+  /*fprintf(stderr, "read config\n");*/
   read_config();
 
   if(argc<2 || !atol(argv[1])) {
+    /*fprintf(stderr, "make window\n");*/
     win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_widget_set_name(win, "load");
     gtk_window_set_title(GTK_WINDOW(win), "Load");
     gtk_signal_connect(GTK_OBJECT(win), "destroy", 
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
 		       "WM destroy");
-    gtk_widget_set_usize(win, w, h);
-    
     gtk_signal_connect(GTK_OBJECT(win), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), win);
-    gtk_widget_realize(win);
     gtk_widget_add_events(win, GDK_BUTTON_PRESS_MASK);
+    
+    /*fprintf(stderr, "set size to %d,%d\n", w, h);*/
+    gtk_widget_set_usize(win, w, h);
+    /*gtk_widget_realize(win);*/
+    
   } else {
     GtkWidget *plug;
 
-    /*printf("argv[1]=%s\n", argv[1]);*/
+    /*fprintf(stderr, "argv[1]=%s\n", argv[1]);*/
     plug=gtk_plug_new(atol(argv[1]));
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(gtk_main_quit), 
@@ -163,8 +172,8 @@ int main(int argc, char *argv[])
 static void do_update(void)
 {
   int w, h;
-  int bw, mbh, bh;
-  int bx, by;
+  int bw, mbh, bh, bm=BOTTOM_MARGIN, tm=TOP_MARGIN;
+  int bx, by, x;
   int cpu, other;
   double ld;
   GdkFont *font;
@@ -172,6 +181,7 @@ static void do_update(void)
   int i;
   char buf[32];
   int reduce;
+  int ndec=1, host_x=0;
 
   /*printf("gc=%p canvas=%p pixmap=%p\n", gc, canvas, pixmap);*/
 
@@ -188,11 +198,28 @@ static void do_update(void)
   gdk_draw_rectangle(pixmap, gc, TRUE, 0, 0, w, h);
 
   bx=2;
-  by=h-BOTTOM_MARGIN;
-  if(by<48)
-    by=h-2;
-  mbh=by-TOP_MARGIN;
   bw=(w-2-3*BAR_GAP)/3;
+  if(options.show_vals) {
+    int width, height;
+
+    width=gdk_char_width(font, '0');
+    height=gdk_char_height(font, '0');
+
+    ndec=(bw/width)-2;
+    if(ndec<1)
+      ndec=1;
+    if(ndec>3)
+      ndec=3;
+
+    tm=height+2;
+    bm=height+4;
+  }
+  by=h-bm;
+  if(by<48) 
+    by=h-2;
+  mbh=by-tm;
+  if(mbh<48)
+    mbh=by-2;
   /*printf("w=%d bw=%d\n", w, bw);*/
 
   glibtop_get_loadavg_l(server, &load);
@@ -206,6 +233,9 @@ static void do_update(void)
   }
   if(reduce && max_load>=2.0)
     max_load/=2;
+  /* Correct for FP inaccuracy, if needed */
+  if(max_load<1.0)
+    max_load=1.0;
 
   for(i=0; i<3; i++) {
     ld=load.loadavg[i];
@@ -218,20 +248,20 @@ static void do_update(void)
     printf("(%d, %d) by (%d, %d)\n", bx, by-bh, bw, bh);
     */
     
-    if(ld>1.0) {
-      int bh1=mbh*(ld-1)/max_load;
+    if(ld>red_line) {
+      int bhred=mbh*(ld-red_line)/max_load;
       /*
-      printf("bh1=%d by-bh1=%d\n", bh1, by-bh1);
-      printf("(%d, %d) by (%d, %d)\n", bx, by-bh, bw, bh1);
+      printf("bhred=%d by-bhred=%d\n", bhred, by-bhred);
+      printf("(%d, %d) by (%d, %d)\n", bx, by-bh, bw, bhred);
       */
       gdk_gc_set_foreground(gc, colours+COL_HIGH);
-      gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bh1);
+      gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bhred);
     }
     gdk_gc_set_foreground(gc, colours+COL_FG);
     gdk_draw_rectangle(pixmap, gc, FALSE, bx, by-bh, bw, bh);
 
     if(options.show_vals) {
-      sprintf(buf, "%3.1f", ld);
+      sprintf(buf, "%3.*f", ndec, ld);
       gdk_draw_string(pixmap, font, gc, bx+2, h-2, buf);
     }
 
@@ -241,8 +271,19 @@ static void do_update(void)
   if(options.show_max) {
     sprintf(buf, "Max %2d", (int) max_load);
     gdk_gc_set_foreground(gc, colours+COL_FG);
-    gdk_draw_string(pixmap, font, gc, 2, 12, buf);
+    gdk_draw_string(pixmap, font, gc, 2, tm, buf);
+
+    host_x=2+gdk_string_width(font, buf)+4;
   }
+
+  if(server->server_host) {
+    x=w-gdk_string_width(font, server->server_host)-2;
+    if(x<host_x)
+      x=host_x;
+    gdk_gc_set_foreground(gc, colours+COL_FG);
+    gdk_draw_string(pixmap, font, gc, x, tm, server->server_host);
+  }
+  
     
   gdk_draw_pixmap(canvas->window,
 		  canvas->style->fg_gc[GTK_WIDGET_STATE (canvas)],
@@ -345,9 +386,11 @@ static void read_config(void)
 	    if(strcmp(var, "update_ms")==0) {
 	      options.update_ms=atoi(val);
 
-	      gtk_timeout_remove(update);
-	      update=gtk_timeout_add(options.update_ms,
-				     (GtkFunction) do_update, NULL);
+	      if(update) {
+		gtk_timeout_remove(update);
+		update=gtk_timeout_add(options.update_ms,
+				       (GtkFunction) do_update, NULL);
+	      }
 	      
 	    } else if(strcmp(var, "show_max")==0) {
 	      options.show_max=atoi(val);
@@ -454,6 +497,7 @@ static void show_config_win(void)
 		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
 		     confwin);
     gtk_window_set_title(GTK_WINDOW(confwin), "Configuration");
+    gtk_window_set_position(GTK_WINDOW(confwin), GTK_WIN_POS_MOUSE);
     ow.window=confwin;
 
     vbox=GTK_DIALOG(confwin)->vbox;
@@ -579,3 +623,6 @@ static void show_info_win(void)
   gtk_widget_show(infowin);
 }
 
+/*
+ * $Log$
+ */

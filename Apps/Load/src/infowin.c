@@ -1,5 +1,7 @@
 /*
  * A GTK+ Widget to implement a RISC OS style info window
+ *
+ * $Id$
  */
 
 #include <stdio.h>
@@ -33,7 +35,7 @@ static int trap_client_destroy(GtkWidget *widget, GdkEvent *event,
 			      gpointer data)
 {
   /* Change this destroy into a hide */
-  gtk_widget_hide(GTK_WIDGET(data));
+  gtk_widget_hide(widget);
   return TRUE;
 }
 
@@ -100,6 +102,8 @@ static void info_win_init(InfoWin *iw)
   gtk_signal_connect(GTK_OBJECT(iw), "delete_event", 
 		     GTK_SIGNAL_FUNC(trap_client_destroy), 
 		     "WM destroy");
+  gtk_window_set_policy(GTK_WINDOW(iw), FALSE, FALSE, TRUE);
+  gtk_window_set_position(GTK_WINDOW(iw), GTK_WIN_POS_MOUSE);
   
   iw->web_site=NULL;
   iw->browser_cmds=g_list_append(NULL, "netscape");
@@ -260,3 +264,6 @@ static void info_win_finalize (GtkObject *object)
   (* GTK_OBJECT_CLASS (parent_class)->finalize) (object);
 }
 
+/*
+ * $Log$
+ */
