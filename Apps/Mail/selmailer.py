@@ -1,6 +1,7 @@
 from gtk import *
 #from newmailer import NewMailer
 from mailers import Mailer
+from my_support import *
 
 TARGET_URI_LIST=0
 targets=[('text/uri-list', 0, TARGET_URI_LIST)]
