@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.8 2003/03/21 14:35:31 stephen Exp $
+# $Id: gui.py,v 1.9 2003/05/09 14:09:36 stephen Exp $
 
 import os
 import sys
@@ -15,6 +15,8 @@ import netstat
 import rox.Menu
 import rox.applet
 import rox.options
+
+from sockwin import SocketsWindow
 
 #import gc; gc.set_debug(gc.DEBUG_LEAK)
 
@@ -140,6 +142,8 @@ vbox.pack_start(ifdisp, g.FALSE, g.FALSE)
 rox.Menu.set_save_name('NetStat')
 menu=rox.Menu.Menu('main', [
     ('/Info', 'show_info', ''),
+    ('/Active sockets...', 'show_active', ''),
+    ('/All sockets...', 'show_all', ''),
     ('/Options...', 'edit_options', ''),
     ('/Quit', 'do_quit', '')
     ])
@@ -157,6 +161,12 @@ class MenuHelper:
         rox.toplevel_unref()
     def edit_options(unused):
         rox.edit_options()
+    def show_active(unused):
+        w=SocketsWindow(stats)
+        w.show()
+    def show_all(unused):
+        w=SocketsWindow(stats, 1)
+        w.show()
 
 menu_helper=MenuHelper()
 menu.attach(win, menu_helper)

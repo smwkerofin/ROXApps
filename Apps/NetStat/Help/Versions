@@ -4,6 +4,7 @@ NetStat
 0.0.8
 -----
 Added window size option.  Work on apparent memory leak.
+Menu options to view active/all.
 
 0.0.7
 -----
