@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.11 2005/03/04 17:33:02 stephen Exp $
+# $Id: vidthumb.py,v 1.12 2005/03/10 21:57:31 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -63,13 +63,13 @@ class VidThumb(thumb.Thumbnailler):
             
         if options.sprocket.int_value:
             # Draw the film strip effect
-            pixmap.draw_rectangle(gc, gtk.TRUE, 0, 0, 8, h)
-            pixmap.draw_rectangle(gc, gtk.TRUE, w-8, 0, 8, h)
+            pixmap.draw_rectangle(gc, True, 0, 0, 8, h)
+            pixmap.draw_rectangle(gc, True, w-8, 0, 8, h)
 
             gc.set_foreground(cmap.alloc_color('#DDD'))
             for y in range(1, h, 8):
-                pixmap.draw_rectangle(gc, gtk.TRUE, 2, y, 4, 4)
-                pixmap.draw_rectangle(gc, gtk.TRUE, w-8+2, y, 4, 4)
+                pixmap.draw_rectangle(gc, True, 2, y, 4, 4)
+                pixmap.draw_rectangle(gc, True, w-8+2, y, 4, 4)
 
         if self.add_time and self.total_time:
             secs=self.total_time
@@ -143,7 +143,7 @@ class VidThumb(thumb.Thumbnailler):
             from pos seconds into the video"""
 
             # Ask for 2 frames.  Seems to work better
-            cmd='mplayer -really-quiet -vo png -z 5 -ss %f -frames 2 -nosound -noloop "%s"' % (pos, fname)
+            cmd='mplayer -really-quiet -vo png -ss %f -frames 2 -nosound -noloop "%s"' % (pos, fname)
             cmd+=' > /dev/null 2>&1'
 
             # If we have 2 frames ignore the first and return the second, else
