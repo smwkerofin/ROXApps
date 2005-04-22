@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id: options.py,v 1.5 2004/06/19 15:40:30 stephen Exp $
+# $Id: options.py,v 1.6 2004/08/05 17:37:39 stephen Exp $
 
 import os
 
@@ -8,7 +8,7 @@ import rox
 import rox.options
 import rox.OptionsBox
 
-rox.setup_app_options('VideoThumbnail')
+rox.setup_app_options('VideoThumbnail', site='kerofin.demon.co.uk')
 
 tsize=rox.options.Option('tsize', 128)
 sprocket=rox.options.Option('sprocket', 1)
