@@ -1,10 +1,10 @@
-# $Id: fetch.py,v 1.4 2004/12/05 13:19:02 stephen Exp $
+# $Id: fetch.py,v 1.5 2005/01/29 11:24:36 stephen Exp $
 
 import os, sys
 import time
 import fcntl, termios, struct
 
-import findrox; findrox.version(1, 9, 14)
+import findrox; findrox.version(2, 0, 0)
 import rox, rox.choices, rox.options
 import gobject
 
@@ -33,9 +33,6 @@ try:
 except:
     set_to=False
 
-def run_main():
-    while rox.g.events_pending():
-        rox.g.main_iteration()
 
 # This won't work under Solaris (termios gets built without FIONREAD
 # because it is defined in a different include file)
@@ -176,7 +173,8 @@ class Fetcher:
 
     def run(self):
         if self.con and self.outf:
-            rox.g.main()
+            rox.toplevel_ref()
+            rox.mainloop()
         
     def report(self, nb, tsize):
         #print 'report', self, nb, tsize
@@ -185,7 +183,7 @@ class Fetcher:
     def finished(self):
         #self.message(_('Done'))
         self.close()
-        rox.g.main_quit()
+        rox.toplevel_unref()
         
 class PasswordWindow(rox.Dialog):
     def __init__(self, host, realm, user=None, password=None):
