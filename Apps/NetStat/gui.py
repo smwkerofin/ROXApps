@@ -1,10 +1,11 @@
-# $Id: gui.py,v 1.17 2005/03/17 11:57:54 stephen Exp $
+# $Id: gui.py,v 1.18 2005/04/03 10:22:52 stephen Exp $
 
 import os
 import sys
 import string
+import math
 
-import findrox; findrox.version(1, 9, 12)
+import findrox; findrox.version(2, 0, 0)
 
 #import rox
 import rox.choices
@@ -344,6 +345,30 @@ def draw_chart(drawable, gc, box, history, ind, levels, max):
     gc.foreground=black
     drawable.draw_line(gc, left, bot, right, bot)
 
+def pretty_max(mval, bin=False):
+    if mval<=0:
+        return 0
+
+    if bin:
+        e=int(math.log(mval)/math.log(2))
+        b=2**e
+        if mval<=b:
+            return b
+        return 2*b
+
+    else:
+        e=int(math.log10(mval))
+        b=10**e
+        if mval<=b:
+            return b
+        if mval<=b*2:
+            return b*2
+        if mval<=b*5:
+            return b*5
+        return b*10
+
+    return mval
+
 history=[]
 hmax=0
 def display_chart(widget, act):
@@ -388,14 +413,16 @@ def display_chart(widget, act):
         if max<hmax/2:
             hmax=max
 
+    pmax=pretty_max(hmax, vind>1)
+
     # Transmit
     top=2
     bot=height/2-2
     left=0
     right=width
-    if hmax>0:
+    if pmax>0:
         draw_chart(widget.window, gc, (top, bot, left, right),
-                   history, vind+1, l, hmax)
+                   history, vind+1, l, pmax)
     slayout.set_text('Tx')
     gc.foreground=black
     widget.window.draw_layout(gc, left, top, slayout)
@@ -405,17 +432,17 @@ def display_chart(widget, act):
     bot=height-2
     left=0
     right=width
-    if hmax>0:
+    if pmax>0:
         draw_chart(widget.window, gc, (top, bot, left, right),
-                   history, vind+0, l, hmax)
+                   history, vind+0, l, pmax)
     slayout.set_text('Rx')
     gc.foreground=black
     widget.window.draw_layout(gc, left, top, slayout)
     
     if vind>1:
-        s=hsize(hmax)
+        s=hsize(pmax)
     else:
-        s='%dp' % hmax
+        s='%dp' % pmax
     #print hmax, s, history[-1]
     try:
         slayout.set_text(s, len(s))
