@@ -1,4 +1,4 @@
-# $Id: linux.py,v 1.2 2003/08/02 17:14:29 stephen Exp $
+# $Id: linux.py,v 1.3 2004/03/17 18:39:46 stephen Exp $
 
 """netstat implementation for Linux"""
 
@@ -7,6 +7,8 @@ import sys
 import string
 import time
 import socket
+
+import rox
 
 def stat():
     """Returns a dict containing the data, indexed by the interface name.
@@ -69,22 +71,65 @@ def dotquad(addr):
     d=addr>>24
     return '%d.%d.%d.%d' % (a, b, c, d)
 
-addrs={}
+class AddrCache:
+    def __init__(self):
+        self.addrs={}
+        self.q=[]
+        self.tout=0
+
+    def get(self, addr):
+        #print 'get', addr, type(addr)
+        if type(addr)==int:
+            addr=dotquad(addr)
+
+        #print self.addrs
+        if addr in self.addrs:
+            return self.addrs[addr]
+
+        self.queue_lookup(addr)
+        return addr
+
+    def queue_lookup(self, addr):
+        if addr in self.q:
+            return
+        
+        self.q.insert(0, addr)
+        #print len(self.q)
+
+        if not self.tout:
+            self.tout=rox.g.timeout_add(1000, self.lookup, addr)
+
+    def lookup(self, ignored):
+        if len(self.q)<1:
+            return False
+
+        addr=self.q.pop()
+        while addr in self.addrs:
+            if len(self.q)<1:
+                return False
+            addr=self.q.pop()
+        
+        #print self, addr
+        
+        try:
+            fqdn=socket.getfqdn(addr)
+        except:
+            fqdn=addr
+
+        self.addrs[addr]=fqdn
+
+        #print fqdn, len(self.q)
+        if len(self.q)>0:
+            return True
+
+        rox.g.timeout_remove(self.tout)
+        return False
+
+
+addrs=AddrCache()
 
 def fqdn(addr):
-    if addr in addrs:
-        return addrs[addr]
-    try:
-        #print addr
-        #hostname, aliaslist, addrlist=socket.gethostbyaddr(addr)
-        #print hostname
-        fqdn=socket.getfqdn(addr)
-        #print fqdn
-    except:
-        print sys.exc_info()[:2]
-        return addr
-    addrs[addr]=fqdn
-    return fqdn
+    return addrs.get(addr)
 
 def serv(port, proto):
     return port
@@ -179,7 +224,7 @@ def ip4_sockets(servers, socks, fname, type):
         except:
             print l
             print sys.exc_info()[:2]
-            pass
+            raise
         
 def ip6_sockets(servers, socks, fname, type):
     try:
@@ -207,7 +252,6 @@ def ip6_sockets(servers, socks, fname, type):
         except:
             #print l
             print sys.exc_info()[:2]
-            pass
         
 def tcp_sockets(servers, socks):
     ip4_sockets(servers, socks, '/proc/net/tcp', 'tcp')
