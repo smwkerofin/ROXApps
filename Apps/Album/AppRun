@@ -7,7 +7,7 @@ except:
     import time
 import shutil, stat
 
-import findrox; findrox.version(1, 9, 14)
+import findrox; findrox.version(2, 0, 0)
 import rox, rox.saving, rox.choices, rox.loading
 import rox.Menu
 import rox.AppInfo

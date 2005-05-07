@@ -1,6 +1,10 @@
 Album
 =====
 
+23-Apr-2005 (0.0.2)
+~~~~~~~~~~~
+Now require ROX-Lib 2.0.0.
+
 02-Apr-2005
 ~~~~~~~~~~~
 Can access options from AppMenu.
@@ -9,7 +13,7 @@ Rename ID3 to localID3 and try to import ID3 from system first.
 
 13-Mar-2005
 ~~~~~~~~~~~
-Include ID3.py incase local system doesn't have it.
+Include ID3.py in case local system doesn't have it.
 
 30-Aug-2004
 ~~~~~~~~~~~

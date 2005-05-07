@@ -3,7 +3,7 @@
 import os, sys
 import time
 
-import findrox; findrox.version(1, 9, 14)
+import findrox; findrox.version(2, 0, 0)
 import rox, rox.choices
 
 rox.setup_app_options('Album')
