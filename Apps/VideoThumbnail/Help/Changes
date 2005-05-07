@@ -3,7 +3,7 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
-22-Apr-2005
+22-Apr-2005 (0.1.5)
 ~~~~~~~~~~~
 MPlayer 1.0pre7 doesn't recognize the -z option, so don't use it.
 Options stored in XDG dirs now.

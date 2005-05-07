@@ -1,6 +1,16 @@
 NetStat
 =======
 
+03-May-2005 (0.1.1)
+~~~~~~~~~~~
+Better scaling of maximum in chart display.
+Stop updating socket windows when they are destroyed!
+Better lookup of IP addresses on Linux.
+
+23-Apr-2005
+~~~~~~~~~~~
+Require ROX-Lib 2.0.0.
+
 03-Apr-2005
 ~~~~~~~~~~~
 Better AppRun/AppletRun as suggested by Thomas Leonard.
