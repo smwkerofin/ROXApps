@@ -3,7 +3,7 @@
   <Summary>Generate thumbnail images for video files</Summary>
   <About>
     <Purpose>Generate thumbnail images for video files</Purpose>
-    <Version>0.1.4 (25th September 2004)</Version>
+    <Version>0.1.5 (7th May 2005)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
@@ -11,7 +11,7 @@
   <Dependencies>
     <AppDir>
       <Name>ROX-Lib2</Name>
-      <NeedsVersion>1.9.13</NeedsVersion>
+      <NeedsVersion>2.0.0</NeedsVersion>
       <Link>http://rox.sourceforge.net</Link>
       <ZeroInstall>/uri/0install/rox.sourceforge.net/lib/</ZeroInstall>
     </AppDir>

@@ -3,6 +3,15 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+22-Apr-2005
+~~~~~~~~~~~
+MPlayer 1.0pre7 doesn't recognize the -z option, so don't use it.
+Options stored in XDG dirs now.
+
+17-Apr-2005
+~~~~~~~~~~~
+Require ROX-Lib 2.0.0.
+
 05-Mar-2005
 ~~~~~~~~~~~
 Fix generation of error image.
