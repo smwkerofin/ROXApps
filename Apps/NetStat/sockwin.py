@@ -1,4 +1,4 @@
-# $Id$
+# $Id: sockwin.py,v 1.1 2003/06/09 17:29:11 stephen Exp $
 import os
 import sys
 import string
@@ -58,6 +58,7 @@ class SocketsWindow(rox.Window):
 
         self.to=None
         self.connect('show', self.on_show)
+        self.connect('destroy', self.on_close)
 
     def __del__(self):
         if self.to:
@@ -66,6 +67,11 @@ class SocketsWindow(rox.Window):
     def on_show(self, ignored=None):
         self.to=rox.g.timeout_add(5*1000, self.update)
 
+    def on_close(self, ignored=None):
+        if self.to:
+            rox.g.timeout_remove(self.to)
+            self.to=0
+            
     def update(self):
         self.load(self.stats.getSockets(self.show_servers))
         return 1
