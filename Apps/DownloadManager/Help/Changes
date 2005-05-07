@@ -1,6 +1,10 @@
 DownloadManager
 ===============
 
+17-May-2005 (0.0.2)
+~~~~~~~~~~~
+Require ROX-Lib 2.0.0.
+
 14-Mar-2005
 ~~~~~~~~~~~
 Added options.
@@ -26,4 +30,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.4 2005/03/10 21:58:39 stephen Exp $
+$Id: Changes,v 1.5 2005/03/17 11:52:23 stephen Exp $

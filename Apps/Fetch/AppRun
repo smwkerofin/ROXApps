@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.17 2005/03/10 21:56:06 stephen Exp $
+# $Id: AppRun,v 1.18 2005/03/17 11:56:15 stephen Exp $
 
 import os, sys
 import time
 
-import findrox; findrox.version(1, 9, 14)
+import findrox; findrox.version(2, 0, 0)
 import rox, rox.choices, rox.options, rox.processes, rox.mime
 
 import urlparse, urllib

@@ -1,6 +1,11 @@
 Fetch
 =====
 
+23-Apr-2005
+~~~~~~~~~~~
+Require ROX-Lib 2.0.0.
+Use toplevel_ref() instead of main_loop().
+
 14-Mar-2005
 ~~~~~~~~~~~
 Standardized options (added app menu entry).  Shorter delays when connecting.
@@ -85,4 +90,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.19 2005/03/10 21:56:06 stephen Exp $
+$Id: Changes,v 1.20 2005/03/17 11:56:47 stephen Exp $
