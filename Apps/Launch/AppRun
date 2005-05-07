@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.4 2004/09/14 14:38:45 stephen Exp $
+# $Id: AppRun,v 1.5 2005/01/23 12:41:29 stephen Exp $
 
 import os, sys
 import urlparse
 
-import findrox; findrox.version(1,9,17)
+import findrox; findrox.version(2, 0, 0)
 import rox
 import rox.options
 import rox.OptionsBox
@@ -22,14 +22,18 @@ options=rox.options.OptionGroup('Launch', 'Options.xml')
 rox.app_options=options
 #print options.pending
 
-moz_cmd='mozilla -remote "openURL(%s,new-window)"'
+BROWSER=os.getenv('BROWSER')
+if BROWSER:
+	web_cmd=BROWSER+' %s'
+else:
+	web_cmd='mozilla -remote "openURL(%s,new-window)"'
 
-http_cmd=rox.options.Option('http', moz_cmd, options)
+http_cmd=rox.options.Option('http', web_cmd, options)
 #ftp_cmd=rox.options.Option('ftp', '', options)
 #mailto_cmd=rox.options.Option('mailto', '', options)
 #print options.pending
 
-schemes=rox.options.ListOption('schemes', ('http=%s' % moz_cmd,), options)
+schemes=rox.options.ListOption('schemes', ('http=%s' % web_cmd,), options)
 
 #print 'pre notify',schemes, schemes.default_value, type(schemes.default_value)
 options.notify()
@@ -84,7 +88,7 @@ def launch_uri(uri):
     if not cmd:
         cmd=http_cmd.value
     if not cmd:
-        cmd=moz_cmd
+        cmd=web_cmd
 
     scmd=cmd % uri
     #print cmd

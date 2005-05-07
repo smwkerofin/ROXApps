@@ -1,7 +1,12 @@
 Launch
 ======
 
-23-Jan-2004
+23-Apr-2005 (0.1.4)
+~~~~~~~~~~~
+Use $BROWSER for default http handler.
+Require ROX-Lib 2.0.0.
+
+23-Jan-2005
 ~~~~~~~~~~~
 Use varlist option widget from ROX-Lib2.
 
