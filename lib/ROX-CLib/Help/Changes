@@ -4,7 +4,7 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
-19-Feb-2005
+19-Feb-2005 (2.1.5)
 ~~~~~~~~~~~
 Use apsymbols.h if available to reduce problems re-using binary on different
 Linux distros.
@@ -217,4 +217,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.20 2005/02/19 11:53:18 stephen Exp $
+$Id: Changes,v 1.21 2005/03/04 17:22:18 stephen Exp $
