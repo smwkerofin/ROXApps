@@ -1,6 +1,6 @@
-# $Id: gui.py,v 1.2 2004/11/21 13:05:05 stephen Exp $
+# $Id: gui.py,v 1.3 2005/02/19 11:46:11 stephen Exp $
 
-import findrox; findrox.version(1, 9, 14)
+import findrox; findrox.version(2 0, 0)
 
 import rox
 import rox.choices
