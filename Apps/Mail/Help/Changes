@@ -1,6 +1,10 @@
 Versions of Mail
 ================
 
+23-Apr-2005
+~~~~~~~~~~~
+Require ROX-Lib 2.0.0.
+
 19-Feb-2005 (0.3.7)
 ~~~~~~~~~~~
 Got the "Check mail programs" window working.  Still needs some way of 
@@ -53,4 +57,4 @@ Check child processes to avoid zombies where possible.
 First released version
 
 -- 
-$Id: Changes,v 1.1 2005/02/19 11:44:49 stephen Exp $
+$Id: Changes,v 1.2 2005/03/04 17:05:38 stephen Exp $
