@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.33 2004/10/29 13:36:48 stephen Exp $
+ * $Id: clock.c,v 1.34 2004/11/21 13:03:57 stephen Exp $
  */
 #include "config.h"
 
@@ -896,12 +896,17 @@ static void check_clock_face(ClockWindow *cwin)
     w=h;
   else if(h>w)
     h=w;
+  if(w<4)
+    w=h=4;
 
-  if(w>CLOCK_SIZE || h>CLOCK_SIZE) {
+  if(w>CLOCK_SIZE) {
     cwin->clock_face=make_clock_face(w, h, cwin->canvas, cwin->gc);
-  } else {
+  } else if(w>4) {
     cwin->clock_face=gdk_pixbuf_scale_simple(clock_face, w, h,
 					     GDK_INTERP_BILINEAR);
+  } else {
+    cwin->clock_face=gdk_pixbuf_scale_simple(clock_face, w, h,
+					     GDK_INTERP_NEAREST);
   }
 }
 
@@ -1366,6 +1371,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.34  2004/11/21 13:03:57  stephen
+ * Use ROXInfoWin
+ *
  * Revision 1.33  2004/10/29 13:36:48  stephen
  * Use rox_choices_load()/save() and  window counting
  *

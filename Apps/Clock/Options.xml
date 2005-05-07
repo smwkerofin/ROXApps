@@ -5,7 +5,7 @@
 	      width='5'>How often to update the time (ms)</numentry>
   </section>
   <section title='Display'>
-    <numentry name='size' label='Window/Applet size' min='32' max='64'
+    <numentry name='size' label='Window/Applet size' min='8' max='64'
 	      width='2'>Initial size</numentry>
     <toggle name='seconds' label='Show second hand'>If this is on the
 second hand is shown</toggle>

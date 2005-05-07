@@ -29,6 +29,10 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(setlocale fstat stat bindtextdomain gettext)
+AC_CHECK_FUNC(getopt_long)
+if test $ac_cv_func_getopt_long = no; then
+  AC_CHECK_LIB(gnugetopt, getopt_long)
+fi
 
 dnl Check for ROX-CLib and version
 dnl Assume that if we have the right ROX-CLib we also have GTK+ and libxml

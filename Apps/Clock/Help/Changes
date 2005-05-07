@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+07-May-2005 (2.1.5)
+~~~~~~~~~~~
+Faster creation of small face displays.
+
 04-Mar-2005
 ~~~~~~~~~~~
 Fix bug creating alarm window.
