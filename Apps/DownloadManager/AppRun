@@ -11,8 +11,8 @@ service_name='uk.co.demon.kerofin.DownloadManager'
 interface_name=service_name
 object_path='/DownloadManager'
 
-# Out options, no way yet to show them
-rox.setup_app_options('DownloadManager')
+# Out options
+rox.setup_app_options('DownloadManager', site='kerofin.demon.co.uk')
 
 allow_nclient=rox.options.Option('allow_nclient', 1)
 client_expires=rox.options.Option('client_expires', 60)
@@ -224,6 +224,7 @@ class MyObject(dbus.Object, rox.Window):
         self.lose_client(id=id)
 
     def Cancel(self, method, reason):
+        #print 'in cancel', self, method, reason
         id=method.get_sender()
         client=self.clients[id]
         #print client, 'has been cancelled', reason
