@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.15 2004/08/27 18:37:10 stephen Exp $
+ * $Id: main.c,v 1.16 2004/11/21 13:03:05 stephen Exp $
  */
 #include "config.h"
 
@@ -581,7 +581,7 @@ static void begin_save(GtkWidget *widget, gpointer data)
 
   path=gtk_editable_get_chars(GTK_EDITABLE(prog_name), 0, -1);
   leaf=(gchar *) g_basename(path);
-  leaf[0]=toupper(leaf[0]);
+  leaf[0]=g_ascii_toupper(leaf[0]);
   gtk_savebox_set_pathname(GTK_SAVEBOX(save), leaf);
   g_free(path);
 
@@ -747,5 +747,8 @@ static void show_info_win(void)
   gtk_widget_show(infowin);
 }
 /*
- * $Log$
+ * $Log: main.c,v $
+ * Revision 1.16  2004/11/21 13:03:05  stephen
+ * Use new ROX-CLib features
+ *
  */
