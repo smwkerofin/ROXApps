@@ -9,11 +9,15 @@
 
 #undef HAVE_LIBINTL_H
 #undef HAVE_LOCALE_H
+#undef HAVE_APSYMBOLS_H
+#undef HAVE_APBUILD_APSYMBOLS_H
+
 #undef HAVE_GETHOSTNAME
 #undef HAVE_XML
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
 #undef HAVE_SETLOCALE
+#undef HAVE_GETOPT_LONG
 
 #define ROX_CLIB_VERSION ""
 
@@ -25,3 +29,9 @@
 #define _(String) (String)
 #endif
 #define N_(String) (String)
+
+#if defined(HAVE_APSYMBOLS_H)
+#include <apsymbols.h>
+#elif defined(HAVE_APBUILD_APSYMBOLS_H)
+#include <apbuild/apsymbols.h>
+#endif

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.29 2004/12/11 11:48:25 stephen Exp $
+ * $Id: freefs.c,v 1.30 2005/01/01 12:30:14 stephen Exp $
  */
 #include "config.h"
 
@@ -301,6 +301,8 @@ int main(int argc, char *argv[])
     }
     if(open_remote(xid, df_dir, minimal)) {
       dprintf(1, "success in open_remote(%lu), exiting", xid);
+      if(xid)
+	sleep(3);
       return 0;
     } else {
       rox_error("Could not connect to server, running standalone");
@@ -1410,6 +1412,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.30  2005/01/01 12:30:14  stephen
+ * Can now pass SOAP messages via command line
+ *
  * Revision 1.29  2004/12/11 11:48:25  stephen
  * More work on the SOAP messages
  *

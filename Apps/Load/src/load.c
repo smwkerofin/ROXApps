@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.24 2004/08/19 19:27:44 stephen Exp $
+ * $Id: load.c,v 1.25 2004/11/21 13:21:56 stephen Exp $
  *
  * Log at end of file
  */
@@ -339,6 +339,8 @@ int main(int argc, char *argv[])
     }
     if(open_remote(xid)) {
       dprintf(1, "success in open_remote(%lu), exiting", xid);
+      if(xid)
+	sleep(3);
       return 0;
     }
   }
@@ -1368,6 +1370,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.25  2004/11/21 13:21:56  stephen
+ * Use new ROX-CLib features
+ *
  * Revision 1.24  2004/08/19 19:27:44  stephen
  * Draw lines on the graph to indicate the levels.
  *

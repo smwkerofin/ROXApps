@@ -14,6 +14,8 @@
 #undef HAVE_LIBINTL_H
 #undef HAVE_MNTENT_H
 #undef HAVE_SYS_MNTTAB_H
+#undef HAVE_APSYMBOLS_H
+#undef HAVE_APBUILD_APSYMBOLS_H
 
 #undef HAVE_REALPATH
 #undef HAVE_BINDTEXTDOMAIN
@@ -21,6 +23,7 @@
 #undef HAVE_STATFS
 #undef HAVE_STATVFS
 #undef HAVE_SETMNTENT
+#undef HAVE_GETOPT_LONG
 
 #define FSTAB ""
 #define MTAB ""
@@ -36,3 +39,8 @@
 
 #define G_DISABLE_CONST_RETURNS
 
+#if defined(HAVE_APSYMBOLS_H)
+#include <apsymbols.h>
+#elif defined(HAVE_APBUILD_APSYMBOLS_H)
+#include <apbuild/apsymbols.h>
+#endif
