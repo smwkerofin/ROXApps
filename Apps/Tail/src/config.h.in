@@ -10,11 +10,14 @@
 #include <sys/types.h>
 
 #undef HAVE_SYS_FILIO_H
+#undef HAVE_LIBINTL_H
+#undef HAVE_LOCALE_H
+#undef HAVE_APSYMBOLS_H
+#undef HAVE_APBUILD_APSYMBOLS_H
 
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
-#undef HAVE_LIBINTL_H
-#undef HAVE_LOCALE_H
+#undef HAVE_GETOPT_LONG
 
 /* I18n support */
 #if defined(HAVE_GETTEXT)
@@ -23,3 +26,9 @@
 #define _(String) (String)
 #endif
 #define N_(String) (String)
+
+#if defined(HAVE_APSYMBOLS_H)
+#include <apsymbols.h>
+#elif defined(HAVE_APBUILD_APSYMBOLS_H)
+#include <apbuild/apsymbols.h>
+#endif
