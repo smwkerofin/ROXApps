@@ -1,6 +1,11 @@
 Album
 =====
 
+08-May-2005
+~~~~~~~~~~~
+Remove debug output from MusicBox interface.
+Improved setting of album cover image.
+
 23-Apr-2005 (0.0.2)
 ~~~~~~~~~~~
 Now require ROX-Lib 2.0.0.

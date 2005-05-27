@@ -34,36 +34,56 @@ def today():
         now=time.strftime('%d %B %Y')
     return now
 
-csize=48
-def scale_cover(pixbuf):
+def scale_cover(pixbuf, csize=48):
     w=pixbuf.get_width()
     h=pixbuf.get_height()
     if w<csize and h<csize:
         return pixbuf
-    scale=1.
-    if w<csize*2 and h<csize*2:
-        scale=0.5
+    if w>h:
+        scale=float(csize)/float(w)
     else:
-        if w>h:
-            scale=float(csize)/float(w)
-        else:
-            scale=float(csize)/float(h)
+        scale=float(csize)/float(h)
 
     return pixbuf.scale_simple(int(scale*w), int(scale*h),
                                rox.g.gdk.INTERP_BILINEAR)
 
 class DropableImage(rox.g.Image, rox.loading.XDSLoader):
+    """Extension of GtkImage to handle image files dropped"""
+
+    # From pixmaps.h in ROX-Filer
+    SMALL=18
+    LARGE=48
+    HUGE=96
     def __init__(self):
         rox.g.Image.__init__(self)
-        rox.loading.XDSLoader.__init__(self, None)
+
+	# Get types supported by gdk-pixbuf
+	mtypes=[]
+	for fmt in rox.g.gdk.pixbuf_get_formats():
+		mtypes+=fmt['mime_types']
+        rox.loading.XDSLoader.__init__(self, mtypes)
+
+	self.set_from_file(resource('DirIcon.png'))
+	#self.set_size_request(8, 8) # Give user a chance of finding us
+	self.loaded=False
+
+        self.size=self.HUGE
 
     def xds_load_from_file(self, path):
         pbuf=rox.g.gdk.pixbuf_new_from_file(path)
         if pbuf:
-            self.set_from_pixbuf(scale_cover(pbuf))
+            self.set_from_pixbuf(scale_cover(pbuf, self.size))
+	    self.set_size_request(self.size, self.size)
+	    self.loaded=True
 
     def xds_load_from_stream(self, name, type, stream):
-        raise "not load from stream"
+	loader=rox.g.PixbufLoader()
+	buf=stream.read()
+	loader.write(buf)
+	pbuf=loader.get_pixbuf()
+	self.set_from_pixbuf(scale_cover(pbuf, self.size))
+	self.loaded=True
+	self.set_size_request(self.size, self.size)
 
 class AlbumWindow(rox.Window, rox.loading.XDSLoader, rox.saving.Saveable):
     def __init__(self):

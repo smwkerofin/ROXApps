@@ -30,7 +30,7 @@ for audio in audio_files:
 
 def send_xmms(p):
     os.system('xmms "%s" &' % p[0])
-    time.sleep(3) # Allow it time to start up
+    time.sleep(5) # Allow it time to start up
     for path in p[1:]:
         os.system('xmms -e "%s"' % path)
 
@@ -43,7 +43,7 @@ def send_music_box(p):
         if os.access(run, os.X_OK):
             loc=run
             break
-    print loc
+    #print loc
     if not loc:
         appdir=os.getenv("PATH")
         for dir in appdir.split(':'):
@@ -51,14 +51,14 @@ def send_music_box(p):
             if os.access(run, os.X_OK):
                 loc=run
                 break
-    print loc
+    #print loc
     if not loc:
         return False
 
     cmd=loc
     for f in p:
         cmd+=' "%s"' % f
-    print >>sys.stderr, cmd
+    #print >>sys.stderr, cmd
     os.system(cmd)
     return True
     
