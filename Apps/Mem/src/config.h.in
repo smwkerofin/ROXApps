@@ -24,6 +24,7 @@
 #undef HAVE_SWAPCTL
 #undef HAVE_KSTAT_OPEN
 #undef HAVE_LIBGTOP
+#undef HAVE_GETOPT_LONG
 
 #define ROX_CLIB_VERSION ""
 

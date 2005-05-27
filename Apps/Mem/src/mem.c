@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.17 2004/11/21 13:23:17 stephen Exp $
+ * $Id: mem.c,v 1.18 2005/01/23 12:43:55 stephen Exp $
  */
 #include "config.h"
 
@@ -277,6 +277,8 @@ int main(int argc, char *argv[])
     }
     if(open_remote(xid)) {
       dprintf(1, "success in open_remote(%lu), exiting", xid);
+      if(xid)
+	sleep(3);
       return 0;
     }
   }
@@ -1273,6 +1275,10 @@ static gboolean options_remote(void)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.18  2005/01/23 12:43:55  stephen
+ * Update choice_install for XDG basedirs choices
+ * Had missed one call to the old choices interface.  Made domain consistant with other apps.
+ *
  * Revision 1.17  2004/11/21 13:23:17  stephen
  * Use new ROX-CLib features
  *
