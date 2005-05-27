@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.34 2004/11/21 13:03:57 stephen Exp $
+ * $Id: clock.c,v 1.35 2005/05/07 10:50:38 stephen Exp $
  */
 #include "config.h"
 
@@ -317,6 +317,8 @@ int main(int argc, char *argv[])
     }
     if(open_remote(xid)) {
       dprintf(1, "success in open_remote(%lu), exiting", xid);
+      if(xid)
+	sleep(3);
       return 0;
     }
   }
@@ -1371,6 +1373,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.35  2005/05/07 10:50:38  stephen
+ * Faster creation of small face displays
+ *
  * Revision 1.34  2004/11/21 13:03:57  stephen
  * Use ROXInfoWin
  *

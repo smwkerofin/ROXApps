@@ -1,6 +1,12 @@
 Changes to Clock
 ================
 
+27-May-2005
+~~~~~~~~~~~
+Fix for creating applets in remote mode, need to give the filer long enough
+to notice the widget was created.
+Use apsymbols for Linux portability.
+
 07-May-2005 (2.1.5)
 ~~~~~~~~~~~
 Faster creation of small face displays.

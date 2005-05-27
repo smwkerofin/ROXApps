@@ -24,14 +24,16 @@ dnl Checks for header files.
 AC_PATH_X
 AC_HEADER_STDC
 AC_CHECK_HEADERS(unistd.h locale.h sys/stat.h libintl.h)
+AC_CHECK_HEADERS(apsymbols.h apbuild/apsymbols.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(setlocale fstat stat bindtextdomain gettext)
-AC_CHECK_FUNC(getopt_long)
+AC_CHECK_FUNCS(getopt_long)
 if test $ac_cv_func_getopt_long = no; then
   AC_CHECK_LIB(gnugetopt, getopt_long)
+  AC_CHECK_FUNCS(getopt_long)
 fi
 
 dnl Check for ROX-CLib and version
