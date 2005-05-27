@@ -1,4 +1,4 @@
-# $Id: DesktopFile.py,v 1.3 2004/11/21 13:05:32 stephen Exp $
+# $Id: DesktopFile.py,v 1.4 2005/03/10 21:55:03 stephen Exp $
 
 """Scan .desktop files and generate rox wrappers for programs"""
 
@@ -6,7 +6,16 @@ import string
 import os
 import sys
 
-credit=sys.argv[0]+' 0.0.1'
+import rox, rox.AppInfo
+
+d2app=rox.AppInfo.AppInfo(os.path.join(rox.app_dir, 'AppInfo.xml'))
+v=d2app.getAbout('Version')
+if v:
+    v=str(v[1])
+else:
+    v=''
+credit=rox.app_dir+' '+v
+#print credit
 
 def _copy(src, dest):
     """Copy a file in a single pass"""
@@ -45,6 +54,10 @@ class DesktopEntry:
         self.no_display=section.getBoolean('NoDisplay', 0)
         self.path=section.get('Path')
         self.hidden=section.getBoolean('Hidden', 0)
+
+        self.categories=section.getList('Categories')
+        self.only_show_in=section.getList('OnlyShowIn')
+        self.not_show_in=section.getList('NotShowIn')
 
     def setType(self, type):
         self.type=type
@@ -165,9 +178,23 @@ class DesktopEntry:
             raise 'Cannot write to '+parent
 
         if self.type:
-            dir=os.path.join(parent, self.type, self.name)
+            tdir=os.path.join(parent, self.type)
+            tback='..'
         else:
-            dir=os.path.join(parent, self.name)
+            tdir=parent
+            tback='.'
+            
+        main_cat=None
+        for c in self.categories:
+            if c not in self.not_show_in:
+                main_cat=c
+                break
+        if main_cat:
+            dir=os.path.join(tdir, main_cat, self.name)
+            back='..'
+        else:
+            dir=os.path.join(tdir, self.name)
+            back='.'
         if os.access(dir, os.F_OK)!=1:
             os.makedirs(dir)
         if os.access(dir, os.W_OK)!=1:
@@ -183,6 +210,19 @@ class DesktopEntry:
                 type, value=sys.exc_info()[:2]
                 print 'Failed to copy icon: %s %s' % (type, value)
                 print 'Was copying %s to %s' % (ifile, os.path.join(dir, '.DirIcon'))
+
+        if main_cat:
+            for c in self.categories:
+                if c!=main_cat:
+                    #print dir, tdir, tback, back
+                    rdir=os.path.join(back, main_cat, self.name)
+                    #print rdir
+                    try:
+                        os.makedirs(os.path.join(tdir, c))
+                        os.symlink(rdir, os.path.join(tdir, c, self.name))
+                    except:
+                        pass
+                    
         return dir
         
 class Section:
@@ -244,6 +284,12 @@ class Section:
         if val=='true' or val=='1':
             return 1
         return 0
+
+    def getList(self, name, locale=None):
+        val=self.get(name, locale)
+        if not val:
+            return []
+        return val.split(';')
 
     def getDesktopEntry(self, locale=None):
         if self.name!='Desktop Entry':
@@ -340,7 +386,7 @@ class DesktopFile:
                 # print ent.type, ent.name
                 # print 'Icon:', ent.findIconFile()
                 dir=ent.makeAppDir(dir)
-                if dir: print dir
+                #if dir: print dir
             
 
 if __name__=='__main__':

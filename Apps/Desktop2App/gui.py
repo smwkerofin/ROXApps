@@ -1,9 +1,10 @@
-# $Id: gui.py,v 1.3 2005/02/19 11:46:11 stephen Exp $
+# $Id: gui.py,v 1.4 2005/05/07 11:08:06 stephen Exp $
 
-import findrox; findrox.version(2 0, 0)
+import findrox; findrox.version(2, 0, 0)
 
 import rox
 import rox.choices
+import rox.basedir
 import rox.filer
 import DesktopFile
 
@@ -11,7 +12,7 @@ import os
 import sys
 import stat
 
-cdir=rox.choices.save('Desktop2App', 'Apps', rox.TRUE)
+cdir=rox.basedir.save_config_path('kerofin.demon.co.uk', 'Desktop2App', 'Apps')
 
 if len(sys.argv)<2:
     if os.access(cdir, os.R_OK)==0:

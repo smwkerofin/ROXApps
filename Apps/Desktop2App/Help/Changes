@@ -1,6 +1,10 @@
 Desktop2App
 ===========
 
+14-May-2005
+~~~~~~~~~~~
+Use the Categories entry (if present) to put the AppDirs into a hierarchy.
+
 05-Mar-2005 (0.1.4)
 ~~~~~~~~~~~
 More places to look for icons.
@@ -17,4 +21,4 @@ More places to look for icons.  Use more recent ROX-Lib.
 ~~~~~~~~~~~
 
 -- 
-$Id: Changes,v 1.4 2005/03/10 21:55:03 stephen Exp $
+$Id: Changes,v 1.5 2005/05/07 11:08:06 stephen Exp $
