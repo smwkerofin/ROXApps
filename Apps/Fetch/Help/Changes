@@ -1,7 +1,12 @@
 Fetch
 =====
 
-23-Apr-2005
+15-May-2005
+~~~~~~~~~~~
+Switch to XDG choices.
+Remove some dead code.  Extra error checks.  Track down stray ChildKill.
+
+23-Apr-2005 (0.1.1)
 ~~~~~~~~~~~
 Require ROX-Lib 2.0.0.
 Use toplevel_ref() instead of main_loop().

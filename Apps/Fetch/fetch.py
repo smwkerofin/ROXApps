@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.5 2005/01/29 11:24:36 stephen Exp $
+# $Id: fetch.py,v 1.6 2005/05/07 11:19:49 stephen Exp $
 
 import os, sys
 import time
@@ -14,7 +14,7 @@ import xml.dom, xml.dom.minidom
 
 _=rox._
 
-rox.setup_app_options('Fetch')
+rox.setup_app_options('Fetch', site='kerofin.demon.co.uk')
 
 allow_pw_change=rox.options.Option('allow_pw_change', True)
 wait_for=rox.options.Option('wait_for', 3)

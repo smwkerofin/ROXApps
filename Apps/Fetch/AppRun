@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.18 2005/03/17 11:56:15 stephen Exp $
+# $Id: AppRun,v 1.19 2005/05/07 11:21:33 stephen Exp $
 
 import os, sys
 import time
@@ -14,7 +14,7 @@ import dclient
 
 _=rox._
 
-rox.setup_app_options('Fetch')
+rox.setup_app_options('Fetch', site='kerofin.demon.co.uk')
 
 allow_pw_change=rox.options.Option('allow_pw_change', True)
 wait_for=rox.options.Option('wait_for', 3)
@@ -30,11 +30,6 @@ delay=500
 
 unknown_type=rox.mime.lookup('text/plain')
 html_type=rox.mime.lookup('text/html')
-
-def run_main():
-    while rox.g.events_pending():
-        rox.g.main_iteration()
-    #print 'done run_main' 
 
 def get_filename(url):
     scheme, location, path, query, fragment=urlparse.urlsplit(url)
@@ -80,6 +75,7 @@ class FetchWindow(rox.Dialog):
         self.dl_man=None
         self.wtag=0
         self.proc=None
+        self.kill_proc=False
         
         rox.Dialog.__init__(self)
         self.set_title(self.url)
@@ -203,9 +199,12 @@ class FetchWindow(rox.Dialog):
         self.start()
 
     def do_response(self, *unused):
+        #print self.dl_man
         if self.dl_man:
             self.dl_man.cancel(_('Cancelled'))
         if self.proc:
+            self.kill_proc=True
+            #print >> sys.stderr, self, unused
             self.proc.kill()
         msg='Fetch of %s cancelled' % self.url
         if self.count:
@@ -237,7 +236,6 @@ class FetchWindow(rox.Dialog):
         
     def message(self, text):
         self.msg1.set_text(text)
-        #run_main()
 
     def percent_done(self, size, total):
         if self.prog is None:
@@ -276,12 +274,9 @@ class FetchWindow(rox.Dialog):
                 speed=size/elapsed/1024
                 self.speed.set_text('%2.1f KB/s' % speed)
             
-        #run_main()
-
     def active(self):
         self.prog.set_text('')
         self.prog.pulse()
-        #run_main()
 
     def close(self):
         #print 'close'
@@ -289,6 +284,8 @@ class FetchWindow(rox.Dialog):
             self.dl_man.cancel(_('Window closed'))
         if self.proc:
             try:
+                #print >>sys.stderr, "window closed"
+                self.kill_proc=True
                 self.proc.kill()
             except:
                 pass
@@ -296,7 +293,7 @@ class FetchWindow(rox.Dialog):
         self.hide()
         self.destroy()
         self.prog=None
-        rox.g.main_quit()
+        #rox.toplevel_unref()
 
     def set_server_type(self, stype_name):
         self.type_l.set_text(stype_name)
@@ -329,7 +326,10 @@ class FetchWindow(rox.Dialog):
 
         data=''
         while True:
-            c=self.con.read(1)
+            try:
+                c=self.con.read(1)
+            except ValueError:
+                break
             data+=c
             #print 'Read',data
             if c=='\n':
@@ -383,7 +383,7 @@ class FetchWindow(rox.Dialog):
             self.real_start()
 
     def on_slot_available(self, interface, signal_name, service, path, message):
-        print interface, signal_name, service, path, message
+        #print interface, signal_name, service, path, message
         if self.dl_man:
             if not self.waiting():
                 rox.g.timeout_remove(self.wtag)
@@ -392,13 +392,11 @@ class FetchWindow(rox.Dialog):
     def acquire(self):
         self.dl_man.register(self.on_slot_available)
         self.wtag=rox.g.timeout_add(delay, self.waiting)
-        #rox.mainloop()
 
     def waiting(self):
         if self.proc:
             return False
         if not self.dl_man:
-            #rox.g.main_quit()
             self.real_start()
             return False
 
@@ -419,7 +417,6 @@ class FetchWindow(rox.Dialog):
                 self.real_start()
             except:
                 rox.report_exception()
-            #rox.g.main_quit()
             return False
 
         n=self.dl_man.getQueueSize()
@@ -437,7 +434,11 @@ class FetchWindow(rox.Dialog):
         rox.g.input_add(self.con.fileno(), rox.g.gdk.INPUT_READ,
                         self.read_some)
 
-        self.proc.wait()
+        try:
+            self.proc.wait()
+        except rox.processes.ChildKilled:
+            pass
+            
         #print 'done waiting'
         self.proc=None
         #self.finished()
@@ -464,7 +465,6 @@ class FetchWindow(rox.Dialog):
             self.size_l.set_text(tstr)
         else:
             self.active()
-        #run_main()
 
         if self.dl_man:
             self.dl_man.update(nb, tsize)
@@ -494,9 +494,7 @@ class FetchWindow(rox.Dialog):
                 mess=_('Done.  Warning: type mismatch')
                 t*=3
         self.message(mess)
-        #run_main()
         rox.g.timeout_add(t, self.close)
-        #rox.mainloop()
         
 def main():
     if len(sys.argv)==1 or (len(sys.argv)==2 and sys.argv[1]=='-o'):
