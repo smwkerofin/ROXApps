@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppletRun,v 1.15 2004/05/15 16:53:28 stephen Exp $
+# $Id: AppletRun,v 1.16 2004/05/21 16:28:23 stephen Exp $
 
 import findrox; findrox.version(1, 9, 12)
 import rox
@@ -158,6 +158,8 @@ class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
 
         ebox.connect("button_press_event", click, self)
 
+        self.nin=0
+        self.mbox_mtime=0
         self.tag=g.timeout_add(5000, self.update)
 
         if self.checkers!=None:
@@ -204,21 +206,24 @@ class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
                 self.mail=1
                 if beep.int_value:
                     g.gdk.beep()
-            nin=count_from(mailfile)
+            mtime=file_mtime(mailfile)
+            if mtime>self.mbox_mtime:
+                self.nin=count_from(mailfile)
+                self.mbox_mtime=mtime
         else:
             if self.mail!=0:
                 self.mail_pixmap.hide()
                 self.nomail_pixmap.show()
                 self.mail=0      
-            nin=0
+            self.nin=0
         if check_out.int_value:
             nout=out_queue()
         else:
             nout=0
         if nout:
-            self.infoline.set_text('%d/%d' % (nin, nout))
-        elif nin:
-            self.infoline.set_text(str(nin))
+            self.infoline.set_text('%d/%d' % (self.nin, nout))
+        elif self.nin:
+            self.infoline.set_text(str(self.nin))
         else:
             self.infoline.set_text("")
         return g.TRUE

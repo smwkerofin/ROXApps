@@ -1,4 +1,4 @@
-# $Id$
+# $Id: my_support.py,v 1.3 2002/10/19 14:34:39 stephen Exp $
 
 import sys
 import os.path
@@ -34,6 +34,14 @@ def file_size(fname):
     try:
         s=os.stat(fname)
         size=s[ST_SIZE]
+    except:
+        size=0
+    return size
+
+def file_mtime(fname):
+    try:
+        s=os.stat(fname)
+        size=s[ST_MTIME]
     except:
         size=0
     return size
