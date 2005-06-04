@@ -15,12 +15,16 @@
 #undef HAVE_SYS_STAT_H
 #undef HAVE_LIBINTL_H
 #undef HAVE_SYS_FILIO_H
+#undef HAVE_APSYMBOLS_H
+#undef HAVE_APBUILD_APSYMBOLS_H
+
 #undef HAVE_SETLOCALE
 #undef HAVE_FSTAT
 #undef HAVE_STAT
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_GETTEXT
 #undef HAVE_MKSTEMP
+#undef HAVE_GETOPT_LONG
 
 #undef HAVE_UNIFIED_DIFF
 
@@ -31,3 +35,9 @@
 #define _(String) (String)
 #endif
 #define N_(String) (String)
+
+#if defined(HAVE_APSYMBOLS_H)
+#include <apsymbols.h>
+#elif defined(HAVE_APBUILD_APSYMBOLS_H)
+#include <apbuild/apsymbols.h>
+#endif

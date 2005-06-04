@@ -1,6 +1,10 @@
 Changes to Diff
 ===============
 
+27-May-2005
+~~~~~~~~~~~
+Detect getopt_long.
+
 23-Nov-2004 (2.1.2)
 ~~~~~~~~~~~
 Added missing libdir script.
