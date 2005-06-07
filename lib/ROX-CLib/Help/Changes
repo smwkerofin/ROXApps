@@ -4,6 +4,11 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+07-Jun-2005
+~~~~~~~~~~~
+Added system tray interface.
+Begun using doxygen to document the library.
+
 19-Feb-2005 (2.1.5)
 ~~~~~~~~~~~
 Use apsymbols.h if available to reduce problems re-using binary on different
@@ -217,4 +222,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.21 2005/03/04 17:22:18 stephen Exp $
+$Id: Changes,v 1.22 2005/05/07 10:39:16 stephen Exp $
