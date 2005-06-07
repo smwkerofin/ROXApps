@@ -1,8 +1,13 @@
 /*
- * $Id: rox.c,v 1.7 2004/10/23 11:50:12 stephen Exp $
+ * $Id: rox.c,v 1.8 2004/10/29 13:36:07 stephen Exp $
  *
  * rox.c - General stuff
  */
+
+/** \file rox.c
+ * General ROX functions.
+ */
+
 #include "rox-clib.h"
 
 #include <stdlib.h>
@@ -19,11 +24,34 @@ static gchar *domain_name=NULL;
 static GdkPixbuf *program_icon=NULL;
 const gchar *app_dir=NULL;
 
+/** Initialize the library.  Equivalent to
+ * rox_init_with_domain(program, NULL, argc, argv).
+ * Do not use this, use rox_init_with_domain() instead.
+ *
+ * @param program name of program
+ * @param argc pointer to argc passed to main()
+ * @param argv pointer to argv passed to main()
+ */
 void rox_init(const char *program, int *argc, char ***argv)
 {
   rox_init_with_domain(program, NULL, argc, argv);
 }
 
+/** Initialize the library.  This calls:
+ * - gtk_init()
+ * - rox_debug_init()
+ * - choices_init()
+ * - options_init_with_domain() (if Options.xml in $APP_DIR)
+ * - rox_dnd_init()
+ * - mime_init()
+ *
+ * If .DirIcon exists in $APP_DIR it is set as the default icon for all windows
+ *
+ * @param program name of program
+ * @param domain domain under the control of the programmer.  Used in options and choices
+ * @param argc pointer to argc passed to main()
+ * @param argv pointer to argv passed to main()
+ */
 void rox_init_with_domain(const char *program, const char *domain,
 			  int *argc, char ***argv)
 {
@@ -63,11 +91,20 @@ void rox_init_with_domain(const char *program, const char *domain,
   mime_init();
 }
 
+/** Returns the program name as passed to rox_init_with_domain()
+ *
+ * @return the program name
+ */
 const gchar *rox_get_program_name(void)
 {
   return program_name;
 }
 
+/** Returns the application directory.
+ *
+ * @return the application directory, which may be NULL or "" if the AppRun
+ * script wasn't called
+ */
 const gchar *rox_get_app_dir(void)
 {
   if(!app_dir)
@@ -75,6 +112,10 @@ const gchar *rox_get_app_dir(void)
   return app_dir;
 }
 
+/** Returns the program icon used for the windows
+ *
+ * @return the program icon, or NULL if there isn't one
+ */
 GdkPixbuf *rox_get_program_icon(void)
 {
   if(program_icon)
@@ -82,6 +123,10 @@ GdkPixbuf *rox_get_program_icon(void)
   return program_icon;
 }
 
+/** Returns the version number of the library encoded as an int
+ *
+ * @return 10000*major+100*minor+micro
+ */
 int rox_clib_version_number(void)
 {
   int ver=0;
@@ -104,16 +149,28 @@ int rox_clib_version_number(void)
   return ver;
 }
 
+/** Returns the version number of the library as a string
+ *
+ * @return "major.minor.micro"
+ */
 const char *rox_clib_version_string(void)
 {
   return ROXCLIB_VERSION;
 }
 
+/** Returns the version number of the GTK+ library encoded as an int
+ *
+ * @return 10000*major+100*minor+micro
+ */
 int rox_clib_gtk_version_number(void)
 {
   return GTK_MAJOR_VERSION*10000+GTK_MINOR_VERSION*100+GTK_MICRO_VERSION;
 }
 
+/** Returns the version number of the GTK+ library as a string
+ *
+ * @return "major.minor.micro"
+ */
 const char *rox_clib_gtk_version_string(void)
 {
   static char buf[32];
@@ -138,12 +195,22 @@ static void window_destroy(GtkWidget *win, gpointer udata)
     gtk_main_quit();
 }
 
+/** Add this window to the ones which are being counted.  When it is destroyed
+ * this will be noted and the window count decreased.
+ *
+ * @param window Window or other widget to count
+ */
 void rox_add_window(GtkWidget *window)
 {
   num_windows++;
   g_signal_connect(window, "destroy", G_CALLBACK(window_destroy), NULL);
 }
 
+/** Return the number of windows ROX-CLib is tracking
+ *
+ * @return the number of windows passed to rox_add_window(), minus the number
+ * of those destroyed
+ */
 int rox_get_n_windows(void)
 {
   return num_windows;
@@ -151,6 +218,9 @@ int rox_get_n_windows(void)
 
 static int exit_now=FALSE;
 
+/** Call gtk_main() repeatedly until either rox_get_n_windows() returns
+ * less than one, or rox_main_quit() is called
+ */
 void rox_main_loop(void)
 {
   in_mainloops++;
@@ -160,6 +230,9 @@ void rox_main_loop(void)
   exit_now=FALSE;
 }
 
+/** Cause rox_main_loop() to exit.  If rox_main_loop() has been called
+ * recursivly only the innermose is exited.
+ */
 void rox_main_quit(void)
 {
   exit_now=TRUE;
@@ -168,6 +241,9 @@ void rox_main_quit(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.8  2004/10/29 13:36:07  stephen
+ * Added rox_choices_load()/save()
+ *
  * Revision 1.7  2004/10/23 11:50:12  stephen
  * Added window counting
  *

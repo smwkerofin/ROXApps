@@ -1,11 +1,18 @@
 /*
- * $Id: rox.h,v 1.6 2004/10/23 11:50:12 stephen Exp $
+ * $Id: rox.h,v 1.7 2004/10/29 13:36:07 stephen Exp $
  *
  * rox.h - Top level header for ROX-CLib
  */
 
 #ifndef _rox_h
 #define _rox_h
+
+/** \file rox.h
+ * \brief Top level header for ROX-CLib.
+ *
+ * This is the top level header file for ROX-CLib.  It provides the usual
+ * facilities required by most ROX programs.
+ */
 
 /*
  * Useful headers.  Most programs will need all of these.
@@ -52,6 +59,9 @@ extern void rox_main_quit(void);
 
 /*
  * $Log: rox.h,v $
+ * Revision 1.7  2004/10/29 13:36:07  stephen
+ * Added rox_choices_load()/save()
+ *
  * Revision 1.6  2004/10/23 11:50:12  stephen
  * Added window counting
  *

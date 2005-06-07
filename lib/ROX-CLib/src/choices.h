@@ -1,11 +1,20 @@
 /*
- * $Id: choices.h,v 1.2 2002/02/13 11:00:36 stephen Exp $
+ * $Id: choices.h,v 1.3 2004/10/29 13:36:07 stephen Exp $
  *
  * Borrowed from ROX-Filer
  *
  * By Thomas Leonard, <tal197@users.sourceforge.net>.
  * (Slight changes, mainly const's, by Stephen Watson
  *    <stephen@kerofin.demon.co.uk>)
+ */
+
+/** \file choices.h
+ * \brief Interface to the ROX choices system
+ *
+ * This declares both the original ROX choices system controlled by
+ * $CHOICESPATH and the new XDG based system.  The original was from
+ * ROX-Filer and was by
+ * Thomas Leonard <tal197@users.sourceforge.net>.
  */
 
 #ifndef _CHOICES_H

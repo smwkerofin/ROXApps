@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.5 2004/09/13 11:29:31 stephen Exp $
+ * $Id: choices.c,v 1.6 2004/10/29 13:36:07 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -47,10 +47,14 @@ static void init_choices(void);
  ****************************************************************/
 
 
-/* Reads in CHOICESPATH and constructs the directory list table.
- * You must call this before using any other choices_* functions.
+/** Checks $CHOICESPATH to construct the directory list table for the old choices_system.
+ * You must call this before using any other choices_* 
+ * functions.
  *
- * If CHOICESPATH does not exist then a suitable default is used.
+ * If the environment variable does not exist then the defaults are used.
+ *
+ * This is called by rox_init_with_domain() and you should call that in
+ * preference to this.
  */
 void choices_init(void)
 {
@@ -62,12 +66,15 @@ void choices_init(void)
 
 }
 
-/* Returns an array of the directories in CHOICESPATH which contain
+/** Returns an array of the directories in CHOICESPATH which contain
  * a subdirectory called 'dir'.
  *
  * Lower-indexed results should override higher-indexed ones.
  *
  * Free the list using choices_free_list().
+ *
+ * @param dir directory to search for.
+ * @return pointer array of results.
  */
 GPtrArray *choices_list_dirs(const char *dir)
 {
@@ -94,6 +101,10 @@ GPtrArray *choices_list_dirs(const char *dir)
 	return list;
 }
 
+/** Free the data returned by choices_list_dirs().
+ *
+ * @param list Return value from choices_list_dirs().
+ */
 void choices_free_list(GPtrArray *list)
 {
 	guint	i;
@@ -106,13 +117,19 @@ void choices_free_list(GPtrArray *list)
 	g_ptr_array_free(list, TRUE);
 }
 
-/* Get the pathname of a choices file to load. Eg:
+/** Get the pathname of a choices file to load. Eg:
  *
  * choices_find_path_load("menus", "ROX-Filer")
  *		 		-> "/usr/local/share/Choices/ROX-Filer/menus".
  *
  * The return values may be NULL - use built-in defaults - otherwise
  * g_free() the result.
+ *
+ * @deprecated Use rox_choices_load() instead.
+ *
+ * @param leaf last part of file name (may include a relative directory part)
+ * @param dir directory to locate in $CHOICESPATH, normally the name of the program
+ * @return path to file (pass to g_free() when done) or NULL
  */
 gchar *choices_find_path_load(const char *leaf, const char *dir)
 {
@@ -137,12 +154,20 @@ gchar *choices_find_path_load(const char *leaf, const char *dir)
 	return NULL;
 }
 
-/* Returns the pathname of a file to save to, or NULL if saving is
+/** Returns the pathname of a file to save to, or NULL if saving is
  * disabled. If 'create' is TRUE then intermediate directories will
  * be created (set this to FALSE if you just want to find out where
  * a saved file would go without actually altering the filesystem).
  *
  * g_free() the result.
+ *
+ * @deprecated Use rox_choices_save() instead
+ *
+ * @param leaf last part of file name (may include a relative directory part)
+ * @param dir directory to locate in $CHOICESPATH, normally the name of the program
+ * @param create if non-zero create missing directories
+ * 
+ * @return path to file (pass to g_free() when done) or NULL
  */
 gchar *choices_find_path_save(const char *leaf, const char *dir,
 			      gboolean create)
@@ -174,6 +199,18 @@ gchar *choices_find_path_save(const char *leaf, const char *dir,
 	return retval;
 }
 
+/** Returns the pathname of a file to save to, or NULL if saving is
+ * disabled. 
+ *
+ * g_free() the result.
+ *
+ * @param leaf last part of file name (may include a relative directory part)
+ * @param dir directory to locate in $CHOICESPATH, normally the name of the program
+ * @param domain domain of the programs author, or email address.  Used to
+ * uniquly identify programs with similar names.
+ * 
+ * @return path to file (pass to g_free() when done) or NULL
+ */
 gchar *rox_choices_save(const char *leaf, const char *dir,
 			       const char *domain)
 {
@@ -201,6 +238,22 @@ gchar *rox_choices_save(const char *leaf, const char *dir,
   return path;
 }
 
+/** Get the pathname of a choices file to load. Eg:
+ *
+ * rox_choices_load("menus", "ROX-Filer", "rox.sourceforge.net")
+ *		 	    -> "/etc/xdg/rox.sourceforge.net/ROX-Filer/menus".
+ *
+ * The return values may be NULL - use built-in defaults - otherwise
+ * g_free() the result.
+ *
+ * This uses basedir_load_config_path(), falling back on choices_find_path_load() if that does not return a result.
+ *
+ * @param leaf last part of file name (may include a relative directory part)
+ * @param dir directory to locate in $CHOICESPATH, normally the name of the program
+ * @param domain domain of the programs author, or email address.  Used to
+ * uniquly identify programs with similar names.
+ * @return path to file (pass to g_free() when done) or NULL
+ */
 gchar *rox_choices_load(const char *leaf, const char *dir,
 			       const char *domain)
 {
@@ -279,5 +332,8 @@ static void init_choices(void)
 }
 
 /*
- * $Log$
+ * $Log: choices.c,v $
+ * Revision 1.6  2004/10/29 13:36:07  stephen
+ * Added rox_choices_load()/save()
+ *
  */
