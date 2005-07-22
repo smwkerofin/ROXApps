@@ -1,7 +1,7 @@
 Album
 =====
 
-08-May-2005
+08-May-2005 (0.0.3)
 ~~~~~~~~~~~
 Remove debug output from MusicBox interface.
 Improved setting of album cover image.
