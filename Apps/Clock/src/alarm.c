@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.17 2004/10/29 13:36:48 stephen Exp $
+ * $Id: alarm.c,v 1.18 2005/03/04 17:17:39 stephen Exp $
  */
 #include "config.h"
 
@@ -545,6 +545,7 @@ static void show_message(const Alarm *alarm)
   
   win=gtk_dialog_new();
   gtk_window_set_title(GTK_WINDOW(win), _("Alarm"));
+  gtk_window_stick(GTK_WINDOW(win));
   
   vbox=GTK_DIALOG(win)->vbox;
 
@@ -963,6 +964,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.18  2005/03/04 17:17:39  stephen
+ * Fix bug creating alarm window
+ *
  * Revision 1.17  2004/10/29 13:36:48  stephen
  * Use rox_choices_load()/save() and  window counting
  *
