@@ -132,10 +132,12 @@ class Mailer:
                 i=list.index(curmail)
                 if i>0:
                     if i==len(list)-1:
-                        list=curmail+list[:i-1]
+                        list=[curmail]+list[:i-1]
                     else:
-                        list=curmail+list[:i-1]+list[i+1:]
+                        list=[curmail]+list[:i-1]+list[i+1:]
 
         return list
 
+    def __repr__(self):
+        return '<Mailer for "%s" at %x>' % (self.name, id(self))
 

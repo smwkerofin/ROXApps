@@ -56,7 +56,7 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
                 mw=size[0]
             if size[1]>mh:
                 mh=size[1]
-            item.connect("activate", set_mailer, self)
+            item.connect("activate", self.set_mailer)
             menu.append(item)
             i=i+1
             self.list_size+=1
@@ -192,6 +192,13 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
         hbox.pack_end(button, expand=g.FALSE)
         
         hbox.show_all()
+
+    def set_mailer(self, widget, *args):
+        mailer=widget.get_data('mailer')
+
+        self.current=mailer
+
+        self.update_win()
 
     def xds_load_from_file(self, path):
         self.loc.set_text(path)

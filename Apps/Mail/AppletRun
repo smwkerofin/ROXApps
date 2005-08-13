@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppletRun,v 1.16 2004/05/21 16:28:23 stephen Exp $
+# $Id: AppletRun,v 1.17 2005/06/04 10:30:43 stephen Exp $
 
 import findrox; findrox.version(1, 9, 12)
 import rox
@@ -37,14 +37,13 @@ app_dir=os.path.dirname(sys.argv[0])
 # Get the defined mailers
 mailers=None
 fname=rox.choices.load('Mail', 'mailers.xml')
-if fname!=None:
+try:
     mailers=Mailer.read_from(Mailer('dummy', ''), fname)
-else:
+except:
     elm=Mailer('elm', '/usr/local/bin/elm', read='xterm -e %s')
     mailx=Mailer('mailx', '/usr/bin/mailx', read='xterm -e %s')
     fname=rox.choices.save('Mail', 'mailers.xml', 1)
     mailers=[mailx, elm]
-    elm.write_to(mailers, fname)
 
 mailer=mailers[0]
 
@@ -167,7 +166,7 @@ class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
                 ch.schedule()
                 
     def show_sel_mailer(self):
-        sm=SelectMailer(mailers)
+        sm=SelectMailer(self.mailers)
         sm.set_callback(self.select_mailer)
         sm.show()
             
@@ -234,7 +233,11 @@ class MailApplet(rox.applet.Applet, rox.loading.XDSLoader):
 
 # Show everything and wait for events...
 try:
-    plug=MailApplet(sys.argv[1], app_dir, mailers, checkers)
+    try:
+        xid=sys.argv[1]
+    except:
+        xid=0
+    plug=MailApplet(xid, app_dir, mailers, checkers)
 
     plug.show_all()
     plug.update()
