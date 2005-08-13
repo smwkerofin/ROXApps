@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+13-Aug-2005
+~~~~~~~~~~~
+Require ROX-Lib 2.0.2 as there was a bug in mime_handler in 2.0.0 and 2.0.1.
+
 22-Apr-2005 (0.1.5)
 ~~~~~~~~~~~
 MPlayer 1.0pre7 doesn't recognize the -z option, so don't use it.

@@ -11,7 +11,7 @@
   <Dependencies>
     <AppDir>
       <Name>ROX-Lib2</Name>
-      <NeedsVersion>2.0.0</NeedsVersion>
+      <NeedsVersion>2.0.2</NeedsVersion>
       <Link>http://rox.sourceforge.net</Link>
       <ZeroInstall>/uri/0install/rox.sourceforge.net/lib/</ZeroInstall>
     </AppDir>
@@ -28,5 +28,6 @@
     <MimeType type="video/x-ms-wmv"/>
     <MimeType type="video/x-ms-asf"/>
     <MimeType type="audio/x-pn-realaudio"/>
+    <MimeType type="application/ogg"/>
   </CanThumbnail>
 </AppInfo>
