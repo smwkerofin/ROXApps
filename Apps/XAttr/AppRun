@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+
+import os, sys
+
+import findrox; findrox.version(2, 0, 0)
+import rox
+
+try:
+    import rox.xattr as xattr
+except:
+    import xattr
+    
+class XAttrWin(rox.Dialog):
+    def __init__(self, path):
+        rox.Dialog.__init__(self, title='%s extended attributes' % path,
+                            buttons=(rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE))
+
+        self.path=path
+
+        self.set_default_size(256, 128)
+
+        vbox=self.vbox
+
+        swin=rox.g.ScrolledWindow()
+        swin.set_policy(rox.g.POLICY_AUTOMATIC, rox.g.POLICY_ALWAYS)
+
+        vbox.pack_start(swin, True, True, 4)
+
+        store=rox.g.ListStore(str, str)
+        self.store=store
+
+        view=rox.g.TreeView(store)
+        swin.add(view)
+        view.set_search_column(0)
+
+        cell=rox.g.CellRendererText()
+        col=rox.g.TreeViewColumn('Attribute', cell, text=0)
+        view.append_column(col)
+        col.set_sort_column_id(0)
+
+        cell=rox.g.CellRendererText()
+        col=rox.g.TreeViewColumn('Value', cell, text=1)
+        view.append_column(col)
+        col.set_sort_column_id(1)
+
+        self.load_table()
+
+        vbox.show_all()
+
+    def load_table(self):
+
+        self.store.clear()
+
+        try:
+            names=xattr.listx(self.path)
+
+            for at in names:
+                try:
+                    val=xattr.get(self.path, at)
+                except:
+                    val=''
+
+                # convert to utf-8 ?
+                name=printable(at)
+
+                self.store.append((name, val))
+        except:
+            rox.report_exception()
+
+bad=unichr(0xfffd)
+ctrl=range(32)
+def printable(s, mch=None):
+    if not isinstance(s, basestring):
+        s=str(s)
+
+    if isinstance(s, str):
+        s=unicode(s, 'utf-8', 'replace')
+        if bad in s:
+            s=s.replace(bad, '?')
+
+    if mch is not None and len(s)>mch:
+        s=s[:mch]
+
+    t=''
+    for c in s:
+        if ord(c) in ctrl:
+            if c=='\0':
+                t+='\\0'
+            elif c=='\n':
+                t+='\\n'
+            elif c=='\r':
+                t+='\\r'
+            else:
+                t+='\\x%02x' % ord(c)
+        else:
+            t+=c
+
+    return t
+
+if __name__=='__main__':
+    if len(sys.argv)>1:
+        w=XAttrWin(sys.argv[1])
+        w.run()
+
+    else:
+        rox.croak('Need a file name argument')
+
