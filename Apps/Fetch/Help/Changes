@@ -1,6 +1,10 @@
 Fetch
 =====
 
+29-Jul-2005
+~~~~~~~~~~~
+Changed layout of window slightly.
+
 15-May-2005
 ~~~~~~~~~~~
 Switch to XDG choices.
@@ -95,4 +99,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.20 2005/03/17 11:56:47 stephen Exp $
+$Id: Changes,v 1.22 2005/05/27 10:19:41 stephen Exp $
