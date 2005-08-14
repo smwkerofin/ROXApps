@@ -1,14 +1,20 @@
 /*
- * resources.h - Find internationalized resource files.
+ * $Id: rox_resources.h,v 1.1 2001/11/05 14:00:27 stephen Exp $
+ */
+/**
+ * @file rox_resources.h
+ * @brief Find internationalized resource files.
  *
- * $Id$
+ * 
  */
 
 #ifndef _rox_resources_h
 #define _rox_resources_h
 
-#define ROX_RESOURCES_NO_LANG ""
-#define ROX_RESOURCES_DEFAULT_LANG NULL
+#define ROX_RESOURCES_NO_LANG ""         /**< Indicates that the resource
+					  * is in no language and does not
+					  * need translating */
+#define ROX_RESOURCES_DEFAULT_LANG NULL  /**< Accept the default language */
 
 /*
  * Search CHOICESPATH, then APP_DIR for a directory called Resources
@@ -21,9 +27,16 @@
 extern gchar *rox_resources_find(const gchar *app_name,
 				 const gchar *leaf,
 				 const gchar *lang);
+extern gchar *rox_resources_find_with_domain(const gchar *app_name,
+					     const gchar *leaf,
+					     const gchar *lang,
+					     const gchar *domain);
 
 #endif
 
 /*
- * $Log$
+ * $Log: rox_resources.h,v $
+ * Revision 1.1  2001/11/05 14:00:27  stephen
+ * Added resources finding function
+ *
  */

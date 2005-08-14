@@ -1,11 +1,105 @@
 /*
- * $Id: rox.c,v 1.8 2004/10/29 13:36:07 stephen Exp $
+ * $Id: rox.c,v 1.9 2005/06/07 10:24:52 stephen Exp $
  *
  * rox.c - General stuff
  */
 
 /** \file rox.c
- * General ROX functions.
+ * @brief General ROX functions.
+ */
+
+/**
+ * @mainpage A library for ROX applications written in C.
+ *
+ * @section user_sec For users
+ * @subsection install_sec Installation
+ *
+ * Copy to a suitable place such as <code>~/lib</code> 
+ *     or make sure it is on 
+ *    your <code>$LIBDIRPATH</code>.
+ *  If you use 
+ * <a href="http://rox.sourceforge.net/phpwiki/index.php/Archive">Archive</a>
+ * to extract it from the downloaded archive then make sure you rename
+ * it to <code>ROX-CLib</code>.
+ * 
+ * Compile using <code>ROX-CLib/AppRun --compile</code> or running
+ * ROX-CLib from the filer.
+ *
+ * You will need
+ * <ul>
+ * <li>GTK+ 2.x</li>
+ * <li>libxml 2.4.x </li>
+ * <li>GNU <code>make</code>.</li>
+ * </ul>
+ * Linux users should already have GNU make installed <code>/usr/bin</code>.
+ * Other OS's may require you
+ * use a different directory (<code>/usr/bin/local</code>) or program name
+ * (<code>gmake</code>).
+ * Set the environment variable MAKE to the correct value before
+ * compiling, e.g.
+ * <pre>
+$ MAKE=gmake ROX-CLib/AppRun --compile
+</pre>
+ *
+ * @section prog_sec For Programmers
+ *
+ * @subsection lib_sec Compiling and linking against the library
+ * 
+ * Compile the library first as above.
+ *
+ * Copy the <a href="../libdir.html">libdir</a> script from 
+ * <code>ROX-CLib/<var>$PLATFORM</var>/bin/libdir</code>
+ * into your app dir.
+ * 
+ * Add the output of
+ *  <pre>   ROX-CLib --cflags</pre>
+ * to your compile line, e.g.
+ * <pre>   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"</pre>
+ * <pre>   gcc `$ROX_CLIB --cflags` -c main.c </pre>
+ *
+ * You should include the main file:
+<pre>
+   #include &lt;rox/rox.h&gt;
+</pre>
+ * and any of the others you need.
+ *
+ * Add the output of
+<pre>   ROX-CLib --cflags
+   ROX-CLib --libs</pre>
+ * to your link line, e.g.
+<pre>   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"</pre>
+    <pre>   gcc `$ROX_CLIB --cflags` -o main main.o `$ROX_CLIB --libs`</pre>
+ *
+ * If you are using autoconf and building a ROX program then:
+ * <ul>
+ * <li>Copy ROX-CLib/Help/aclocal.m4 to your programs src directory.</li>
+ * <li>In src/configure.in add:
+ * <pre>ROX_CLIB(2, 0, 0)</pre></li>
+ * 
+ * <li>In src/Makefile.in add:
+ * <pre>  ROX_CLIB = @@ROX_CLIB_PATH@/AppRun</pre>
+ *     and to CFLAGS add: <code>`${ROX_CLIB} --cflags`</code>
+ *     and to LDFLAGS add: <code>`${ROX_CLIB} --libs`</code>
+ * </li>
+ * <li>In AppRun (and AppletRun if it is an applet) ensure you have:
+<pre>
+   APP_DIR=`dirname $0`
+   APP_DIR=`cd $APP_DIR;pwd`; export APP_DIR
+   if [ -z "$LD_LIBRARY_PATH" ]; then
+       LD_LIBRARY_PATH=`$APP_DIR/libdir ROX-CLib --runtime`
+   else
+       LD_LIBRARY_PATH=`$APP_DIR/libdir ROX-CLib --runtime`:$LD_LIBRARY_PATH
+   fi
+   export LD_LIBRARY_PATH
+</pre>
+ * </li>
+ * </ul>
+ *
+ * @subsection zero_sec Zero Install
+ *
+ * To use ROX-CLib through Zero Install change the use of <a href="libdir.html">libdir</a> to:
+ * <pre>    ROX_CLIB="`$APP_DIR/libdir --0install www.kerofin.demon.co.uk ROX-CLib`/AppRun"</pre>
+ *
  */
 
 #include "rox-clib.h"
@@ -26,11 +120,11 @@ const gchar *app_dir=NULL;
 
 /** Initialize the library.  Equivalent to
  * rox_init_with_domain(program, NULL, argc, argv).
- * Do not use this, use rox_init_with_domain() instead.
+ * @deprecated Use rox_init_with_domain() instead.
  *
- * @param program name of program
- * @param argc pointer to argc passed to main()
- * @param argv pointer to argv passed to main()
+ * @param[in] program name of program
+ * @param[in,out] argc pointer to argc passed to main()
+ * @param[in,out] argv pointer to argv passed to main()
  */
 void rox_init(const char *program, int *argc, char ***argv)
 {
@@ -41,16 +135,16 @@ void rox_init(const char *program, int *argc, char ***argv)
  * - gtk_init()
  * - rox_debug_init()
  * - choices_init()
- * - options_init_with_domain() (if Options.xml in $APP_DIR)
+ * - options_init_with_domain() (if @c Options.xml in <var>$APP_DIR</var>)
  * - rox_dnd_init()
  * - mime_init()
  *
- * If .DirIcon exists in $APP_DIR it is set as the default icon for all windows
+ * If @c .DirIcon exists in <var>$APP_DIR</var> it is set as the default icon for all windows
  *
- * @param program name of program
- * @param domain domain under the control of the programmer.  Used in options and choices
- * @param argc pointer to argc passed to main()
- * @param argv pointer to argv passed to main()
+ * @param[in] program name of program
+ * @param[in] domain domain under the control of the programmer.  Used in options and choices
+ * @param[in,out] argc pointer to argc passed to main()
+ * @param[in,out] argv pointer to argv passed to main()
  */
 void rox_init_with_domain(const char *program, const char *domain,
 			  int *argc, char ***argv)
@@ -231,7 +325,7 @@ void rox_main_loop(void)
 }
 
 /** Cause rox_main_loop() to exit.  If rox_main_loop() has been called
- * recursivly only the innermose is exited.
+ * recursivly only the innermost is exited.
  */
 void rox_main_quit(void)
 {
@@ -241,6 +335,9 @@ void rox_main_quit(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.9  2005/06/07 10:24:52  stephen
+ * Using doxygen to generate documentation
+ *
  * Revision 1.8  2004/10/29 13:36:07  stephen
  * Added rox_choices_load()/save()
  *

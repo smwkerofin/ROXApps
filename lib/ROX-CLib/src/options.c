@@ -1,15 +1,22 @@
 /*
- * $Id: options.c,v 1.5 2005/01/29 11:22:51 stephen Exp $
+ * $Id: options.c,v 1.6 2005/02/19 11:53:18 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
  * Derived from code written by Thomas Leonard, <tal197@users.sourceforge.net>.
  */
-/* How it works:
+/** \file options.c
+ * \brief Interface to the ROX options system.
+ *
+ * Manage a programs options in the same way as ROX-Filer does.
+ *
+ * Derived from code written by Thomas Leonard, <tal197@users.sourceforge.net>.
+ *
+ * How it works:
  *
  * On startup:
  *
- * - The <Choices>/PROJECT/Options file is read in, which contains a list of
+ * - The &lt;Choices&gt;/PROJECT/Options file is read in, which contains a list of
  *   name/value pairs, and these are stored in the 'loading' hash table.
  *
  * - Each part of the filer then calls option_add_int(), or a related function,
@@ -142,6 +149,14 @@ static GList *build_font(Option *option, xmlNode *node, gchar *label);
  *			EXTERNAL INTERFACE			*
  ****************************************************************/
 
+/**
+ * Initialize the options system, normally called by rox_init_with_domain()
+ * if it detects @c Options.xml in <var>$APP_DIR</var>.
+ *
+ 
+ * @param[in] project name of program
+ * @param[in] domain domain under the control of the programmer.
+ */
 void options_init_with_domain(const char *project, const char *domain)
 {
 	char	*path;
@@ -186,12 +201,19 @@ void options_init_with_domain(const char *project, const char *domain)
 	option_register_widget("font", build_font);
 }
 
+/**
+ * Initialize the options system, normally called by rox_init().
+ * @deprecated Use options_init_with_domain() instead.
+ *
+ * @param[in] project name of program
+ */
 void options_init(const char *project)
 {
   options_init_with_domain(project, NULL);
 }
 
-/* When parsing the XML file, process an element named 'name' by
+/**
+ * When parsing the XML file, process an element named 'name' by
  * calling 'builder(option, xml_node, label)'.
  * builder returns the new widgets to add to the options box.
  * 'name' should be a static string. Call 'option_check_widget' when
@@ -200,15 +222,22 @@ void options_init(const char *project)
  * Functions to set or get the widget's state can be stored in 'option'.
  * If the option doesn't have a name attribute in Options.xml then
  * ui will be NULL on entry (this is used for buttons).
+ *
+ * @param[in] name name of the type of widget as used in the Options.xml
+ * element
+ * @param[in] builder function called to build the option
  */
 void option_register_widget(char *name, OptionBuildFn builder)
 {
 	g_hash_table_insert(widget_builder, name, builder);
 }
 
-/* This is called when the widget's value is modified by the user.
+/**
+ * This is called when the widget's value is modified by the user.
  * Reads the new value of the widget into the option and calls
  * the notify callbacks.
+ *
+ * @param[in,out] option option to be updated
  */
 void option_check_widget(Option *option)
 {
@@ -239,7 +268,8 @@ void option_check_widget(Option *option)
 	options_notify();
 }
 
-/* Call all the notify callbacks. This should happen after any options
+/**
+ * Call all the notify callbacks. This should happen after any options
  * have their values changed.
  * Set each option->has_changed flag before calling this function.
  */
@@ -267,8 +297,11 @@ static void store_backup(gpointer key, gpointer value, gpointer data)
 	option->backup = g_strdup(option->value);
 }
 
-/* Allow the user to edit the options. Returns the window widget (you don't
+/**
+ * Allow the user to edit the options. Returns the window widget (you don't
  * normally need this). NULL if already open.
+ *
+ * @return the options window
  */
 GtkWidget *options_show(void)
 {
@@ -295,7 +328,13 @@ GtkWidget *options_show(void)
 	return window;
 }
 
-/* Initialise and register a new integer option */
+/**
+ * Initialise and register a new integer option
+ *
+ * @param[in,out] option option to initialize
+ * @param[in] key name of the option
+ * @param[in] value default value
+ */
 void option_add_int(Option *option, const gchar *key, int value)
 {
 	option->value = g_strdup_printf("%d", value);
@@ -303,6 +342,13 @@ void option_add_int(Option *option, const gchar *key, int value)
 	option_add(option, key);
 }
 
+/**
+ * Initialise and register a new string option
+ *
+ * @param[in,out] option option to initialize
+ * @param[in] key name of the option
+ * @param[in] value default value
+ */
 void option_add_string(Option *option, const gchar *key, const gchar *value)
 {
 	option->value = g_strdup(value);
@@ -310,9 +356,12 @@ void option_add_string(Option *option, const gchar *key, const gchar *value)
 	option_add(option, key);
 }
 
-/* Add a callback which will be called after any options have changed their
+/**
+ * Add a callback which will be called after any options have changed their
  * values. If several options change at once, this is called after all
  * changes.
+ *
+ * @param[in] callback funtion to call if options change
  */
 void option_add_notify(OptionNotify *callback)
 {
@@ -321,7 +370,11 @@ void option_add_notify(OptionNotify *callback)
 	notify_callbacks = g_list_append(notify_callbacks, callback);
 }
 
-/* Call 'callback' after all the options have been saved */
+/**
+ * Call 'callback' after all the options have been saved
+ *
+ * @param[in] callback funtion to call when options have been saved
+ */
 void option_add_saver(OptionNotify *callback)
 {
 	g_return_if_fail(callback != NULL);
@@ -1782,6 +1835,9 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: options.c,v $
+ * Revision 1.6  2005/02/19 11:53:18  stephen
+ * Accept "True" as a synonym for "1" when converting option values to ints
+ *
  * Revision 1.5  2005/01/29 11:22:51  stephen
  * Renamed 'Options' to 'Options.xml' to be compatible with ROX-Lib2
  *

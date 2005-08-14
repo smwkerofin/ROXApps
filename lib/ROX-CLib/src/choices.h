@@ -1,5 +1,5 @@
 /*
- * $Id: choices.h,v 1.3 2004/10/29 13:36:07 stephen Exp $
+ * $Id: choices.h,v 1.4 2005/06/07 10:24:52 stephen Exp $
  *
  * Borrowed from ROX-Filer
  *
@@ -39,5 +39,8 @@ extern gchar *rox_choices_load(const char *leaf, const char *dir,
 			       const char *domain);
 extern gchar *rox_choices_save(const char *leaf, const char *dir,
 			       const char *domain);
+extern GPtrArray *rox_choices_list_dirs(const char *dir,
+			       const char *domain);
+extern void rox_choices_free_list(GPtrArray *list);
 
 #endif /* _CHOICES_H */

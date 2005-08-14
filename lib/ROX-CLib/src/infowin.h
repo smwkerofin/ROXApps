@@ -1,7 +1,10 @@
-/*
- * A GTK+ Widget to implement a RISC OS style info window
+/**
+ * @file infowin.h
+ * @brief A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.h,v 1.4 2004/05/22 15:54:02 stephen Exp $
+ */
+/*
+ * $Id: infowin.h,v 1.5 2004/05/31 10:47:06 stephen Exp $
  */
 
 #ifndef __ROX_INFO_WIN_H__
@@ -15,14 +18,30 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/** Cast object pointer to #ROXInfoWin * or @c NULL if not a
+ *  valid #ROXInfoWin *
+ * @param[in] obj pointer to object
+ * @return pointer to #ROXInfoWin or @c NULL
+ */
 #define ROX_INFO_WIN(obj)          GTK_CHECK_CAST (obj, rox_info_win_get_type (), ROXInfoWin)
+  
+/** Cast class pointer to #ROXInfoWinClass * or @c NULL if not a
+ *  valid #ROXInfoWinClass *
+ * @param[in] klass pointer to class
+ * @return pointer to #ROXInfoWinClass or @c NULL
+ */
 #define ROX_INFO_WIN_CLASS(klass)  GTK_CHECK_CLASS_CAST (klass, rox_info_win_get_type (), ROXInfoWinClass)
+  
+/** Test if object is a #ROXInfoWin
+ * @param[in] obj pointer to object
+ * @return non-zero if argument points to a #ROXInfoWin
+ */
 #define ROX_IS_INFO_WIN(obj)       GTK_CHECK_TYPE (obj, rox_info_win_get_type ())
 
 typedef struct _InfoWin       ROXInfoWin;
 typedef struct _InfoWinClass  ROXInfoWinClass;
 
-  /* Internal use */
+  /** @internal */
 enum info_slots {
     ROX_INFO_WIN_PROGRAM, ROX_INFO_WIN_PURPOSE, ROX_INFO_WIN_VERSION,
     ROX_INFO_WIN_AUTHOR, ROX_INFO_WIN_WEBSITE,
@@ -30,18 +49,29 @@ enum info_slots {
     ROX_INFO_WIN_NSLOT
 };
 
+/**
+ * Definition of a ROXInfoWin widget
+ */
 struct _InfoWin
 {
-  GtkDialog dialog;
+  GtkDialog dialog;                     /**< Instance of parent class */
 
-  GtkWidget *table;
-  GtkWidget *slots[ROX_INFO_WIN_NSLOT];
-  GtkWidget *extend;
+  GtkWidget *table;                     /**< Used to layout window */
+  GtkWidget *slots[ROX_INFO_WIN_NSLOT]; /**< @internal */
+  GtkWidget *extend;                    /**< Extension area, see
+					 * rox_info_win_get_extension_area()
+					 */
   
-  gchar *web_site;
-  GList *browser_cmds;
+  gchar *web_site;                      /**< URL of program's home page */
+  GList *browser_cmds;                  /**< Ways to launch browser to
+					 * view program's home page.
+					 * @deprecated
+					 */
 };
 
+/**
+ * Definition of ROXInfoWin class. @internal
+ */
 struct _InfoWinClass
 {
   GtkDialogClass parent_class;
@@ -61,7 +91,9 @@ extern GtkWidget *rox_info_win_get_extension_area(ROXInfoWin *iw);
 #define INFO_WIN_CLASS(klass)  ROX_INFO_WIN_CLASS(klass)
 #define IS_INFO_WIN(obj)       ROX_IS_INFO_WIN(obj)
  
+/** @deprecated Use ROXInfoWin */
 #define InfoWin ROXInfoWin
+/** @deprecated Use ROXInfoWinClass */
 #define InfoWinClass ROXInfoWinClass
 
 extern GtkWidget* info_win_new(const gchar *program, const gchar *purpose,
@@ -78,6 +110,9 @@ extern void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd);
 
 /*
  * $Log: infowin.h,v $
+ * Revision 1.5  2004/05/31 10:47:06  stephen
+ * Added mime_handler support (needs testing)
+ *
  * Revision 1.4  2004/05/22 15:54:02  stephen
  * InfoWin is now ROXInfoWin
  *

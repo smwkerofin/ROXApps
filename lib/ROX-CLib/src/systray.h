@@ -1,10 +1,10 @@
 /*
  * systray.c - Interface to the system tray.
  *
- * $Id$
+ * $Id: systray.h,v 1.1 2005/06/07 10:22:54 stephen Exp $
  */
 
-/** @file rox/systray.h
+/** @file systray.h
  * @brief Interface to the system tray.
  */
 
@@ -25,6 +25,9 @@ extern void rox_systray_cancel_message(GtkWidget *systray, int id);
 #endif
 
 /*
- * $Log$
+ * $Log: systray.h,v $
+ * Revision 1.1  2005/06/07 10:22:54  stephen
+ * Added system tray interface
+ *
  *
  */

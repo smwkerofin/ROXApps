@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.6 2004/10/29 13:36:07 stephen Exp $
+ * $Id: choices.c,v 1.7 2005/06/07 10:24:52 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -19,7 +19,19 @@
  * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
  * Place, Suite 330, Boston, MA  02111-1307  USA
  */
-/* choices.c - code for handling loading and saving of user choices */
+/** @file choices.c
+ * @brief Code for handling loading and saving of user choices.
+ *
+ * The current versions use a parameter "domain" to ensure that two
+ * programs from different sources but with the same name do not clash.
+ * domain is optional and may be NULL.  If given it should be a domain name
+ * identifying the software, i.e. I use kerofin.demon.co.uk.  If you don't
+ * have a domain name, use an email address, e.g. me@my-isp.org
+ *
+ * Borrowed from:
+ * ROX-Filer, filer for the ROX desktop project
+ * Copyright (C) 2000, Thomas Leonard, <tal197@users.sourceforge.net>.
+ */
 
 #include "rox-clib.h"
 
@@ -73,7 +85,7 @@ void choices_init(void)
  *
  * Free the list using choices_free_list().
  *
- * @param dir directory to search for.
+ * @param[in] dir directory to search for.
  * @return pointer array of results.
  */
 GPtrArray *choices_list_dirs(const char *dir)
@@ -103,7 +115,7 @@ GPtrArray *choices_list_dirs(const char *dir)
 
 /** Free the data returned by choices_list_dirs().
  *
- * @param list Return value from choices_list_dirs().
+ * @param[in,out] list Return value from choices_list_dirs().
  */
 void choices_free_list(GPtrArray *list)
 {
@@ -127,8 +139,8 @@ void choices_free_list(GPtrArray *list)
  *
  * @deprecated Use rox_choices_load() instead.
  *
- * @param leaf last part of file name (may include a relative directory part)
- * @param dir directory to locate in $CHOICESPATH, normally the name of the program
+ * @param[in] leaf last part of file name (may include a relative directory part)
+ * @param[in] dir directory to locate in $CHOICESPATH, normally the name of the program
  * @return path to file (pass to g_free() when done) or NULL
  */
 gchar *choices_find_path_load(const char *leaf, const char *dir)
@@ -163,9 +175,9 @@ gchar *choices_find_path_load(const char *leaf, const char *dir)
  *
  * @deprecated Use rox_choices_save() instead
  *
- * @param leaf last part of file name (may include a relative directory part)
- * @param dir directory to locate in $CHOICESPATH, normally the name of the program
- * @param create if non-zero create missing directories
+ * @param[in] leaf last part of file name (may include a relative directory part)
+ * @param[in] dir directory to locate in $CHOICESPATH, normally the name of the program
+ * @param[in] create if non-zero create missing directories
  * 
  * @return path to file (pass to g_free() when done) or NULL
  */
@@ -204,9 +216,9 @@ gchar *choices_find_path_save(const char *leaf, const char *dir,
  *
  * g_free() the result.
  *
- * @param leaf last part of file name (may include a relative directory part)
- * @param dir directory to locate in $CHOICESPATH, normally the name of the program
- * @param domain domain of the programs author, or email address.  Used to
+ * @param[in] leaf last part of file name (may include a relative directory part)
+ * @param[in] dir directory to locate in $CHOICESPATH, normally the name of the program
+ * @param[in] domain domain of the programs author, or email address.  Used to
  * uniquly identify programs with similar names.
  * 
  * @return path to file (pass to g_free() when done) or NULL
@@ -240,18 +252,20 @@ gchar *rox_choices_save(const char *leaf, const char *dir,
 
 /** Get the pathname of a choices file to load. Eg:
  *
+ * <code>
  * rox_choices_load("menus", "ROX-Filer", "rox.sourceforge.net")
  *		 	    -> "/etc/xdg/rox.sourceforge.net/ROX-Filer/menus".
+ * </code>
  *
  * The return values may be NULL - use built-in defaults - otherwise
  * g_free() the result.
  *
  * This uses basedir_load_config_path(), falling back on choices_find_path_load() if that does not return a result.
  *
- * @param leaf last part of file name (may include a relative directory part)
- * @param dir directory to locate in $CHOICESPATH, normally the name of the program
- * @param domain domain of the programs author, or email address.  Used to
- * uniquly identify programs with similar names.
+ * @param[in] leaf last part of file name (may include a relative directory part)
+ * @param[in] dir directory to locate in $CHOICESPATH, normally the name of the program
+ * @param[in] domain domain of the programs author, or email address.  Used to
+ * uniquely identify programs with similar names.
  * @return path to file (pass to g_free() when done) or NULL
  */
 gchar *rox_choices_load(const char *leaf, const char *dir,
@@ -273,6 +287,65 @@ gchar *rox_choices_load(const char *leaf, const char *dir,
     path=choices_find_path_load(leaf, dir);
 
   return path;
+}
+
+/** Returns an array of the directories in XDG_CONFIG_DIRS which contain
+ * a subdirectory called 'domain/dir'.
+ *
+ * Lower-indexed results should override higher-indexed ones.
+ *
+ * Free the list using rox_choices_free_list().
+ *
+ * @param[in] dir directory to search for.
+ * @param[in] domain domain of the programs author, or email address.  Used to
+ * uniquely identify programs with similar names.
+ * @return pointer array of results.
+ */
+GPtrArray *rox_choices_list_dirs(const char *domain, const char *dir)
+{
+	GPtrArray	*list;
+	GList *dirs, *d;
+	gchar *tmp;
+
+	g_return_val_if_fail(dir_list != NULL, NULL);
+
+	if(domain)
+	  tmp=g_strconcat(domain, "/", dir, NULL);
+	else
+	  tmp=g_strdup(dir);
+	
+	list = g_ptr_array_new();
+	dirs=basedir_get_config_paths();
+
+	for(d=dirs; d; d=g_list_next(d)) {
+		gchar	*path;
+
+		path = g_strconcat((gchar *) d->data, "/", tmp, NULL);
+		if (exists(path))
+			g_ptr_array_add(list, path);
+		else
+			g_free(path);
+
+	}
+	g_list_free(dirs);
+
+	return list;
+}
+
+/** Free the data returned by rox_choices_list_dirs().
+ *
+ * @param[in,out] list Return value from rox_choices_list_dirs().
+ */
+void rox_choices_free_list(GPtrArray *list)
+{
+	guint	i;
+
+	g_return_if_fail(list != NULL);
+
+	for (i = 0; i < list->len; i++)
+		g_free(g_ptr_array_index(list, i));
+
+	g_ptr_array_free(list, TRUE);
 }
 
 /****************************************************************
@@ -333,6 +406,9 @@ static void init_choices(void)
 
 /*
  * $Log: choices.c,v $
+ * Revision 1.7  2005/06/07 10:24:52  stephen
+ * Using doxygen to generate documentation
+ *
  * Revision 1.6  2004/10/29 13:36:07  stephen
  * Added rox_choices_load()/save()
  *

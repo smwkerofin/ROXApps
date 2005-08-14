@@ -1,7 +1,12 @@
 /*
  * error.c - display error message
  *
- * $Id: error.c,v 1.4 2003/03/05 15:31:23 stephen Exp $
+ * $Id: error.c,v 1.5 2003/10/22 17:17:33 stephen Exp $
+ */
+
+/**
+ * @file error.c
+ * @brief Display error message
  */
 
 #include <stdio.h>
@@ -15,6 +20,12 @@
 #include "error.h"
 #include "rox-clib.h"
 
+/**
+ * Display an error message in a modal dialogue box.
+ *
+ * @param[in] fmt printf-style format string, followed by the arguments, to
+ * generate the message
+ */
 void rox_error(const char *fmt, ...)
 {
   va_list list;
@@ -43,6 +54,9 @@ void rox_error(const char *fmt, ...)
 
 /*
  * $Log: error.c,v $
+ * Revision 1.5  2003/10/22 17:17:33  stephen
+ * Put name of program (if we have it...) in error box
+ *
  * Revision 1.4  2003/03/05 15:31:23  stephen
  * First pass a conversion to GTK 2
  * Known problems in SOAP code.

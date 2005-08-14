@@ -1,7 +1,9 @@
 /*
- * rox_resources.c -Find internationalized resource files.
- *
- * $Id: rox_resources.c,v 1.2 2001/11/29 15:44:09 stephen Exp $
+ * $Id: rox_resources.c,v 1.3 2002/02/13 11:00:38 stephen Exp $
+ */
+/*
+ * @file rox_resources.c
+ * @brief Find internationalized resource files.
  */
 
 #include "rox-clib.h"
@@ -121,6 +123,21 @@ static gchar *do_tests(GPtrArray *dirs, const gchar *app_dir,
   return answer;
 }
   
+/**
+ * Search CHOICESPATH, then APP_DIR for a directory called Resources
+ * which contains the file leaf, whether in a sub-directory lang or
+ * directly.
+ *
+ * @param[in] app_name application name, for seaching choices.
+ * @param[in] leaf name of file to seach for.
+ * @param[in] lang language code,  may be #ROX_RESOURCES_NO_LANG to not search
+ * for sub-directories, or #ROX_RESOURCES_DEFAULT_LANG for the sub-directory
+ * appropriate for the selected language
+ * @return the full path if found (pass to g_free when done), otherwise
+ * @c NULL
+ *
+ * @deprecated Use rox_resources_find_with_domain() instead.
+ */
 gchar *rox_resources_find(const gchar *app_name,
 				 const gchar *leaf,
 				 const gchar *lang)
@@ -151,8 +168,57 @@ gchar *rox_resources_find(const gchar *app_name,
   return answer;
 }
 
+/**
+ * Search XDG_CONFIG_DIRS, then APP_DIR for a directory called
+ * Resources
+ * which contains the file leaf, whether in a sub-directory lang or
+ * directly.
+ *
+ * @param[in] app_name application name, for seaching choices.
+ * @param[in] leaf name of file to seach for.
+ * @param[in] lang language code,  may be #ROX_RESOURCES_NO_LANG to not search
+ * for sub-directories, or #ROX_RESOURCES_DEFAULT_LANG for the sub-directory
+ * appropriate for the selected language
+ * @param[in] domain name of domain, or @c NULL (see rox_choices_list_dirs())
+ *
+ * @return the full path if found (pass to g_free when done), otherwise
+ * @c NULL
+ */
+gchar *rox_resources_find_with_domain(const gchar *app_name,
+				      const gchar *leaf,
+				      const gchar *lang,
+				      const gchar *domain)
+{
+  int i;
+  GPtrArray *dirs;
+  gchar *app_dir;
+  gchar *answer=NULL;
+
+  if(!lang)
+    lang=g_getenv("LANG");
+
+  dirs=rox_choices_list_dirs(app_name, domain);
+
+  app_dir=g_getenv("APP_DIR");
+
+  dprintf(3, "app_dir=%s leaf=%s lang=%s", app_dir, leaf, lang? lang: "NULL");
+  answer=do_tests(dirs, app_dir, leaf, lang);
+  
+  if(dirs) {
+    rox_choices_free_list(dirs);
+  }
+
+  return answer;
+}
+
 /*
  * $Log: rox_resources.c,v $
+ * Revision 1.3  2002/02/13 11:00:38  stephen
+ * Better way of accessing web site (by running a URI file).  Improvement to
+ * language checking in rox_resources.c.  Visit by the const fairy in choices.h.
+ * Updated pkg program to check for libxml2.  Added rox.c to access ROX-CLib's
+ * version number.
+ *
  * Revision 1.2  2001/11/29 15:44:09  stephen
  * Fixed bug in rox_resources.
  *

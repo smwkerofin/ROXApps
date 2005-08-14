@@ -1,7 +1,10 @@
-/*
- * A GTK+ Widget to implement a RISC OS style info window
+/**
+ * @file infowin.c
+ * @brief A GTK+ Widget to implement a RISC OS style info window
  *
- * $Id: infowin.c,v 1.11 2004/05/31 10:47:06 stephen Exp $
+ */
+/*
+ * $Id: infowin.c,v 1.12 2004/10/02 13:09:54 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -66,17 +69,10 @@ static void dismiss(GtkWidget *widget, gpointer data)
 static void goto_website(GtkWidget *widget, gpointer data)
 {
   ROXInfoWin *iw;
-  GList *cmds;
-  int pid;
-  char cpath[1024];
-  char *path, *dir, *file;
-  FILE *out;
-  char tfname[256];
-  time_t now;
 
-  g_return_if_fail(IS_INFO_WIN(data));
+  g_return_if_fail(ROX_IS_INFO_WIN(data));
 
-  iw=INFO_WIN(data);
+  iw=ROX_INFO_WIN(data);
 
   if(!iw->web_site)
     return;
@@ -222,6 +218,9 @@ static void rox_info_win_init(ROXInfoWin *iw)
   gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 2);
 }
 
+/**
+ * Type code for an InfoWin
+ */
 GType rox_info_win_get_type(void)
 {
   static GType iw_type = 0;
@@ -246,6 +245,20 @@ GType rox_info_win_get_type(void)
   return iw_type;
 }
 
+/**
+ * Construct an information window for the program.
+ *
+ * @param[in] program name of program
+ * @param[in] purpose short description of program's function
+ * @param[in] version string describing current version
+ * @param[in] author name of author(s)
+ * @param[in] website URL where to find more information or get new
+ * versions
+ *
+ * @return pointer to a ROXInfoWin object
+ *
+ * @deprecated Use rox_info_win_new_from_appinfo() instead.
+ */
 GtkWidget* rox_info_win_new(const gchar *program, const gchar *purpose,
 				const gchar *version, const gchar *author,
 				const gchar *website)
@@ -283,9 +296,18 @@ GtkWidget* rox_info_win_new(const gchar *program, const gchar *purpose,
   return widget;
 }
 
+/**
+ * Add a possible command for viewing a web page.
+ *
+ * @param[in,out] iw a valid info window
+ * @param[in] cmd command to add.  It will be called with a single argument
+ * which is the URL to view
+ *
+ * @deprecated Web sites are now viewed using rox_uri_launch() and commands
+ * added by this function are ignored.
+ */
 void rox_info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
 {
-  g_return_if_fail(iw!=NULL);
   g_return_if_fail(ROX_IS_INFO_WIN(iw));
   g_return_if_fail(cmd!=NULL);
 
@@ -420,6 +442,14 @@ static GList *expand_languages(GList *languages)
   return nelangs;
 }
 
+/**
+ * Construct an information window for the program.  The data is taken from
+ * the file <code>$APP_DIR/AppInfo.xml</code>.
+ *
+ * @param[in] program name of program
+ *
+ * @return pointer to a #ROXInfoWin object
+ */
 GtkWidget *rox_info_win_new_from_appinfo(const char *program)
 {
   gchar *purpose=NULL, *version=NULL, *author=NULL, *website=NULL;
@@ -526,19 +556,32 @@ GtkWidget *rox_info_win_new_from_appinfo(const char *program)
   return window;
 }
 
+/**
+ * Get pointer to a GtkVBox between the default contents and the dialog
+ * area with the close button.  Arbitrary content may be added here.
+ *
+ * @param[in,out] iw a valid info window
+ * @return pointer to a GtkVBox
+ */
 GtkWidget *rox_info_win_get_extension_area(ROXInfoWin *iw)
 {
-  g_return_if_fail(iw!=NULL);
+  g_return_val_if_fail(ROX_IS_INFO_WIN(iw), NULL);
 
   return iw->extend;
 }
 
-/* Binary compatability */
+/**
+ * @deprecated Replaced by rox_info_win_get_type()
+ */
 GType info_win_get_type(void)
 {
   return rox_info_win_get_type();
 }
 
+/**
+ * @deprecated As rox_info_win_new() except that the window's
+ * delete_event signal is caught to turn closing the window into a hide
+ */
 GtkWidget* info_win_new(const gchar *program, const gchar *purpose,
 				const gchar *version, const gchar *author,
 				const gchar *website)
@@ -555,6 +598,10 @@ GtkWidget* info_win_new(const gchar *program, const gchar *purpose,
   return iw;
 }
 
+/**
+ * @deprecated As rox_info_win_new_from_appinfo() except that the window's
+ * delete_event signal is caught to turn closing the window into a hide
+ */
 GtkWidget* info_win_new_from_appinfo(const gchar *program)
 {
   GtkWidget *iw;
@@ -569,6 +616,9 @@ GtkWidget* info_win_new_from_appinfo(const gchar *program)
   return iw;
 }
 
+/**
+ * @deprecated As rox_info_win_add_browser_command().
+ */
 void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
 {
   return rox_info_win_add_browser_command(iw, cmd);
@@ -576,6 +626,10 @@ void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.12  2004/10/02 13:09:54  stephen
+ * Added uri.h and rox_uri_launch() (and moved some stuff from rox_path
+ * there) to better handle launching URIs.  ROXInfoWin now uses it.
+ *
  * Revision 1.11  2004/05/31 10:47:06  stephen
  * Added mime_handler support (needs testing)
  *
