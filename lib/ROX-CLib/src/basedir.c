@@ -1,7 +1,15 @@
 /*
- * $Id: basedir.c,v 1.1 2004/03/25 13:10:40 stephen Exp $
+ * $Id: basedir.c,v 1.2 2004/09/13 11:29:30 stephen Exp $
  *
  * XDG base directory functions for ROX-CLib
+ */
+
+/**
+ * @file basedir.c
+ * @brief XDG base directory functions for ROX-CLib
+ *
+ * @author Stephen Watson
+ * @version $Id$
  */
 
 #include "rox-clib.h"
@@ -73,6 +81,9 @@ static void init(void)
   xdg_config_dirs=split_path(xdg_config_home, tmp);
 }
 
+/**
+ * @return The directory where the user may write configuration files.
+ */
 const gchar *basedir_get_config_home(void)
 {
   if(!xdg_config_home)
@@ -81,6 +92,9 @@ const gchar *basedir_get_config_home(void)
   return xdg_config_home;
 }
 
+/**
+ * @return A list of directories to be searched for configuration files.  Free
+ * the list but not the directories. */
 GList *basedir_get_config_paths(void)
 {
   GList *paths=NULL;
@@ -130,6 +144,16 @@ static gchar *save_path(const gchar *base, const char *resource,
   return path;
 }
 
+/**
+ * Return the full path to a file where configuration may be saved.
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return Full path to the file, pass to g_free() when done, or @c NULL
+ * if saving has been disabled
+ */
 gchar *basedir_save_config_path(const char *resource, const char *leaf)
 {
   if(!xdg_config_home)
@@ -138,6 +162,17 @@ gchar *basedir_save_config_path(const char *resource, const char *leaf)
   return save_path(xdg_config_home, resource, leaf);
 }
 
+/**
+ * Return the full path to a file where data may be saved.  Normally this
+ * is not required.
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return Full path to the file, pass to g_free() when done, or @c NULL if
+ * saving has been disabled
+ */
 gchar *basedir_save_data_path(const char *resource, const char *leaf)
 {
   if(!xdg_data_home)
@@ -161,6 +196,16 @@ static gchar *load_path(gchar **dirs, const char *resource, const char *leaf)
   return NULL;
 }
 
+/**
+ * Return the full path to a file from which configuration may be loaded.
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return Full path to the file, pass to g_free() when done, or @c NULL
+ * if no such file found.
+ */
 gchar *basedir_load_config_path(const char *resource, const char *leaf)
 {
   if(!xdg_config_dirs)
@@ -169,6 +214,16 @@ gchar *basedir_load_config_path(const char *resource, const char *leaf)
   return load_path(xdg_config_dirs, resource, leaf);
 }
 
+/**
+ * Return the full path to a file from which data may be loaded.
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return Full path to the file, pass to g_free() when done, or @c NULL
+ * if no such file found.
+ */
 gchar *basedir_load_data_path(const char *resource, const char *leaf)
 {
   if(!xdg_data_dirs)
@@ -194,6 +249,18 @@ static GList *load_paths(gchar **dirs, const char *resource, const char *leaf)
   return paths;
 }
 
+/**
+ * Return a list of full paths to a file from which configuration may be
+ * loaded in each diretory where it exists.  Useful for merging the
+ * conents of multiple files..
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return Listof full path to files, pass to basedir_free_paths() when done,
+ * or @c NULL if no such file found.
+ */
 GList *basedir_load_config_paths(const char *resource, const char *leaf)
 {
   if(!xdg_config_dirs)
@@ -202,6 +269,18 @@ GList *basedir_load_config_paths(const char *resource, const char *leaf)
   return load_paths(xdg_config_dirs, resource, leaf);
 }
 
+/**
+ * Return a list of full paths to a file from which data may be
+ * loaded in each diretory where it exists.  Useful for merging the
+ * conents of multiple files..
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return Listof full path to files, pass to basedir_free_paths() when done,
+ * or @c NULL if no such file found.
+ */
 GList *basedir_load_data_paths(const char *resource, const char *leaf)
 {
   if(!xdg_data_dirs)
@@ -210,8 +289,25 @@ GList *basedir_load_data_paths(const char *resource, const char *leaf)
   return load_paths(xdg_data_dirs, resource, leaf);
 }
 
+/** Free a list returned by basedir_load_config_paths() or
+ * basedir_load_data_paths().
+ *
+ * @param[in,out] paths list of paths.
+ */
+void basedir_free_paths(GList *paths)
+{
+  GList *p;
+
+  for(p=paths; p; p=g_list_next(p))
+    g_free(p);
+  g_list_free(paths);
+}
+
 /*
  * $Log: basedir.c,v $
+ * Revision 1.2  2004/09/13 11:29:30  stephen
+ * Choices system can use XDG base directories
+ *
  * Revision 1.1  2004/03/25 13:10:40  stephen
  * Added basedir and mime
  *
