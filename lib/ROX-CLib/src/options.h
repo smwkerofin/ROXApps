@@ -1,5 +1,5 @@
 /*
- * $Id: options.h,v 1.4 2005/06/07 10:24:52 stephen Exp $
+ * $Id: options.h,v 1.5 2005/08/14 16:07:00 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -67,7 +67,7 @@
 /**
  * An option, stored as a string.  It may have an integer value
  */
-typedef struct _Option Option;
+typedef struct Option Option;
 
 /** Type of function called when the options change */
 typedef void OptionNotify(void);
@@ -83,7 +83,7 @@ typedef GList * (*OptionBuildFn)(Option *option, xmlNode *node, gchar *label);
 /**
  * An option, stored as a string.  It may have an integer value
  */
-struct _Option {
+struct Option {
   gchar		*value; /**< Current value of the option */
   long		int_value;      /**< Result of atol(value) */
 	gboolean	has_changed;  /**< Non-zero if changed */
@@ -124,6 +124,10 @@ GtkWidget *options_show(void);
 
 /*
  * $Log: options.h,v $
+ * Revision 1.5  2005/08/14 16:07:00  stephen
+ * Added rox_resources_find_with_domain().
+ * More doxygen additions.
+ *
  * Revision 1.4  2005/06/07 10:24:52  stephen
  * Using doxygen to generate documentation
  *
