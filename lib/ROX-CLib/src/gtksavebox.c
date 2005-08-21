@@ -22,6 +22,58 @@
  * to include it in Gtk+ at some point.
  */
 
+/**
+ * @file gtksavebox.c
+ * @brief Drag and drop saving widget for GTK+
+ *
+ * This version has been altered for inclusion in ROX-CLib.  If it makes it
+ * into Gtk+ then it will be removed from ROX-CLib.
+ *
+ * Behaviour:
+ *
+ * - Clicking Save or pressing Return:
+ * 	- Emits 'save_to_file',
+ * 	- Emits 'saved_to_uri' (with the same pathname),
+ * 	- Destroys the widget.
+ *   
+ * - Clicking Cancel or pressing Escape:
+ * 	- Destroys the widget.
+ *
+ * - Dragging the data somewhere:
+ *      - Will either emit 'save_to_file' or get the selection,
+ *      - Emits 'saved_to_uri' (possibly with a @c NULL URI),
+ *      - Destroys the widget.
+ *
+ * - Clicking Discard:
+ *	- Emits 'saved_to_uri' with a @c NULL URI,
+ *	- Destroys the widget.
+ *
+ * To clarify: 'saved_to_uri' indicates that the save was successful. A
+ * @c NULL URI just means that the data was saved to another application rather
+ * than a fixed address. Data should only be marked unmodified when
+ * saved_to_uri is called with a non-<code>NULL</code> URI.
+ *
+ * Discard is a bit like a successful save to a null device. The data should
+ * be discarded when saved_to_uri is called, whatever URI is set to.
+ *
+ * 
+ * Signals:
+ * 
+ * gint save_to_file (GtkSavebox *savebox, const gchar *pathname) 
+ * 	Save the data to disk using this pathname. Return @c GTK_XDS_SAVED
+ * 	on success, or @c GTK_XDS_SAVE_ERROR on failure (and report the error
+ * 	to the user somehow). DO NOT mark the data unmodified or change
+ * 	the pathname for the file - this might be a scrap file transfer.
+ *
+ * void saved_to_uri (GtkSavebox *savebox, const gchar *uri)
+ *	The data is saved. If 'uri' is non-<code>NULL</code>, mark the file as unmodified
+ *	and update the pathname/uri for the file to the one given.
+ *
+ * @author Thomas Leonard
+ * @version $Id$ based on
+ * gtksavebox.c,v 1.28 2002/05/12 16:28:42 tal197 from ROX-Filer 1.3.5
+ */
+
 /*
  * This version has been altered for inclusion in ROX-CLib.  If it makes it
  * into Gtk+ then it will be removed from ROX-CLib.
@@ -58,48 +110,6 @@
 
 #include "global.h"
 #include "rox_path.h"
-
-/* 
- * Behaviour:
- *
- * - Clicking Save or pressing Return:
- * 	- Emits 'save_to_file',
- * 	- Emits 'saved_to_uri' (with the same pathname),
- * 	- Destroys the widget.
- *   
- * - Clicking Cancel or pressing Escape:
- * 	- Destroys the widget.
- *
- * - Dragging the data somewhere:
- *      - Will either emit 'save_to_file' or get the selection,
- *      - Emits 'saved_to_uri' (possibly with a NULL URI),
- *      - Destroys the widget.
- *
- * - Clicking Discard:
- *	- Emits 'saved_to_uri' with a NULL URI,
- *	- Destroys the widget.
- *
- * To clarify: 'saved_to_uri' indicates that the save was successful. A
- * NULL URI just means that the data was saved to another application rather
- * than a fixed address. Data should only be marked unmodified when
- * saved_to_uri is called with a non-NULL URI.
- *
- * Discard is a bit like a successful save to a null device. The data should
- * be discarded when saved_to_uri is called, whatever URI is set to.
- *
- * 
- * Signals:
- * 
- * gint save_to_file (GtkSavebox *savebox, const gchar *pathname) 
- * 	Save the data to disk using this pathname. Return GTK_XDS_SAVED
- * 	on success, or GTK_XDS_SAVE_ERROR on failure (and report the error
- * 	to the user somehow). DO NOT mark the data unmodified or change
- * 	the pathname for the file - this might be a scrap file transfer.
- *
- * void saved_to_uri (GtkSavebox *savebox, const gchar *uri)
- *	The data is saved. If 'uri' is non-NULL, mark the file as unmodified
- *	and update the pathname/uri for the file to the one given.
- */
 
 enum {
   PROP_0,
@@ -164,6 +174,7 @@ marshal_INT__STRING (GClosure     *closure,
 		     gpointer      invocation_hint,
 		     gpointer      marshal_data);
 
+/** @return type code for GtkSavebox */
 GType
 gtk_savebox_get_type (void)
 {
@@ -293,6 +304,12 @@ gtk_savebox_init (GtkSavebox *savebox)
   gtk_box_reorder_child (GTK_BOX (dialog->vbox), savebox->discard_area, 0);
 }
 
+/**
+ * Create and return a new GtkSavebox widget.
+ *
+ * @param[in] action Label to use in the Save button
+ * @return pointer to the widget
+ */
 GtkWidget*
 gtk_savebox_new (const gchar *action)
 {
@@ -319,6 +336,12 @@ gtk_savebox_new (const gchar *action)
   return GTK_WIDGET(dialog);
 }
 
+/**
+ * Set the icon used for dragging the file.
+ *
+ * @param[in,out] savebox Save box widget
+ * @param[in] pixbuf image to use for icon
+ */
 void
 gtk_savebox_set_icon (GtkSavebox *savebox, GdkPixbuf *pixbuf)
 {
@@ -336,6 +359,12 @@ gtk_savebox_set_icon (GtkSavebox *savebox, GdkPixbuf *pixbuf)
     }
 }
 
+/**
+ * Set the initial path to show in the widget.
+ *
+ * @param[in,out] savebox Save box widget
+ * @param[in] pathname path to use
+ */
 void
 gtk_savebox_set_pathname (GtkSavebox *savebox, const gchar *pathname)
 {
@@ -358,6 +387,13 @@ gtk_savebox_set_pathname (GtkSavebox *savebox, const gchar *pathname)
 			      	  : -1);
 }
 
+/**
+ * Set whether the discard area is show.  Normally this is hidden  but
+ * contains a single "Discard" button.
+ *
+ * @param[in,out] savebox Save box widget
+ * @param[in] setting non-zero to show discard area
+ */
 void
 gtk_savebox_set_has_discard (GtkSavebox *savebox, gboolean setting)
 {
@@ -701,5 +737,9 @@ static GtkWidget *button_new_mixed(const char *stock, const char *message)
 }
 
 /*
- * $Log$
+ * $Log: gtksavebox.c,v $
+ * Revision 1.3  2003/03/05 15:31:23  stephen
+ * First pass a conversion to GTK 2
+ * Known problems in SOAP code.
+ *
  */

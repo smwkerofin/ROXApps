@@ -1,8 +1,13 @@
 /*
- * $Id: applet.c,v 1.3 2003/03/05 15:31:23 stephen Exp $
+ * $Id: applet.c,v 1.4 2004/03/25 13:10:40 stephen Exp $
  *
- * applet.c - Utilities for rox applet.s
+ * applet.c - Utilities for rox applets
  */
+/**
+ * @file applet.c
+ * @brief Implementing ROX applets
+ */
+
 #include "rox-clib.h"
 
 #include <stdlib.h>
@@ -38,170 +43,6 @@ static struct name_loc {
 static gint screen_height=-1;
 static gint screen_width=-1;
 
-#if 0
-/* Parse the property string */
-static void decode_location(const char *prop)
-{
-  int i;
-  gchar **strs;
-
-  strs=g_strsplit(prop, ",", 2);
-  if(!strs)
-    return;
-  for(i=0; locations[i].name; i++)
-    if(strcmp(locations[i].name, strs[0])==0) {
-      panel_loc=locations[i].loc;
-      break;
-    }
-  if(strs[1])
-    panel_size=atoi(strs[1]);
-
-  g_strfreev(strs);
-}
-
-/* Get the data we need */
-PanelLocation applet_get_panel_location(GtkWidget *plug)
-{
-  guint32 xid;
-  GdkWindow *gwin;
-  Window xwin, parent, root, *children;
-  int nchild;
-  GdkAtom apos;
-  GdkAtom string;
-
-  g_return_val_if_fail(plug!=NULL, PANEL_UNKNOWN);
-  
-  dprintf(3, "panel_loc=%d", panel_loc);
-
-  /* Have we the answer already */
-  if(panel_loc!=PANEL_UNKNOWN)
-    return panel_loc;
-
-  /* Get screen size */
-#ifdef GTK2
-  gdk_drawable_get_size(GDK_ROOT_PARENT(), &screen_width, &screen_height);
-#else
-  gdk_window_get_size(GDK_ROOT_PARENT(), &screen_width, &screen_height);
-#endif
-  dprintf(3, "screen is %d,%d", screen_width, screen_height);
-
-  apos=gdk_atom_intern("_ROX_PANEL_MENU_POS", FALSE);
-  string=gdk_atom_intern("STRING", FALSE);
-
-  /* Work our way up the list of windows until we find one with the property */
-  gtk_widget_realize(plug);
-  gwin=plug->window;
-  xwin=GDK_WINDOW_XWINDOW(gwin);
-  do {
-    gint res;
-    Atom xtype;
-    GdkAtom type;
-    gint format, length;
-    gulong nitems, remain;
-    guchar *data;
-
-    xtype=0;
-    res=XGetWindowProperty(GDK_DISPLAY(), xwin, gdk_x11_atom_to_xatom(apos),
-			   0, -1, FALSE,
-			   gdk_x11_atom_to_xatom(string),
-			   &xtype, &format, &nitems, &remain, &data);
-    type=gdk_x11_xatom_to_atom(xtype);
-    dprintf(3, "res=%d type=%p %s, format=%d length=%d data=%p",
-	    res, type, type!=GDK_NONE? gdk_atom_name(type): "NONE", 
-	    format, nitems, data);
-    if(res==Success && format!=0) {
-      dprintf(2, "property=%s", (char *) data);
-
-      decode_location((const char *) data);
-      
-      XFree(data);
-      break;
-    }
-
-    /* Find the parent window */
-    if(!XQueryTree(GDK_DISPLAY(), xwin, &root, &parent, &children, &nchild))
-      break;
-    XFree(children);
-    
-    dprintf(3, "xwin 0x%lx has parent 0x%lx", xwin, parent);
-    xwin=parent;
-  } while(xwin);
-
-  return panel_loc;
-}
-
-/* Mostly taken from icon.c panel_position_menu */
-static void position_menu(GtkMenu *menu, gint *x, gint *y,
-			  gboolean *push_in,
-			  gpointer data)
-{
-  int *pos = (int *) data;
-  GtkRequisition requisition;
-
-  dprintf(2, "position_menu(%p, &%d, &%d, %p)", menu, *x, *y, data);
-  dprintf(3, "pos[]={%d, %d, %d}", pos[0], pos[1], pos[2]);
-  
-  gtk_widget_size_request(GTK_WIDGET(menu), &requisition);
-  dprintf(3, "menu is %d,%d", requisition.width, requisition.height);
-
-  if (pos[0] == -1)
-    *x = screen_width - panel_size - requisition.width;
-  else if (pos[0] == -2)
-    *x = panel_size;
-  else
-    *x = pos[0] - (requisition.width >> 2);
-		
-  if (pos[1] == -1)
-    *y = screen_height - panel_size - requisition.height;
-  else if (pos[1] == -2)
-    *y = panel_size;
-  else
-    *y = pos[1] - (requisition.height >> 2);
-
-  dprintf(3, "at %d,%d", *x, *y);
-  *x = CLAMP(*x, 0, screen_width - requisition.width);
-  *y = CLAMP(*y, 0, screen_height - requisition.height);
-
-  dprintf(3, "at %d,%d", *x, *y);
-}
-
-void applet_show_menu(GtkWidget *menu, GdkEventButton *evbut)
-{
-  if(panel_loc==PANEL_UNKNOWN)
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-		   evbut->button, evbut->time);
-  else {
-    int pos[3];
-  
-    pos[0] = evbut->x_root;
-    pos[1] = evbut->y_root;
-    pos[2] = 1;
-
-    switch(panel_loc) {
-    case PANEL_TOP:
-      pos[1]=-2;
-      break;
-    case PANEL_BOTTOM:
-      pos[1]=-1;
-      break;
-    case PANEL_LEFT:
-      pos[0]=-2;
-      break;
-    case PANEL_RIGHT:
-      pos[0]=-1;
-      break;
-    default:
-      rox_error("Unknown panel location (%d), can't place menu",
-		panel_loc);
-      return;
-    }
-    
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, position_menu, pos,
-		   evbut->button, evbut->time);
-  }
-}
-#endif
-
 typedef struct applet_info {
   PanelLocation loc;
   int margin;
@@ -230,7 +71,7 @@ static void decode_location2(const char *prop, AppletInfo *inf)
 }
 
 /* Get the data we need */
-AppletInfo *get_position(GtkWidget *plug)
+static AppletInfo *get_position(GtkWidget *plug)
 {
   guint32 xid;
   GdkWindow *gwin;
@@ -332,6 +173,14 @@ static void position_menu2(GtkMenu *menu, gint *x, gint *y,
   dprintf(3, "at %d,%d", *x, *y);
 }
 
+/**
+ * Popup a menu in the appropriate place for an applet's icon.
+ *
+ * @param[in,out] plug the GtkPlug object used to hold the applet
+ * @param[in] menu the menu to show
+ * @param[in] evbut the button event that triggered the menu, or
+ * @c NULL if the menu was triggered by some other means
+ */
 void applet_popup_menu(GtkWidget *plug, GtkWidget *menu, GdkEventButton *evbut)
 {
   AppletInfo *pos;
@@ -355,6 +204,9 @@ void applet_popup_menu(GtkWidget *plug, GtkWidget *menu, GdkEventButton *evbut)
 
 /*
  * $Log: applet.c,v $
+ * Revision 1.4  2004/03/25 13:10:40  stephen
+ * Added basedir and mime
+ *
  * Revision 1.3  2003/03/05 15:31:23  stephen
  * First pass a conversion to GTK 2
  * Known problems in SOAP code.

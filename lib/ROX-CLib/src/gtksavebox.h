@@ -29,6 +29,14 @@
  * gtksavebox.h,v 1.7 2002/05/02 14:46:07 tal197
  */
 
+/**
+ * @file gtksavebox.h
+ * @brief Drag and drop saving widget for GTK+
+ *
+ * @author Thomas Leonard
+ * @version $Id$
+ */
+
 #ifndef __GTK_SAVEBOX_H__
 #define __GTK_SAVEBOX_H__
 
@@ -42,23 +50,42 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* This is for the 'info' value of the GtkTargetList.
+/** This is for the 'info' value of the GtkTargetList.
  * It's for the XdndDirectSave0 target - ignore requests for this target
  * because they're handled internally by the widget. Don't use this
  * value for anything else!
  */
 #define GTK_TARGET_XDS 0x584453
 
+/** @return type code for GtkSavebox */
 #define GTK_TYPE_SAVEBOX		(gtk_savebox_get_type ())
 
+/** Cast pointer into a pointer to GtkSavebox only if it is valid,
+ * otherwise return @c NULL
+ * @param[in] obj pointer to object
+ * @return pointer to GtkSavebox or @c NULL for error
+ */
 #define GTK_SAVEBOX(obj)		\
 	(GTK_CHECK_CAST ((obj), GTK_TYPE_SAVEBOX, GtkSavebox))
 
+/** Cast pointer into a pointer to GtkSavebox class only if it is valid,
+ * otherwise return @c NULL
+ * @param[in] klass pointer to object class
+ * @return pointer to GtkSavebox class or @c NULL for error
+ */
 #define GTK_SAVEBOX_CLASS(klass)	\
 	(GTK_CHECK_CLASS_CAST ((klass), GTK_TYPE_SAVEBOX, GtkSaveboxClass))
 
+/** Check a pointer to GtkSavebox
+ * @param[in] obj pointer to object
+ * @return non-zero if a pointer to a GtkSavebox
+ */
 #define GTK_IS_SAVEBOX(obj)	(GTK_CHECK_TYPE ((obj), GTK_TYPE_SAVEBOX))
 
+/** Check a pointer to a GtkSavebox class
+ * @param[in] klass pointer to object class
+ * @return non-zero if a pointer to a GtkSavebox class
+ */
 #define GTK_IS_SAVEBOX_CLASS(klass)	\
 	(GTK_CHECK_CLASS_TYPE ((klass), GTK_TYPE_SAVEBOX))
 
@@ -68,28 +95,34 @@ typedef struct _GtkSaveboxClass   GtkSaveboxClass;
 typedef struct _GtkSaveboxButton  GtkSaveboxButton;
 
 enum {
-  GTK_XDS_SAVED,		/* Done the save - no problem */
-  GTK_XDS_SAVE_ERROR,		/* Error during save - reported */
-  GTK_XDS_NO_HANDLER,		/* Used internally (sanity checking) */
+  GTK_XDS_SAVED,		/**< Done the save - no problem */
+  GTK_XDS_SAVE_ERROR,		/**< Error during save - reported */
+  GTK_XDS_NO_HANDLER,		/**< Used internally (sanity checking) */
 };
 
+/**
+ * GTK+ widget used for drag and drop saving.
+ */
 struct _GtkSavebox
 {
-  GtkDialog dialog;
+  GtkDialog dialog;		/**< Instance of parent class */
 
-  GtkWidget *discard_area;	/* Normally hidden */
-  GtkWidget *drag_box;		/* Event box - contains pixmap, or NULL */
-  GtkWidget *icon;		/* The pixmap widget */
-  GtkWidget *entry;		/* Where the pathname goes */
+  GtkWidget *discard_area;	/**< Normally hidden */
+  GtkWidget *drag_box;		/**< Event box - contains pixmap, or NULL */
+  GtkWidget *icon;		/**< The pixmap widget */
+  GtkWidget *entry;		/**< Where the pathname goes */
 
-  GtkTargetList *targets;	/* Formats that we can save in */
-  gboolean  using_xds;		/* Have we sent XDS reply 'S' or 'F' yet? */
-  gboolean  data_sent;		/* Did we send any data at all this drag? */
+  GtkTargetList *targets;	/**< Formats that we can save in */
+  gboolean  using_xds;		/**< Have we sent XDS reply 'S' or 'F' yet? */
+  gboolean  data_sent;		/**< Did we send any data at all this drag? */
 };
 
+/**
+ * @internal Class of GTK+ widget used for drag and drop saving.
+ */
 struct _GtkSaveboxClass
 {
-  GtkDialogClass parent_class;
+  GtkDialogClass parent_class;   /**< Parent class */
 
   gint (*save_to_file)	(GtkSavebox *savebox, guchar *pathname);
   void (*saved_to_uri)	(GtkSavebox *savebox, guchar *uri);
@@ -111,3 +144,8 @@ void	   gtk_savebox_set_has_discard	(GtkSavebox *savebox, gboolean setting);
 
 
 #endif /* __GTK_SAVEBOX_H__ */
+
+/*
+ * $Log$
+ */
+  
