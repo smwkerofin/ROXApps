@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Id: infowin.h,v 1.5 2004/05/31 10:47:06 stephen Exp $
+ * $Id: infowin.h,v 1.6 2005/08/14 16:07:00 stephen Exp $
  */
 
 #ifndef __ROX_INFO_WIN_H__
@@ -38,8 +38,8 @@ extern "C" {
  */
 #define ROX_IS_INFO_WIN(obj)       GTK_CHECK_TYPE (obj, rox_info_win_get_type ())
 
-typedef struct _InfoWin       ROXInfoWin;
-typedef struct _InfoWinClass  ROXInfoWinClass;
+typedef struct ROXInfoWin       ROXInfoWin;
+typedef struct ROXInfoWinClass  ROXInfoWinClass;
 
   /** @internal */
 enum info_slots {
@@ -50,9 +50,12 @@ enum info_slots {
 };
 
 /**
- * Definition of a ROXInfoWin widget
+ * @brief Definition of a ROXInfoWin widget.
+ *
+ * ROXInfoWin manages a standard window for displaying information about
+ * a ROX application.
  */
-struct _InfoWin
+struct ROXInfoWin
 {
   GtkDialog dialog;                     /**< Instance of parent class */
 
@@ -72,7 +75,7 @@ struct _InfoWin
 /**
  * Definition of ROXInfoWin class. @internal
  */
-struct _InfoWinClass
+struct ROXInfoWinClass
 {
   GtkDialogClass parent_class;
 };
@@ -110,6 +113,10 @@ extern void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd);
 
 /*
  * $Log: infowin.h,v $
+ * Revision 1.6  2005/08/14 16:07:00  stephen
+ * Added rox_resources_find_with_domain().
+ * More doxygen additions.
+ *
  * Revision 1.5  2004/05/31 10:47:06  stephen
  * Added mime_handler support (needs testing)
  *
