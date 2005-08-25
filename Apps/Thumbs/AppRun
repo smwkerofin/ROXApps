@@ -2,4 +2,4 @@
 
 APP_DIR="`dirname $0`" export APP_DIR
 
-python "$APP_DIR/main.py"
+exec python "$APP_DIR/main.py"
