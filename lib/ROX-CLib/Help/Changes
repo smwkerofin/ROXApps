@@ -4,6 +4,16 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+03-Sep-2005
+~~~~~~~~~~~
+More doxygen additions.  
+Start of changes to build system to integrate with the Zero Install injector.
+
+21-Aug-2005
+~~~~~~~~~~~
+Added basedir_free_paths().
+More doxygen additions.
+
 14-Aug-2005
 ~~~~~~~~~~~
 Added rox_resources_find_with_domain().
@@ -227,4 +237,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.23 2005/06/07 10:24:08 stephen Exp $
+$Id: Changes,v 1.24 2005/08/14 16:07:00 stephen Exp $
