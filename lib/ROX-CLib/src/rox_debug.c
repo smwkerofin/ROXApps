@@ -1,8 +1,21 @@
 /*
- * rox_debug.h - Access to standard debug output
+ * rox_debug.c - Access to standard debug output
  *
- * $Id: rox_debug.c,v 1.2 2005/03/04 17:22:18 stephen Exp $
+ * $Id: rox_debug.c,v 1.3 2005/08/21 13:06:38 stephen Exp $
  */
+
+/**
+ * @file rox_debug.c
+ * @brief Standard debug output.
+ *
+ * Unless the pre-processer symbol @c DEBUG is defined as non-zero
+ * before rox_debug.h is included then the functions here are defined to be
+ * no-operations.
+ *
+ * @author Stephen Watson
+ * @version $Id$
+ */
+
 #include "rox-clib.h"
 
 #include <stdlib.h>
@@ -77,6 +90,9 @@ void rox_debug_printf(int level, const char *fmt, ...)
 
 /*
  * $Log: rox_debug.c,v $
+ * Revision 1.3  2005/08/21 13:06:38  stephen
+ * Added doxygen comments
+ *
  * Revision 1.2  2005/03/04 17:22:18  stephen
  * Use apsymbols.h if available to reduce problems re-using binary on different Linux distros
  *
