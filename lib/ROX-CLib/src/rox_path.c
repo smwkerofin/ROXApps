@@ -1,8 +1,16 @@
 /*
  * rox_path.c - utilities for path handling, support for drag & drop
  *
- * $Id: rox_path.c,v 1.8 2004/10/02 13:10:22 stephen Exp $
+ * $Id: rox_path.c,v 1.9 2004/10/23 11:50:45 stephen Exp $
  */
+/**
+ * @file rox_path.c
+ * @brief Utilities for path handling, including support for drag & drop.
+ *
+ * @author Stephen Watson
+ * @version $Id$
+ */
+
 #include "rox-clib.h"
 
 #include <stdlib.h>
@@ -19,6 +27,14 @@
 #define DEBUG 1
 #include "rox_debug.h"
 
+/**
+ * Given a URI return a local path using rox_unescape_uri()
+ * to convert the path.  file://thishost/path -> /path
+ *
+ * @param[in] uri uri to process
+ * @return local path (pass to g_free() when done) or @c NULL if it is
+ * not a local file path.
+ */
 char *rox_path_get_local(const char *uri)
 {
   char *host;
@@ -30,9 +46,9 @@ char *rox_path_get_local(const char *uri)
   
   if(uri[0]=='/') {
     if(uri[1]!='/')
-      return unescape_uri(uri);
+      return rox_unescape_uri(uri);
     if(uri[2]=='/')
-      return unescape_uri(uri+2);
+      return rox_unescape_uri(uri+2);
 
     host=(char *) uri+2;
     end=strchr(host, '/');
@@ -57,6 +73,12 @@ char *rox_path_get_local(const char *uri)
   return NULL;
 }
 
+/**
+ * Determine whether or not a host name identifies the local machine.
+ * 
+ * @param[in] hname host name to check.
+ * @return non-zero if the host name belongs to the local machine
+ */
 int rox_hostname_is_local(const char *hname)
 {
   const char *ahname=rox_hostname();
@@ -91,6 +113,13 @@ int rox_hostname_is_local(const char *hname)
   return FALSE;
 }
 
+/**
+ * Given a file: URI, return the host part of the URI.
+ * file://host/path -> host
+ *
+ * @param[in] uri uri to process
+ * @return server name (pass to g_free() when done).
+ */
 char *rox_path_get_server(const char *uri)
 {
   char *host, *end;
@@ -110,6 +139,15 @@ char *rox_path_get_server(const char *uri)
   return g_strdup("localhost");
 }
 
+/**
+ * Given a file: URI, return the path part of the URI using rox_unescape_uri()
+ * to convert the path.
+ * file://host/path -> /path
+ *
+ * @param[in] uri uri to process
+ * @return server name (pass to g_free() when done), or @c NULL if not a
+ * valid file: URI.
+ */
 char *rox_path_get_path(const char *uri)
 {
   char *host;
@@ -136,6 +174,9 @@ char *rox_path_get_path(const char *uri)
 
 /*
  * $Log: rox_path.c,v $
+ * Revision 1.9  2004/10/23 11:50:45  stephen
+ * More fixes for finding the hostname in drag and drop
+ *
  * Revision 1.8  2004/10/02 13:10:22  stephen
  * Added uri.h and rox_uri_launch() (and moved some stuff from rox_path
  * there) to better handle launching URIs.  ROXInfoWin now uses it.

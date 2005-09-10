@@ -1,7 +1,19 @@
 /*
  * Install handlers for MIME types
  *
- * $Id: mime_handler.c,v 1.1 2004/05/31 10:47:06 stephen Exp $
+ * $Id: mime_handler.c,v 1.2 2004/06/21 21:09:29 stephen Exp $
+ */
+
+/**
+ * @file mime_handler.c
+ * @brief Install handlers for MIME types.
+ *
+ * This provides the facility for a ROX application to install itself as
+ * the handler for a set of MIME types in a standardized way.  The user is
+ * asked to confirm any changes to their set up.
+ *
+ * @author Stephen Watson
+ * @version $Id$
  */
 
 #include "rox-clib.h"
@@ -544,11 +556,32 @@ static void install_from_appinfo_c(void)
   g_object_unref(ainfo);
 }
 
+/**
+ * Scan the applications AppInfo.xml file for CanRun and CanThumbnail
+ * declarations.  If any are found they are reported to the user who is asked
+ * whether the application can be set as the current handler for those types.
+ *
+ * Example AppInfo.xml (from VideoThumbnail):
+ * <pre>
+ * &lt;AppInfo&gt;
+ * ...
+ *   &lt;CanThumbnail&gt;
+ *     &lt;MimeType type="video/mpeg"/&gt;
+ *     &lt;MimeType type="video/quicktime"/&gt;
+ *     &lt;MimeType type="video/x-msvideo"/&gt;
+ *   &lt;/CanThumbnail&gt;
+ * &lt;/AppInfo&gt; 
+ * </pre>
+ * 
+ */
 void rox_mime_install_from_appinfo(void)
 {
   install_from_appinfo_c();
 }
 
 /*
- * $Log$
+ * $Log: mime_handler.c,v $
+ * Revision 1.2  2004/06/21 21:09:29  stephen
+ * Added C implementation
+ *
  */

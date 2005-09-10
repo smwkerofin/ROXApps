@@ -1,31 +1,47 @@
 /*
- * $Id: mime.h,v 1.1 2004/03/25 13:10:40 stephen Exp $
+ * $Id: mime.h,v 1.2 2004/05/22 17:03:57 stephen Exp $
  *
- * Shared MIME databse functions for ROX-CLib
+ * Shared MIME database functions for ROX-CLib
+ */
+
+/**
+ * @file mime.h
+ * @brief Shared MIME database functions for ROX-CLib
+ *
+ * @author Thomas Leonard, Stephen Watson
+ * @version $Id$
  */
 
 #ifndef _rox_mime_h
 #define _rox_mime_h
 
+/**
+ * Type holding information on a MIME-type
+ */
 typedef struct mime_type{
-  const char *media;
-  const char *subtype;
+  const char *media;            /**< Media of type, e.g. text or audio */
+  const char *subtype;          /**< Sub-type, e.g. html in text/html */
 
-  const char *comment;
-} MIMEType;
+  const char *comment;          /**< Description of type.  Do not access this
+				 * directly, use mime_type_comment().*/
+} MIMEType; 
 
 /* Common types, valid after mime_init() called */
-extern MIMEType *text_plain;       /* Default for plain file */
-extern MIMEType *application_executable;  /* Default for executable file */
-extern MIMEType *application_octet_stream;  /* Default for binary file */
-extern MIMEType *inode_directory;
-extern MIMEType *inode_mountpoint;
-extern MIMEType *inode_pipe;
-extern MIMEType *inode_socket;
-extern MIMEType *inode_block;
-extern MIMEType *inode_char;
-extern MIMEType *inode_door;
-extern MIMEType *inode_unknown;
+extern MIMEType *text_plain;               /**< Default for plain file */
+extern MIMEType *application_executable;   /**< Default for executable file */
+extern MIMEType *application_octet_stream; /**< Default for binary file */
+extern MIMEType *inode_directory;          /**< A directory */
+extern MIMEType *inode_mountpoint;         /**< A directory used as a mount
+					    * point*/
+extern MIMEType *inode_pipe;               /**< A named pipe */
+extern MIMEType *inode_socket;             /**< UNIX domain socket */
+extern MIMEType *inode_block;              /**< Block device file */
+extern MIMEType *inode_char;               /**< Character device file */
+extern MIMEType *inode_door;               /**< Door file, similar to sockets,
+					    * not available on all operating
+					    * systems */
+extern MIMEType *inode_unknown;            /**< Unknown type, probably broken
+					    * symbolic link */
 
 /* Initialize MIME system.   */
 extern void mime_init(void);
@@ -44,6 +60,9 @@ extern int mime_get_by_content(void);
 
 /*
  * $Log: mime.h,v $
+ * Revision 1.2  2004/05/22 17:03:57  stephen
+ * Added AppInfo parser
+ *
  * Revision 1.1  2004/03/25 13:10:40  stephen
  * Added basedir and mime
  *

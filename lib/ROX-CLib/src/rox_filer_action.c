@@ -1,8 +1,19 @@
 /*
- * $Id: rox_filer_action.c,v 1.10 2003/03/25 14:31:34 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.11 2004/05/05 19:24:18 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
+/**
+ * @file rox_filer_action.c
+ * @brief  Drive the filer via the SOAP calls.
+ *
+ * Uses the filer's remote protocol to drive the filer.  See Appendix C in
+ * ROX-Filer/Help/Manual.html
+ *
+ * @author Stephen Watson
+ * @version $Id$
+ */
+
 #include "rox-clib.h"
 
 #include <stdlib.h>
@@ -31,6 +42,11 @@ struct fa_data {
 
 #define check_init() do{if(!doneinit){rox_filer_action_init();}}while(0)
 
+/**
+ * Initialize the filer action system.  Calling this function is optional,
+ * the other file action functions will call this automatically if they
+ * detect that initialization has not been performed.
+ */
 void rox_filer_action_init(void)
 {
   rox_soap_init();
@@ -103,16 +119,31 @@ static void simple_call(const char *action, const char *argname,
   xmlFreeDoc(rpc);
 }
 
+/**
+ * Call the OpenDir method
+ *
+ * @param[in] filename name of directory to open.
+ */
 void rox_filer_open_dir(const char *filename)
 {
   simple_call("OpenDir", "Filename", filename);
 }
 
+/**
+ * Call the CloseDir method
+ *
+ * @param[in] filename name of directory to close.
+ */
 void rox_filer_close_dir(const char *filename)
 {
   simple_call("CloseDir", "Filename", filename);
 }
 
+/**
+ * Call the Examine method
+ *
+ * @param[in] filename name of file to examine.
+ */
 void rox_filer_examine(const char *filename)
 {
   simple_call("Examine", "Filename", filename);
@@ -137,6 +168,12 @@ static const char *panel_side(ROXPanelSide side)
   return sidename;
 }
 
+/**
+ * Call the Panel method to set the panel on a side.
+ *
+ * @param[in] name name of the panel
+ * @param[in] side side of the screen to place the panel
+ */
 void rox_filer_panel(const char *name, ROXPanelSide side)
 {
   xmlDocPtr rpc;
@@ -157,6 +194,15 @@ void rox_filer_panel(const char *name, ROXPanelSide side)
   xmlFreeDoc(rpc);
 }
 
+/**
+ * Add an object to a panel.
+ *
+ * @param[in] side the panel to add to
+ * @param[in] path path name of object to be added.
+ * @param[in] after if @c FALSE the object is added to the end of the group of
+ * icons at the start, otherwise is is added to the start of the icons at the
+ * end.
+ */
 void rox_filer_panel_add(ROXPanelSide side, const char *path, int after)
 {
   xmlDocPtr rpc;
@@ -182,11 +228,23 @@ void rox_filer_panel_add(ROXPanelSide side, const char *path, int after)
   xmlFreeDoc(rpc);
 }
 
+/**
+ * Set the name of the pinboard.
+ *
+ * @param[in] name name of the panel.
+ */
 void rox_filer_pinboard(const char *name)
 {
   simple_call("Pinboard", "Name", name);
 }
      
+/**
+ * Add an object to the pinboard.
+ *
+ * @param[in] path path name of object to be added.
+ * @param[in] x x coordinate of position on pinboard
+ * @param[in] y y coordinate of position on pinboard
+ */
 void rox_filer_pinboard_add(const char *path, int x, int y)
 {
   xmlDocPtr rpc;
@@ -207,11 +265,22 @@ void rox_filer_pinboard_add(const char *path, int x, int y)
   xmlFreeDoc(rpc);
 }
 
+/**
+ * Call the Run method to run a file.
+ *
+ * @param[in] filename name of object to run.
+ */
 void rox_filer_run(const char *filename)
 {
   simple_call("Run", "Filename", filename);
 }
 
+/**
+ * Show a directory viewer with the named file highlighted.
+ *
+ * @param[in] directory name of directory to show
+ * @param[in] leafname name of file in directory to highlight.
+ */
 void rox_filer_show(const char *directory, const char *leafname)
 {
   xmlDocPtr rpc;
@@ -253,25 +322,71 @@ static void do_transfer_op(const char *action, const char *from,
   xmlFreeDoc(rpc);
 }
 
+/**
+ * Copy a file.  If @a leafname is @c NULL then copy object @a from to
+ * destination @a to, otherwise copy @a leafname in directory @a from to
+ * directory @a to.
+ *
+ * @param[in] from object to copy or directory file is in
+ * @param[in] to path to copy object to, or destination directory.
+ * @param[in] leafname if not @c NULL the file in @a from to be copied
+ * to directory @a to.
+ * @param[in] quiet if @c TRUE then the operation is quiet (no confirmation
+ * required), if @c FALSE then confirmation is needed.  If #ROX_FILER_DEFAULT
+ * then the setting is taken from the filer's current options.
+ */
 void rox_filer_copy(const char *from, const char *to,
 			   const char *leafname, int quiet)
 {
   do_transfer_op("Copy", from, to, leafname, quiet);
 }
   
+/**
+ * Move a file.  If @a leafname is @c NULL then move object @a from to
+ * destination @a to, otherwise move @a leafname in directory @a from to
+ * directory @a to.
+ *
+ * @param[in] from object to move or directory file is in
+ * @param[in] to path to move object to, or destination directory.
+ * @param[in] leafname if not @c NULL the file in @a from to be moved
+ * to directory @a to.
+ * @param[in] quiet if @c TRUE then the operation is quiet (no confirmation
+ * required), if @c FALSE then confirmation is needed.  If #ROX_FILER_DEFAULT
+ * then the setting is taken from the filer's current options.
+ */
 void rox_filer_move(const char *from, const char *to,
 			   const char *leafname, int quiet)
 {
   do_transfer_op("Copy", from, to, leafname, quiet);
 }
   
+/**
+ * Create a symbolic link.  If @a leafname is @c NULL then link object @a from to
+ * destination @a to, otherwise link @a leafname in directory @a from to
+ * directory @a to.
+ *
+ * @param[in] from object to link or directory file is in
+ * @param[in] to path to create link, or destination directory.
+ * @param[in] leafname if not @c NULL the file in @a from to be linked
+ * to directory @a to.
+ */
 void rox_filer_link(const char *from, const char *to,
 			   const char *leafname)
 {
   do_transfer_op("Copy", from, to, leafname, ROX_FILER_DEFAULT);
 }
 
-
+/**
+ * Mount a known mountpoint (defined in /etc/fstab or /etc/vfstab).
+ *
+ * @param[in] mountpoint path to mount point defined in system file
+ * @param[in] quiet if @c TRUE then the operation is quiet (no confirmation
+ * required), if @c FALSE then confirmation is needed.  If #ROX_FILER_DEFAULT
+ * then the setting is taken from the filer's current options.
+ * @param[in] opendir if @c TRUE then a new filer window is opened for the
+ * mounted directory.  If #ROX_FILER_DEFAULT
+ * then the setting is taken from the filer's current options.
+ */
 void rox_filer_mount(const char *mountpoint, int quiet, int opendir)
 {
   xmlDocPtr rpc;
@@ -405,6 +520,13 @@ static void string_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
   dprintf(2, "returning from string_reply");
 }
 
+/**
+ * Determine the MIME type of a file by asking ROX-Filer.
+ *
+ * @param[in] file name of file to identify
+ * @return MIME type of file, in form "media/sub-type" (pass to g_free() when
+ * done), or @c NULL if failed
+ */
 char *rox_filer_file_type(const char *file)
 {
   xmlDocPtr rpc;
@@ -427,6 +549,12 @@ char *rox_filer_file_type(const char *file)
   return ans;
 }
 
+
+/**
+ * Get ROX-Filer's version string.
+ *
+ * @return version string (pass to g_free() when done), or @c NULL if failed
+ */
 char *rox_filer_version(void)
 {
   xmlDocPtr rpc;
@@ -448,11 +576,21 @@ char *rox_filer_version(void)
   return ans;
 }
 
+/**
+ * Check for error in talking to ROX-Filer.  Errors are not normally
+ * reported back to the caller, but are recorded.  Only the most recent error
+ * is returned.
+ *
+ * @return non-zero if an error is recorded.
+ */
 int rox_filer_have_error(void)
 {
   return !!last_error;
 }
 
+/**
+ * @return text string containing last known error, do not free
+ */
 const char *rox_filer_get_last_error(void)
 {
   if(last_error)
@@ -461,6 +599,9 @@ const char *rox_filer_get_last_error(void)
   return "No error";
 }
 
+/**
+ * Clear any recorded error
+ */
 void rox_filer_clear_error(void)
 {
   last_error=NULL;
@@ -468,6 +609,9 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.11  2004/05/05 19:24:18  stephen
+ * Extra debug (problem when target for SOAP doesn't exist)
+ *
  * Revision 1.10  2003/03/25 14:31:34  stephen
  * New attempt at working SOAP code.
  *

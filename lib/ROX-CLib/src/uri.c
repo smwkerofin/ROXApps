@@ -1,7 +1,15 @@
 /*
  * uri.c - utilities for uri handling and launching
  *
- * $Id$
+ * $Id: uri.c,v 1.1 2004/10/02 13:10:28 stephen Exp $
+ */
+
+/**
+ * @file uri.c
+ * @brief Utilities for uri handling and launching.
+ *
+ * @author Stephen Watson
+ * @version $Id$
  */
 
 #include "rox-clib.h"
@@ -21,7 +29,13 @@
 
 
 /* handle % escapes in DnD */
-/* Escape path for future use in URI */
+/**
+ * Escape path for future use in URI by replacing problematic characters
+ * with a %xx escape sequence.
+ *
+ * @param[in] path path to be escaped
+ * @return escaped path, pass to g_free() when done.
+ */
 gchar *rox_escape_uri_path(const char *path)
 {
   const char *safe = "-_./"; /* Plus isalnum() */
@@ -44,6 +58,11 @@ gchar *rox_escape_uri_path(const char *path)
   return ans;
 }
 
+/**
+ * Return the canonical hostname for use in drag and drop.
+ *
+ * @return host name
+ */
 const gchar *rox_hostname(void)
 {
   static char host[1025]={0};
@@ -58,6 +77,13 @@ const gchar *rox_hostname(void)
   return host;
 }
 
+/**
+ * Convert a local path into a file: URI with problematic characters
+ * replaced with %xx escapes.
+ *
+ * @param[in] path to encode
+ * @return the converted URI, pass to g_free() when done.
+ */
 gchar *rox_encode_path_as_uri(const guchar *path)
 {
   gchar *tpath = rox_escape_uri_path(path);
@@ -70,6 +96,12 @@ gchar *rox_encode_path_as_uri(const guchar *path)
   return uri;
 }
 
+/**
+ * Convert a URI with %xx escapes into one without
+ *
+ * @param[in] uri URI to be converted.
+ * @return converted URI, pass to g_free() when done.
+ */
 gchar *rox_unescape_uri(const char *uri)
 {
   const gchar *s;
@@ -98,6 +130,18 @@ gchar *rox_unescape_uri(const char *uri)
   return tmp;
 }
 
+/**
+ * Launch a URI.  If there is a handler for the MIME type text/x-uri then
+ * that is executed with '-' as a single argument and the URI pass in on
+ * standard input.  If there is no such handler then each of the following
+ * commands is tried in turn:
+ * - gnome-moz-remote --newwin @a uri
+ * - mozilla @a uri
+ * - netscape @a uri
+ *
+ * @param[in] uri URI to launch
+ * @return exit status of the last attempted command (0 for success).
+ */
 int rox_uri_launch(const char *uri)
 {
   gchar *text_x_uri=choices_find_path_load("text_x-uri", "MIME-types");
@@ -143,5 +187,9 @@ int rox_uri_launch(const char *uri)
 }
 
 /*
- * $Log$
+ * $Log: uri.c,v $
+ * Revision 1.1  2004/10/02 13:10:28  stephen
+ * Added uri.h and rox_uri_launch() (and moved some stuff from rox_path
+ * there) to better handle launching URIs.  ROXInfoWin now uses it.
+ *
  */

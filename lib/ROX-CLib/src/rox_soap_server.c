@@ -1,9 +1,21 @@
 /*
- * $Id: rox_soap_server.c,v 1.7 2004/04/07 19:26:59 stephen Exp $
+ * $Id: rox_soap_server.c,v 1.8 2005/03/04 17:22:18 stephen Exp $
  *
  * rox_soap_server.c - Provide ROX-Filer like SOAP server
  *
  * Mostly adapted from ROX-Filer/src/remote.c by Thomas Leonard
+ */
+
+/**
+ * @file rox_soap_server.c
+ * @brief Provide ROX-Filer like SOAP server.
+ *
+ * SOAP allows you to communicate with server programs via the X server.
+ * You may implement your applications to function from a single instance
+ * no matter how many times they are started, much as ROX-Filer does itself.
+ *
+ * @author Thomas Leonard, Stephen Watson
+ * @version $Id$
  */
 
 #include "rox-clib.h"
@@ -54,6 +66,9 @@ static GdkAtom xsoap;
 static gboolean done_init=FALSE;
 #define check_init() do {if(!done_init)rox_soap_server_init();} while(0)
 
+/**
+ * Initialize the SOAP server system
+ */
 void rox_soap_server_init(void)
 {
   xsoap=gdk_atom_intern("_XSOAP", FALSE);
@@ -61,6 +76,14 @@ void rox_soap_server_init(void)
   done_init=TRUE;
 }
 
+/**
+ * Create and return a new server instance.
+ *
+ * @param[in] program_name name of the progam, this is used as an
+ * element name in the XML SOAP message
+ * @param[in] ns_url name space URL for the XML
+ * @return pointer to server instance, free with rox_soap_server_delete().
+ */
 ROXSOAPServer *rox_soap_server_new(const char *program_name,
 				   const char *ns_url)
 {
@@ -94,6 +117,21 @@ ROXSOAPServer *rox_soap_server_new(const char *program_name,
   return server;
 }
 
+/**
+ * Add an action to the server.  An action is a call that can be made on the
+ * server.  It can have 0 or more named arguments, some of which may be
+ * optional.
+ *
+ * @param[in,out] server the server instance.
+ * @param[in] action_name Name of the action, must be a valid XML element name
+ * without a name space.
+ * @param[in] args comma seperated list of required  arguments, in the order
+ * they will be presented to the @a action function.
+ * @param[in] optional_args comma seperated list of optional
+ * arguments, in the order they will bepresented to the @a action function.
+ * @param[in] action function to call to process the action 
+ * @param[in] udata addtional data to pass to @a action
+ */
 void rox_soap_server_add_action(ROXSOAPServer *server,
 				const char *action_name,
 				const char *args,
@@ -113,6 +151,13 @@ void rox_soap_server_add_action(ROXSOAPServer *server,
   g_hash_table_insert(server->actions, g_strdup(action_name), act);
 }
 
+/**
+ * Add a number of actions to the server, see rox_soap_server_add_action().
+ *
+ * @param[in,out] server the server instance.
+ * @param[in] actions array of actions, terminated by a @c NULL
+ * ROXSOAPServerActions.action_name.
+ */
 void rox_soap_server_add_actions(ROXSOAPServer *server,
 				 ROXSOAPServerActions *actions)
 {
@@ -135,6 +180,11 @@ static void action_table_free(gpointer key, gpointer value, gpointer udata)
   g_free(action);
 }
 
+/**
+ * Delete the server instance.  Its actions can no longer be called.
+ *
+ * @param[in,out] server server instance to delete.
+ */
 void rox_soap_server_delete(ROXSOAPServer *server)
 {
   g_free((gpointer) server->ns_url);
@@ -149,7 +199,8 @@ void rox_soap_server_delete(ROXSOAPServer *server)
 /* Return the (first) child of this node with the given name.
  * NULL if not found.
  */
-xmlNode *get_subnode(xmlNode *node, const char *namespaceURI, const char *name)
+static xmlNode *get_subnode(xmlNode *node, const char *namespaceURI,
+		     const char *name)
 {
   for (node = node->xmlChildrenNode; node; node = node->next) {
     if (node->type != XML_ELEMENT_NODE)
@@ -241,7 +292,7 @@ static xmlNodePtr soap_invoke(ROXSOAPServer *server, xmlNode *method)
 /* Executes the RPC call(s) in the given SOAP message and returns
  * the reply.
  */
-xmlDocPtr run_soap(ROXSOAPServer *server, xmlDocPtr soap)
+static xmlDocPtr run_soap(ROXSOAPServer *server, xmlDocPtr soap)
 {
   xmlNodePtr body, node, rep_body, reply;
   xmlDocPtr rep_doc = NULL;
@@ -410,3 +461,6 @@ static gboolean client_event(GtkWidget *window,
   return TRUE;
 }
 
+/*
+ * $Log$
+ */

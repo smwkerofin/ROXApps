@@ -1,19 +1,34 @@
 /*
- * $Id: rox_filer_action.h,v 1.3 2002/02/27 16:28:09 stephen Exp $
+ * $Id: rox_filer_action.h,v 1.4 2002/03/19 08:29:19 stephen Exp $
  *
  * rox_filer_action.h - drive the filer via SOAP
+ */
+
+/**
+ * @file rox_filer_action.h
+ * @brief  Drive the filer via the SOAP calls.
+ *
+ * @author Stephen Watson
+ * @version $Id$
  */
 
 #ifndef _rox_filer_action_h
 #define _rox_filer_action_h
 
+/** Name space of ROX-Filer's SOAP messages */
 #define ROX_NAMESPACE_URL "http://rox.sourceforge.net/SOAP/ROX-Filer"
 
+/**
+ * Available panels.
+ */
 typedef enum panel_side {
-  ROXPS_TOP,ROXPS_BOTTOM,ROXPS_LEFT,ROXPS_RIGHT
+  ROXPS_TOP,        /**< Panel is on the top of the screen */
+  ROXPS_BOTTOM,     /**< Panel is on the bottom of the screen */
+  ROXPS_LEFT,       /**< Panel is on the left of the screen */
+  ROXPS_RIGHT,      /**< Panel is on the right of the screen */
 } ROXPanelSide;
 
-#define ROX_FILER_DEFAULT (-1)  /* Use default setting of option */
+#define ROX_FILER_DEFAULT (-1)  /**< Use default setting of option */
 
 extern void rox_filer_open_dir(const char *filename);
 extern void rox_filer_close_dir(const char *filename);
@@ -48,6 +63,10 @@ extern void rox_filer_clear_error(void);
 
 /*
  * $Log: rox_filer_action.h,v $
+ * Revision 1.4  2002/03/19 08:29:19  stephen
+ * Added SOAP server (rox_soap_server.h).  SOAP client can connect to programs
+ * other than ROX-Filer.
+ *
  * Revision 1.3  2002/02/27 16:28:09  stephen
  * Add support for PanelAdd and PinboardAdd (assuming they get into the
  * filer)

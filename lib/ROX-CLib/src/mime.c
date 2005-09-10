@@ -1,7 +1,15 @@
 /*
- * $Id: mime.c,v 1.1 2004/03/25 13:10:40 stephen Exp $
+ * $Id: mime.c,v 1.2 2004/05/22 17:03:57 stephen Exp $
  *
  * Shared MIME databse functions for ROX-CLib
+ */
+
+/**
+ * @file mime.c
+ * @brief Shared MIME database functions for ROX-CLib
+ *
+ * @author Thomas Leonard, Stephen Watson
+ * @version $Id$
  */
 
 #include "rox-clib.h"
@@ -21,6 +29,9 @@
 #include "basedir.h"
 #include "mime.h"
 
+/**
+ * XML name space of the MIME definitions.
+ */
 #define TYPE_NS "http://www.freedesktop.org/standards/shared-mime-info"
 
 /* Globals */
@@ -36,26 +47,31 @@ MIMEType *inode_char;
 MIMEType *inode_door;
 MIMEType *inode_unknown;
 
+/** Normal files of undefined type default to text/plain */
 #define UNKNOWN text_plain
 
-/* The first pattern in the list which matches is used */
+/** The first pattern in the list which matches is used */
 typedef struct pattern {
-  gint len;		/* Used for sorting */
-  gchar *glob;
-  MIMEType *type;
+  gint len;		/**< Used for sorting the list, longest pattern
+			 * first */
+  gchar *glob;          /**< glob pattern, such as *.txt */
+  MIMEType *type;       /**< Type for this pattern */
 } Pattern;
 
-/* List of all defined types */
+/** List of all defined types */
 static GHashTable *all_types=NULL;
 
 /* Ways to look up types */
-static GHashTable *literals=NULL;  /* By full leaf name */
-static GHashTable *exten=NULL;     /* .jpg -> image/jpeg */
-static GPtrArray *globs=NULL;      /* README* -> text/x-readme */
+static GHashTable *literals=NULL;  /**< Type by full leaf name */
+static GHashTable *exten=NULL;     /**< Type by extension, .jpg -> image/jpeg */
+static GPtrArray *globs=NULL;      /**< Type by pattern README* -> text/x-readme */
 
 /* config */
-static int by_content=FALSE;   /* Currently ignored */
-static int ignore_exec=FALSE;
+static int by_content=FALSE;   /**< If non-zero check the file contents to
+				* identify the type, currently ignored */
+static int ignore_exec=FALSE;  /**< If zero all files with an execute
+				* bit set are returned as
+				* application/executable */
 
 /* Local functions */
 static MIMEType *get_type(const char *name, int can_create);
@@ -63,6 +79,10 @@ static void load_mime_types(void);
 static void get_comment(MIMEType *type);
 static MIMEType *type_by_path(const char *path);
 
+/**
+ * Initialize the MIME type system.  This must be called before the
+ * other functions.
+ */
 void mime_init(void)
 {
   all_types=g_hash_table_new(g_str_hash, g_str_equal);
@@ -85,6 +105,30 @@ void mime_init(void)
   load_mime_types();
 }
 
+/**
+ * Return the MIME type of the named object.
+ *
+ * If the object does not exist, or
+ * is in an unsearchable directory, then the type returned is based purely
+ * on the name.
+ *
+ * If the object does exist then the type of file is checked.  If it is a
+ * non-file object (such as a directory)  then the appropriate inode/* type
+ * is returned.  If it is a file and is executable and the
+ * mime_get_ignore_exec_bit() value is @c FALSE then application/executable
+ * is returned.
+ *
+ * If mime_get_by_content() is not @c FALSE and content checking is
+ * implemented (it currently is not) and a type is identified it is returned.
+ *
+ * If the type can be identified by the name then that is returned.
+ *
+ * Finally if the execute bit is set application/executable is returned,
+ * otherwise #UNKNOWN.
+ *
+ * @param[in] path path to object to check, or a name of a non-existant file
+ * @return the identified type.
+ */
 MIMEType *mime_lookup(const char *path)
 {
   MIMEType *type=NULL;
@@ -124,11 +168,24 @@ MIMEType *mime_lookup(const char *path)
   return exec? application_executable: UNKNOWN;
 }
 
+/**
+ * Return the type of a file based purely on the name.  The file need not
+ * exist or be readable.
+ *
+ * @param[in] name name of file
+ * @return the identified type.
+ */
 MIMEType *mime_lookup_by_name(const char *name)
 {
   return get_type(name, TRUE);
 }
 
+/**
+ * Return the human readable name of the type, in the form media/sub-type
+ *
+ * @param[in] type type to return name of.
+ * @return the name, pass to g_free() when done.
+ */
 char *mime_type_name(const MIMEType *type)
 {
   char *s;
@@ -227,6 +284,13 @@ static void get_comment(MIMEType *type)
   g_list_free(files);
 }
 
+/**
+ * Return the comment of a MIME type (the long form of a name, e.g. "
+ * Text document")
+ *
+ * @param[in] type the type
+ * @return the comment
+ */
 const char *mime_type_comment(MIMEType *type)
 {
   g_return_val_if_fail(type!=NULL, NULL);
@@ -237,21 +301,52 @@ const char *mime_type_comment(MIMEType *type)
   return type->comment? type->comment: "unknown";
 }
 
+/**
+ * Set how the MIME system treats executable files.  If @a ignore is @c FALSE
+ * then all executable files will be identified as application/executable
+ *
+ * @param[in] ignore the new value of the ignore_exec flag.
+ */
 void mime_set_ignore_exec_bit(int ignore)
 {
   ignore_exec=ignore;
 }
 
+/**
+ * Return how the MIME system treats executable files, see
+ * mime_set_ignore_exec_bit().
+ *
+ * @return the value of the ignore_exec flag.
+ */
 int mime_get_ignore_exec_bit(void)
 {
   return ignore_exec;
 }
 
+/**
+ * Set how the MIME system deals with the content of files.  If @a content is
+ * @c FALSE then the content of the files will never be read to identify the
+ * type.
+ *
+ * Currently this flag has no effect as identifying files by content is not
+ * yet supported.
+ *
+ * @param[in] content the new value of the by_cotnent flag.
+ */
 void mime_set_by_content(int content)
 {
   by_content=content;
 }
 
+/**
+ * Return how the MIME system deals with the content of files, see
+ * mime_set_by_content().
+ *
+ * Currently this flag has no effect as identifying files by content is not
+ * yet supported.
+ *
+ * @return the value of the by_content flag.
+ */
 int mime_get_by_content(void)
 {
   return by_content;
@@ -433,6 +528,9 @@ static MIMEType *type_by_path(const char *path)
 
 /*
  * $Log: mime.c,v $
+ * Revision 1.2  2004/05/22 17:03:57  stephen
+ * Added AppInfo parser
+ *
  * Revision 1.1  2004/03/25 13:10:40  stephen
  * Added basedir and mime
  *

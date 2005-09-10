@@ -1,7 +1,18 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.7 2003/08/20 20:57:44 stephen Exp $
+ * $Id: rox_dnd.c,v 1.8 2003/12/13 19:26:05 stephen Exp $
+ */
+
+/**
+ * @file rox_dnd.c
+ * @brief  Utilities for using drag & drop with ROX apps.
+ *
+ * This provides the receiver part of the protocol.  The sender part is
+ * handled by #GtkSavebox.
+ *
+ * @author Stephen Watson
+ * @version $Id$
  */
 
 #include "rox-clib.h"
@@ -71,6 +82,11 @@ static gboolean init_done=FALSE;
 
 #define check_init() do { if(!init_done) rox_dnd_init();} while(0)
 
+/**
+ * Initialize the drag and drop system.  Calling this function is optional,
+ * the other dnd functions will call this automatically if they detect that
+ * initialization has not been performed.
+ */
 void rox_dnd_init(void)
 {
   XdndDirectSave0 = gdk_atom_intern("XdndDirectSave0", FALSE);
@@ -82,6 +98,15 @@ void rox_dnd_init(void)
   init_done=TRUE;
 }
 
+/**
+ * Register callback functions for handling drag and drop on a widget.
+ *
+ * @param[in] widget widget which will accept drops.
+ * @param[in] flags bit mask of flags.  None are currently defined.
+ * @param[in] uris function to call to handle the text/uri-list protocol.
+ * @param[in] xds function to call to handle the X Direct Save protocol.
+ * @param[in] udata additional user data to pass to callback functions.
+ */
 void rox_dnd_register_full(GtkWidget *widget,
 				  guint flags,
 				  rox_dnd_handle_uris uris,
@@ -309,6 +334,14 @@ static void got_uri_list(GtkWidget 		*widget,
   g_slist_free(uri_list);
 }
 
+/**
+ * Given a list of URIs return only those which are local files.  Uses
+ * rox_path_get_local().
+ *
+ * @param[in] uris list of URIs.
+ * @return list of local paths (pass to rox_dnd_local_free() when done,
+ * or @c NULL if none of the URIs were local files.
+ */
 GSList *rox_dnd_filter_local(GSList *uris)
 {
   GSList *filt=NULL;
@@ -326,6 +359,11 @@ GSList *rox_dnd_filter_local(GSList *uris)
   return filt;
 }
 
+/**
+ * Free a list of local files returned by rox_dnd_filter_local().
+ *
+ * @param[in,out] paths list of local files returned by rox_dnd_filter_local().
+ */
 void rox_dnd_local_free(GSList *paths)
 {
   GSList *t;
@@ -424,6 +462,10 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.8  2003/12/13 19:26:05  stephen
+ * Exposed functions to escape and unescape uri's.
+ * rox_path_get_local() and rox_path_get_path() now unescape uri's.
+ *
  * Revision 1.7  2003/08/20 20:57:44  stephen
  * Handle % escaped URI's
  *
