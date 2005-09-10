@@ -1,11 +1,13 @@
 /*
- * $Id: rox_resources.h,v 1.1 2001/11/05 14:00:27 stephen Exp $
+ * $Id: rox_resources.h,v 1.2 2005/08/14 16:07:00 stephen Exp $
  */
 /**
  * @file rox_resources.h
  * @brief Find internationalized resource files.
  *
- * 
+ *
+ * @author Stephen Watson
+ * @version $Id$
  */
 
 #ifndef _rox_resources_h
@@ -36,6 +38,10 @@ extern gchar *rox_resources_find_with_domain(const gchar *app_name,
 
 /*
  * $Log: rox_resources.h,v $
+ * Revision 1.2  2005/08/14 16:07:00  stephen
+ * Added rox_resources_find_with_domain().
+ * More doxygen additions.
+ *
  * Revision 1.1  2001/11/05 14:00:27  stephen
  * Added resources finding function
  *

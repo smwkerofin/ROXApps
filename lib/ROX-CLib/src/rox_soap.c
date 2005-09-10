@@ -1,11 +1,23 @@
 /*
- * $Id: rox_soap.c,v 1.13 2004/07/31 12:25:14 stephen Exp $
+ * $Id: rox_soap.c,v 1.14 2005/03/04 17:22:18 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
  *
  * Mostly adapted from ROX-Filer/src/remote.c by Thomas Leonard
  */
+/**
+ * @file rox_soap.c
+ * @brief Interface to server programs using the SOAP protocol.
+ *
+ * SOAP allows you to communicate with server programs via the X server.
+ * You may implement your applications to function from a single instance
+ * no matter how many times they are started, much as ROX-Filer does itself.
+ *
+ * @author Thomas Leonard, Stephen Watson
+ * @version $Id$
+ */
+
 #include "rox-clib.h"
 
 #include <stdlib.h>
@@ -35,12 +47,20 @@
 
 #define TIMEOUT 10000
 
-typedef struct program {
-  const char *name;
-  const char *atom_format;
-  const char *command;    /* Feed it the SOAP data via stdin */
+/**
+ * Definition of how we contact a program.
+ */
+typedef struct program { 
+  const char *name;         /**< Name of program */
+  const char *atom_format;  /**< Format of atom used for communication,
+			     * see rox_soap_define_program() */
+  const char *command;      /**< Command to execute if a running instance
+			     * cannot be contacted. */
 } Program;
 
+/**
+ * @internal connection to program
+ */
 struct rox_soap {
   Program *prog;
   GdkAtom atom;
@@ -49,6 +69,9 @@ struct rox_soap {
   guint timeout;
 };
 
+/**
+ * @internal record of a single message via IPC
+ */
 typedef struct soap_data {
   ROXSOAP *filer;
   rox_soap_callback callback;
@@ -60,6 +83,9 @@ typedef struct soap_data {
   gint done_called;
 } SoapData;
 
+/**
+ * @internal record of a single message via a pipe
+ */
 typedef struct soap_pipe_data {
   ROXSOAP *filer;
   rox_soap_callback callback;
@@ -98,6 +124,9 @@ last_error=last_error_buffer;return;}}while(0);
 do{if(!(expr)){sprintf(last_error_buffer,"assertion '%s' failed",#expr); \
 last_error=last_error_buffer;return val;}}while(0);
 
+/**
+ * Initialize the SOAP system.
+ */
 void rox_soap_init(void)
 {
   gchar *id;
@@ -123,6 +152,11 @@ void rox_soap_init(void)
   done_init=TRUE;
 }
 
+/**
+ * Open connection to ROX-Filer.
+ *
+ * @return connection to ROX-Filer.
+ */
 ROXSOAP *rox_soap_connect_to_filer(void)
 {
   ROXSOAP *filer=g_new(ROXSOAP, 1);
@@ -139,6 +173,9 @@ ROXSOAP *rox_soap_connect_to_filer(void)
   return filer;
 }
 
+/**
+ * Close connection to a SOAP server.
+ */
 void rox_soap_close(ROXSOAP *con)
 {
   g_free(con);
@@ -174,6 +211,16 @@ static Program *find_program(const char *name)
   return nprog;
 }
 
+/** 
+ * Define how to connect to the named program. An entry for ROX-Filer is
+ * pre-defined.
+ *
+ * @param[in] name name of program as passed to rox_soap_connect().
+ * @param[in] atom_format format of atom name to use to connect, %e is
+ * effective UID, %h is fully qualified domain name (FQDN) of display
+ * @param[in] command command that may be fed the SOAP document on stdin if
+ *            connecting via the atom fails, may be @c NULL
+ */
 void rox_soap_define_program(const char *name, const char *atom_format,
 			     const char *command)
 {
@@ -232,6 +279,15 @@ static char *make_atom_name(Program *prog)
   return tmp;
 }
 
+/**
+ * Returns the name of the atom which will be used to locate the given program.
+ * It uses the format given in the rox_soap_define_program() call, with the
+ * defined substitutions.
+ *
+ * @param[in] name name of program
+ * @return atom name to use (pass to g_free() when done) or @c NULL if
+ * the program is not known.
+ */
 char *rox_soap_atom_name_for_program(const char *name)
 {
   Program *prog=find_program(name);
@@ -239,6 +295,11 @@ char *rox_soap_atom_name_for_program(const char *name)
   return prog? make_atom_name(prog): NULL;
 }
 
+/*
+ * Open the connection to the named program
+ *
+ * @return connection to program.
+ */
 ROXSOAP *rox_soap_connect(const char *name)
 {
   ROXSOAP *soap;
@@ -267,6 +328,12 @@ ROXSOAP *rox_soap_connect(const char *name)
   return soap;
 }
 
+/*
+ * Check connection to the named program.
+ *
+ * @param[in] prog name of program to ping
+ * @return @c TRUE if the program is contactable via SOAP, @c FALSE otherwise.
+ */
 gboolean rox_soap_ping(const char *prog)
 {
   Program *program;
@@ -284,6 +351,18 @@ gboolean rox_soap_ping(const char *prog)
   return get_existing_ipc_window(atom)!=NULL;
 }
 
+/**
+ * Build part of XML document to send.
+ * The action to perform is in name space @a ns_url.  Add arguments to the node
+ * @a act, then call rox_soap_send() with the return value.
+ *
+ * @param[in] action Action to perform, the name of the element in the
+ * SOAP body.
+ * @param[in] ns_url name space of the program
+ * @param[out] act XML node, with name @a action, where arguments may
+ * be added
+ * @return XML document defining the SOAP message to send.
+ */
 xmlDocPtr rox_soap_build_xml(const char *action, const char *ns_url,
 			     xmlNodePtr *act)
 {
@@ -486,7 +565,23 @@ static void destroy_ipc_window(GtkWidget *ipc_window, SoapData *sdata)
   g_free(sdata);
 }
 
-gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
+/**
+ * Send the XML document to a program using SOAP.  If @a run_prog is @c TRUE
+ * and there is no program to talk to, use rox_soap_send_via_pipe().
+ * When complete callback is called with the status and reply.
+ *
+ * @param[in] prog connection to program
+ * @param[in] doc XML document containg SOAP message
+ * @param[in] run_prog if @c FALSE and the program could not be contacted,
+ * then return failure.  Otherwise if a command has been defined (see
+ * rox_soap_define_program()) execute that and send @a doc to its standard
+ * input and read back the reply from its standard output.
+ * @param[in] callback function to call after contact has been made and
+ * the server returns success or failure.
+ * @param[in] udata addtional data to pass to @a callback.
+ * @return @c FALSE if the call failed, see rox_soap_get_last_error().
+ */
+gboolean rox_soap_send(ROXSOAP *prog, xmlDocPtr doc, gboolean run_prog,
 		       rox_soap_callback callback, gpointer udata)
 {
   GtkWidget	*ipc_window;
@@ -496,24 +591,24 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   GdkEventClient event;
   SoapData *sdata;
 
-  rox_soap_return_val_if_fail(filer!=NULL, FALSE);
+  rox_soap_return_val_if_fail(prog!=NULL, FALSE);
   rox_soap_return_val_if_fail(doc!=NULL, FALSE);
   rox_soap_return_val_if_fail(callback!=NULL, FALSE);
   
   if(!done_init)
     rox_soap_init();
 
-  if(!filer->existing_ipc_window)
-    filer->existing_ipc_window=get_existing_ipc_window(filer->atom);
-  dprintf(3, "existing_ipc_window %p", filer->existing_ipc_window);
-  if(!filer->existing_ipc_window && (!run_filer || !filer->prog->command)) {
-    sprintf(last_error_buffer, "No %s to target", filer->prog->name);
+  if(!prog->existing_ipc_window)
+    prog->existing_ipc_window=get_existing_ipc_window(prog->atom);
+  dprintf(3, "existing_ipc_window %p", prog->existing_ipc_window);
+  if(!prog->existing_ipc_window && (!run_prog || !prog->prog->command)) {
+    sprintf(last_error_buffer, "No %s to target", prog->prog->name);
     last_error=last_error_buffer;
     return FALSE;
   }
 
-  if(!filer->existing_ipc_window) {
-    return rox_soap_send_via_pipe(filer, doc, callback, udata);
+  if(!prog->existing_ipc_window) {
+    return rox_soap_send_via_pipe(prog, doc, callback, udata);
   }
 
   xmlDocDumpMemory(doc, &mem, &size);
@@ -528,14 +623,14 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   dprintf(2, "ipc_window=%p ref=%d", ipc_window,
 	  G_OBJECT(ipc_window)->ref_count);
 
-  gdk_property_change(ipc_window->window, filer->xsoap,
+  gdk_property_change(ipc_window->window, prog->xsoap,
 		      gdk_x11_xatom_to_atom(XA_STRING), 8,
 		      GDK_PROP_MODE_REPLACE, mem, size);
   g_free(mem);
   dprintf(3, "set property %p on %p", xsoap, ipc_window->window);
 
   sdata=g_new(SoapData, 1);
-  sdata->filer=filer;
+  sdata->filer=prog;
   sdata->callback=callback;
   sdata->data=udata;
   sdata->prop=xsoap;
@@ -543,9 +638,9 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
   sdata->done_called=0;
   
   event.data.l[0] = GDK_WINDOW_XWINDOW(ipc_window->window);
-  event.data.l[1] = gdk_x11_atom_to_xatom(filer->xsoap);
+  event.data.l[1] = gdk_x11_atom_to_xatom(prog->xsoap);
   event.data_format = 32;
-  event.message_type = filer->xsoap;
+  event.message_type = prog->xsoap;
   dprintf(3, "event->data.l={%p, %p}", event.data.l[0], event.data.l[1]);
 	
   gtk_widget_add_events(ipc_window, GDK_PROPERTY_CHANGE_MASK);
@@ -553,15 +648,15 @@ gboolean rox_soap_send(ROXSOAP *filer, xmlDocPtr doc, gboolean run_filer,
 				     G_CALLBACK(soap_done), sdata);
   
   dprintf(2, "sending message %p to %p", event.message_type,
-	  filer->existing_ipc_window);
+	  prog->existing_ipc_window);
   gdk_event_send_client_message((GdkEvent *) &event,
-		       	GDK_WINDOW_XWINDOW(filer->existing_ipc_window));
+		       	GDK_WINDOW_XWINDOW(prog->existing_ipc_window));
   dprintf(3, "sent message to %p",
-	  GDK_WINDOW_XWINDOW(filer->existing_ipc_window));
+	  GDK_WINDOW_XWINDOW(prog->existing_ipc_window));
 
   /*g_signal_connect(ipc_window, "destroy",
     G_CALLBACK(destroy_ipc_window), sdata);*/
-  sdata->timeout_tag=g_timeout_add(filer->timeout, too_slow, sdata);
+  sdata->timeout_tag=g_timeout_add(prog->timeout, too_slow, sdata);
 
   return TRUE;
 }
@@ -626,19 +721,39 @@ static void read_from_pipe(gpointer data, gint com, GdkInputCondition cond)
   }
 }
 
-gboolean rox_soap_send_via_pipe(ROXSOAP *filer, xmlDocPtr doc,
+/**
+ * Send the XML document to a program using SOAP by executing the defined
+ * program, sending @a doc to its standard
+ * input and reading back the reply from its standard output.  If no
+ * command has been defined for the program then the call fails.
+ *
+ * When complete callback is called with the status and reply.
+ *
+ * @param[in] prog connection to program
+ * @param[in] doc XML document containg SOAP message
+ * @param[in] callback function to call after contact has been made and
+ * the server returns success or failure.
+ * @param[in] udata addtional data to pass to @a callback.
+ * @return @c FALSE if the call failed, see rox_soap_get_last_error().
+ */
+gboolean rox_soap_send_via_pipe(ROXSOAP *prog, xmlDocPtr doc,
 				rox_soap_callback callback, gpointer udata)
 {
   SoapPipeData *sdata;
   int tch[2], fch[2];
   FILE *out;
 
-  rox_soap_return_val_if_fail(filer!=NULL, FALSE);
+  rox_soap_return_val_if_fail(prog!=NULL, FALSE);
   rox_soap_return_val_if_fail(doc!=NULL, FALSE);
   rox_soap_return_val_if_fail(callback!=NULL, FALSE);
+
+  if(!prog->prog->command) {
+    sprintf(last_error_buffer, "%s has no defined command", prog->prog->name);
+    last_error=last_error_buffer;
+  }
   
   sdata=g_new(SoapPipeData, 1);
-  sdata->filer=filer;
+  sdata->filer=prog;
   sdata->callback=callback;
   sdata->data=udata;
   sdata->reply=g_string_new("");
@@ -663,7 +778,7 @@ gboolean rox_soap_send_via_pipe(ROXSOAP *filer, xmlDocPtr doc,
     close(fch[0]);
     dup2(tch[0], 0);
     dup2(fch[1], 1);
-    execlp("sh", "sh", "-c", filer->prog->command, NULL);
+    execlp("sh", "sh", "-c", prog->prog->command, NULL);
     _exit(1);
 
   default:
@@ -684,14 +799,24 @@ gboolean rox_soap_send_via_pipe(ROXSOAP *filer, xmlDocPtr doc,
   return TRUE;
 }
 
-void rox_soap_set_timeout(ROXSOAP *filer, guint ms)
+/**
+ * Set the time to wait for a reply from a SOAP call.
+ *
+ * @param[in,out] prog program to set time out for, or @c NULL to set default
+ * time out for all subsequent programs.
+ * @param[in] ms time out in milliseconds
+ */
+void rox_soap_set_timeout(ROXSOAP *prog, guint ms)
 {
-  if(filer)
-    filer->timeout=ms;
+  if(prog)
+    prog->timeout=ms;
   else
     timeout=ms;
 }
 
+/**
+ * @return text message of last error
+ */
 const char *rox_soap_get_last_error(void)
 {
   if(last_error)
@@ -700,6 +825,9 @@ const char *rox_soap_get_last_error(void)
   return "No error";
 }
 
+/**
+ * Clear last error
+ */
 void rox_soap_clear_error(void)
 {
   last_error=NULL;
@@ -707,6 +835,9 @@ void rox_soap_clear_error(void)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.14  2005/03/04 17:22:18  stephen
+ * Use apsymbols.h if available to reduce problems re-using binary on different Linux distros
+ *
  * Revision 1.13  2004/07/31 12:25:14  stephen
  * gtk_timeout now g_timeout
  *

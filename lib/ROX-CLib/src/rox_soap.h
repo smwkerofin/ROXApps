@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.h,v 1.4 2002/03/19 08:29:20 stephen Exp $
+ * $Id: rox_soap.h,v 1.5 2003/03/05 15:31:23 stephen Exp $
  *
  * rox_soap.h - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -8,18 +8,40 @@
  * interface.  See rox_soap_server.h
  */
 
+/**
+ * @file rox_soap.h
+ * @brief Interface to server programs using the SOAP protocol.
+ *
+ * SOAP allows you to communicate with server programs via the X server.
+ * You may implement your applications to function from a single instance
+ * no matter how many times they are started, much as ROX-Filer does itself.
+ *
+ * @author Stephen Watson
+ * @version $Id$
+ */
+
 #ifndef _rox_soap_h
 #define _rox_soap_h
 
 #include "rox-clib.h"
 
+/** XML name space used by SOAP */
 #define ENV_NAMESPACE_URL "http://www.w3.org/2001/12/soap-envelope"
+
+/** XML name space used by SOAP */
 #define SOAP_NAMESPACE_URL "http://www.w3.org/2001/12/soap-rpc"
 
-struct rox_soap;
+/** Open or potential connection to a SOAP server program */
 typedef struct rox_soap ROXSOAP;
 
-typedef void (*rox_soap_callback)(ROXSOAP *filer, gboolean status, 
+/**
+ * Type of function called on completion of a SOAP call.
+ * @param[in] prog connection to program
+ * @param[in] @c FALSE if call failed, other wise it succeeded
+ * @param[in] reply document from server, may be @c NULL
+ * @param[in,out] udata addtional data passed to rox_soap_send()
+ */
+typedef void (*rox_soap_callback)(ROXSOAP *prog, gboolean status, 
 				  xmlDocPtr reply, gpointer udata);
 
 /* Initialize data
@@ -61,23 +83,23 @@ extern ROXSOAP *rox_soap_connect(const char *prog);
  */
 extern ROXSOAP *rox_soap_connect_to_filer(void);
 
-/* Send the XML document to ROX-Filer using SOAP.  If run_filer is TRUE
- * and there is no filer to talk to, use rox_soap_send_via_pipe()
+/* Send the XML document to a program using SOAP.  If run_prog is TRUE
+ * and there is no progra to talk to, use rox_soap_send_via_pipe()
  * Returns TRUE if comms succeeded, 
  * When complete callback is called with the status and reply.
  */
-extern gboolean rox_soap_send(ROXSOAP *filer,
-			      xmlDocPtr doc, gboolean run_filer,
+extern gboolean rox_soap_send(ROXSOAP *prog,
+			      xmlDocPtr doc, gboolean run_prog,
 			      rox_soap_callback callback, gpointer udata);
 
 /* Set the timeout when contacting ROX-Filer (in ms, defaults to 10000).
  */
 extern void rox_soap_set_timeout(ROXSOAP *filer, guint ms);
 
-/* Send the XML document to ROX-Filer using the -R option.
+/* Send the XML document to a program directly.
  * When complete callback is called with the status and reply.
  */
-extern gboolean rox_soap_send_via_pipe(ROXSOAP *filer, xmlDocPtr doc, 
+extern gboolean rox_soap_send_via_pipe(ROXSOAP *prog, xmlDocPtr doc, 
 				   rox_soap_callback callback, gpointer udata);
 
 /*
@@ -105,6 +127,10 @@ extern void rox_soap_close(ROXSOAP *filer);
 
 /*
  * $Log: rox_soap.h,v $
+ * Revision 1.5  2003/03/05 15:31:23  stephen
+ * First pass a conversion to GTK 2
+ * Known problems in SOAP code.
+ *
  * Revision 1.4  2002/03/19 08:29:20  stephen
  * Added SOAP server (rox_soap_server.h).  SOAP client can connect to programs
  * other than ROX-Filer.

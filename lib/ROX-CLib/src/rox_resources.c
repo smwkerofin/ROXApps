@@ -1,9 +1,12 @@
 /*
- * $Id: rox_resources.c,v 1.3 2002/02/13 11:00:38 stephen Exp $
+ * $Id: rox_resources.c,v 1.4 2005/08/14 16:07:00 stephen Exp $
  */
-/*
+/**
  * @file rox_resources.c
  * @brief Find internationalized resource files.
+ *
+ * @author Stephen Watson
+ * @version $Id$
  */
 
 #include "rox-clib.h"
@@ -213,6 +216,10 @@ gchar *rox_resources_find_with_domain(const gchar *app_name,
 
 /*
  * $Log: rox_resources.c,v $
+ * Revision 1.4  2005/08/14 16:07:00  stephen
+ * Added rox_resources_find_with_domain().
+ * More doxygen additions.
+ *
  * Revision 1.3  2002/02/13 11:00:38  stephen
  * Better way of accessing web site (by running a URI file).  Improvement to
  * language checking in rox_resources.c.  Visit by the const fairy in choices.h.

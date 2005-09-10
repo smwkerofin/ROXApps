@@ -1,5 +1,5 @@
 /*
- * $Id: options.h,v 1.5 2005/08/14 16:07:00 stephen Exp $
+ * $Id: options.h,v 1.6 2005/08/21 13:05:40 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -57,6 +57,9 @@
  * - If anything changed then:
  *   - All the options are written to the filesystem
  *   - The saver_callbacks are called.
+ *
+ * @author Thomas Leonard, Stephen Watson
+ * @version $Id$
  */
 
 #ifndef _options_h
@@ -124,6 +127,9 @@ GtkWidget *options_show(void);
 
 /*
  * $Log: options.h,v $
+ * Revision 1.6  2005/08/21 13:05:40  stephen
+ * Renamed _Options to Options to aid in doxygenning
+ *
  * Revision 1.5  2005/08/14 16:07:00  stephen
  * Added rox_resources_find_with_domain().
  * More doxygen additions.
