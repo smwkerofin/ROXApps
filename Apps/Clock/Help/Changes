@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+11-Sep-2005
+~~~~~~~~~~~
+Remove aclocal.m4, replace with rox-clib.m4 and aclocal -I .
+
 27-Jul-2005
 ~~~~~~~~~~~
 Made alarm windows sticky.
