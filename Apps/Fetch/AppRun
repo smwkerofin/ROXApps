@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.20 2005/05/27 10:19:41 stephen Exp $
+# $Id: AppRun,v 1.21 2005/08/13 13:08:25 stephen Exp $
 
 import os, sys
 import time
@@ -76,6 +76,8 @@ class FetchWindow(rox.Dialog):
         self.wtag=0
         self.proc=None
         self.kill_proc=False
+
+        self.percent=-1
         
         rox.Dialog.__init__(self)
         self.set_title(self.url)
@@ -248,8 +250,11 @@ class FetchWindow(rox.Dialog):
             self.active()
             return
         self.prog.set_fraction(val)
-        self.prog.set_text('%d%%' % (val*100))
-        self.set_title('%d%% %s' % (val*100, self.real_target))
+        percent=int(val*100)
+        if self.percent!=percent:
+            self.percent=percent
+            self.prog.set_text('%d%%' % (val*100))
+            self.set_title('%d%% %s' % (val*100, self.real_target))
 
         if self.start_time and total>0 and size>0:
             now=time.time()

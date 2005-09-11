@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.6 2005/05/07 11:19:49 stephen Exp $
+# $Id: fetch.py,v 1.7 2005/05/27 10:19:41 stephen Exp $
 
 import os, sys
 import time
@@ -84,11 +84,14 @@ class Fetcher:
         self.con=None
         self.bsize=block_size.int_value
 
+        self.last_update=0
+        self.update_delay=0.5
+        
         self.opener=ROXURLopener()
         self.open_server()
         self.run()
         self.to_parent('c','')
-        
+
     def to_parent(self, type, message):
         print '%s=%s' % (type, message)
         sys.stdout.flush()
@@ -178,7 +181,10 @@ class Fetcher:
         
     def report(self, nb, tsize):
         #print 'report', self, nb, tsize
-        self.to_parent('n', str(nb))
+        now=time.time()
+        if now-self.last_update>self.update_delay or tsize>0 and nb>=tsize:
+            self.to_parent('n', str(nb))
+            self.last_update=now
 
     def finished(self):
         #self.message(_('Done'))
