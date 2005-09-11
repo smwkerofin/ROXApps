@@ -135,6 +135,28 @@ ac_version=`expr $[1] \* 10000 + $[2] \* 100 + $[3]`
 AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ac_version)
 ])
 
+dnl ROX-CLib, first via 0launch 
+AC_DEFUN(ROX_CLIB_0LAUNCH, [
+ac_url=http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib
+AC_MSG_CHECKING(for ROX-CLib via 0launch)
+if 0launch -c $ac_url 2>/dev/null ; then
+  AC_MSG_RESULT(yes)
+  ROX_CLIB_PATH="`0launch -c $ac_url -r`"/../..
+else
+  AC_MSG_RESULT(no)
+  ROX_LIB_DIR_VERSION(ROX-CLib, $1.$2.$3, ROX_CLIB_PATH, www.kerofin.demon.co.uk)
+fi
+if test -z "$ROX_CLIB_PATH" ; then
+  AC_MSG_ERROR(Cannot find ROX-CLib)
+fi
+AC_SUBST(ROX_CLIB_PATH)
+ac_verstr=`"$ROX_CLIB_PATH"/AppRun -v`
+ac_ver=`echo $ac_verstr | cut -d " " -f 2`
+set `echo $ac_ver | tr '.' ' '`
+ac_version=`expr $[1] \* 10000 + $[2] \* 100 + $[3]`
+AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ac_version)
+])
+
 dnl Extract version number from $APP_DIR/AppInfo.xml
 AC_DEFUN(ROX_SELF_VERSION, [
 AC_MSG_CHECKING(version information)
