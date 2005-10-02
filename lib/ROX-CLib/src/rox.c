@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.9 2005/06/07 10:24:52 stephen Exp $
+ * $Id: rox.c,v 1.10 2005/08/14 16:07:00 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -72,9 +72,11 @@ $ MAKE=gmake ROX-CLib/AppRun --compile
  *
  * If you are using autoconf and building a ROX program then:
  * <ul>
- * <li>Copy ROX-CLib/Help/aclocal.m4 to your programs src directory.</li>
  * <li>In src/configure.in add:
  * <pre>ROX_CLIB(2, 0, 0)</pre></li>
+ * <li>Copy ROX-CLib/Help/rox-clib.m4 to your programs src directory then
+ * execute
+ * <pre>aclocal -I .</pre></li>
  * 
  * <li>In src/Makefile.in add:
  * <pre>  ROX_CLIB = @@ROX_CLIB_PATH@/AppRun</pre>
@@ -335,6 +337,10 @@ void rox_main_quit(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.10  2005/08/14 16:07:00  stephen
+ * Added rox_resources_find_with_domain().
+ * More doxygen additions.
+ *
  * Revision 1.9  2005/06/07 10:24:52  stephen
  * Using doxygen to generate documentation
  *

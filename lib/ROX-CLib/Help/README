@@ -43,10 +43,13 @@ to your link line, e.g.
    gcc `$ROX_CLIB --cflags` -o main main.o `$ROX_CLIB --libs`
 
 If you are using autoconf and building a ROX program then:
-    * Copy ROX-CLib/Help/aclocal.m4 to your programs src directory.
     * In src/configure.in add:
 
    ROX_CLIB(2, 0, 0)
+
+    * Copy ROX-CLib/Help/rox-clib.m4 to your programs src directory then
+      execute:
+         aclocal -I .
 
     * In src/Makefile.in add:
 
