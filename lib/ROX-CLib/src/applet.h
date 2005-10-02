@@ -1,5 +1,5 @@
 /*
- * $Id: applet.h,v 1.3 2003/03/05 15:31:23 stephen Exp $
+ * $Id: applet.h,v 1.4 2005/08/21 13:06:38 stephen Exp $
  *
  * applet.h - Utilities for ROX applets
  */
@@ -24,13 +24,23 @@ enum panel_location {
 };
 typedef enum panel_location PanelLocation;
 
+typedef struct applet_info {
+  PanelLocation loc;
+  int margin;
+} AppletInfo;
+
 extern void applet_popup_menu(GtkWidget *plug, GtkWidget *menu,
 			      GdkEventButton *evbut);
+
+extern AppletInfo *applet_get_position(GtkWidget *plug);
 
 #endif
 
 /*
  * $Log: applet.h,v $
+ * Revision 1.4  2005/08/21 13:06:38  stephen
+ * Added doxygen comments
+ *
  * Revision 1.3  2003/03/05 15:31:23  stephen
  * First pass a conversion to GTK 2
  * Known problems in SOAP code.

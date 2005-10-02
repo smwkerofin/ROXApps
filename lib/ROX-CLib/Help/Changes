@@ -4,6 +4,15 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+16-Sep-2005
+~~~~~~~~~~~
+Properly declare an internal function that SystemTray was using and shouldn't
+have been.
+
+11-Sep-2005
+~~~~~~~~~~~
+Build system fits in with autoconf better.
+
 03-Sep-2005
 ~~~~~~~~~~~
 More doxygen additions.  
@@ -237,4 +246,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.24 2005/08/14 16:07:00 stephen Exp $
+$Id: Changes,v 1.25 2005/09/10 16:19:34 stephen Exp $

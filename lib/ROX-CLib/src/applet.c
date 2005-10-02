@@ -1,5 +1,5 @@
 /*
- * $Id: applet.c,v 1.4 2004/03/25 13:10:40 stephen Exp $
+ * $Id: applet.c,v 1.5 2005/08/21 13:06:38 stephen Exp $
  *
  * applet.c - Utilities for rox applets
  */
@@ -43,11 +43,6 @@ static struct name_loc {
 static gint screen_height=-1;
 static gint screen_width=-1;
 
-typedef struct applet_info {
-  PanelLocation loc;
-  int margin;
-} AppletInfo;
-
 /* Parse the property string */
 static void decode_location2(const char *prop, AppletInfo *inf)
 {
@@ -71,7 +66,7 @@ static void decode_location2(const char *prop, AppletInfo *inf)
 }
 
 /* Get the data we need */
-static AppletInfo *get_position(GtkWidget *plug)
+AppletInfo *applet_get_position(GtkWidget *plug)
 {
   guint32 xid;
   GdkWindow *gwin;
@@ -187,7 +182,7 @@ void applet_popup_menu(GtkWidget *plug, GtkWidget *menu, GdkEventButton *evbut)
 
   pos=g_object_get_data(G_OBJECT(plug), "applet-menu-pos");
   if(!pos) {
-    pos=get_position(plug);
+    pos=applet_get_position(plug);
     if(pos) {
       g_object_set_data(G_OBJECT(plug), "applet-menu-pos", pos);
       g_signal_connect_swapped(G_OBJECT(plug), "destroy",
@@ -204,6 +199,9 @@ void applet_popup_menu(GtkWidget *plug, GtkWidget *menu, GdkEventButton *evbut)
 
 /*
  * $Log: applet.c,v $
+ * Revision 1.5  2005/08/21 13:06:38  stephen
+ * Added doxygen comments
+ *
  * Revision 1.4  2004/03/25 13:10:40  stephen
  * Added basedir and mime
  *
