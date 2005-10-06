@@ -29,5 +29,7 @@
     <MimeType type="video/x-ms-asf"/>
     <MimeType type="audio/x-pn-realaudio"/>
     <MimeType type="application/ogg"/>
+    <MimeType type="video/x-ogm"/>
+    <MimeType type="application/x-matroska"/>
   </CanThumbnail>
 </AppInfo>
