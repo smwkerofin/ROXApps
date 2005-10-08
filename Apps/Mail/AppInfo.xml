@@ -2,7 +2,7 @@
 <AppInfo>
   <About>
     <Purpose>Provide ROX interface to mail clients</Purpose>
-	<Version>0.3.7 (4 Mar 2005)</Version>
+	<Version>0.3.8 (8 Oct 2005)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
@@ -20,7 +20,7 @@ spedisce email</Summary>
   <Dependencies>
     <AppDir>
       <Name>ROX-Lib2</Name>
-      <NeedsVersion>1.9.12</NeedsVersion>
+      <NeedsVersion>2.0.2</NeedsVersion>
       <Link>http://rox.sourceforge.net</Link>
       <ZeroInstall>/uri/0install/rox.sourceforge.net/lib</ZeroInstall>
     </AppDir>

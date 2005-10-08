@@ -1,7 +1,7 @@
 Versions of Mail
 ================
 
-26-Jul-2005
+26-Jul-2005 (0.3.8)
 ~~~~~~~~~~~
 Fixed selection of mailers.
 
@@ -65,4 +65,4 @@ Check child processes to avoid zombies where possible.
 First released version
 
 -- 
-$Id: Changes,v 1.4 2005/06/04 10:30:43 stephen Exp $
+$Id: Changes,v 1.5 2005/08/13 13:11:42 stephen Exp $

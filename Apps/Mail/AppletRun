@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 #
-# $Id: AppletRun,v 1.17 2005/06/04 10:30:43 stephen Exp $
+# $Id: AppletRun,v 1.18 2005/08/13 13:11:42 stephen Exp $
 
-import findrox; findrox.version(1, 9, 12)
+import findrox; findrox.version(2, 0, 2)
 import rox
 import rox.choices
 import rox.options
