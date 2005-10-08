@@ -5,6 +5,10 @@ Changes to FreeFS
 ~~~~~~~~~~~
 Remove aclocal.m4, replace with rox-clib.m4 and aclocal -I .
 
+29-Aug-2005
+~~~~~~~~~~~
+Attempt to get ROX-CLib via 0launch.
+
 27-May-2005
 ~~~~~~~~~~~
 Fix for creating applets in remote mode, need to give the filer long enough
