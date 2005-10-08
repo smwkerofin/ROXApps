@@ -3,6 +3,11 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+07-Oct-2005 (0.1.6)
+~~~~~~~~~~~
+Added support for using totem-video-thumbnailer instead of MPlayer
+(Torsten Marek).
+
 12-Sep-2005
 ~~~~~~~~~~~
 MPlayer supports video/x-ogm and application/x-matroska (Yuri Bongiorno).

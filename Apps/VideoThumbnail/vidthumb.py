@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.12 2005/03/10 21:57:31 stephen Exp $
+# $Id: vidthumb.py,v 1.13 2005/04/22 15:25:09 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -39,14 +39,105 @@ first_by_types={
     'video/x-ms-wmv': False
 }
 
+def binaryInPath(b):
+    for path in os.environ["PATH"].split(":"):
+        if os.access(os.path.join(path, b), os.R_OK | os.X_OK):
+            return True
+    return False
+
+def execute_return_err(cmd):
+    errmsg=""
+    cin, cout=os.popen4(cmd, 'r')
+    cin.close()
+    for l in cout:
+        errmsg+=l
+    cout.close()
+    #cerr.close()
+    if debug: print cmd, errmsg
+    if errmsg:
+        return errmsg
+        
 debug=os.environ.get('VIDTHUMB_DEBUG', 0)
 
-class VidThumb(thumb.Thumbnailler):
-    """Generate thumbnail for video files understood by mplayer"""
+class VidThumbNail(thumb.Thumbnailler):
+    """Generate thumbnail for video files understood by totem"""
     def __init__(self, debug=False):
         """Initialize Video thumbnailler"""
         thumb.Thumbnailler.__init__(self, 'VideoThumbnail', 'vidthumb',
                                     True, debug)
+
+    def failed_image(self, rsize, tstr):
+        if debug: print 'failed_image', self, rsize, tstr
+        if not tstr:
+            tstr='Error!'
+        w=rsize
+        h=rsize/4*3
+        try:
+            p=rox.g.gdk.Pixbuf(rox.g.gdk.COLORSPACE_RGB, False, 8, w, h)
+        except:
+            sys.exit(2)
+        if debug: print p
+
+        pixmap, mask=p.render_pixmap_and_mask()
+        cmap=pixmap.get_colormap()
+        gc=pixmap.new_gc(foreground=cmap.alloc_color('black'))
+        gc.set_foreground(gc.background)
+
+        if debug: print gc, gc.foreground
+        pixmap.draw_rectangle(gc, rox.g.TRUE, 0, 0, w, h)
+        
+        gc.set_foreground(cmap.alloc_color('red'))
+        dummy=rox.g.Window()
+        layout=dummy.create_pango_layout(tstr)
+        if w>40:
+            layout.set_width((w-10)*pango.SCALE)
+            #layout.set_wrap(pango.WRAP_CHAR)
+        pixmap.draw_layout(gc, 10, 4, layout)
+        if debug: print pixmap
+
+        self.add_time=False
+        
+        return p.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
+
+    def check_executable(cls):
+        try:
+            return binaryInPath(cls._binary)
+        except Exception, e:
+            if debug:
+                print e
+            return False
+    check_executable = classmethod(check_executable)
+        
+        
+
+class VidThumbTotem(VidThumbNail):
+    """Generate thumbnail for video files understood by totem"""
+    _binary = "totem-video-thumbnailer"
+    def __init__(self, debug=False):
+        """Initialize Video thumbnailler"""
+        VidThumbNail.__init__(self, debug)
+
+
+    def get_image(self, inname, rsize):
+        outfile = os.path.join(self.work_dir, "out.png")
+        if options.scale.int_value:
+            cmd = 'totem-video-thumbnailer -s %i \"%s\" %s' % (rsize, inname, outfile)
+        else:
+            cmd = 'totem-video-thumbnailer \"%s\" %s' % (inname, outfile)
+        errmsg=execute_return_err(cmd)
+        if not os.path.exists(outfile):
+            return self.failed_image(rsize, errmsg)
+
+        # Now we load the raw image in
+        return rox.g.gdk.pixbuf_new_from_file(outfile)
+
+
+class VidThumbMPlayer(VidThumbNail):
+    """Generate thumbnail for video files understood by mplayer"""
+    _binary = "mplayer"
+    def __init__(self, debug=False):
+        """Initialize Video thumbnailler"""
+        VidThumbNail.__init__(self, debug)
 
         self.add_time=options.time_label.int_value
 
@@ -92,36 +183,6 @@ class VidThumb(thumb.Thumbnailler):
                                
         return img.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
 
-    def failed_image(self, rsize, tstr):
-        if debug: print 'failed_image', self, rsize, tstr
-        w=rsize
-        h=rsize/4*3
-        try:
-            p=rox.g.gdk.Pixbuf(rox.g.gdk.COLORSPACE_RGB, False, 8, w, h)
-        except:
-            sys.exit(2)
-        if debug: print p
-
-        pixmap, mask=p.render_pixmap_and_mask()
-        cmap=pixmap.get_colormap()
-        gc=pixmap.new_gc(foreground=cmap.alloc_color('black'))
-        gc.set_foreground(gc.background)
-
-        if debug: print gc, gc.foreground
-        pixmap.draw_rectangle(gc, rox.g.TRUE, 0, 0, w, h)
-        
-        gc.set_foreground(cmap.alloc_color('red'))
-        dummy=rox.g.Window()
-        layout=dummy.create_pango_layout(tstr)
-        if w>40:
-            layout.set_width((w-10)*pango.SCALE)
-            #layout.set_wrap(pango.WRAP_CHAR)
-        pixmap.draw_layout(gc, 10, 4, layout)
-        if debug: print pixmap
-
-        self.add_time=False
-        
-        return p.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
 
     def get_image(self, inname, rsize):
         """Generate the raw image from the file.  We run mplayer (twice)
@@ -213,7 +274,10 @@ class VidThumb(thumb.Thumbnailler):
         # Now we load the raw image in
 
         return rox.g.gdk.pixbuf_new_from_file(frfname)
-        
+
+thumbnailers = {"mplayer": VidThumbMPlayer,
+                "totem" : VidThumbTotem }
+
 # Process command line args.  Although the filer always passes three args,
 # let the last two default to something sensible to allow use outside
 # the filer.
@@ -249,10 +313,31 @@ def main(argv):
     elif not os.path.isabs(outname):
         outname=os.path.abspath(outname)
     #print inname, outname, rsize
-
-    thumb=VidThumb(options.report.int_value)
+    thumbC = thumbnailers.pop(options.generator.value)
+    if not thumbC.check_executable():
+        origbin = thumbC._binary
+        for (name, cls) in thumbnailers.iteritems():
+            if cls.check_executable():
+                thumbC = cls
+                msg = """VideoThumbnail could not find the program "%s", but another thumbnail generator is available.
+                
+Should "%s" be used from now on?"""
+                if rox.confirm(msg % (origbin, thumbC._binary), rox.g.STOCK_YES):
+                    options.generator.value = name
+                    rox.app_options.save()
+                    pass
+                break
+        else:
+            msg = """VideoThumbnail could not find any usable thumbnail generator.
+            
+You need to install either MPlayer (http://www.mplayerhq.hu)
+or Totem (http://www.gnome.org/projects/totem/)."""
+            rox.croak(msg)
+            
+    thumb = thumbC(options.report.int_value)
     thumb.run(inname, outname, rsize)
 
+        
 def configure():
     """Configure the app"""
     options.edit_options()
