@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.12 2004/04/13 10:31:49 stephen Exp $
+ * $Id: main.c,v 1.13 2004/11/21 13:11:28 stephen Exp $
  */
 #include "config.h"
 
@@ -87,7 +87,6 @@ static void setup_config(void);
 static void show_info_win(void);        /* Show information box */
 static void show_choices_win(void);     /* Show configuration window */
 static void read_config(void);          /* Read configuration */
-static gboolean read_config_xml(void);
 
 static gboolean load_from_uri(GtkWidget *widget, GSList *uris, gpointer data,
 			      gpointer udata);
@@ -217,6 +216,8 @@ static void opts_changed(void)
     gtk_widget_modify_font(window->diffs, pfd);
     pango_font_description_free(pfd);
   }
+  /*fprintf(stderr, "in opts_changed, unified=%d %d\n",
+    o_use_unified.int_value, o_use_unified.has_changed);*/
 }
 
 static void setup_config(void)
@@ -775,7 +776,7 @@ static void show_diffs(DiffWindow *win)
   GtkTextIter start, end;
   GtkTextBuffer *buf;
 
-  win->unified=options.use_unified;
+  win->unified=o_use_unified.int_value;
 
   win->fname[0]=g_strdup(tmpnam(NULL));
   write_window_to(win->file[0], win->fname[0], win);
@@ -801,7 +802,8 @@ static void show_diffs(DiffWindow *win)
 #else
     cmd=g_strdup_printf("diff -c %s %s", win->fname[0], win->fname[1]);
 #endif
-   execlp("/bin/sh", "sh", "-c", cmd, NULL);
+    /*fprintf(stderr, "cmd=%s\n", cmd);*/
+    execlp("/bin/sh", "sh", "-c", cmd, NULL);
     _exit(1);
   }
   win->pid=pid;
@@ -825,6 +827,9 @@ static void show_choices_win(void)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.13  2004/11/21 13:11:28  stephen
+ * Use new ROX-CLib features
+ *
  * Revision 1.12  2004/04/13 10:31:49  stephen
  * Got stock icon wrong
  *

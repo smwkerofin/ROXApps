@@ -1,6 +1,11 @@
 Changes to Diff
 ===============
 
+07-Oct-2005
+~~~~~~~~~~~
+Bugfix: selection of unified mode from options was broken, reported by
+        Peter Hyman.
+
 11-Sep-2005
 ~~~~~~~~~~~
 Remove aclocal.m4, replace with rox-clib.m4 and aclocal -I .
