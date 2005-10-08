@@ -1,7 +1,7 @@
 Fetch
 =====
 
-11-Sep-2005
+11-Sep-2005 (0.1.2)
 ~~~~~~~~~~~
 Reduce redundant updates of the display and title (4* speed increase in my
 connection slowed my desktop down!).
@@ -104,4 +104,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.23 2005/08/13 13:08:25 stephen Exp $
+$Id: Changes,v 1.24 2005/09/11 13:04:26 stephen Exp $
