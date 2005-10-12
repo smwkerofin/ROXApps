@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.10 2005/08/14 16:07:00 stephen Exp $
+ * $Id: rox.c,v 1.11 2005/10/02 11:34:19 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -184,7 +184,7 @@ void rox_init_with_domain(const char *program, const char *domain,
   }
   
   rox_dnd_init();
-  mime_init();
+  rox_mime_init();
 }
 
 /** Returns the program name as passed to rox_init_with_domain()
@@ -337,6 +337,9 @@ void rox_main_quit(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.11  2005/10/02 11:34:19  stephen
+ * Build system fits in with autoconf better.
+ *
  * Revision 1.10  2005/08/14 16:07:00  stephen
  * Added rox_resources_find_with_domain().
  * More doxygen additions.

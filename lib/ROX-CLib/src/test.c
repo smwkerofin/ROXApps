@@ -1,5 +1,5 @@
 /*
- * $Id: test.c,v 1.9 2004/03/25 13:10:40 stephen Exp $
+ * $Id: test.c,v 1.10 2004/05/22 17:03:57 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -175,7 +175,7 @@ static void test_basedir(const char *home)
 
 static void test_mime_file(const char *path)
 {
-  MIMEType *type=mime_lookup(path);
+  ROXMIMEType *type=rox_mime_lookup(path);
   char *tname, *comm;
 
   printf(" %s -> ", path);
@@ -183,8 +183,8 @@ static void test_mime_file(const char *path)
     printf("UNKNOWN\n");
     return;
   }
-  tname=mime_type_name(type);
-  comm=mime_type_comment(type);
+  tname=rox_mime_type_name(type);
+  comm=rox_mime_type_comment(type);
   printf("%s (%s)\n", tname, comm? comm: "UNKNOWN");
   g_free(tname);
 }
@@ -193,7 +193,7 @@ static void test_mime(const char *home)
 {
   printf("test MIME system\n");
   
-  mime_init();
+  /*mime_init();*/
 
   test_mime_file("/etc/passwd");
   test_mime_file("/dev/null");
@@ -248,17 +248,19 @@ static void test_appinfo(const char *home)
   printf("obj=%p ai=%p ROX_IS_APPINFO(obj)=%d\n", obj, ai,
 	 ROX_IS_APPINFO(obj));
 
-  test_appinfo_1(ai);
-  rox_appinfo_set_language(ai, "it"); 
-  test_appinfo_1(ai);
+  if(ai) {
+    test_appinfo_1(ai);
+    rox_appinfo_set_language(ai, "it"); 
+    test_appinfo_1(ai);
 
-  g_object_unref(obj);
+    g_object_unref(obj);
+  }
 
   path=g_strdup_printf("%s/Apps/VideoThumbnail/AppInfo.xml", home);
   obj=rox_appinfo_new_from_path(path);
   if(obj) {
     GList *list, *p;
-    MIMEType *type;
+    ROXMIMEType *type;
     
     ai=ROX_APPINFO(obj);
     test_appinfo_1(ai);
@@ -267,9 +269,9 @@ static void test_appinfo(const char *home)
     for(p=list; p; p=g_list_next(p)) {
       char *tname, *comm;
       
-      type=(MIMEType *) p->data;
-      tname=mime_type_name(type);
-      comm=mime_type_comment(type);
+      type=(ROXMIMEType *) p->data;
+      tname=rox_mime_type_name(type);
+      comm=rox_mime_type_comment(type);
       printf("  %s (%s)\n", tname, comm? comm: "UNKNOWN");
       g_free(tname);
     }
