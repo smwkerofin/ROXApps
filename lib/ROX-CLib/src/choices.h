@@ -1,5 +1,5 @@
 /*
- * $Id: choices.h,v 1.4 2005/06/07 10:24:52 stephen Exp $
+ * $Id: choices.h,v 1.5 2005/08/14 16:07:00 stephen Exp $
  *
  * Borrowed from ROX-Filer
  *
@@ -15,6 +15,16 @@
  * $CHOICESPATH and the new XDG based system.  The original was from
  * ROX-Filer and was by
  * Thomas Leonard <tal197@users.sourceforge.net>.
+ *
+ * These functions are deprecated and should not be used in new code:
+ * - choices_init()
+ * - choices_list_dirs()
+ * - choices_free_list()
+ * - choices_find_path_load()
+ * - choices_find_path_save()
+ *
+ * @version $Id$
+ * @author Thomas Leonard, Stephen Watson.
  */
 
 #ifndef _CHOICES_H

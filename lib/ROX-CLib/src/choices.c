@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.7 2005/06/07 10:24:52 stephen Exp $
+ * $Id: choices.c,v 1.8 2005/08/14 16:07:00 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -28,9 +28,22 @@
  * identifying the software, i.e. I use kerofin.demon.co.uk.  If you don't
  * have a domain name, use an email address, e.g. me@my-isp.org
  *
+ *
+ * These functions are deprecated and should not be used in new code:
+ * - choices_init()
+ * - choices_list_dirs()
+ * - choices_free_list()
+ * - choices_find_path_load()
+ * - choices_find_path_save()
+ *
+ * @version $Id$
+ * @author Thomas Leonard, Stephen Watson.
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
  * Copyright (C) 2000, Thomas Leonard, <tal197@users.sourceforge.net>.
+ *
+ * @version $Id$
+ * @author Thomas Leonard, Stephen Watson.
  */
 
 #include "rox-clib.h"
@@ -65,8 +78,8 @@ static void init_choices(void);
  *
  * If the environment variable does not exist then the defaults are used.
  *
- * This is called by rox_init_with_domain() and you should call that in
- * preference to this.
+ * @deprecated This is called by rox_init_with_domain() and you should call
+ * that in preference to this.
  */
 void choices_init(void)
 {
@@ -87,6 +100,8 @@ void choices_init(void)
  *
  * @param[in] dir directory to search for.
  * @return pointer array of results.
+ *
+ * @deprecated use rox_choices_list_dirs() instead.
  */
 GPtrArray *choices_list_dirs(const char *dir)
 {
@@ -116,6 +131,8 @@ GPtrArray *choices_list_dirs(const char *dir)
 /** Free the data returned by choices_list_dirs().
  *
  * @param[in,out] list Return value from choices_list_dirs().
+ * 
+ * @deprecated use rox_choices_list_dirs() instead.
  */
 void choices_free_list(GPtrArray *list)
 {
@@ -406,6 +423,10 @@ static void init_choices(void)
 
 /*
  * $Log: choices.c,v $
+ * Revision 1.8  2005/08/14 16:07:00  stephen
+ * Added rox_resources_find_with_domain().
+ * More doxygen additions.
+ *
  * Revision 1.7  2005/06/07 10:24:52  stephen
  * Using doxygen to generate documentation
  *
