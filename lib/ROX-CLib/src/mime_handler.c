@@ -1,7 +1,7 @@
 /*
  * Install handlers for MIME types
  *
- * $Id: mime_handler.c,v 1.2 2004/06/21 21:09:29 stephen Exp $
+ * $Id: mime_handler.c,v 1.3 2005/09/10 16:14:37 stephen Exp $
  */
 
 /**
@@ -13,7 +13,7 @@
  * asked to confirm any changes to their set up.
  *
  * @author Stephen Watson
- * @version $Id$
+ * @version $Id: mime_handler.c,v 1.3 2005/09/10 16:14:37 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -210,7 +210,7 @@ static void load_types(GtkWidget *win, GList *types)
   GtkTreeModel *model;
   gboolean check;
   GList *rover;
-  MIMEType *type;
+  ROXMIMEType *type;
   gchar *dir, *app_dir;
   GtkTreeIter iter;
   gchar *tname;
@@ -274,11 +274,11 @@ static void load_types(GtkWidget *win, GList *types)
     }
 
     icon=NULL;
-    tname=mime_type_name(type);
+    tname=rox_mime_type_name(type);
 
     gtk_list_store_append(GTK_LIST_STORE(model), &iter);
     gtk_list_store_set(GTK_LIST_STORE(model), &iter, TNAME, tname,
-		       COMMENT, mime_type_comment(type),
+		       COMMENT, rox_mime_type_comment(type),
 		       INSTALL, dinstall, UNINSTALL, FALSE,
 		       IS_OURS, can_un, -1);
     if(check)
@@ -290,7 +290,7 @@ static void load_types(GtkWidget *win, GList *types)
 
 static void set_active(GtkWidget *win)
 {
-  MIMEType *type;
+  ROXMIMEType *type;
   GList *types=NULL;
   GtkTreeModel *model;
   GtkTreeIter iter;
@@ -316,7 +316,7 @@ static void set_active(GtkWidget *win)
     gtk_tree_model_get_value(model, &iter, INSTALL, &ins);
     if(g_value_get_boolean(&ins)) {
       gtk_tree_model_get_value(model, &iter, TNAME, &name);
-      type=mime_lookup_by_name(g_value_get_string(&name));
+      type=rox_mime_lookup_by_name(g_value_get_string(&name));
       rox_debug_printf(3, " type=%s", g_value_get_string(&name));
       types=g_list_append(types, type);
       g_value_unset(&name);
@@ -330,7 +330,7 @@ static void set_active(GtkWidget *win)
 
 static void set_uninstall(GtkWidget *win)
 {
-  MIMEType *type;
+  ROXMIMEType *type;
   GList *types=NULL;
   GtkTreeModel *model;
   GtkTreeIter iter;
@@ -356,7 +356,7 @@ static void set_uninstall(GtkWidget *win)
     gtk_tree_model_get_value(model, &iter, UNINSTALL, &uins);
     if(g_value_get_boolean(&uins)) {
       gtk_tree_model_get_value(model, &iter, TNAME, &name);
-      type=mime_lookup_by_name(g_value_get_string(&name));
+      type=rox_mime_lookup_by_name(g_value_get_string(&name));
       rox_debug_printf(3, " type=%s", g_value_get_string(&name));
       types=g_list_append(types, type);
       g_value_unset(&name);
@@ -413,7 +413,7 @@ static void install_type_handler(GList *types, const gchar *dir,
   int resp;
   GList *atypes, *rover;
   gchar *path, *leaf;
-  MIMEType *mtype;
+  ROXMIMEType *mtype;
 
   win=make_install_list(app_dir, desc, dir, types, info, TRUE);
 
@@ -425,7 +425,7 @@ static void install_type_handler(GList *types, const gchar *dir,
 
   atypes=g_object_get_data(G_OBJECT(win), "install-list");
   for(rover=atypes; rover; rover=g_list_next(rover)) {
-    mtype=(MIMEType *) rover->data;
+    mtype=(ROXMIMEType *) rover->data;
     leaf=g_strdup_printf("%s_%s", mtype->media, mtype->subtype);
     path=choices_find_path_save(leaf, dir, TRUE);
     rox_debug_printf(3, "rover=%p leaf=%s path=%s", rover, leaf, path);
@@ -446,7 +446,7 @@ static void install_type_handler(GList *types, const gchar *dir,
 
   atypes=g_object_get_data(G_OBJECT(win), "uninstall-list");
   for(rover=atypes; rover; rover=g_list_next(rover)) {
-    mtype=(MIMEType *) rover->data;
+    mtype=(ROXMIMEType *) rover->data;
     leaf=g_strdup_printf("%s_%s", mtype->media, mtype->subtype);
     path=choices_find_path_save(leaf, dir, TRUE);
     rox_debug_printf(3, "u rover=%p leaf=%s path=%s", rover, leaf, path);
@@ -490,7 +490,7 @@ static void install_send_to_types(GList *types, const gchar *app_dir)
   int resp;
   GList *atypes, *rover;
   gchar *path, *aname, *dir;
-  MIMEType *mtype;
+  ROXMIMEType *mtype;
   
   win=make_install_list(app_dir, _("type handler"), "SendTo", types,
 			_("The application can handle files of these types.  "
@@ -508,7 +508,7 @@ static void install_send_to_types(GList *types, const gchar *app_dir)
   
   atypes=g_object_get_data(G_OBJECT(win), "install-list");
   for(rover=atypes; rover; rover=g_list_next(rover)) {
-    mtype=(MIMEType *) rover->data;
+    mtype=(ROXMIMEType *) rover->data;
     dir=g_strdup_printf("SendTo/.%s_%s", mtype->media, mtype->subtype);
     path=choices_find_path_save(aname, dir, TRUE);
     if(path) {
@@ -581,6 +581,9 @@ void rox_mime_install_from_appinfo(void)
 
 /*
  * $Log: mime_handler.c,v $
+ * Revision 1.3  2005/09/10 16:14:37  stephen
+ * Added doxygen comments
+ *
  * Revision 1.2  2004/06/21 21:09:29  stephen
  * Added C implementation
  *

@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Id: infowin.c,v 1.12 2004/10/02 13:09:54 stephen Exp $
+ * $Id: infowin.c,v 1.13 2005/08/14 16:07:00 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -588,6 +588,7 @@ GtkWidget* info_win_new(const gchar *program, const gchar *purpose,
 {
   GtkWidget *iw;
 
+  ROX_CLIB_DEPRECATED("rox_info_win_new");
   persistant=TRUE;
   iw=rox_info_win_new(program, purpose, version, author, website);
   persistant=FALSE;
@@ -606,6 +607,7 @@ GtkWidget* info_win_new_from_appinfo(const gchar *program)
 {
   GtkWidget *iw;
 
+  ROX_CLIB_DEPRECATED("rox_info_win_new_from_appinfo");
   persistant=TRUE;
   iw=rox_info_win_new_from_appinfo(program);
   persistant=FALSE;
@@ -621,11 +623,16 @@ GtkWidget* info_win_new_from_appinfo(const gchar *program)
  */
 void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
 {
-  return rox_info_win_add_browser_command(iw, cmd);
+  ROX_CLIB_DEPRECATED("rox_info_win_add_browser_command");
+  rox_info_win_add_browser_command(iw, cmd);
 }
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.13  2005/08/14 16:07:00  stephen
+ * Added rox_resources_find_with_domain().
+ * More doxygen additions.
+ *
  * Revision 1.12  2004/10/02 13:09:54  stephen
  * Added uri.h and rox_uri_launch() (and moved some stuff from rox_path
  * there) to better handle launching URIs.  ROXInfoWin now uses it.

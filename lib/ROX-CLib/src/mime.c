@@ -1,5 +1,5 @@
 /*
- * $Id: mime.c,v 1.2 2004/05/22 17:03:57 stephen Exp $
+ * $Id: mime.c,v 1.3 2005/09/10 16:14:19 stephen Exp $
  *
  * Shared MIME databse functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief Shared MIME database functions for ROX-CLib
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id$
+ * @version $Id: mime.c,v 1.3 2005/09/10 16:14:19 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -35,17 +35,17 @@
 #define TYPE_NS "http://www.freedesktop.org/standards/shared-mime-info"
 
 /* Globals */
-MIMEType *text_plain;       /* Default for plain file */
-MIMEType *application_executable;  /* Default for executable file */
-MIMEType *application_octet_stream;  /* Default for binary file */
-MIMEType *inode_directory;
-MIMEType *inode_mountpoint;
-MIMEType *inode_pipe;
-MIMEType *inode_socket;
-MIMEType *inode_block;
-MIMEType *inode_char;
-MIMEType *inode_door;
-MIMEType *inode_unknown;
+ROXMIMEType *text_plain;       /* Default for plain file */
+ROXMIMEType *application_executable;  /* Default for executable file */
+ROXMIMEType *application_octet_stream;  /* Default for binary file */
+ROXMIMEType *inode_directory;
+ROXMIMEType *inode_mountpoint;
+ROXMIMEType *inode_pipe;
+ROXMIMEType *inode_socket;
+ROXMIMEType *inode_block;
+ROXMIMEType *inode_char;
+ROXMIMEType *inode_door;
+ROXMIMEType *inode_unknown;
 
 /** Normal files of undefined type default to text/plain */
 #define UNKNOWN text_plain
@@ -55,7 +55,7 @@ typedef struct pattern {
   gint len;		/**< Used for sorting the list, longest pattern
 			 * first */
   gchar *glob;          /**< glob pattern, such as *.txt */
-  MIMEType *type;       /**< Type for this pattern */
+  ROXMIMEType *type;    /**< Type for this pattern */
 } Pattern;
 
 /** List of all defined types */
@@ -63,8 +63,10 @@ static GHashTable *all_types=NULL;
 
 /* Ways to look up types */
 static GHashTable *literals=NULL;  /**< Type by full leaf name */
-static GHashTable *exten=NULL;     /**< Type by extension, .jpg -> image/jpeg */
-static GPtrArray *globs=NULL;      /**< Type by pattern README* -> text/x-readme */
+static GHashTable *exten=NULL;     /**< Type by extension,
+				    * .jpg -> image/jpeg */
+static GPtrArray *globs=NULL;      /**< Type by pattern
+				    * README* -> text/x-readme */
 
 /* config */
 static int by_content=FALSE;   /**< If non-zero check the file contents to
@@ -74,16 +76,16 @@ static int ignore_exec=FALSE;  /**< If zero all files with an execute
 				* application/executable */
 
 /* Local functions */
-static MIMEType *get_type(const char *name, int can_create);
+static ROXMIMEType *get_type(const char *name, int can_create);
 static void load_mime_types(void);
-static void get_comment(MIMEType *type);
-static MIMEType *type_by_path(const char *path);
+static void get_comment(ROXMIMEType *type);
+static ROXMIMEType *type_by_path(const char *path);
 
 /**
  * Initialize the MIME type system.  This must be called before the
  * other functions.
  */
-void mime_init(void)
+void rox_mime_init(void)
 {
   all_types=g_hash_table_new(g_str_hash, g_str_equal);
   literals=g_hash_table_new(g_str_hash, g_str_equal);
@@ -103,6 +105,15 @@ void mime_init(void)
   inode_unknown=get_type("inode/unknown", TRUE);
 
   load_mime_types();
+}
+
+/**
+ * Initialize the MIME type system.
+ * @deprecated Use rox_mime_init() instead.
+ */
+void mime_init(void)
+{
+  ROX_CLIB_DEPRECATED("rox_mime_init");
 }
 
 /**
@@ -129,9 +140,9 @@ void mime_init(void)
  * @param[in] path path to object to check, or a name of a non-existant file
  * @return the identified type.
  */
-MIMEType *mime_lookup(const char *path)
+ROXMIMEType *rox_mime_lookup(const char *path)
 {
-  MIMEType *type=NULL;
+  ROXMIMEType *type=NULL;
   struct stat st;
   int exec=FALSE;
 
@@ -167,6 +178,17 @@ MIMEType *mime_lookup(const char *path)
 
   return exec? application_executable: UNKNOWN;
 }
+ 
+/**
+ * Return the MIME type of the named object.
+ *
+ * @deprecated Use rox_mime_lookup().
+ */
+ROXMIMEType *mime_lookup(const char *path)
+{
+  ROX_CLIB_DEPRECATED("rox_mime_lookup");
+  return rox_mime_lookup(path);
+}
 
 /**
  * Return the type of a file based purely on the name.  The file need not
@@ -175,9 +197,21 @@ MIMEType *mime_lookup(const char *path)
  * @param[in] name name of file
  * @return the identified type.
  */
-MIMEType *mime_lookup_by_name(const char *name)
+ROXMIMEType *rox_mime_lookup_by_name(const char *name)
 {
   return get_type(name, TRUE);
+}
+
+/**
+ * Return the type of a file based purely on the name.  The file need not
+ * exist or be readable.
+ *
+ * @deprecated use rox_mime_lookup_by_name()
+ */
+ROXMIMEType *mime_lookup_by_name(const char *name)
+{
+  ROX_CLIB_DEPRECATED("rox_mime_lookup_by_name");
+  return rox_mime_lookup_by_name(name);
 }
 
 /**
@@ -186,7 +220,7 @@ MIMEType *mime_lookup_by_name(const char *name)
  * @param[in] type type to return name of.
  * @return the name, pass to g_free() when done.
  */
-char *mime_type_name(const MIMEType *type)
+char *rox_mime_type_name(const ROXMIMEType *type)
 {
   char *s;
 
@@ -197,7 +231,18 @@ char *mime_type_name(const MIMEType *type)
   return s;
 }
 
-static void get_comment_file(const gchar *fname, MIMEType *type,
+/**
+ * Return the human readable name of the type, in the form media/sub-type
+ *
+ * @deprecated use rox_mime_type_name().
+ */
+char *mime_type_name(const ROXMIMEType *type)
+{
+  ROX_CLIB_DEPRECATED("rox_mime_type_name");
+  return rox_mime_type_name(type);
+}
+
+static void get_comment_file(const gchar *fname, ROXMIMEType *type,
 			     const char *req_lang)
 {
   xmlDocPtr doc;
@@ -257,7 +302,7 @@ static void get_comment_file(const gchar *fname, MIMEType *type,
   xmlFreeDoc(doc);
 }
 
-static void get_comment(MIMEType *type)
+static void get_comment(ROXMIMEType *type)
 {
   GList *files, *p;
   gchar *leaf;
@@ -291,7 +336,7 @@ static void get_comment(MIMEType *type)
  * @param[in] type the type
  * @return the comment
  */
-const char *mime_type_comment(MIMEType *type)
+const char *rox_mime_type_comment(ROXMIMEType *type)
 {
   g_return_val_if_fail(type!=NULL, NULL);
 
@@ -302,13 +347,37 @@ const char *mime_type_comment(MIMEType *type)
 }
 
 /**
+ * Return the comment of a MIME type (the long form of a name, e.g. "
+ * Text document")
+ *
+ * @deprecated use rox_mime_type_comment().
+ */
+const char *mime_type_comment(ROXMIMEType *type)
+{
+  ROX_CLIB_DEPRECATED("rox_mime_type_comment");
+  return rox_mime_type_comment(type);
+}
+
+/**
  * Set how the MIME system treats executable files.  If @a ignore is @c FALSE
  * then all executable files will be identified as application/executable
  *
  * @param[in] ignore the new value of the ignore_exec flag.
  */
+void rox_mime_set_ignore_exec_bit(int ignore)
+{
+  ignore_exec=ignore;
+}
+
+/**
+ * Set how the MIME system treats executable files.  If @a ignore is @c FALSE
+ * then all executable files will be identified as application/executable
+ *
+ * @deprecated Use rox_mime_set_ignore_exec_bit().
+ */
 void mime_set_ignore_exec_bit(int ignore)
 {
+  ROX_CLIB_DEPRECATED("rox_mime_set_ignore_exec_bit");
   ignore_exec=ignore;
 }
 
@@ -318,8 +387,20 @@ void mime_set_ignore_exec_bit(int ignore)
  *
  * @return the value of the ignore_exec flag.
  */
+int rox_mime_get_ignore_exec_bit(void)
+{
+  return ignore_exec;
+}
+
+/**
+ * Return how the MIME system treats executable files, see
+ * mime_set_ignore_exec_bit().
+ *
+ * @deprecated Use rox_mime_get_ignore_exec_bit().
+ */
 int mime_get_ignore_exec_bit(void)
 {
+  ROX_CLIB_DEPRECATED("rox_mime_get_ignore_exec_bit");
   return ignore_exec;
 }
 
@@ -333,8 +414,21 @@ int mime_get_ignore_exec_bit(void)
  *
  * @param[in] content the new value of the by_cotnent flag.
  */
+void rox_mime_set_by_content(int content)
+{
+  by_content=content;
+}
+
+/**
+ * Set how the MIME system deals with the content of files.  If @a content is
+ * @c FALSE then the content of the files will never be read to identify the
+ * type.
+ *
+ * @deprecated Use rox_mime_set_by_content()
+ */
 void mime_set_by_content(int content)
 {
+  ROX_CLIB_DEPRECATED("rox_mime_set_by_content");
   by_content=content;
 }
 
@@ -347,14 +441,27 @@ void mime_set_by_content(int content)
  *
  * @return the value of the by_content flag.
  */
-int mime_get_by_content(void)
+int rox_mime_get_by_content(void)
 {
   return by_content;
 }
 
-static MIMEType *get_type(const char *name, int can_create)
+/**
+ * Return how the MIME system deals with the content of files, see
+ * mime_set_by_content().
+ *
+ *
+ * @deprecated Use rox_mime_get_by_content()
+ */
+int mime_get_by_content(void)
 {
-  MIMEType *type;
+  ROX_CLIB_DEPRECATED("rox_mime_get_by_content");
+  return by_content;
+}
+
+static ROXMIMEType *get_type(const char *name, int can_create)
+{
+  ROXMIMEType *type;
   char *sl;
 
   type=g_hash_table_lookup(all_types, name);
@@ -365,7 +472,7 @@ static MIMEType *get_type(const char *name, int can_create)
   g_return_val_if_fail(sl!=NULL, NULL);
   g_return_val_if_fail(strchr(sl+1, '/')==NULL, NULL);
 
-  type=g_new(MIMEType, 1);
+  type=g_new(ROXMIMEType, 1);
   type->media=g_strndup(name, sl-name);
   type->subtype=g_strdup(sl+1);
   type->comment=NULL;
@@ -375,7 +482,7 @@ static MIMEType *get_type(const char *name, int can_create)
   return type;
 }
 
-static void add_pattern(MIMEType *type, const char *pattern)
+static void add_pattern(ROXMIMEType *type, const char *pattern)
 {
   if(pattern[0]=='*' && pattern[1]=='.' &&
      strpbrk(pattern + 2, "*?[")==NULL) {
@@ -409,7 +516,7 @@ static gint sort_by_strlen(gconstpointer a, gconstpointer b)
 
 static void load_glob(const char *path)
 {
-  MIMEType *type=NULL;
+  ROXMIMEType *type=NULL;
   GError *error=NULL;
   gchar *data, *line;
   
@@ -473,11 +580,11 @@ static void load_mime_types(void)
   }
 }
 
-static MIMEType *type_by_path(const char *path)
+static ROXMIMEType *type_by_path(const char *path)
 {
   const char *ext, *dot, *leafname;
   char *lower;
-  MIMEType *type=NULL;
+  ROXMIMEType *type=NULL;
   int i;
 
   leafname=g_basename(path);
@@ -528,6 +635,9 @@ static MIMEType *type_by_path(const char *path)
 
 /*
  * $Log: mime.c,v $
+ * Revision 1.3  2005/09/10 16:14:19  stephen
+ * Added doxygen comments
+ *
  * Revision 1.2  2004/05/22 17:03:57  stephen
  * Added AppInfo parser
  *

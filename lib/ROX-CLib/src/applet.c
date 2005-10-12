@@ -1,11 +1,14 @@
 /*
- * $Id: applet.c,v 1.5 2005/08/21 13:06:38 stephen Exp $
+ * $Id: applet.c,v 1.6 2005/10/02 11:35:47 stephen Exp $
  *
  * applet.c - Utilities for rox applets
  */
 /**
  * @file applet.c
  * @brief Implementing ROX applets
+ *
+ * @version $Id$
+ * @author Stephen Watson stephen@kerofin.demon.co.uk
  */
 
 #include "rox-clib.h"
@@ -27,12 +30,12 @@
 
 #define MENU_MARGIN 32
 
-static enum panel_location panel_loc=PANEL_UNKNOWN;
+static ROXPanelLocation panel_loc=PANEL_UNKNOWN;
 static gint panel_size=MENU_MARGIN;
 
 static struct name_loc {
   const char *name;
-  enum panel_location loc;
+  ROXPanelLocation loc;
 } locations[]={
   {"Top", PANEL_TOP},   {"Bottom", PANEL_BOTTOM},
   {"Left", PANEL_LEFT}, {"Right", PANEL_RIGHT},
@@ -44,7 +47,7 @@ static gint screen_height=-1;
 static gint screen_width=-1;
 
 /* Parse the property string */
-static void decode_location2(const char *prop, AppletInfo *inf)
+static void decode_location2(const char *prop, ROXAppletInfo *inf)
 {
   int i;
   gchar **strs;
@@ -65,8 +68,13 @@ static void decode_location2(const char *prop, AppletInfo *inf)
   g_strfreev(strs);
 }
 
-/* Get the data we need */
-AppletInfo *applet_get_position(GtkWidget *plug)
+/**
+ * Return the location of an applet's icon.
+ *
+ * @param[in] plug the widget that the applet created in the panel.
+ * @return pointer to applet info, pass to g_free() when done.
+ */
+ROXAppletInfo *rox_applet_get_position(GtkWidget *plug)
 {
   guint32 xid;
   GdkWindow *gwin;
@@ -74,7 +82,7 @@ AppletInfo *applet_get_position(GtkWidget *plug)
   int nchild;
   GdkAtom apos;
   GdkAtom string;
-  AppletInfo *ainfo=NULL;
+  ROXAppletInfo *ainfo=NULL;
 
   g_return_val_if_fail(plug!=NULL, NULL);
   
@@ -113,7 +121,7 @@ AppletInfo *applet_get_position(GtkWidget *plug)
     if(res==Success && format!=0) {
       dprintf(2, "property=%s", (char *) data);
 
-      ainfo=g_new(AppletInfo, 1);
+      ainfo=g_new(ROXAppletInfo, 1);
       decode_location2((const char *) data, ainfo);
       
       XFree(data);
@@ -132,17 +140,31 @@ AppletInfo *applet_get_position(GtkWidget *plug)
   return ainfo;
 }
 
+/**
+ * Return the location of an applet's icon.
+ *
+ * @param[in] plug the widget that the applet created in the panel.
+ * @return pointer to applet info, pass to g_free() when done.
+ *
+ * @deprecated Use rox_applet_get_position() instead.
+ */
+ROXAppletInfo *applet_get_position(GtkWidget *plug)
+{
+  ROX_CLIB_DEPRECATED("rox_applet_get_position");
+  return rox_applet_get_position(plug);
+}
+
 static void position_menu2(GtkMenu *menu, gint *x, gint *y,
 			  gboolean *push_in,
 			  gpointer data)
 {
-  AppletInfo *ainfo = (AppletInfo *) data;
+  ROXAppletInfo *ainfo = (ROXAppletInfo *) data;
   GtkRequisition requisition;
 
   dprintf(2, "position_menu(%p, &%d, &%d, %p)", menu, *x, *y, data);
   if(!ainfo)
     return;
-  dprintf(3, "AppletInfo={%d, %d}", ainfo->loc, ainfo->margin);
+  dprintf(3, "ROXAppletInfo={%d, %d}", ainfo->loc, ainfo->margin);
   
   gtk_widget_size_request(GTK_WIDGET(menu), &requisition);
   dprintf(3, "menu is %d,%d", requisition.width, requisition.height);
@@ -176,13 +198,14 @@ static void position_menu2(GtkMenu *menu, gint *x, gint *y,
  * @param[in] evbut the button event that triggered the menu, or
  * @c NULL if the menu was triggered by some other means
  */
-void applet_popup_menu(GtkWidget *plug, GtkWidget *menu, GdkEventButton *evbut)
+void rox_applet_popup_menu(GtkWidget *plug, GtkWidget *menu,
+			   GdkEventButton *evbut)
 {
-  AppletInfo *pos;
+  ROXAppletInfo *pos;
 
   pos=g_object_get_data(G_OBJECT(plug), "applet-menu-pos");
   if(!pos) {
-    pos=applet_get_position(plug);
+    pos=rox_applet_get_position(plug);
     if(pos) {
       g_object_set_data(G_OBJECT(plug), "applet-menu-pos", pos);
       g_signal_connect_swapped(G_OBJECT(plug), "destroy",
@@ -197,8 +220,28 @@ void applet_popup_menu(GtkWidget *plug, GtkWidget *menu, GdkEventButton *evbut)
 		   0, gtk_get_current_event_time());
 }
 
+/**
+ * Popup a menu in the appropriate place for an applet's icon.
+ *
+ * @param[in,out] plug the GtkPlug object used to hold the applet
+ * @param[in] menu the menu to show
+ * @param[in] evbut the button event that triggered the menu, or
+ * @c NULL if the menu was triggered by some other means
+ *
+ * @deprecated Use rox_applet_popup_menu() instead.
+ */
+void applet_popup_menu(GtkWidget *plug, GtkWidget *menu, GdkEventButton *evbut)
+{
+  ROX_CLIB_DEPRECATED("rox_applet_popup_menu");
+  rox_applet_popup_menu(plug, menu, evbut);
+}
+
 /*
  * $Log: applet.c,v $
+ * Revision 1.6  2005/10/02 11:35:47  stephen
+ * Properly declare an internal function that SystemTray was using and shouldn't
+ * have been.
+ *
  * Revision 1.5  2005/08/21 13:06:38  stephen
  * Added doxygen comments
  *

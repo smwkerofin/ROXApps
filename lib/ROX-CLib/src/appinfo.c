@@ -1,7 +1,7 @@
 /*
  * A GObject to hold a parsed AppInfo.xml file
  *
- * $Id: appinfo.c,v 1.1 2004/05/22 17:03:57 stephen Exp $
+ * $Id: appinfo.c,v 1.2 2005/08/21 13:06:16 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -373,7 +373,7 @@ GList *rox_appinfo_get_mime_type_list(ROXAppInfo *ai, const gchar *element)
     
     if(strcmp(sub->name, "MimeType")==0) {
       value=xmlGetProp(sub, "type");
-      type=mime_lookup_by_name(value);
+      type=rox_mime_lookup_by_name(value);
       xmlFree(value);
       if(type)
 	list=g_list_append(list, type);
@@ -419,6 +419,10 @@ GList *rox_appinfo_get_can_thumbnail_list(ROXAppInfo *ai)
 
 /*
  * $Log: appinfo.c,v $
+ * Revision 1.2  2005/08/21 13:06:16  stephen
+ * Added doxygen comments.
+ * Renamed struct to ROXAppInfo
+ *
  * Revision 1.1  2004/05/22 17:03:57  stephen
  * Added AppInfo parser
  *
