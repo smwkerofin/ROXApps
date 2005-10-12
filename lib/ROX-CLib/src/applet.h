@@ -1,5 +1,5 @@
 /*
- * $Id: applet.h,v 1.4 2005/08/21 13:06:38 stephen Exp $
+ * $Id: applet.h,v 1.5 2005/10/02 11:35:47 stephen Exp $
  *
  * applet.h - Utilities for ROX applets
  */
@@ -9,35 +9,52 @@
 
 /**
  * @file applet.h
- * @brief Implementing ROX applets
+ * @brief Implementing ROX applets.
+ *
+ * @version $Id$
+ * @author Stephen Watson stephen@kerofin.demon.co.uk
  */
 
 /**
- * Location of panel the applet is one.
+ * Location of panel the applet is on.
  */
-enum panel_location {
+enum rox_panel_location {
   PANEL_TOP,            /**< Panel is on the top */
   PANEL_BOTTOM,         /**< Panel is on the bottom */
   PANEL_LEFT,           /**< Panel is on the left */
   PANEL_RIGHT,          /**< Panel is on the right */
   PANEL_UNKNOWN         /**< Panel location is unknown */
 };
-typedef enum panel_location PanelLocation;
+typedef enum rox_panel_location ROXPanelLocation;
+#define PanelLocation ROXPanelLocation
 
-typedef struct applet_info {
-  PanelLocation loc;
-  int margin;
-} AppletInfo;
+typedef struct ROXAppletInfo ROXAppletInfo;
+/**
+ * @brief Details of the location of an applet's icon.
+ */
+struct ROXAppletInfo {
+  PanelLocation loc;             /**< Location of the panel the icon is on. */
+  int margin;                    /**< Margin in pixels from screen edge
+				  * to place popup menu. */
+};
+#define AppletInfo ROXAppletInfo
+
+extern void rox_applet_popup_menu(GtkWidget *plug, GtkWidget *menu,
+			      GdkEventButton *evbut);
+extern ROXAppletInfo *rox_applet_get_position(GtkWidget *plug);
 
 extern void applet_popup_menu(GtkWidget *plug, GtkWidget *menu,
 			      GdkEventButton *evbut);
-
-extern AppletInfo *applet_get_position(GtkWidget *plug);
+extern ROXAppletInfo *applet_get_position(GtkWidget *plug);
 
 #endif
 
 /*
  * $Log: applet.h,v $
+ * Revision 1.5  2005/10/02 11:35:47  stephen
+ * Properly declare an internal function that SystemTray was using and shouldn't
+ * have been.
+ *
  * Revision 1.4  2005/08/21 13:06:38  stephen
  * Added doxygen comments
  *
