@@ -10,6 +10,8 @@ The old options_*() functions are deprecated.
 Many externally visible symbols (functions and types) now have rox_ or
 ROX prefixes.  All still exist under the old names but in general will 
 produce a warning message.  The intention is to remove them for version 2.2.
+Added rox_mime_get_icon().
+Added a 0launch feed.
 
 16-Sep-2005
 ~~~~~~~~~~~
@@ -253,4 +255,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.26 2005/10/02 11:36:31 stephen Exp $
+$Id: Changes,v 1.27 2005/10/12 11:19:23 stephen Exp $
