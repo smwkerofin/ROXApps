@@ -5,7 +5,7 @@
 # This is Free Software under the terms of the GNU General Public License
 # version 2.  See ROX-CLib/Help/COPYING for more details.
 #
-# $Id: libdir.sh,v 1.4 2004/07/31 12:25:42 stephen Exp $
+# $Id: libdir.sh,v 1.5 2004/08/04 18:20:19 stephen Exp $
 
 if [ x"$LIBDIRPATH" = x ]; then
   LIBDIRPATH="$HOME/lib:/usr/local/lib:/usr/lib"
@@ -35,7 +35,7 @@ usage() {
   echo "  --libdir           use LIBDIRPATH $LIBDIRPATH" >&2
   echo "  --appdir           use APPDIRPATH $APPDIRPATH" >&2
   echo "  --path PATH        use given PATH" >&2
-  echo "  --0install site    look on the Zero Install site, if available" >&2
+  echo "  --0install site    look on the Zero Install site (deprecated)" >&2
   echo "  --append-path dir  append dir onto the current path" >&2
   echo "  --prepend-path dir prepend dir onto the current path" >&2
   echo "   (default is $path)" >&2
