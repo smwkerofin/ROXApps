@@ -1,5 +1,5 @@
 /*
- * $Id: options.c,v 1.6 2005/02/19 11:53:18 stephen Exp $
+ * $Id: options.c,v 1.7 2005/08/14 16:07:00 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -19,18 +19,18 @@
  * - The &lt;Choices&gt;/PROJECT/Options file is read in, which contains a list of
  *   name/value pairs, and these are stored in the 'loading' hash table.
  *
- * - Each part of the filer then calls option_add_int(), or a related function,
+ * - Each part of the filer then calls rox_option_add_int(), or a related function,
  *   supplying the name for each option and a default value. Once an option is
  *   registered, it is removed from the loading table.
  *
  * - If things need to happen when values change, modules register with
- *   option_add_notify().
+ *   rox_option_add_notify().
  *
- * - option_register_widget() can be used during initialisation (any time
+ * - rox_option_register_widget() can be used during initialisation (any time
  *   before the Options box is displayed) to tell the system how to render a
  *   particular type of option.
  *
- * - Finally, all notify callbacks are called. Use the Option->has_changed
+ * - Finally, all notify callbacks are called. Use the #ROXOption.has_changed
  *   field to work out what has changed from the defaults.
  *
  * When the user opens the Options box:
@@ -48,7 +48,7 @@
  *
  * - The option values are updated.
  *
- * - All notify callbacks are called. Use the Option->has_changed field
+ * - All notify callbacks are called. Use the #ROXOption.has_changed field
  *   to see what changed.
  *
  * When OK is clicked:
@@ -88,7 +88,7 @@ static GtkTooltips *option_tooltips = NULL;
 /* The Options window. NULL if not yet created. */
 static GtkWidget *window = NULL;
 
-/* "filer_unique" -> (Option *) */
+/* "filer_unique" -> (ROXOption *) */
 static GHashTable *option_hash = NULL;
 
 /* A mapping (name -> value) for options which have been loaded by not
@@ -97,7 +97,7 @@ static GHashTable *option_hash = NULL;
  */
 static GHashTable *loading = NULL;
 
-/* A mapping (XML name -> OptionBuildFn). When reading the Options.xml
+/* A mapping (XML name -> ROXOptionBuildFn). When reading the Options.xml
  * file, this table gives the function used to create the widgets.
  */
 static GHashTable *widget_builder = NULL;
@@ -125,25 +125,25 @@ static void build_options_window(void);
 static GtkWidget *build_window_frame(GtkTreeView **tree_view);
 static void update_option_widgets(void);
 static void button_patch_set_colour(GtkWidget *button, GdkColor *color);
-static void option_add(Option *option, const gchar *key);
+static void option_add(ROXOption *option, const gchar *key);
 static void set_not_changed(gpointer key, gpointer value, gpointer data);
 static void load_options(xmlDoc *doc);
 static gboolean check_anything_changed(void);
 static GtkWidget *button_new_mixed(const char *stock, const char *message);
 static int str_to_int(const char *str);
 
-static GList *build_label(Option *option, xmlNode *node, gchar *label);
-static GList *build_spacer(Option *option, xmlNode *node, gchar *label);
-static GList *build_frame(Option *option, xmlNode *node, gchar *label);
+static GList *build_label(ROXOption *option, xmlNode *node, gchar *label);
+static GList *build_spacer(ROXOption *option, xmlNode *node, gchar *label);
+static GList *build_frame(ROXOption *option, xmlNode *node, gchar *label);
 
-static GList *build_toggle(Option *option, xmlNode *node, gchar *label);
-static GList *build_slider(Option *option, xmlNode *node, gchar *label);
-static GList *build_entry(Option *option, xmlNode *node, gchar *label);
-static GList *build_numentry(Option *option, xmlNode *node, gchar *label);
-static GList *build_radio_group(Option *option, xmlNode *node, gchar *label);
-static GList *build_colour(Option *option, xmlNode *node, gchar *label);
-static GList *build_menu(Option *option, xmlNode *node, gchar *label);
-static GList *build_font(Option *option, xmlNode *node, gchar *label);
+static GList *build_toggle(ROXOption *option, xmlNode *node, gchar *label);
+static GList *build_slider(ROXOption *option, xmlNode *node, gchar *label);
+static GList *build_entry(ROXOption *option, xmlNode *node, gchar *label);
+static GList *build_numentry(ROXOption *option, xmlNode *node, gchar *label);
+static GList *build_radio_group(ROXOption *option, xmlNode *node, gchar *label);
+static GList *build_colour(ROXOption *option, xmlNode *node, gchar *label);
+static GList *build_menu(ROXOption *option, xmlNode *node, gchar *label);
+static GList *build_font(ROXOption *option, xmlNode *node, gchar *label);
 
 /****************************************************************
  *			EXTERNAL INTERFACE			*
@@ -157,7 +157,7 @@ static GList *build_font(Option *option, xmlNode *node, gchar *label);
  * @param[in] project name of program
  * @param[in] domain domain under the control of the programmer.
  */
-void options_init_with_domain(const char *project, const char *domain)
+void rox_options_init_with_domain(const char *project, const char *domain)
 {
 	char	*path;
 	xmlDoc	*doc;
@@ -187,36 +187,85 @@ void options_init_with_domain(const char *project, const char *domain)
 		g_free(path);
 	}
 
-	option_register_widget("label", build_label);
-	option_register_widget("spacer", build_spacer);
-	option_register_widget("frame", build_frame);
+	rox_option_register_widget("label", build_label);
+	rox_option_register_widget("spacer", build_spacer);
+	rox_option_register_widget("frame", build_frame);
 
-	option_register_widget("toggle", build_toggle);
-	option_register_widget("slider", build_slider);
-	option_register_widget("entry", build_entry);
-	option_register_widget("numentry", build_numentry);
-	option_register_widget("radio-group", build_radio_group);
-	option_register_widget("colour", build_colour);
-	option_register_widget("menu", build_menu);
-	option_register_widget("font", build_font);
+	rox_option_register_widget("toggle", build_toggle);
+	rox_option_register_widget("slider", build_slider);
+	rox_option_register_widget("entry", build_entry);
+	rox_option_register_widget("numentry", build_numentry);
+	rox_option_register_widget("radio-group", build_radio_group);
+	rox_option_register_widget("colour", build_colour);
+	rox_option_register_widget("menu", build_menu);
+	rox_option_register_widget("font", build_font);
+}
+
+/**
+ * Initialize the options system, normally called by rox_init_with_domain()
+ * if it detects @c Options.xml in <var>$APP_DIR</var>.
+ *
+ 
+ * @param[in] project name of program
+ * @param[in] domain domain under the control of the programmer.
+ *
+ * @deprecated Use rox_options_init_with_domain() instead.
+ */
+void options_init_with_domain(const char *project, const char *domain)
+{
+  ROX_CLIB_DEPRECATED("rox_options_init_with_domain");
+  rox_options_init_with_domain(project, domain);
 }
 
 /**
  * Initialize the options system, normally called by rox_init().
- * @deprecated Use options_init_with_domain() instead.
+ * @deprecated Use rox_options_init_with_domain() instead.
+ *
+ * @param[in] project name of program
+ */
+void rox_options_init(const char *project)
+{
+  ROX_CLIB_DEPRECATED("rox_options_init_with_domain");
+  rox_options_init_with_domain(project, NULL);
+}
+
+/**
+ * Initialize the options system, normally called by rox_init().
+ * @deprecated Use rox_options_init_with_domain() instead.
  *
  * @param[in] project name of program
  */
 void options_init(const char *project)
 {
-  options_init_with_domain(project, NULL);
+  ROX_CLIB_DEPRECATED("rox_options_init_with_domain");
+  rox_options_init_with_domain(project, NULL);
 }
 
 /**
  * When parsing the XML file, process an element named 'name' by
  * calling 'builder(option, xml_node, label)'.
  * builder returns the new widgets to add to the options box.
- * 'name' should be a static string. Call 'option_check_widget' when
+ * @a name should be a static string. Call rox_option_check_widget() when
+ * the widget's value is modified.
+ *
+ * Functions to set or get the widget's state can be stored in 'option'.
+ * If the option doesn't have a name attribute in Options.xml then
+ * ui will be @c NULL on entry (this is used for buttons).
+ *
+ * @param[in] name name of the type of widget as used in the Options.xml
+ * element
+ * @param[in] builder function called to build the option
+ */
+void rox_option_register_widget(char *name, ROXOptionBuildFn builder)
+{
+	g_hash_table_insert(widget_builder, name, builder);
+}
+
+/**
+ * When parsing the XML file, process an element named 'name' by
+ * calling 'builder(option, xml_node, label)'.
+ * builder returns the new widgets to add to the options box.
+ * 'name' should be a static string. Call rox_option_check_widget when
  * the widget's value is modified.
  *
  * Functions to set or get the widget's state can be stored in 'option'.
@@ -226,10 +275,13 @@ void options_init(const char *project)
  * @param[in] name name of the type of widget as used in the Options.xml
  * element
  * @param[in] builder function called to build the option
+ *
+ * @deprecated Use rox_option_register_widget().
  */
-void option_register_widget(char *name, OptionBuildFn builder)
+void option_register_widget(char *name, ROXOptionBuildFn builder)
 {
-	g_hash_table_insert(widget_builder, name, builder);
+  ROX_CLIB_DEPRECATED("rox_option_register_widget");
+  rox_option_register_widget(name, builder);
 }
 
 /**
@@ -239,7 +291,7 @@ void option_register_widget(char *name, OptionBuildFn builder)
  *
  * @param[in,out] option option to be updated
  */
-void option_check_widget(Option *option)
+void rox_option_check_widget(ROXOption *option)
 {
 	gchar		*new = NULL;
 
@@ -265,7 +317,22 @@ void option_check_widget(Option *option)
 	option->value = new;
 	option->int_value = str_to_int(new);
 
-	options_notify();
+	rox_options_notify();
+}
+
+/**
+ * This is called when the widget's value is modified by the user.
+ * Reads the new value of the widget into the option and calls
+ * the notify callbacks.
+ *
+ * @param[in,out] option option to be updated.
+ *
+ * @deprecate Use rox_option_check_widget().
+ */
+void option_check_widget(ROXOption *option)
+{
+  ROX_CLIB_DEPRECATED("rox_option_check_widget");
+  rox_option_check_widget(option);
 }
 
 /**
@@ -273,12 +340,12 @@ void option_check_widget(Option *option)
  * have their values changed.
  * Set each option->has_changed flag before calling this function.
  */
-void options_notify(void)
+void rox_options_notify(void)
 {
 	GList	*next;
 
 	for (next = notify_callbacks; next; next = next->next) {
-		OptionNotify *cb = (OptionNotify *) next->data;
+		ROXOptionNotify *cb = (ROXOptionNotify *) next->data;
 
 		cb();
 	}
@@ -288,10 +355,23 @@ void options_notify(void)
 					 check_anything_changed());
 }
 
+/**
+ * Call all the notify callbacks. This should happen after any options
+ * have their values changed.
+ * Set each option->has_changed flag before calling this function.
+ *
+ * @deprecated Use rox_options_notify().
+ */
+void options_notify(void)
+{
+  ROX_CLIB_DEPRECATED("rox_options_notify");
+  rox_options_notify();
+}
+
 /* Store values used by Revert */
 static void store_backup(gpointer key, gpointer value, gpointer data)
 {
-	Option *option = (Option *) value;
+	ROXOption *option = (ROXOption *) value;
 
 	g_free(option->backup);
 	option->backup = g_strdup(option->value);
@@ -299,11 +379,11 @@ static void store_backup(gpointer key, gpointer value, gpointer data)
 
 /**
  * Allow the user to edit the options. Returns the window widget (you don't
- * normally need this). NULL if already open.
+ * normally need this). 
  *
- * @return the options window
+ * @return the options window or @c NULL if already open.
  */
-GtkWidget *options_show(void)
+GtkWidget *rox_options_show(void)
 {
 	if (!option_tooltips)
 		option_tooltips = gtk_tooltips_new();
@@ -329,17 +409,46 @@ GtkWidget *options_show(void)
 }
 
 /**
+ * Allow the user to edit the options. Returns the window widget (you don't
+ * normally need this). NULL if already open.
+ *
+ * @return the options window
+ *
+ * @deprecated Use rox_options_show().
+ */
+GtkWidget *options_show(void)
+{
+  ROX_CLIB_DEPRECATED("rox_options_show");
+  return rox_options_show();
+}
+
+/**
  * Initialise and register a new integer option
  *
  * @param[in,out] option option to initialize
  * @param[in] key name of the option
  * @param[in] value default value
  */
-void option_add_int(Option *option, const gchar *key, int value)
+void rox_option_add_int(ROXOption *option, const gchar *key, int value)
 {
 	option->value = g_strdup_printf("%d", value);
 	option->int_value = value;
 	option_add(option, key);
+}
+
+/**
+ * Initialise and register a new integer option
+ *
+ * @param[in,out] option option to initialize
+ * @param[in] key name of the option
+ * @param[in] value default value
+ *
+ * @deprecated Use rox_option_add_int().
+ */
+void option_add_int(ROXOption *option, const gchar *key, int value)
+{
+  ROX_CLIB_DEPRECATED("rox_option_add_int");
+  rox_option_add_int(option, key, value);
 }
 
 /**
@@ -349,11 +458,27 @@ void option_add_int(Option *option, const gchar *key, int value)
  * @param[in] key name of the option
  * @param[in] value default value
  */
-void option_add_string(Option *option, const gchar *key, const gchar *value)
+void rox_option_add_string(ROXOption *option, const gchar *key,
+			   const gchar *value)
 {
 	option->value = g_strdup(value);
 	option->int_value = str_to_int(value);
 	option_add(option, key);
+}
+
+/**
+ * Initialise and register a new string option
+ *
+ * @param[in,out] option option to initialize
+ * @param[in] key name of the option
+ * @param[in] value default value
+ *
+ * @deprecated Use rox_option_add_int().
+ */
+void option_add_string(ROXOption *option, const gchar *key, const gchar *value)
+{
+  ROX_CLIB_DEPRECATED("rox_option_add_string");
+  rox_option_add_string(option, key, value);
 }
 
 /**
@@ -363,7 +488,7 @@ void option_add_string(Option *option, const gchar *key, const gchar *value)
  *
  * @param[in] callback funtion to call if options change
  */
-void option_add_notify(OptionNotify *callback)
+void rox_option_add_notify(ROXOptionNotify *callback)
 {
 	g_return_if_fail(callback != NULL);
 
@@ -371,15 +496,43 @@ void option_add_notify(OptionNotify *callback)
 }
 
 /**
+ * Add a callback which will be called after any options have changed their
+ * values. If several options change at once, this is called after all
+ * changes.
+ *
+ * @param[in] callback funtion to call if options change
+ *
+ * @deprecated Use rox_option_add_notify().
+ */
+void option_add_notify(ROXOptionNotify *callback)
+{
+  ROX_CLIB_DEPRECATED("rox_option_add_notify");
+  rox_option_add_notify(callback);
+}
+
+/**
  * Call 'callback' after all the options have been saved
  *
  * @param[in] callback funtion to call when options have been saved
  */
-void option_add_saver(OptionNotify *callback)
+void rox_option_add_saver(ROXOptionNotify *callback)
 {
 	g_return_if_fail(callback != NULL);
 
 	saver_callbacks = g_list_append(saver_callbacks, callback);
+}
+
+/**
+ * Call 'callback' after all the options have been saved
+ *
+ * @param[in] callback funtion to call when options have been saved
+ *
+ * @deprecated Use rox_option_add_save().
+ */
+void option_add_saver(ROXOptionNotify *callback)
+{
+  ROX_CLIB_DEPRECATED("rox_option_add_saver");
+  rox_option_add_saver(callback);
 }
 
 /****************************************************************
@@ -402,7 +555,7 @@ static int str_to_int(const char *str)
  * On exit, the value will have been updated to the loaded value, if
  * different to the default.
  */
-static void option_add(Option *option, const gchar *key)
+static void option_add(ROXOption *option, const gchar *key)
 {
 	gpointer okey, value;
 
@@ -435,7 +588,7 @@ static void option_add(Option *option, const gchar *key)
 static GtkColorSelectionDialog *current_csel_box = NULL;
 static GtkFontSelectionDialog *current_fontsel_box = NULL;
 
-static void get_new_colour(GtkWidget *ok, Option *option)
+static void get_new_colour(GtkWidget *ok, ROXOption *option)
 {
 	GtkWidget	*csel;
 	GdkColor	c;
@@ -450,10 +603,10 @@ static void get_new_colour(GtkWidget *ok, Option *option)
 	
 	gtk_widget_destroy(GTK_WIDGET(current_csel_box));
 
-	option_check_widget(option);
+	rox_option_check_widget(option);
 }
 
-static void open_coloursel(GtkWidget *button, Option *option)
+static void open_coloursel(GtkWidget *button, ROXOption *option)
 {
 	GtkColorSelectionDialog	*csel;
 	GtkWidget		*dialog, *patch;
@@ -483,7 +636,7 @@ static void open_coloursel(GtkWidget *button, Option *option)
 	gtk_widget_show(dialog);
 }
 
-static void font_chosen(GtkWidget *dialog, gint response, Option *option)
+static void font_chosen(GtkWidget *dialog, gint response, ROXOption *option)
 {
 	gchar *font;
 
@@ -497,14 +650,14 @@ static void font_chosen(GtkWidget *dialog, gint response, Option *option)
 
 	g_free(font);
 
-	option_check_widget(option);
+	rox_option_check_widget(option);
 
 out:
 	gtk_widget_destroy(dialog);
 
 }
 
-static void toggle_active_font(GtkToggleButton *toggle, Option *option)
+static void toggle_active_font(GtkToggleButton *toggle, ROXOption *option)
 {
 	if (current_fontsel_box)
 		gtk_widget_destroy(GTK_WIDGET(current_fontsel_box));
@@ -521,10 +674,10 @@ static void toggle_active_font(GtkToggleButton *toggle, Option *option)
 				   _("(use default)"));
 	}
 
-	option_check_widget(option);
+	rox_option_check_widget(option);
 }
 
-static void open_fontsel(GtkWidget *button, Option *option)
+static void open_fontsel(GtkWidget *button, ROXOption *option)
 {
 	if (current_fontsel_box)
 		gtk_widget_destroy(GTK_WIDGET(current_fontsel_box));
@@ -665,9 +818,9 @@ static void build_menu_item(xmlNode *node, GtkWidget *option_menu)
 static void build_widget(xmlNode *widget, GtkWidget *box)
 {
 	const char *name = widget->name;
-	OptionBuildFn builder;
+	ROXOptionBuildFn builder;
 	gchar	*oname;
-	Option	*option;
+	ROXOption	*option;
 	gchar	*label;
 
 	label = xmlGetProp(widget, "label");
@@ -826,7 +979,7 @@ static void build_options_window(void)
 
 static void null_widget(gpointer key, gpointer value, gpointer data)
 {
-	Option	*option = (Option *) value;
+	ROXOption	*option = (ROXOption *) value;
 
 	g_return_if_fail(option->widget != NULL);
 
@@ -1080,7 +1233,7 @@ static gchar *option_menu_get(GtkOptionMenu *om)
 
 static void restore_backup(gpointer key, gpointer value, gpointer data)
 {
-	Option *option = (Option *) value;
+	ROXOption *option = (ROXOption *) value;
 
 	g_return_if_fail(option->backup != NULL);
 
@@ -1096,13 +1249,13 @@ static void restore_backup(gpointer key, gpointer value, gpointer data)
 static void revert_options(GtkWidget *widget, gpointer data)
 {
 	g_hash_table_foreach(option_hash, restore_backup, NULL);
-	options_notify();
+	rox_options_notify();
 	update_option_widgets();
 }
 
 static void check_changed_cb(gpointer key, gpointer value, gpointer data)
 {
-	Option *option = (Option *) value;
+	ROXOption *option = (ROXOption *) value;
 	gboolean *changed = (gboolean *) data;
 
 	g_return_if_fail(option->backup != NULL);
@@ -1126,7 +1279,7 @@ static gboolean check_anything_changed(void)
 static void write_option(gpointer key, gpointer value, gpointer data)
 {
 	xmlNodePtr doc = (xmlNodePtr) data;
-	Option *option = (Option *) value;
+	ROXOption *option = (ROXOption *) value;
 	xmlNodePtr tree;
 
 	tree = xmlNewTextChild(doc, NULL, "Option", option->value);
@@ -1162,7 +1315,7 @@ static void save_options(void)
 
 	for (next = saver_callbacks; next; next = next->next)
 	{
-		OptionNotify *cb = (OptionNotify *) next->data;
+		ROXOptionNotify *cb = (ROXOptionNotify *) next->data;
 		cb();
 	}
 
@@ -1174,7 +1327,7 @@ out:
 /* Make the widget reflect the current value of the option */
 static void update_cb(gpointer key, gpointer value, gpointer data)
 {
-	Option *option = (Option *) value;
+	ROXOption *option = (ROXOption *) value;
 
 	g_return_if_fail(option != NULL);
 	g_return_if_fail(option->widget != NULL);
@@ -1199,41 +1352,41 @@ static void update_option_widgets(void)
  * value of the option.
  */
 
-static void update_toggle(Option *option)
+static void update_toggle(ROXOption *option)
 {
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(option->widget),
 			option->int_value);
 }
 
-static void update_entry(Option *option)
+static void update_entry(ROXOption *option)
 {
 	gtk_entry_set_text(GTK_ENTRY(option->widget), option->value);
 }
 
-static void update_numentry(Option *option)
+static void update_numentry(ROXOption *option)
 {
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(option->widget),
 			option->int_value);
 }
 
-static void update_radio_group(Option *option)
+static void update_radio_group(ROXOption *option)
 {
 	radio_group_set_value(GTK_RADIO_BUTTON(option->widget), option->value);
 }
 
-static void update_slider(Option *option)
+static void update_slider(ROXOption *option)
 {
 	gtk_adjustment_set_value(
 			gtk_range_get_adjustment(GTK_RANGE(option->widget)),
 			option->int_value);
 }
 
-static void update_menu(Option *option)
+static void update_menu(ROXOption *option)
 {
 	option_menu_set(GTK_OPTION_MENU(option->widget), option->value);
 }
 
-static void update_font(Option *option)
+static void update_font(ROXOption *option)
 {
 	GtkToggleButton *active;
 	gboolean have_font = option->value[0] != '\0';
@@ -1251,7 +1404,7 @@ static void update_font(Option *option)
 				     : (gchar *) _("(use default)"));
 }
 
-static void update_colour(Option *option)
+static void update_colour(ROXOption *option)
 {
 	GdkColor colour;
 
@@ -1263,41 +1416,41 @@ static void update_colour(Option *option)
  * from the widget.
  */
 
-static gchar *read_toggle(Option *option)
+static gchar *read_toggle(ROXOption *option)
 {
 	GtkToggleButton *toggle = GTK_TOGGLE_BUTTON(option->widget);
 
 	return g_strdup_printf("%d", gtk_toggle_button_get_active(toggle));
 }
 
-static gchar *read_entry(Option *option)
+static gchar *read_entry(ROXOption *option)
 {
 	return gtk_editable_get_chars(GTK_EDITABLE(option->widget), 0, -1);
 }
 
-static gchar *read_numentry(Option *option)
+static gchar *read_numentry(ROXOption *option)
 {
 	return g_strdup_printf("%d", (int)
 		gtk_spin_button_get_value(GTK_SPIN_BUTTON(option->widget)));
 }
 
-static gchar *read_slider(Option *option)
+static gchar *read_slider(ROXOption *option)
 {
 	return g_strdup_printf("%d", (int)
 		gtk_range_get_adjustment(GTK_RANGE(option->widget))->value);
 }
 
-static gchar *read_radio_group(Option *option)
+static gchar *read_radio_group(ROXOption *option)
 {
 	return radio_group_get_value(GTK_RADIO_BUTTON(option->widget));
 }
 
-static gchar *read_menu(Option *option)
+static gchar *read_menu(ROXOption *option)
 {
 	return g_strdup(option_menu_get(GTK_OPTION_MENU(option->widget)));
 }
 
-static gchar *read_font(Option *option)
+static gchar *read_font(ROXOption *option)
 {
 	GtkToggleButton *active;
 
@@ -1308,7 +1461,7 @@ static gchar *read_font(Option *option)
 	return g_strdup(gtk_label_get_text(GTK_LABEL(option->widget)));
 }
 
-static gchar *read_colour(Option *option)
+static gchar *read_colour(ROXOption *option)
 {
 	GtkStyle *style = GTK_BIN(option->widget)->child->style;
 
@@ -1320,14 +1473,14 @@ static gchar *read_colour(Option *option)
 
 static void set_not_changed(gpointer key, gpointer value, gpointer data)
 {
-	Option	*option = (Option *) value;
+	ROXOption	*option = (ROXOption *) value;
 
 	option->has_changed = FALSE;
 }
 
 /* Builders for decorations (no corresponding option) */
 
-static GList *build_label(Option *option, xmlNode *node, gchar *label)
+static GList *build_label(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GtkWidget *widget;
 	gchar *text;
@@ -1368,7 +1521,7 @@ static GList *build_label(Option *option, xmlNode *node, gchar *label)
 	return g_list_append(NULL, widget);
 }
 
-static GList *build_spacer(Option *option, xmlNode *node, gchar *label)
+static GList *build_spacer(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GtkWidget *eb;
 
@@ -1381,7 +1534,7 @@ static GList *build_spacer(Option *option, xmlNode *node, gchar *label)
 	return g_list_append(NULL, eb);
 }
 
-static GList *build_frame(Option *option, xmlNode *node, gchar *label)
+static GList *build_frame(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GtkWidget *nbox, *frame, *label_widget;
 	xmlNode	  *hw;
@@ -1419,7 +1572,7 @@ static GList *build_frame(Option *option, xmlNode *node, gchar *label)
  * callbacks.
  */
 
-static GList *build_toggle(Option *option, xmlNode *node, gchar *label)
+static GList *build_toggle(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GtkWidget	*toggle;
 
@@ -1434,12 +1587,12 @@ static GList *build_toggle(Option *option, xmlNode *node, gchar *label)
 	option->widget = toggle;
 
 	g_signal_connect_swapped(toggle, "toggled",
-			G_CALLBACK(option_check_widget), option);
+			G_CALLBACK(rox_option_check_widget), option);
 
 	return g_list_append(NULL, toggle);
 }
 
-static GList *build_slider(Option *option, xmlNode *node, gchar *label)
+static GList *build_slider(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GtkAdjustment *adj;
 	GtkWidget *hbox, *slide, *label_wid;
@@ -1500,12 +1653,12 @@ static GList *build_slider(Option *option, xmlNode *node, gchar *label)
 	option->widget = slide;
 
 	g_signal_connect_swapped(adj, "value-changed",
-			G_CALLBACK(option_check_widget), option);
+			G_CALLBACK(rox_option_check_widget), option);
 
 	return g_list_append(NULL, hbox);
 }
 
-static GList *build_entry(Option *option, xmlNode *node, gchar *label)
+static GList *build_entry(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GtkWidget	*hbox;
 	GtkWidget	*entry;
@@ -1532,13 +1685,13 @@ static GList *build_entry(Option *option, xmlNode *node, gchar *label)
 	option->widget = entry;
 
 	g_signal_connect_data(entry, "changed",
-			G_CALLBACK(option_check_widget), option,
+			G_CALLBACK(rox_option_check_widget), option,
 			NULL, G_CONNECT_AFTER | G_CONNECT_SWAPPED);
 
 	return g_list_append(NULL, hbox);
 }
 
-static GList *build_numentry(Option *option, xmlNode *node, gchar *label)
+static GList *build_numentry(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GtkWidget	*hbox;
 	GtkWidget	*spin;
@@ -1581,12 +1734,12 @@ static GList *build_numentry(Option *option, xmlNode *node, gchar *label)
 	option->widget = spin;
 
 	g_signal_connect_swapped(spin, "value-changed",
-			G_CALLBACK(option_check_widget), option);
+			G_CALLBACK(rox_option_check_widget), option);
 
 	return g_list_append(NULL, hbox);
 }
 
-static GList *build_radio_group(Option *option, xmlNode *node, gchar *label)
+static GList *build_radio_group(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GList		*list = NULL;
 	GtkWidget	*button = NULL;
@@ -1601,7 +1754,7 @@ static GList *build_radio_group(Option *option, xmlNode *node, gchar *label)
 		{
 			button = build_radio(rn, button);
 			g_signal_connect_swapped(button, "toggled",
-				G_CALLBACK(option_check_widget), option);
+				G_CALLBACK(rox_option_check_widget), option);
 			list = g_list_append(list, button);
 		}
 	}
@@ -1643,7 +1796,7 @@ static GList *build_radio_group(Option *option, xmlNode *node, gchar *label)
 	return list;
 }
 
-static GList *build_colour(Option *option, xmlNode *node, gchar *label)
+static GList *build_colour(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GtkWidget	*hbox, *da, *button, *label_wid;
 	
@@ -1675,7 +1828,7 @@ static GList *build_colour(Option *option, xmlNode *node, gchar *label)
 	return g_list_append(NULL, hbox);
 }
 
-static GList *build_menu(Option *option, xmlNode *node, gchar *label)
+static GList *build_menu(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GtkWidget	*hbox, *om, *option_menu, *label_wid;
 	xmlNode		*item;
@@ -1707,13 +1860,13 @@ static GList *build_menu(Option *option, xmlNode *node, gchar *label)
 	option->widget = option_menu;
 
 	g_signal_connect_data(option_menu, "changed",
-			G_CALLBACK(option_check_widget), option,
+			G_CALLBACK(rox_option_check_widget), option,
 			NULL, G_CONNECT_AFTER | G_CONNECT_SWAPPED);
 
 	return g_list_append(NULL, hbox);
 }
 
-static GList *build_font(Option *option, xmlNode *node, gchar *label)
+static GList *build_font(ROXOption *option, xmlNode *node, gchar *label)
 {
 	GtkWidget	*hbox, *button;
 	GtkWidget	*active = NULL;
@@ -1835,6 +1988,10 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: options.c,v $
+ * Revision 1.7  2005/08/14 16:07:00  stephen
+ * Added rox_resources_find_with_domain().
+ * More doxygen additions.
+ *
  * Revision 1.6  2005/02/19 11:53:18  stephen
  * Accept "True" as a synonym for "1" when converting option values to ints
  *

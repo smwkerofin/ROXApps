@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.h,v 1.4 2002/03/19 08:29:19 stephen Exp $
+ * $Id: rox_filer_action.h,v 1.5 2005/09/10 16:16:14 stephen Exp $
  *
  * rox_filer_action.h - drive the filer via SOAP
  */
@@ -9,7 +9,7 @@
  * @brief  Drive the filer via the SOAP calls.
  *
  * @author Stephen Watson
- * @version $Id$
+ * @version $Id: rox_filer_action.h,v 1.5 2005/09/10 16:16:14 stephen Exp $
  */
 
 #ifndef _rox_filer_action_h
@@ -21,7 +21,7 @@
 /**
  * Available panels.
  */
-typedef enum panel_side {
+typedef enum rox_panel_side {
   ROXPS_TOP,        /**< Panel is on the top of the screen */
   ROXPS_BOTTOM,     /**< Panel is on the bottom of the screen */
   ROXPS_LEFT,       /**< Panel is on the left of the screen */
@@ -63,6 +63,9 @@ extern void rox_filer_clear_error(void);
 
 /*
  * $Log: rox_filer_action.h,v $
+ * Revision 1.5  2005/09/10 16:16:14  stephen
+ * Added doxygen comments
+ *
  * Revision 1.4  2002/03/19 08:29:19  stephen
  * Added SOAP server (rox_soap_server.h).  SOAP client can connect to programs
  * other than ROX-Filer.

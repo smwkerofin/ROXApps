@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.8 2003/12/13 19:26:05 stephen Exp $
+ * $Id: rox_dnd.c,v 1.9 2005/09/10 16:15:58 stephen Exp $
  */
 
 /**
@@ -12,7 +12,7 @@
  * handled by #GtkSavebox.
  *
  * @author Stephen Watson
- * @version $Id$
+ * @version $Id: rox_dnd.c,v 1.9 2005/09/10 16:15:58 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -229,7 +229,7 @@ static GSList *uri_list_to_gslist(char *uri_list)
 	uri = g_malloc(sizeof(char) * (length + 1));
 	strncpy(uri, uri_list, length);
 	uri[length] = 0;
-	list = g_slist_append(list, unescape_uri(uri));
+	list = g_slist_append(list, rox_unescape_uri(uri));
 	g_free(uri);
       }
 
@@ -263,7 +263,7 @@ static gboolean drag_drop(GtkWidget 	  *widget,
       gchar *path, *uri;
 
       path=g_strconcat("/tmp/", leafname, NULL);
-      uri=encode_path_as_uri(path);
+      uri=rox_encode_path_as_uri(path);
       g_free(path);
       dprintf(3, "%s %s", leafname, uri);
       set_xds_prop(context, uri);
@@ -462,6 +462,9 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.9  2005/09/10 16:15:58  stephen
+ * Added doxygen comments
+ *
  * Revision 1.8  2003/12/13 19:26:05  stephen
  * Exposed functions to escape and unescape uri's.
  * rox_path_get_local() and rox_path_get_path() now unescape uri's.

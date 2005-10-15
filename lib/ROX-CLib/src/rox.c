@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.11 2005/10/02 11:34:19 stephen Exp $
+ * $Id: rox.c,v 1.12 2005/10/12 11:19:06 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -168,7 +168,7 @@ void rox_init_with_domain(const char *program, const char *domain,
     
     options_file=g_build_filename(app_dir, "Options.xml", NULL);
     if(access(options_file, R_OK)==0) {
-      options_init_with_domain(program, domain);
+      rox_options_init_with_domain(program, domain);
     }
     g_free(options_file);
     
@@ -337,6 +337,10 @@ void rox_main_quit(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.12  2005/10/12 11:19:06  stephen
+ * Externally visible symbols have rox_ or ROX prefixes.
+ * All still exist under the old names but in general will produce a warning message.
+ *
  * Revision 1.11  2005/10/02 11:34:19  stephen
  * Build system fits in with autoconf better.
  *
