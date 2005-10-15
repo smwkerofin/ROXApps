@@ -1,5 +1,5 @@
 /*
- * $Id: mime.h,v 1.3 2005/09/10 16:14:19 stephen Exp $
+ * $Id: mime.h,v 1.4 2005/10/12 11:00:22 stephen Exp $
  *
  * Shared MIME database functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief Shared MIME database functions for ROX-CLib
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id: mime.h,v 1.3 2005/09/10 16:14:19 stephen Exp $
+ * @version $Id: mime.h,v 1.4 2005/10/12 11:00:22 stephen Exp $
  */
 
 #ifndef _rox_mime_h
@@ -57,6 +57,8 @@ extern int rox_mime_get_ignore_exec_bit(void);
 extern void rox_mime_set_by_content(int content);
 extern int rox_mime_get_by_content(void);
 
+extern GdkPixbuf *rox_mime_get_icon(const ROXMIMEType *type, int msize);
+
 /* Old names, to be removed before 2.2 */
 extern void mime_init(void);
 
@@ -74,6 +76,10 @@ extern int mime_get_by_content(void);
 
 /*
  * $Log: mime.h,v $
+ * Revision 1.4  2005/10/12 11:00:22  stephen
+ * Externally visible symbols have rox_ or ROX prefixes.
+ * All still exist under the old names but in general will produce a warning message.
+ *
  * Revision 1.3  2005/09/10 16:14:19  stephen
  * Added doxygen comments
  *

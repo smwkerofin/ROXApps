@@ -1,5 +1,5 @@
 /*
- * $Id: mime.c,v 1.3 2005/09/10 16:14:19 stephen Exp $
+ * $Id: mime.c,v 1.4 2005/10/12 11:00:22 stephen Exp $
  *
  * Shared MIME databse functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief Shared MIME database functions for ROX-CLib
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id: mime.c,v 1.3 2005/09/10 16:14:19 stephen Exp $
+ * @version $Id: mime.c,v 1.4 2005/10/12 11:00:22 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -459,6 +459,133 @@ int mime_get_by_content(void)
   return by_content;
 }
 
+static GdkPixbuf *try_load(const char *path, int msize)
+{
+  if(!path)
+    return NULL;
+
+  rox_debug_printf(1, "try loading %s at %d", path, msize);
+
+  return gdk_pixbuf_new_from_file_at_size(path, msize, msize, NULL);
+}
+
+static GdkPixbuf *theme_try_load(const char *root, int dot, const char *theme,
+				 const char *name, int msize)
+{
+  gchar *path;
+  gchar *tname;
+  GdkPixbuf *icon;
+
+  tname=g_strconcat(name, ".svg", NULL);
+  path=g_build_filename(root, dot? ".icons" : "icons",
+			theme, "MIME", tname, NULL);
+  g_free(tname);
+  icon=try_load(path, msize);
+  g_free(path);
+  if(icon)
+    return icon;
+
+  tname=g_strconcat(name, ".png", NULL);
+  path=g_build_filename(root, dot? ".icons": "icons",
+			theme, "MIME", tname, NULL);
+  g_free(tname);
+  icon=try_load(path, msize);
+  g_free(path);
+  if(icon)
+    return icon;
+}
+
+/**
+ * Return the icon for the specified MIME type, scaled appropriately.
+ * This function checks the override icons for media/subtype, then the
+ * ROX theme icon for the same type.  If neither works it tries again for the
+ * generic media icon in the same places.  If nothing works, @c NULL is
+ * returned.
+ *
+ * In the future this will detect the icon theme in use, but until then
+ * only the ROX theme is checked.
+ *
+ * @param[in] type MIME type to look up
+ * @param[in] msize maximum size in pixels of the icon to return.  If 0 or less
+ * the default size of 48 is used.
+ * @return the icon, or @c NULL if not found.
+ */
+GdkPixbuf *rox_mime_get_icon(const ROXMIMEType *type, int msize)
+{
+  gchar *iname, *path;
+  const gchar *home;
+  GdkPixbuf *icon=NULL;
+
+  if(msize<=0)
+    msize=48;
+
+  iname=g_strdup_printf("%s_%s.png", type->media, type->subtype);
+  path=rox_choices_load(iname, "MIME-icons", "rox.sourceforge.net");
+  if(!path)
+    path=rox_choices_load(iname, "MIME-icons", NULL);
+  g_free(iname);
+  if(path) {
+    icon=try_load(path, msize);
+    g_free(path);
+  }
+  if(icon)
+    return icon;
+
+  home=g_get_home_dir();
+
+  iname=g_strdup_printf("mime-%s:%s", type->media, type->subtype);
+  icon=theme_try_load(home, TRUE, "ROX", iname, msize);
+  if(icon) {
+    g_free(iname);
+    return icon;
+  }
+  icon=theme_try_load("/usr/local/share", FALSE, "ROX", iname, msize);
+  if(icon) {
+    g_free(iname);
+    return icon;
+  }
+  icon=theme_try_load("/usr/share", FALSE, "ROX", iname, msize);
+  if(icon) {
+    g_free(iname);
+    return icon;
+  }
+  g_free(iname);
+  
+ iname=g_strdup_printf("%s.png", type->media);
+  path=rox_choices_load(iname, "MIME-icons", "rox.sourceforge.net");
+  if(!path)
+    path=rox_choices_load(iname, "MIME-icons", NULL);
+  g_free(iname);
+  if(path) {
+    icon=try_load(path, msize);
+    g_free(path);
+  }
+  if(icon)
+    return icon;
+
+  home=g_get_home_dir();
+
+  iname=g_strdup_printf("mime-%s", type->media);
+  icon=theme_try_load(home, TRUE, "ROX", iname, msize);
+  if(icon) {
+    g_free(iname);
+    return icon;
+  }
+  icon=theme_try_load("/usr/local/share", FALSE, "ROX", iname, msize);
+  if(icon) {
+    g_free(iname);
+    return icon;
+  }
+  icon=theme_try_load("/usr/share", FALSE, "ROX", iname, msize);
+  if(icon) {
+    g_free(iname);
+    return icon;
+  }
+  g_free(iname);
+
+  return NULL;
+}
+
 static ROXMIMEType *get_type(const char *name, int can_create)
 {
   ROXMIMEType *type;
@@ -635,6 +762,10 @@ static ROXMIMEType *type_by_path(const char *path)
 
 /*
  * $Log: mime.c,v $
+ * Revision 1.4  2005/10/12 11:00:22  stephen
+ * Externally visible symbols have rox_ or ROX prefixes.
+ * All still exist under the old names but in general will produce a warning message.
+ *
  * Revision 1.3  2005/09/10 16:14:19  stephen
  * Added doxygen comments
  *
