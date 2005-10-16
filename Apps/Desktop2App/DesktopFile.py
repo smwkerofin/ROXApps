@@ -1,4 +1,4 @@
-# $Id: DesktopFile.py,v 1.4 2005/03/10 21:55:03 stephen Exp $
+# $Id: DesktopFile.py,v 1.5 2005/05/27 10:14:40 stephen Exp $
 
 """Scan .desktop files and generate rox wrappers for programs"""
 
@@ -142,7 +142,7 @@ class DesktopEntry:
 
         if self.path:
             out.write('cd %s\n' % self.path)
-        cmd=self.command('$@')
+        cmd=self.command('"$@"')
         if self.terminal:
             opts=self.section.get('TerminalOptions')
             if opts:
