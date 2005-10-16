@@ -42,6 +42,13 @@ which opens.
   Encode as binary: select if file is not text (uses uuencode)
               Send: click to send the file
 
+Check mail programs
+-------------------
+
+This menu option lets you set up one or more programs to be called at regular
+intervals to fetch mail from servers.  I don't recommend using this option, 
+setting up fetchmail to run in daemon mode is a much better idea.
+
 Bugs
 ----
 
