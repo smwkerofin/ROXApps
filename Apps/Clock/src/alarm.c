@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.18 2005/03/04 17:17:39 stephen Exp $
+ * $Id: alarm.c,v 1.19 2005/08/03 13:19:05 stephen Exp $
  */
 #include "config.h"
 
@@ -30,7 +30,11 @@
 #endif
 
 #include <rox/rox.h>
+#include <rox/systray.h>
+
 #include "alarm.h"
+
+GdkPixbuf *alarm_icon=NULL;
 
 /* Note these are used as array indicies, so leave them starting at zero
    and monotonically increasing */
@@ -61,6 +65,10 @@ typedef struct alarm {
 static GList *alarms=NULL;
 
 static time_t alarms_saved=(time_t) 0;
+
+static int nalarm_show=0;
+static GtkWidget *alarm_notify=NULL;
+static int notify_id=0;
 
 /* For the alarm list */
 enum alarm_list_cols {
@@ -229,8 +237,10 @@ void alarm_load(void)
 {
   gchar *fname;
 #ifdef HAVE_SYS_STAT_H
-    struct stat statb;
+  struct stat statb;
 #endif
+
+  rox_systray_init();
 
   fname=rox_choices_load("alarms.xml", PROJECT, AUTHOR_DOMAIN);
   if(fname) {
@@ -531,6 +541,15 @@ static void remove_window(GtkWidget *wid, gpointer data)
   gtk_widget_hide(win);
   /*gtk_widget_unref(win);*/
   gtk_widget_destroy(win);
+
+  if(--nalarm_show<1 && alarm_notify) {
+    gtk_widget_hide(alarm_notify);
+  }
+}
+
+static void systray_gone(GtkWidget *widget, gpointer udata)
+{
+  alarm_notify=NULL;
 }
 
 static void show_message(const Alarm *alarm)
@@ -572,6 +591,23 @@ static void show_message(const Alarm *alarm)
 
   gtk_widget_show(win);
   gdk_beep();
+
+  nalarm_show++;
+  if(!alarm_notify) {
+    alarm_notify=rox_systray_new();
+    if(alarm_notify) {
+      GdkPixbuf *tmp=gdk_pixbuf_scale_simple(alarm_icon, 16, 16,
+					     GDK_INTERP_BILINEAR);
+      label=gtk_image_new_from_pixbuf(tmp);
+      gtk_container_add(GTK_CONTAINER(alarm_notify), label);
+      g_object_unref(tmp);
+    }
+  }
+  if(alarm_notify) {
+    gtk_widget_show_all(alarm_notify);
+    
+    notify_id=rox_systray_send_message(alarm_notify, alarm->message, 5000);
+  }
 }
 
 int alarm_check(void)
@@ -964,6 +1000,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.19  2005/08/03 13:19:05  stephen
+ * Made alarm windows sticky
+ *
  * Revision 1.18  2005/03/04 17:17:39  stephen
  * Fix bug creating alarm window
  *

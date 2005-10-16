@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.35 2005/05/07 10:50:38 stephen Exp $
+ * $Id: clock.c,v 1.36 2005/05/27 10:14:07 stephen Exp $
  */
 #include "config.h"
 
@@ -96,7 +96,6 @@ static Mode default_mode={
 
 static GtkWidget *menu=NULL;          /* Popup menu */
 static GdkColormap *cmap = NULL;
-static GdkPixbuf *alarm_icon=NULL;
 static GdkColor colours[]={
   /* If you change these, change the enums below */
   {0, 0xffff,0xffff,0xffff},
@@ -121,15 +120,15 @@ enum {WHITE, RED, GREEN, BLUE, ORANGE, GREY, BLACK};
 #define CLOCK_SIZE 256
 static GdkPixbuf *clock_face=NULL;
 
-static Option o_format;
-static Option o_user_format;
-static Option o_seconds;
-static Option o_show_text;
-static Option o_hours;
-static Option o_interval;
-static Option o_size;
-static Option o_font;
-static Option o_no_face;
+static ROXOption o_format;
+static ROXOption o_user_format;
+static ROXOption o_seconds;
+static ROXOption o_show_text;
+static ROXOption o_hours;
+static ROXOption o_interval;
+static ROXOption o_size;
+static ROXOption o_font;
+static ROXOption o_no_face;
 
 static gboolean load_alarms=TRUE;   /* Also controls if we show them */
 static gboolean save_alarms=TRUE;
@@ -241,7 +240,7 @@ int main(int argc, char *argv[])
   setlocale(LC_TIME, "");
   setlocale (LC_ALL, "");
 #endif
-  app_dir=g_getenv("APP_DIR");
+  app_dir=rox_get_app_dir();
 #ifdef HAVE_BINDTEXTDOMAIN
   localedir=g_strconcat(app_dir, "/Messages", NULL);
   bindtextdomain(PROJECT, localedir);
@@ -555,17 +554,17 @@ static void opts_changed(void)
   if(o_font.has_changed) {
     GList *l;
 
-    printf("font changed, now %s\n", o_font.value);
+    dprintf(1, "font changed, now %s\n", o_font.value);
 
     for(l=windows; l; l=g_list_next(l)) {
       ClockWindow *c=(ClockWindow *) l->data;
-      printf(" %p %p\n", c, c->clock_face);
+      dprintf(1, " %p %p\n", c, c->clock_face);
       if(c->clock_face) {
 	gdk_pixbuf_unref(c->clock_face);
 	c->clock_face=NULL;
       }
     }
-    printf(" %p\n", clock_face);
+    dprintf(1, " %p\n", clock_face);
     if(clock_face) {
       gdk_pixbuf_unref(clock_face);
       clock_face=NULL;
@@ -577,17 +576,17 @@ static void setup_options(void)
 {
   read_config();
   
-  option_add_int(&o_format, "format", default_mode.format);
-  option_add_string(&o_user_format, "user_format", user_defined);
-  option_add_int(&o_seconds, "seconds", default_mode.seconds);
-  option_add_int(&o_show_text, "text", default_mode.show_text);
-  option_add_int(&o_hours, "hours", default_mode.hours);
-  option_add_int(&o_interval, "interval", default_mode.interval);
-  option_add_int(&o_size, "size", default_mode.init_size);
-  option_add_string(&o_font, "font", default_mode.font_name);
-  option_add_int(&o_no_face, "no_face", 0);
+  rox_option_add_int(&o_format, "format", default_mode.format);
+  rox_option_add_string(&o_user_format, "user_format", user_defined);
+  rox_option_add_int(&o_seconds, "seconds", default_mode.seconds);
+  rox_option_add_int(&o_show_text, "text", default_mode.show_text);
+  rox_option_add_int(&o_hours, "hours", default_mode.hours);
+  rox_option_add_int(&o_interval, "interval", default_mode.interval);
+  rox_option_add_int(&o_size, "size", default_mode.init_size);
+  rox_option_add_string(&o_font, "font", default_mode.font_name);
+  rox_option_add_int(&o_no_face, "no_face", 0);
 
-  option_add_notify(opts_changed);
+  rox_option_add_notify(opts_changed);
 }
 
 enum draw_hours {
@@ -1037,91 +1036,13 @@ static gboolean read_config_xml(void)
 /* Read in the config */
 static void read_config(void)
 {
-  guchar *fname;
-
-  if(read_config_xml())
-    return;
-  
-  fname=rox_choices_load("options", PROJECT, AUTHOR_DOMAIN);
-
-  if(fname) {
-    FILE *in;
-
-    in=fopen(fname, "r");
-    if(in) {
-      char buf[1024], *line;
-      char *end;
-      gchar *words;
-
-      do {
-	line=fgets(buf, sizeof(buf), in);
-	if(!line)
-	  break;
-	end=strchr(line, '\n');
-	if(end)
-	  *end=0;
-	end=strchr(line, '#');  /* everything after # is a comment */
-	if(end)
-	  *end=0;
-
-	words=g_strstrip(line);
-	if(words[0]) {
-	  gchar *var, *val;
-
-	  end=strchr(words, '=');
-	  if(end) {
-	    /* var = val */
-	    val=g_strstrip(end+1);
-	    *end=0;
-	    var=g_strstrip(words);
-
-	    if(strcmp(var, "time_format")==0) {
-	      int i;
-
-	      for(i=0; formats[i].name; i++)
-		if(strcmp(val, formats[i].name)==0)
-		  break;
-	      if(formats[i].name)
-		default_mode.format=i;
-	      
-	    } else if(strcmp(var, "flags")==0) {
-	      int flags=atoi(val);
-	      default_mode.seconds=!!(flags & MODE_SECONDS);
-	      default_mode.show_text=!(flags & MODE_NO_TEXT);
-	      default_mode.hours=!!(flags & MODE_HOURS);
-	      
-	    } else if(strcmp(var, "interval")==0) {
-	      default_mode.interval=(guint32) atol(val);
-	      
-	    } else if(strcmp(var, "user_format")==0) {
-	      strncpy(user_defined, val, sizeof(user_defined));
-	      
-	    } else if(strcmp(var, "init_size")==0) {
-	      default_mode.init_size=(guint) atoi(val);
-	      
-	    } else if(strcmp(var, "font_name")==0) {
-	      default_mode.font_name=g_strdup(val);
-	      
-	    }
-	  }
-	}
-	
-      } while(!feof(in));
-
-      fclose(in);
-
-      if(default_mode.init_size<16)
-	default_mode.init_size=16;
-    }
-    
-    g_free(fname);
-  }
+  read_config_xml();
 }
 
 /* Show the configure window */
 static void show_conf_win(void)
 {
-  options_show();
+  rox_options_show();
 }
 
 static void close_window(void)
@@ -1216,7 +1137,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
     }
 
     if(cwin->applet_mode)
-      applet_popup_menu(cwin->win, menu, bev);
+      rox_applet_popup_menu(cwin->win, menu, bev);
     else
       gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		     bev->button, bev->time);
@@ -1247,7 +1168,7 @@ static gboolean popup_menu(GtkWidget *window, gpointer udata)
   }
 
   if(cwin->applet_mode)
-    applet_popup_menu(cwin->win, menu, NULL);
+    rox_applet_popup_menu(cwin->win, menu, NULL);
   else
     gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		   0, gtk_get_current_event_time());
@@ -1373,6 +1294,11 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.36  2005/05/27 10:14:07  stephen
+ * Fix for creating applets in remote mode, need to give the filer long enough
+ * to notice the widget was created.
+ * Use apsymbols for Linux portability.
+ *
  * Revision 1.35  2005/05/07 10:50:38  stephen
  * Faster creation of small face displays
  *

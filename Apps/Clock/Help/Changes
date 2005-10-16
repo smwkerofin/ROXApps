@@ -1,6 +1,13 @@
 Changes to Clock
 ================
 
+12-Oct-2005
+~~~~~~~~~~~
+Update for ROX-CLib changes, many externally visible symbols
+(functions and types) now have rox_ or ROX prefixes.
+Alarms are show in the system tray.
+Can get ROX-CLib via 0launch.
+
 11-Sep-2005
 ~~~~~~~~~~~
 Remove aclocal.m4, replace with rox-clib.m4 and aclocal -I .

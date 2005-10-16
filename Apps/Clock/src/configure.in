@@ -38,7 +38,7 @@ fi
 
 dnl Check for ROX-CLib and version
 dnl Assume that if we have the right ROX-CLib we also have GTK+ and libxml
-ROX_CLIB(2, 1, 4)
+ROX_CLIB_0LAUNCH(2, 1, 6)
 
 dnl Is altzone defined in <time.h> ?
 AC_MSG_CHECKING(for altzone)
