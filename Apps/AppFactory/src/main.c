@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.16 2004/11/21 13:03:05 stephen Exp $
+ * $Id: main.c,v 1.17 2005/05/27 10:12:46 stephen Exp $
  */
 #include "config.h"
 
@@ -71,8 +71,8 @@ static GtkWidget *save=NULL;
 static const char *author="";
 static char *homepage="";
 
-static Option opt_author;
-static Option opt_homepage;
+static ROXOption opt_author;
+static ROXOption opt_homepage;
 
 static void usage(const char *argv0)
 {
@@ -280,8 +280,8 @@ int main(int argc, char *argv[])
 
 static void setup_config(void)
 {
-  option_add_string(&opt_author, "author", author);
-  option_add_string(&opt_homepage, "web", homepage);
+  rox_option_add_string(&opt_author, "author", author);
+  rox_option_add_string(&opt_homepage, "web", homepage);
 }
 
 static gboolean app_dropped(GtkWidget *widget, GSList *uris, gpointer data,
@@ -656,7 +656,7 @@ static void hide_window(GtkWidget *widget, gpointer data)
 
 static void show_config_win(void)
 {
-  options_show(); 
+  rox_options_show(); 
 }
 
 /*
@@ -748,6 +748,9 @@ static void show_info_win(void)
 }
 /*
  * $Log: main.c,v $
+ * Revision 1.17  2005/05/27 10:12:46  stephen
+ * Use apsymbols for Linux portability.
+ *
  * Revision 1.16  2004/11/21 13:03:05  stephen
  * Use new ROX-CLib features
  *

@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.13 2004/11/21 13:11:28 stephen Exp $
+ * $Id: main.c,v 1.14 2005/10/08 11:10:41 stephen Exp $
  */
 #include "config.h"
 
@@ -76,8 +76,8 @@ static Options options={
   "fixed", FALSE
 };
 
-static Option o_font_name;
-static Option o_use_unified;
+static ROXOption o_font_name;
+static ROXOption o_use_unified;
 
 /* Declare functions in advance */
 static DiffWindow *make_window(void);
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
   setlocale (LC_ALL, "");
 #endif
   /* What is the directory where our resources are? (set by AppRun) */
-  app_dir=g_getenv("APP_DIR");
+  app_dir=rox_get_app_dir();
 #ifdef HAVE_BINDTEXTDOMAIN
   /* More (untested) i18n support */
   localedir=g_strconcat(app_dir, "/Messages", NULL);
@@ -226,10 +226,10 @@ static void setup_config(void)
   
   read_config();
 
-  option_add_string(&o_font_name, "font", options.font_name);
-  option_add_int(&o_use_unified, "unified", options.use_unified);
+  rox_option_add_string(&o_font_name, "font", options.font_name);
+  rox_option_add_int(&o_use_unified, "unified", options.use_unified);
 
-  option_add_notify(opts_changed);
+  rox_option_add_notify(opts_changed);
 }
 
 static DiffWindow *make_window()
@@ -775,13 +775,31 @@ static void show_diffs(DiffWindow *win)
   gchar *cmd;
   GtkTextIter start, end;
   GtkTextBuffer *buf;
+#ifdef HAVE_MKSTEMP
+  char tnam[1024];
+  int fd;
+#endif
 
   win->unified=o_use_unified.int_value;
 
+#ifdef HAVE_MKSTEMP
+  strcpy(tnam, "/tmp/rox.Diff.XXXXXX");
+  fd=mkstemp(tnam);
+  close(fd);
+  win->fname[0]=g_strdup(tnam);
+#else
   win->fname[0]=g_strdup(tmpnam(NULL));
+#endif
   write_window_to(win->file[0], win->fname[0], win);
 
+#ifdef HAVE_MKSTEMP
+  strcpy(tnam, "/tmp/rox.Diff.XXXXXX");
+  fd=mkstemp(tnam);
+  close(fd);
+  win->fname[1]=g_strdup(tnam);
+#else
   win->fname[1]=g_strdup(tmpnam(NULL));
+#endif
   write_window_to(win->file[1], win->fname[1], win);
 
   pipe(p);
@@ -822,11 +840,15 @@ static void show_diffs(DiffWindow *win)
 
 static void show_choices_win(void)
 {
-  options_show();
+  rox_options_show();
 }
 
 /*
  * $Log: main.c,v $
+ * Revision 1.14  2005/10/08 11:10:41  stephen
+ * Bugfix: selection of unified mode from options was broken, reported by
+ *         Peter Hyman.
+ *
  * Revision 1.13  2004/11/21 13:11:28  stephen
  * Use new ROX-CLib features
  *

@@ -1,6 +1,15 @@
 Mem
 ===
 
+16-Oct-2005
+~~~~~~~~~~~
+Can get ROX-CLib via 0launch.
+
+12-Oct-2005
+~~~~~~~~~~~
+Update for ROX-CLib changes, many externally visible symbols
+(functions and types) now have rox_ or ROX prefixes.
+
 11-Sep-2005
 ~~~~~~~~~~~
 Remove aclocal.m4, replace with rox-clib.m4 and aclocal -I .

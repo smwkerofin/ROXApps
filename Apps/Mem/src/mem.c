@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.18 2005/01/23 12:43:55 stephen Exp $
+ * $Id: mem.c,v 1.19 2005/05/27 10:21:50 stephen Exp $
  */
 #include "config.h"
 
@@ -76,12 +76,12 @@ static Options default_options={
   AD_PER
 };
 
-static Option o_update_rate;
-static Option o_applet_size;
-static Option o_show_host;
-static Option o_gauge_width;
-static Option o_mem_disp;
-static Option o_swap_disp;
+static ROXOption o_update_rate;
+static ROXOption o_applet_size;
+static ROXOption o_show_host;
+static ROXOption o_gauge_width;
+static ROXOption o_mem_disp;
+static ROXOption o_swap_disp;
 
 typedef struct mem_window {
   gboolean is_applet;
@@ -301,16 +301,17 @@ static void setup_options(void)
 {
   read_choices();  /* Read old format config */
 
-  option_add_int(&o_update_rate, "update_rate",
+  rox_option_add_int(&o_update_rate, "update_rate",
 		 1000*default_options.update_sec);
-  option_add_int(&o_applet_size, "applet_size",
+  rox_option_add_int(&o_applet_size, "applet_size",
 		  default_options.applet_init_size);
-  option_add_int(&o_show_host, "show_host", default_options.show_host);
-  option_add_int(&o_gauge_width, "gauge_width", default_options.gauge_width);
-  option_add_int(&o_mem_disp, "mem_disp", default_options.mem_disp);
-  option_add_int(&o_swap_disp, "swap_disp", default_options.swap_disp);
+  rox_option_add_int(&o_show_host, "show_host", default_options.show_host);
+  rox_option_add_int(&o_gauge_width, "gauge_width",
+		     default_options.gauge_width);
+  rox_option_add_int(&o_mem_disp, "mem_disp", default_options.mem_disp);
+  rox_option_add_int(&o_swap_disp, "swap_disp", default_options.swap_disp);
 
-  option_add_notify(opts_changed);
+  rox_option_add_notify(opts_changed);
 }
 
 static void remove_window(MemWindow *win)
@@ -1035,7 +1036,7 @@ static void opts_changed(void)
 
 static void show_config_win(void)
 {
-  options_show();
+  rox_options_show();
 }
 
 static void close_window(void)
@@ -1124,7 +1125,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 	menu_create_menu(window);
 
       if(mwin->is_applet)
-	applet_popup_menu(mwin->win, menu, bev);
+	rox_applet_popup_menu(mwin->win, menu, bev);
       else
 	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		       bev->button, bev->time);
@@ -1148,7 +1149,7 @@ static gboolean popup_menu(GtkWidget *window, gpointer udata)
     menu_create_menu(GTK_WIDGET(mwin->win));
 
   if(mwin->is_applet)
-    applet_popup_menu(mwin->win, menu, NULL);
+    rox_applet_popup_menu(mwin->win, menu, NULL);
   else
     gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		   0, gtk_get_current_event_time());
@@ -1275,6 +1276,10 @@ static gboolean options_remote(void)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.19  2005/05/27 10:21:50  stephen
+ * Fix for creating applets in remote mode, need to give the filer long enough
+ * to notice the widget was created.
+ *
  * Revision 1.18  2005/01/23 12:43:55  stephen
  * Update choice_install for XDG basedirs choices
  * Had missed one call to the old choices interface.  Made domain consistant with other apps.

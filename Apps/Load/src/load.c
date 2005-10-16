@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.25 2004/11/21 13:21:56 stephen Exp $
+ * $Id: load.c,v 1.26 2005/05/27 10:21:11 stephen Exp $
  *
  * Log at end of file
  */
@@ -116,21 +116,21 @@ static int ihistory=0;
 static char hostname[256];
 #endif
 
-static Option opt_update_rate;
-static Option opt_show_max;
-static Option opt_show_vals;
-static Option opt_show_host;
-static Option opt_multiple;
-static Option opt_applet_size;
-static Option opt_col_norm1;
-static Option opt_col_norm5;
-static Option opt_col_norm15;
-static Option opt_col_high1;
-static Option opt_col_high5;
-static Option opt_col_high15;
-static Option opt_col_fg;
-static Option opt_col_bg;
-static Option opt_font;
+static ROXOption opt_update_rate;
+static ROXOption opt_show_max;
+static ROXOption opt_show_vals;
+static ROXOption opt_show_host;
+static ROXOption opt_multiple;
+static ROXOption opt_applet_size;
+static ROXOption opt_col_norm1;
+static ROXOption opt_col_norm5;
+static ROXOption opt_col_norm15;
+static ROXOption opt_col_high1;
+static ROXOption opt_col_high5;
+static ROXOption opt_col_high15;
+static ROXOption opt_col_fg;
+static ROXOption opt_col_bg;
+static ROXOption opt_font;
 
 typedef struct load_window {
   GtkWidget *win;
@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
   setlocale(LC_TIME, "");
   setlocale (LC_ALL, "");
 #endif
-  app_dir=g_getenv("APP_DIR");
+  app_dir=rox_get_app_dir();
 #ifdef HAVE_BINDTEXTDOMAIN
   localedir=g_strconcat(app_dir, "/Messages", NULL);
   bindtextdomain(PROJECT, localedir);
@@ -358,23 +358,23 @@ int main(int argc, char *argv[])
 
 static void setup_config(void)
 {
-  option_add_int(&opt_update_rate, "update_rate", 2);
-  option_add_int(&opt_show_max, "show_max", TRUE);
-  option_add_int(&opt_show_vals, "show_vals", FALSE);
-  option_add_int(&opt_show_host, "show_host", FALSE);
-  option_add_int(&opt_multiple, "multiple", TRUE);
-  option_add_int(&opt_applet_size, "applet_size", MIN_WIDTH);
-  option_add_string(&opt_col_norm1, "normal1", "#00cc00");
-  option_add_string(&opt_col_norm5, "normal5", "#00aa00");
-  option_add_string(&opt_col_norm15, "normal15", "#008800");
-  option_add_string(&opt_col_high1, "high1", "#ff0000");
-  option_add_string(&opt_col_high5, "high5", "#dd0000");
-  option_add_string(&opt_col_high15, "high15", "#bb0000");
-  option_add_string(&opt_col_fg, "foreground", "#000000");
-  option_add_string(&opt_col_bg, "background", "#d6d6d6");
-  option_add_string(&opt_font, "font", "Serif 6");
+  rox_option_add_int(&opt_update_rate, "update_rate", 2);
+  rox_option_add_int(&opt_show_max, "show_max", TRUE);
+  rox_option_add_int(&opt_show_vals, "show_vals", FALSE);
+  rox_option_add_int(&opt_show_host, "show_host", FALSE);
+  rox_option_add_int(&opt_multiple, "multiple", TRUE);
+  rox_option_add_int(&opt_applet_size, "applet_size", MIN_WIDTH);
+  rox_option_add_string(&opt_col_norm1, "normal1", "#00cc00");
+  rox_option_add_string(&opt_col_norm5, "normal5", "#00aa00");
+  rox_option_add_string(&opt_col_norm15, "normal15", "#008800");
+  rox_option_add_string(&opt_col_high1, "high1", "#ff0000");
+  rox_option_add_string(&opt_col_high5, "high5", "#dd0000");
+  rox_option_add_string(&opt_col_high15, "high15", "#bb0000");
+  rox_option_add_string(&opt_col_fg, "foreground", "#000000");
+  rox_option_add_string(&opt_col_bg, "background", "#d6d6d6");
+  rox_option_add_string(&opt_font, "font", "Serif 6");
 
-  option_add_notify(opts_changed);
+  rox_option_add_notify(opts_changed);
 }
 
 /* Work out number of CPU's here.  0 means we could not work it out and
@@ -1137,7 +1137,7 @@ static void opts_changed(void)
 
 static void show_config_win(void)
 {
-  options_show();
+  rox_options_show();
 }
 
 static void close_window(void)
@@ -1219,7 +1219,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 
     dprintf(3, "show menu for %s", lwin->is_applet? "applet": "window");
     if(lwin->is_applet)
-      applet_popup_menu(lwin->win, menu, bev);
+      rox_applet_popup_menu(lwin->win, menu, bev);
     else
       gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		     bev->button, bev->time);
@@ -1241,7 +1241,7 @@ static gboolean popup_menu(GtkWidget *window, gpointer udata)
     menu_create_menu(GTK_WIDGET(lwin->win));
 
   if(lwin->is_applet)
-    applet_popup_menu(lwin->win, menu, NULL);
+    rox_applet_popup_menu(lwin->win, menu, NULL);
   else
     gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		   0, gtk_get_current_event_time());
@@ -1370,6 +1370,11 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.26  2005/05/27 10:21:11  stephen
+ * Fix for creating applets in remote mode, need to give the filer long enough
+ * to notice the widget was created.
+ * Use apsymbols for Linux portability.
+ *
  * Revision 1.25  2004/11/21 13:21:56  stephen
  * Use new ROX-CLib features
  *

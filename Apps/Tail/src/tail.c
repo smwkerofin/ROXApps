@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.19 2004/08/05 17:49:16 stephen Exp $
+ * $Id: tail.c,v 1.20 2004/11/21 13:24:39 stephen Exp $
  */
 
 #include "config.h"
@@ -38,6 +38,7 @@
 #include <rox/rox.h>
 #include <rox/rox_dnd.h>
 #include <rox/gtksavebox.h>
+#include <rox/mime.h>
 
 #define MAX_SIZE (256*1024)  /* Maximum size to load at start */
 
@@ -77,7 +78,7 @@ static GtkItemFactoryEntry menu_items[] = {
   GTK_STOCK_DIALOG_INFO},
   {N_("/_Save text..."), "<control>S", file_saveas_proc, 0, "<StockItem>",
   GTK_STOCK_SAVE_AS},
-  {N_("/_Quit"),"<control>Q",  gtk_main_quit, 0,  "<StockItem>",
+  {N_("/_Quit"),"<control>Q",  rox_main_quit, 0,  "<StockItem>",
   GTK_STOCK_QUIT},
 };
 
@@ -104,6 +105,8 @@ static GtkWidget *get_main_menu(GtkWidget *window, const gchar *name)
   gchar *menurc;
   GtkWidget *menu;
 
+  dprintf(1, "in get_main_menu(%p, %s)\n", window, name);
+  
   accel_group = gtk_accel_group_new ();
 
   /* This function initializes the item factory.
@@ -188,7 +191,7 @@ int main(int argc, char *argv[])
   rox_init_with_domain(PROJECT, "kerofin.demon.co.uk", &argc, &argv);
   
   /* What is the directory where our resources are? (set by AppRun) */
-  app_dir=g_getenv("APP_DIR");
+  app_dir=rox_get_app_dir();
 #ifdef HAVE_BINDTEXTDOMAIN
   /* More (untested) i18n support */
   localedir=g_strconcat(app_dir, "/Messages", NULL);
@@ -478,6 +481,8 @@ static void set_fd(int nfd)
 static void show_info_win(void)
 {
   GtkWidget *infowin;
+
+  dprintf(1, "in show_info_win()\n");
   
   infowin=rox_info_win_new_from_appinfo(PROGRAM);
   rox_add_window(infowin);
@@ -560,17 +565,7 @@ static void file_saveas_proc(void)
   rox_debug_printf(2, "set pathname to %s", "tail.txt");
   gtk_savebox_set_pathname(GTK_SAVEBOX(savebox), "tail.txt");
 
-  ipath=rox_choices_load("text_plain.png", "MIME-icons", "rox.sourceforge.net");
-  if(!ipath)
-    ipath=rox_choices_load("text_plain.png", "MIME-icons", NULL);
-  if(!ipath)
-    ipath=rox_choices_load("text.png", "MIME-icons", "rox.sourceforge.net");
-  if(!ipath)
-    ipath=rox_choices_load("text.png", "MIME-icons", NULL);
-  if(ipath) {
-    pixbuf=gdk_pixbuf_new_from_file(ipath, &err);
-    g_free(ipath);
-  }
+  pixbuf=rox_mime_get_icon(text_plain, 0);
   if(!pixbuf) {
     pixbuf=gdk_pixbuf_new_from_xpm_data(default_xpm);
   }
@@ -604,8 +599,8 @@ static gboolean show_menu(GtkWidget *widget, gpointer data)
   guint32 time=0;
   static GtkWidget *popup_menu=NULL;
 
-  /*printf("show_menu(%p, %p), is text view=%d\n", widget, data,
-    GTK_IS_TEXT_VIEW(widget));*/
+  dprintf(1, "show_menu(%p, %p), is text view=%d\n", widget, data,
+	  GTK_IS_TEXT_VIEW(widget));
   
   if(GTK_IS_TEXT_VIEW(widget))
     return FALSE;
@@ -644,9 +639,21 @@ static void add_menu_entries(GtkTextView *view, GtkMenu *menu,
   GtkWidget *win=GTK_WIDGET(data);
   GtkWidget *popup_menu;
   GtkWidget *sep, *item;
+  GtkItemFactory *item_factory;
+  GtkAccelGroup *accel_group;
+  gint nmenu_items = sizeof (menu_items) / sizeof (menu_items[0]);
 
-  popup_menu=get_main_menu(win, "<text>");
-    
+  dprintf(1, "add_menu_entries(%p, %p, %p)", view, menu, data);
+
+  accel_group = gtk_accel_group_new ();
+
+  item_factory = gtk_item_factory_new (MENU_TYPE, "<text>", accel_group);
+  gtk_item_factory_create_items (item_factory, nmenu_items, menu_items,
+				 NULL);
+  gtk_window_add_accel_group(GTK_WINDOW(win), accel_group);
+
+  popup_menu=gtk_item_factory_get_widget (item_factory, "<text>");
+      
   sep=gtk_separator_menu_item_new();
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), sep);
   gtk_widget_show(sep);
@@ -677,6 +684,9 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.20  2004/11/21 13:24:39  stephen
+ * Use new ROX-CLib features
+ *
  * Revision 1.19  2004/08/05 17:49:16  stephen
  * Updated compilation system to use libdir.
  * Don't show more that 256KB when loading file (doesn't work via stdin).

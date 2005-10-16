@@ -5,7 +5,7 @@ PLATFORM = @with_platform@
 PLATFORM_DIR = ../${PLATFORM}
 .SUFFIXES:
 .SUFFIXES: .c .o
-ROX_CLIB = "@ROX_RUN@" ROX-CLib
+ROX_CLIB = "@ROX_CLIB_PATH@/AppRun"
 
 CC = @CC@
 CFLAGS = @CFLAGS@ `${PKG_CONFIG} --cflags gtk+-2.0 libxml-2.0` -I. `${ROX_CLIB} --cflags`
