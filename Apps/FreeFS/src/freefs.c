@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.30 2005/01/01 12:30:14 stephen Exp $
+ * $Id: freefs.c,v 1.31 2005/05/27 10:20:47 stephen Exp $
  */
 #include "config.h"
 
@@ -66,9 +66,9 @@
 /* GTK+ objects */
 static GtkWidget *menu=NULL;
 
-static Option opt_update_sec;
-static Option opt_applet_size;
-static Option opt_applet_show_dir;
+static ROXOption opt_update_sec;
+static ROXOption opt_applet_size;
+static ROXOption opt_applet_show_dir;
 
 typedef struct free_window {
   GtkWidget *win;
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
 
   rox_init_with_domain(PROJECT, DOMAIN, &argc, &argv);
 
-  app_dir=g_getenv("APP_DIR");
+  app_dir=rox_get_app_dir();
 #ifdef HAVE_BINDTEXTDOMAIN
   localedir=rox_resources_find(PROGRAM, "Messages", ROX_RESOURCES_NO_LANG);
   bindtextdomain(PROGRAM, localedir);
@@ -910,11 +910,11 @@ static void init_options(void)
   guint applet_init_size=32;    /* Initial size of applet */
   gboolean applet_show_dir=TRUE;/* Print name of directory on applet version */
 
-  option_add_int(&opt_update_sec, "update_rate", update_sec);
-  option_add_int(&opt_applet_size, "applet_size", applet_init_size);
-  option_add_int(&opt_applet_show_dir, "show_dir", applet_show_dir);
+  rox_option_add_int(&opt_update_sec, "update_rate", update_sec);
+  rox_option_add_int(&opt_applet_size, "applet_size", applet_init_size);
+  rox_option_add_int(&opt_applet_show_dir, "show_dir", applet_show_dir);
 
-  option_add_notify(opts_changed);
+  rox_option_add_notify(opts_changed);
 }
 
 
@@ -955,7 +955,7 @@ static void close_window(void)
 
 static void show_config_win(int ignored)
 {
-  options_show();
+  rox_options_show();
 }
 
 /* Pop-up menu */
@@ -977,7 +977,7 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Close"), 	        NULL, close_window, 0,      
                                 "<StockItem>", GTK_STOCK_CLOSE},
   { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
-  { N_("/Quit"), 	        NULL, gtk_main_quit, 0,      
+  { N_("/Quit"), 	        NULL, rox_main_quit, 0,      
                                 "<StockItem>", GTK_STOCK_QUIT},
 };
 
@@ -1106,7 +1106,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
       rox_debug_printf(3, "menu=%p", menu);
       
       if(fwin->is_applet) {
-	applet_popup_menu(fwin->win, menu, bev);
+	rox_applet_popup_menu(fwin->win, menu, bev);
       } else {
 	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		     bev->button, bev->time);
@@ -1133,7 +1133,7 @@ static gboolean popup_menu(GtkWidget *window, gpointer udata)
   update_menus();
 
   if(fwin->is_applet)
-    applet_popup_menu(fwin->win, menu, NULL);
+    rox_applet_popup_menu(fwin->win, menu, NULL);
   else
     gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
 		   0, gtk_get_current_event_time());
@@ -1412,6 +1412,11 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.31  2005/05/27 10:20:47  stephen
+ * Fix for creating applets in remote mode, need to give the filer long enough
+ * to notice the widget was created.
+ * Use apsymbols for Linux portability.
+ *
  * Revision 1.30  2005/01/01 12:30:14  stephen
  * Can now pass SOAP messages via command line
  *

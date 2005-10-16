@@ -100,7 +100,7 @@ else
 fi
 
 dnl Check for ROX-CLib and version
-ROX_CLIB_0LAUNCH(2, 1, 5)
+ROX_CLIB_0LAUNCH(2, 1, 6)
 
 dnl Extract version info from AppInfo.xml
 ROX_SELF_VERSION
