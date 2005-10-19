@@ -24,4 +24,5 @@ view the program info, change the configuration or quit the program.
     <implementation stability="testing" version="2.1.3"
 platform="Linux-ix86" id=".."/>
   </group>
+  <feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/FreeFS'/>
 </interface>

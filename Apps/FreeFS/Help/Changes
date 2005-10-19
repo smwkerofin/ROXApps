@@ -1,6 +1,10 @@
 Changes to FreeFS
 =================
 
+17-Oct-2005
+~~~~~~~~~~~
+Update local feed interface to support feed-for.
+
 16-Oct-2005
 ~~~~~~~~~~~
 Added local injector feed.
