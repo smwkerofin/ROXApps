@@ -1,5 +1,5 @@
 /*
- * $Id: basedir.c,v 1.2 2004/09/13 11:29:30 stephen Exp $
+ * $Id: basedir.c,v 1.3 2005/08/21 13:05:09 stephen Exp $
  *
  * XDG base directory functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief XDG base directory functions for ROX-CLib
  *
  * @author Stephen Watson
- * @version $Id$
+ * @version $Id: basedir.c,v 1.3 2005/08/21 13:05:09 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -84,7 +84,7 @@ static void init(void)
 /**
  * @return The directory where the user may write configuration files.
  */
-const gchar *basedir_get_config_home(void)
+const gchar *rox_basedir_get_config_home(void)
 {
   if(!xdg_config_home)
     init();
@@ -93,9 +93,22 @@ const gchar *basedir_get_config_home(void)
 }
 
 /**
+ * @return The directory where the user may write configuration files.
+ *
+ * @deprecated use rox_basedir_get_config_home()
+ */
+const gchar *basedir_get_config_home(void)
+{
+  ROX_CLIB_DEPRECATED("rox_basedir_get_config_home");
+
+  return rox_basedir_get_config_home();
+}
+
+/**
  * @return A list of directories to be searched for configuration files.  Free
- * the list but not the directories. */
-GList *basedir_get_config_paths(void)
+ * the list but not the directories.
+ */
+GList *rox_basedir_get_config_paths(void)
 {
   GList *paths=NULL;
   int i;
@@ -108,6 +121,19 @@ GList *basedir_get_config_paths(void)
   }
   
   return paths;
+}
+
+/**
+ * @return A list of directories to be searched for configuration files.  Free
+ * the list but not the directories.
+ *
+ * @deprecated use rox_basedir_get_config_home()
+ */
+GList *basedir_get_config_paths(void)
+{
+  ROX_CLIB_DEPRECATED("rox_basedir_get_config_paths");
+  
+  return rox_basedir_get_config_paths();
 }
 
 static gchar *save_path(const gchar *base, const char *resource,
@@ -154,12 +180,31 @@ static gchar *save_path(const gchar *base, const char *resource,
  * @return Full path to the file, pass to g_free() when done, or @c NULL
  * if saving has been disabled
  */
-gchar *basedir_save_config_path(const char *resource, const char *leaf)
+gchar *rox_basedir_save_config_path(const char *resource, const char *leaf)
 {
   if(!xdg_config_home)
     init();
 
   return save_path(xdg_config_home, resource, leaf);
+}
+
+/**
+ * Return the full path to a file where configuration may be saved.
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return Full path to the file, pass to g_free() when done, or @c NULL
+ * if saving has been disabled.
+ *
+ * @deprecated use rox_basedir_save_config_path().
+ */
+gchar *basedir_save_config_path(const char *resource, const char *leaf)
+{
+  ROX_CLIB_DEPRECATED("rox_basedir_save_config_path");
+
+  return rox_basedir_save_config_path(resource, leaf);
 }
 
 /**
@@ -173,12 +218,32 @@ gchar *basedir_save_config_path(const char *resource, const char *leaf)
  * @return Full path to the file, pass to g_free() when done, or @c NULL if
  * saving has been disabled
  */
-gchar *basedir_save_data_path(const char *resource, const char *leaf)
+gchar *rox_basedir_save_data_path(const char *resource, const char *leaf)
 {
   if(!xdg_data_home)
     init();
 
   return save_path(xdg_data_home, resource, leaf);
+}
+
+/**
+ * Return the full path to a file where data may be saved.  Normally this
+ * is not required.
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return Full path to the file, pass to g_free() when done, or @c NULL if
+ * saving has been disabled.
+ *
+ * @deprecated use rox_basedir_save_data_path().
+ */
+gchar *basedir_save_data_path(const char *resource, const char *leaf)
+{
+  ROX_CLIB_DEPRECATED("rox_basedir_save_data_path");
+
+  return rox_basedir_save_data_path(resource, leaf);
 }
 
 static gchar *load_path(gchar **dirs, const char *resource, const char *leaf)
@@ -206,12 +271,49 @@ static gchar *load_path(gchar **dirs, const char *resource, const char *leaf)
  * @return Full path to the file, pass to g_free() when done, or @c NULL
  * if no such file found.
  */
-gchar *basedir_load_config_path(const char *resource, const char *leaf)
+gchar *rox_basedir_load_config_path(const char *resource, const char *leaf)
 {
   if(!xdg_config_dirs)
     init();
 
   return load_path(xdg_config_dirs, resource, leaf);
+}
+
+/**
+ * Return the full path to a file from which configuration may be loaded.
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return Full path to the file, pass to g_free() when done, or @c NULL
+ * if no such file found.
+ *
+ * @deprecated use rox_basedir_load_config_path().
+ */
+gchar *basedir_load_config_path(const char *resource, const char *leaf)
+{
+  ROX_CLIB_DEPRECATED("rox_basedir_load_config_path");
+
+  return rox_basedir_load_config_path(resource, leaf);
+}
+
+/**
+ * Return the full path to a file from which data may be loaded.
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return Full path to the file, pass to g_free() when done, or @c NULL
+ * if no such file found.
+ */
+gchar *rox_basedir_load_data_path(const char *resource, const char *leaf)
+{
+  if(!xdg_data_dirs)
+    init();
+
+  return load_path(xdg_data_dirs, resource, leaf);
 }
 
 /**
@@ -226,10 +328,9 @@ gchar *basedir_load_config_path(const char *resource, const char *leaf)
  */
 gchar *basedir_load_data_path(const char *resource, const char *leaf)
 {
-  if(!xdg_data_dirs)
-    init();
+  ROX_CLIB_DEPRECATED("rox_basedir_load_data_path");
 
-  return load_path(xdg_data_dirs, resource, leaf);
+  return rox_basedir_load_data_path(resource, leaf);
 }
 
 static GList *load_paths(gchar **dirs, const char *resource, const char *leaf)
@@ -258,15 +359,36 @@ static GList *load_paths(gchar **dirs, const char *resource, const char *leaf)
  * the programmers domain and the name of the program as
  * "kerofin.demon.co.uk/Clock"
  * @param[in] leaf Last part of file name, such as "alarms.xml".
- * @return Listof full path to files, pass to basedir_free_paths() when done,
+ * @return List of full path to files, pass to rox_basedir_free_paths() when done,
  * or @c NULL if no such file found.
  */
-GList *basedir_load_config_paths(const char *resource, const char *leaf)
+GList *rox_basedir_load_config_paths(const char *resource, const char *leaf)
 {
   if(!xdg_config_dirs)
     init();
 
   return load_paths(xdg_config_dirs, resource, leaf);
+}
+
+/**
+ * Return a list of full paths to a file from which configuration may be
+ * loaded in each diretory where it exists.  Useful for merging the
+ * conents of multiple files..
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return List of full path to files, pass to rox_basedir_free_paths() when done,
+ * or @c NULL if no such file found.
+ *
+ * @deprecated use rox_basedir_load_config_paths().
+ */
+GList *basedir_load_config_paths(const char *resource, const char *leaf)
+{
+  ROX_CLIB_DEPRECATED("rox_basedir_load_config_paths");
+
+  return rox_basedir_load_config_paths(resource, leaf);
 }
 
 /**
@@ -278,10 +400,10 @@ GList *basedir_load_config_paths(const char *resource, const char *leaf)
  * the programmers domain and the name of the program as
  * "kerofin.demon.co.uk/Clock"
  * @param[in] leaf Last part of file name, such as "alarms.xml".
- * @return Listof full path to files, pass to basedir_free_paths() when done,
+ * @return List of full path to files, pass to rox_basedir_free_paths() when done,
  * or @c NULL if no such file found.
  */
-GList *basedir_load_data_paths(const char *resource, const char *leaf)
+GList *rox_basedir_load_data_paths(const char *resource, const char *leaf)
 {
   if(!xdg_data_dirs)
     init();
@@ -289,12 +411,33 @@ GList *basedir_load_data_paths(const char *resource, const char *leaf)
   return load_paths(xdg_data_dirs, resource, leaf);
 }
 
+/**
+ * Return a list of full paths to a file from which data may be
+ * loaded in each diretory where it exists.  Useful for merging the
+ * conents of multiple files..
+ *
+ * @param[in] resource Either the name of the program ("Clock") or
+ * the programmers domain and the name of the program as
+ * "kerofin.demon.co.uk/Clock"
+ * @param[in] leaf Last part of file name, such as "alarms.xml".
+ * @return List of full path to files, pass to rox_basedir_free_paths() when done,
+ * or @c NULL if no such file found.
+ *
+ * @deprecated use rox_basedir_load_data_paths().
+ */
+GList *basedir_load_data_paths(const char *resource, const char *leaf)
+{
+  ROX_CLIB_DEPRECATED("rox_basedir_load_data_paths");
+
+  return rox_basedir_load_data_paths(resource, leaf);
+}
+
 /** Free a list returned by basedir_load_config_paths() or
  * basedir_load_data_paths().
  *
  * @param[in,out] paths list of paths.
  */
-void basedir_free_paths(GList *paths)
+void rox_basedir_free_paths(GList *paths)
 {
   GList *p;
 
@@ -305,6 +448,10 @@ void basedir_free_paths(GList *paths)
 
 /*
  * $Log: basedir.c,v $
+ * Revision 1.3  2005/08/21 13:05:09  stephen
+ * Added doxygen comments.
+ * Added basedir_free_paths
+ *
  * Revision 1.2  2004/09/13 11:29:30  stephen
  * Choices system can use XDG base directories
  *

@@ -1,5 +1,5 @@
 /*
- * $Id: mime.c,v 1.4 2005/10/12 11:00:22 stephen Exp $
+ * $Id: mime.c,v 1.5 2005/10/15 10:47:28 stephen Exp $
  *
  * Shared MIME databse functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief Shared MIME database functions for ROX-CLib
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id: mime.c,v 1.4 2005/10/12 11:00:22 stephen Exp $
+ * @version $Id: mime.c,v 1.5 2005/10/15 10:47:28 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -312,7 +312,7 @@ static void get_comment(ROXMIMEType *type)
   rox_debug_printf(1, "get_comment %s/%s", type->media, type->subtype);
 
   leaf=g_strdup_printf("%s/%s.xml", type->media, type->subtype);
-  files=basedir_load_data_paths("mime", leaf);
+  files=rox_basedir_load_data_paths("mime", leaf);
   g_free(leaf);
 
   for(p=files; p; p=g_list_next(p)) {
@@ -688,7 +688,7 @@ static void load_mime_types(void)
 {
   GList *paths, *p;
 
-  paths=basedir_load_data_paths("mime", "globs");
+  paths=rox_basedir_load_data_paths("mime", "globs");
   for(p=g_list_last(paths); p; p=g_list_previous(p)) {
     load_glob((char *) p->data);
 
@@ -762,6 +762,9 @@ static ROXMIMEType *type_by_path(const char *path)
 
 /*
  * $Log: mime.c,v $
+ * Revision 1.5  2005/10/15 10:47:28  stephen
+ * Added rox_mime_get_icon()
+ *
  * Revision 1.4  2005/10/12 11:00:22  stephen
  * Externally visible symbols have rox_ or ROX prefixes.
  * All still exist under the old names but in general will produce a warning message.

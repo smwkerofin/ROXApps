@@ -4,6 +4,11 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+22-Oct-2005 (2.1.6)
+~~~~~~~~~~~
+Missed renaming the basedir_* functions to rox_basedir_*.  Deprecation
+warning disabled for this release.
+
 17-Oct-2005
 ~~~~~~~~~~~
 Update local feed interface to support feed-for.
@@ -259,4 +264,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.28 2005/10/15 10:49:47 stephen Exp $
+$Id: Changes,v 1.29 2005/10/19 12:01:57 stephen Exp $

@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.8 2005/08/14 16:07:00 stephen Exp $
+ * $Id: choices.c,v 1.9 2005/10/12 10:56:12 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -36,13 +36,13 @@
  * - choices_find_path_load()
  * - choices_find_path_save()
  *
- * @version $Id$
+ * @version $Id: choices.c,v 1.9 2005/10/12 10:56:12 stephen Exp $
  * @author Thomas Leonard, Stephen Watson.
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
  * Copyright (C) 2000, Thomas Leonard, <tal197@users.sourceforge.net>.
  *
- * @version $Id$
+ * @version $Id: choices.c,v 1.9 2005/10/12 10:56:12 stephen Exp $
  * @author Thomas Leonard, Stephen Watson.
  */
 
@@ -252,15 +252,15 @@ gchar *rox_choices_save(const char *leaf, const char *dir,
     gchar *resource;
     gchar *tmp;
 
-    tmp=basedir_save_config_path(domain, dir);
+    tmp=rox_basedir_save_config_path(domain, dir);
     rox_debug_printf(3, "tmp=%s", tmp? tmp: "NULL");
     g_free(tmp);
 
     resource=g_strconcat(domain, "/", dir, NULL);
-    path=basedir_save_config_path(resource, leaf);
+    path=rox_basedir_save_config_path(resource, leaf);
     g_free(resource);
   } else {
-    path=basedir_save_config_path(dir, leaf);
+    path=rox_basedir_save_config_path(dir, leaf);
   }
   rox_debug_printf(2, "=%s", path? path: "NULL");
 
@@ -277,7 +277,7 @@ gchar *rox_choices_save(const char *leaf, const char *dir,
  * The return values may be NULL - use built-in defaults - otherwise
  * g_free() the result.
  *
- * This uses basedir_load_config_path(), falling back on choices_find_path_load() if that does not return a result.
+ * This uses rox_basedir_load_config_path(), falling back on choices_find_path_load() if that does not return a result.
  *
  * @param[in] leaf last part of file name (may include a relative directory part)
  * @param[in] dir directory to locate in $CHOICESPATH, normally the name of the program
@@ -294,10 +294,10 @@ gchar *rox_choices_load(const char *leaf, const char *dir,
     gchar *resource;
 
     resource=g_strconcat(domain, "/", dir, NULL);
-    path=basedir_load_config_path(resource, leaf);
+    path=rox_basedir_load_config_path(resource, leaf);
     g_free(resource);
   } else {
-    path=basedir_load_config_path(dir, leaf);
+    path=rox_basedir_load_config_path(dir, leaf);
   }
 
   if(!path)
@@ -332,7 +332,7 @@ GPtrArray *rox_choices_list_dirs(const char *domain, const char *dir)
 	  tmp=g_strdup(dir);
 	
 	list = g_ptr_array_new();
-	dirs=basedir_get_config_paths();
+	dirs=rox_basedir_get_config_paths();
 
 	for(d=dirs; d; d=g_list_next(d)) {
 		gchar	*path;
@@ -423,6 +423,9 @@ static void init_choices(void)
 
 /*
  * $Log: choices.c,v $
+ * Revision 1.9  2005/10/12 10:56:12  stephen
+ * Mark the old choices_*() functions as deprecated.
+ *
  * Revision 1.8  2005/08/14 16:07:00  stephen
  * Added rox_resources_find_with_domain().
  * More doxygen additions.

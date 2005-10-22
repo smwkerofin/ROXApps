@@ -1,5 +1,5 @@
 /*
- * $Id: test.c,v 1.10 2004/05/22 17:03:57 stephen Exp $
+ * $Id: test.c,v 1.11 2005/10/12 11:19:06 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -147,25 +147,25 @@ static void test_basedir(const char *home)
   printf("test basedirs\n");
   
   printf("save_config_path %s %s => ", "ROX-CLib", "dummy");
-  path=basedir_save_config_path("ROX-CLib", "dummy");
+  path=rox_basedir_save_config_path("ROX-CLib", "dummy");
   printf("%s\n", path? path: "NULL");
   if(path)
     g_free(path);
 
   printf("load_config_path %s %s => ", "ROX-CLib", "dummy");
-  path=basedir_load_config_path("ROX-CLib", "dummy");
+  path=rox_basedir_load_config_path("ROX-CLib", "dummy");
   printf("%s\n", path? path: "NULL");
   if(path)
     g_free(path);
 
   printf("load_data_path %s %s => ", "mime", "globs");
-  path=basedir_load_data_path("mime", "globs");
+  path=rox_basedir_load_data_path("mime", "globs");
   printf("%s\n", path? path: "NULL");
   if(path)
     g_free(path);
 
   printf("load_data_paths %s %s => \n", "mime", "globs");
-  paths=basedir_load_data_paths("mime", "globs");
+  paths=rox_basedir_load_data_paths("mime", "globs");
   for(p=paths; p; p=g_list_next(p)) {
     printf("  %s\n", (char *) p->data);
     g_free(p->data);

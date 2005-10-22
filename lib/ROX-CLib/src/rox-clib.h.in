@@ -50,8 +50,12 @@
 # define gdk_x11_atom_to_xatom(x) (x)
 #endif
 
+#if 0
 #define ROX_CLIB_DEPRECATED(use) \
   g_warning("%s is deprecated, use %s instead", __func__, use)
+#else
+#define ROX_CLIB_DEPRECATED(use) ((void) 0)
+#endif
 
 #if defined(HAVE_APSYMBOLS_H)
 # include <apsymbols.h>
