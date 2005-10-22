@@ -4,6 +4,11 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+22-Oct-2005 (2.1.7)
+~~~~~~~~~~~
+Forgot to update version information in two places.  Unlikely to have a 
+major affect, but will make a new release just to be on the safe side.
+
 22-Oct-2005 (2.1.6)
 ~~~~~~~~~~~
 Missed renaming the basedir_* functions to rox_basedir_*.  Deprecation
@@ -264,4 +269,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.29 2005/10/19 12:01:57 stephen Exp $
+$Id: Changes,v 1.30 2005/10/22 10:42:28 stephen Exp $
