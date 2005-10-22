@@ -1,5 +1,5 @@
 /*
- * $Id: basedir.h,v 1.3 2005/08/21 13:05:09 stephen Exp $
+ * $Id: basedir.h,v 1.4 2005/10/22 10:42:28 stephen Exp $
  *
  * XDG base directory functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief XDG base directory functions for ROX-CLib
  *
  * @author Stephen Watson
- * @version $Id: basedir.h,v 1.3 2005/08/21 13:05:09 stephen Exp $
+ * @version $Id: basedir.h,v 1.4 2005/10/22 10:42:28 stephen Exp $
  */
 
 #ifndef _rox_basedir_h
@@ -34,7 +34,7 @@ extern void rox_basedir_free_paths(GList *paths);
 
 /* These two are primarily for the use of choices */
 extern const gchar *basedir_get_config_home(void);
-extern GList *basedir_get_config_paths(void); /* Free list, not contents */
+extern GList *basedir_get_config_paths(void); 
 
 /* Old names for backwards compatability */
 extern gchar *basedir_save_config_path(const char *resource, const char *leaf);
@@ -47,15 +47,18 @@ extern GList *basedir_load_config_paths(const char *resource,
 					const char *leaf);
 extern GList *basedir_load_data_paths(const char *resource, const char *leaf);
 
-extern void basedir_free_paths(GList *paths);
-
 extern const gchar *basedir_get_config_home(void);
-extern GList *basedir_get_config_paths(void); /* Free list, not contents */
+extern GList *basedir_get_config_paths(void); 
 
 #endif
 
 /*
  * $Log: basedir.h,v $
+ * Revision 1.4  2005/10/22 10:42:28  stephen
+ * Renamed basedir functions to rox_basedir.
+ * Disabled deprecation warning.
+ * This is version 2.1.6
+ *
  * Revision 1.3  2005/08/21 13:05:09  stephen
  * Added doxygen comments.
  * Added basedir_free_paths
