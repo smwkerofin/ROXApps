@@ -4,7 +4,7 @@
   <Summary xml:lang="it">Mostra il carico medio di sistema.</Summary>
   <About>
     <Purpose>Display system load</Purpose>
-	<Version>2.1.2 (22 November 2004)</Version>
+	<Version>2.1.3 (22 October 2005)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
@@ -17,7 +17,7 @@
     <Homepage label="Sito web">http://www.kerofin.demon.co.uk/rox/</Homepage>
   </About>
   <Dependencies>
-    <AppDir><Name>ROX-CLib</Name><NeedsVersion>2.1.4</NeedsVersion></AppDir>
+    <AppDir><Name>ROX-CLib</Name><NeedsVersion>2.1.6</NeedsVersion></AppDir>
   </Dependencies>
   <AppMenu>
     <Item option='-o'>
