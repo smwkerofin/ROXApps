@@ -1,10 +1,10 @@
 #! /usr/bin/env python
 
 import dbus
-import sys, time
+import sys, time, os
 
-import findrox; findrox.version(2, 0, 0)
-import rox, rox.options
+import findrox; findrox.version(2, 0, 2)
+import rox, rox.options, rox.applet, rox.Menu, rox.InfoWin
 
 # DBus setup
 service_name='uk.co.demon.kerofin.DownloadManager'
@@ -66,7 +66,7 @@ PER=6
 AGE=7
 
 class MyObject(dbus.Object, rox.Window):
-    def __init__(self, service):
+    def __init__(self, service, xid=None):
         dbus.Object.__init__(self, object_path, service, [self.Ping,
                                                           self.CanIStart,
                                                           self.QueueSize,
@@ -135,9 +135,82 @@ class MyObject(dbus.Object, rox.Window):
 
         vbox.show_all()
 
+        self.auto_show=False
+        self.user_show=False
+
+        if xid:
+            self.applet=rox.applet.Applet(xid)
+
+            ebox=rox.g.EventBox()
+            self.applet.add(ebox)
+
+            vbox=rox.g.VBox()
+            ebox.add(vbox)
+
+            icon=rox.g.Image()
+            icon.set_from_file(os.path.join(rox.app_dir, '.DirIcon'))
+            vbox.pack_start(icon, False, False, 2)
+            
+            self.alabel=rox.g.Label('0:0')
+            vbox.pack_start(self.alabel, False, False, 2)
+
+            self.applet.show_all()
+
+            rox.Menu.set_save_name('DownloadManager')
+            self.applet_menu=rox.Menu.Menu('applet', [
+                ('/Info', 'show_info', '<StockItem>', '', rox.g.STOCK_DIALOG_INFO),
+                ('/sep', '', '<Separator>'),
+                ('/Show window', 'show_window', ''),
+                ('/Hide window', 'hide_window', ''),
+                ('/sep', '', '<Separator>'),
+                ('/Close applet', 'close_applet', '<StockItem>', '', rox.g.STOCK_CLOSE),
+                ('/sep', '', '<Separator>'),
+                ('/Quit', 'do_quit', '<StockItem>', '', rox.g.STOCK_QUIT)
+                ])
+
+            self.applet_menu.attach(self.applet, self)
+
+            ebox.add_events(rox.g.gdk.BUTTON_PRESS_MASK)
+            ebox.connect("button_press_event", self.click)
+
+        else:
+            self.applet=None
+
         rox.g.timeout_add(2000, self.update)
 
         rox.app_options.add_notify(self.opts_changed)
+
+    def click(self, widget, event, data=None):
+        if event.button==1:
+            self.show_window()
+            return True
+
+        elif event.button==3:
+            self.applet_menu.popup(self, event, self.applet.position_menu)
+            return True
+
+        return False
+
+    def show_info(self):
+        rox.InfoWin.infowin('DownloadManager')
+
+    def close_applet(self):
+        self.applet.hide()
+        self.applet.destroy()
+        self.applet=None
+
+    def show_window(self, *unused):
+        self.user_show=True
+        self.maybe_show()
+
+    def hide_window(self):
+        self.user_show=False
+        self.maybe_show()
+
+    def do_quit(self):
+        self.close_applet()
+        self.hide_window()
+        self.destroy()
 
     def update(self, *unused):
         self.model.clear()
@@ -168,12 +241,22 @@ class MyObject(dbus.Object, rox.Window):
                                AGE, str(int(time.time()-client.last)))
                 nwait+=1
 
+        if self.applet:
+            self.alabel.set_label('%d:%d' % (nactive,nwait))
+            
         if nactive>=show_nactive.int_value or nwait>=show_nwaiting.int_value:
+            self.auto_show=True
+        else:
+            self.auto_show=False
+        self.maybe_show()
+                
+        return True
+
+    def maybe_show(self):
+        if self.user_show or self.auto_show:
             self.show()
         else:
             self.hide()
-                
-        return True
 
     def opts_changed(self):
         self.update()
@@ -276,11 +359,11 @@ class MyObject(dbus.Object, rox.Window):
     def __str__(self, *args):
         return 'MyObject-%s' % id(self)
 
-def run():
+def run(xid=None):
     try:
         bus=dbus.SessionBus()
         server=dbus.Service(service_name, bus)
-        object=MyObject(server)
+        object=MyObject(server, xid)
 
         rox.mainloop()
     except:
@@ -298,5 +381,7 @@ def show_options():
 if __name__=='__main__':
     if len(sys.argv)==2 and sys.argv[1]=='-o':
         show_options()
+    elif len(sys.argv)==3 and sys.argv[1]=='-a':
+        run(int(sys.argv[2]))
     else:
         run()

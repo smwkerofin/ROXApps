@@ -1,6 +1,14 @@
 DownloadManager
 ===============
 
+30-Oct-2005
+~~~~~~~~~~~
+Added injector feed.
+
+29-Oct-2005
+~~~~~~~~~~~
+Added applet mode.
+
 20-May-2005 (0.0.3)
 ~~~~~~~~~~~
 Switched over to XDG choices.
@@ -34,4 +42,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.7 2005/05/27 10:17:06 stephen Exp $
+$Id: Changes,v 1.8 2005/10/08 11:13:56 stephen Exp $
