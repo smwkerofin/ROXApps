@@ -1,6 +1,11 @@
 DownloadManager
 ===============
 
+05-Nov-2005
+~~~~~~~~~~~
+Changed to newer menu system and added Options entry.
+Added GetStats and ShowWindow methods.
+
 30-Oct-2005
 ~~~~~~~~~~~
 Added injector feed.
@@ -42,4 +47,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.8 2005/10/08 11:13:56 stephen Exp $
+$Id: Changes,v 1.9 2005/10/30 12:39:23 stephen Exp $

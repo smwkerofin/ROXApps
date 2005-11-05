@@ -65,7 +65,7 @@ TOTAL=5
 PER=6
 AGE=7
 
-class MyObject(dbus.Object, rox.Window):
+class DownloadManager(dbus.Object, rox.Window):
     def __init__(self, service, xid=None):
         dbus.Object.__init__(self, object_path, service, [self.Ping,
                                                           self.CanIStart,
@@ -73,7 +73,9 @@ class MyObject(dbus.Object, rox.Window):
                                                           self.Update,
                                                           self.Done,
                                                           self.Cancel,
-                                                          self.ShowOptions])
+                                                          self.ShowOptions,
+                                                          self.GetStats,
+                                                          self.ShowWindow])
 
         rox.Window.__init__(self)
 
@@ -158,14 +160,20 @@ class MyObject(dbus.Object, rox.Window):
 
             rox.Menu.set_save_name('DownloadManager')
             self.applet_menu=rox.Menu.Menu('applet', [
-                ('/Info', 'show_info', '<StockItem>', '', rox.g.STOCK_DIALOG_INFO),
-                ('/sep', '', '<Separator>'),
-                ('/Show window', 'show_window', ''),
-                ('/Hide window', 'hide_window', ''),
-                ('/sep', '', '<Separator>'),
-                ('/Close applet', 'close_applet', '<StockItem>', '', rox.g.STOCK_CLOSE),
-                ('/sep', '', '<Separator>'),
-                ('/Quit', 'do_quit', '<StockItem>', '', rox.g.STOCK_QUIT)
+                rox.Menu.Action('/Info', 'show_info',
+                            stock=rox.g.STOCK_DIALOG_INFO),
+                rox.Menu.Separator(),
+                rox.Menu.Action('/Options', 'opt_clicked',
+                            stock=rox.g.STOCK_PREFERENCES),
+                rox.Menu.Separator(),
+                rox.Menu.Action('/Show window', 'show_window'),
+                rox.Menu.Action('/Hide window', 'hide_window'),
+                rox.Menu.Separator(),
+                rox.Menu.Action('/Close applet', 'close_applet',
+                            stock=rox.g.STOCK_CLOSE),
+                rox.Menu.Separator(),
+                rox.Menu.Action('/Quit', 'do_quit',
+                            stock=rox.g.STOCK_QUIT)
                 ])
 
             self.applet_menu.attach(self.applet, self)
@@ -304,7 +312,7 @@ class MyObject(dbus.Object, rox.Window):
         id=method.get_sender()
         client=self.clients[id]
         #print client, 'has finished'
-        self.lose_client(id=id)
+        self.lose_client(id)
 
     def Cancel(self, method, reason):
         #print 'in cancel', self, method, reason
@@ -316,6 +324,21 @@ class MyObject(dbus.Object, rox.Window):
     def ShowOptions(self, method):
         rox.edit_options()
 
+    def GetStats(self, method):
+        act=[]
+        for a in self.active:
+            client=self.clients[act]
+            act.append((client.id, client.fname, client.size, client.total,
+                        client.start, client.last))
+        
+        waiting=len(self.clients)-len(self.active)
+
+        return (act, waiting)
+
+    def ShowWindow(self, method, show):
+        self.user_show=show
+        self.maybe_show()        
+    
     def opt_clicked(self, *unused):
         rox.edit_options()
 
@@ -357,13 +380,13 @@ class MyObject(dbus.Object, rox.Window):
             self.slotAvailable()
 
     def __str__(self, *args):
-        return 'MyObject-%s' % id(self)
+        return 'DownloadManager-%s' % id(self)
 
 def run(xid=None):
     try:
         bus=dbus.SessionBus()
         server=dbus.Service(service_name, bus)
-        object=MyObject(server, xid)
+        object=DownloadManager(server, xid)
 
         rox.mainloop()
     except:

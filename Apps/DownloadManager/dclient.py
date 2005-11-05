@@ -109,7 +109,21 @@ class Manager:
         self.object.connect_to_signal('slot_available', fn)
 
     def showOptions(self):
+        """Show the download manager's options window."""
         self.object.ShowOptions()
+
+    def getStats(self):
+        """Return a 2-tuple describing the status of the current downloads.
+        The first element is a list of tuples, 1 for each active download:
+        (id, filename, size, total, start_time, last_update_time)
+        The second element is the number of downloads waiting for a free
+        slot."""
+        return self.object.GetStats()
+
+    def showWindow(self, show=True):
+        """If show==True then show the download window, otherwise
+        hide it."""
+        self.object.ShowWindow(show)
 
 def connect(start=False):
     """Make connection to DownloadManager.
@@ -124,6 +138,13 @@ def connect(start=False):
             raise
 
         # Start DownloadManager here
+        path=os.getenv('APPDIRPATH', os.getenv('PATH'))
+        path=path.split(':')
+        for p in path:
+            x=os.path.join(p, 'DownloadManager')
+            if rox.isappdir(x):
+                os.spawnl(os.P_NOWAIT, x)
+                break
 
         man=Manager()
     return man
