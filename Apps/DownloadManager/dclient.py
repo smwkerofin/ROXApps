@@ -113,17 +113,30 @@ class Manager:
         self.object.ShowOptions()
 
     def getStats(self):
-        """Return a 2-tuple describing the status of the current downloads.
-        The first element is a list of tuples, 1 for each active download:
-        (id, filename, size, total, start_time, last_update_time)
-        The second element is the number of downloads waiting for a free
-        slot."""
+        """Return a list of strings describing each active client."""
         return self.object.GetStats()
+
+    def getActive(self):
+        """Return number of downloads in progress."""
+        return self.object.GetActive()
+
+    def getWaiting(self):
+        """Return number of clients waiting."""
+        return self.object.GetWaiting()
 
     def showWindow(self, show=True):
         """If show==True then show the download window, otherwise
         hide it."""
         self.object.ShowWindow(show)
+
+    def ping(self):
+        """Return True if the server is still responding."""
+        try:
+            ok=self.object.Ping()
+        except:
+            ok=False
+
+        return ok
 
 def connect(start=False):
     """Make connection to DownloadManager.
@@ -138,12 +151,16 @@ def connect(start=False):
             raise
 
         # Start DownloadManager here
+        import rox, time
         path=os.getenv('APPDIRPATH', os.getenv('PATH'))
         path=path.split(':')
         for p in path:
             x=os.path.join(p, 'DownloadManager')
             if rox.isappdir(x):
-                os.spawnl(os.P_NOWAIT, x)
+                #print >> sys.stderr, x
+                os.spawnl(os.P_NOWAIT, os.path.join(x, 'AppRun'),
+                          'DownloadManager')
+                time.sleep(1)
                 break
 
         man=Manager()

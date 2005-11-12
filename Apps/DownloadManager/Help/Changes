@@ -1,6 +1,11 @@
 DownloadManager
 ===============
 
+06-Nov-2005
+~~~~~~~~~~~
+Changed applet mode totally: now an independant process which communicates
+with DownloadManager using new GetActive and GetWaiting methods.
+
 05-Nov-2005
 ~~~~~~~~~~~
 Changed to newer menu system and added Options entry.
@@ -47,4 +52,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.9 2005/10/30 12:39:23 stephen Exp $
+$Id: Changes,v 1.10 2005/11/05 17:37:47 stephen Exp $

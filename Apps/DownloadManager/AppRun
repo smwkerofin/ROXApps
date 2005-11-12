@@ -54,7 +54,7 @@ class Client:
             self.total=total
 
     def __str__(self):
-        return '<Client id="%s" host="%s" file="%s" last=%f running=%s>' % (self.id, self.server, self.fname, self.last, self.running)
+        return '<Client id="%s" host="%s" file="%s" last=%f running=%s start=%f size=%d total=%d>' % (self.id, self.server, self.fname, self.last, self.running, self.start, self.size, self.total)
 
 ID=0
 SERVER=1
@@ -75,6 +75,8 @@ class DownloadManager(dbus.Object, rox.Window):
                                                           self.Cancel,
                                                           self.ShowOptions,
                                                           self.GetStats,
+                                                          self.GetActive,
+                                                          self.GetWaiting,
                                                           self.ShowWindow])
 
         rox.Window.__init__(self)
@@ -136,6 +138,8 @@ class DownloadManager(dbus.Object, rox.Window):
         optbut.connect('clicked', self.opt_clicked)
 
         vbox.show_all()
+
+        self.connect('delete_event', self.hide_window)
 
         self.auto_show=False
         self.user_show=False
@@ -211,7 +215,7 @@ class DownloadManager(dbus.Object, rox.Window):
         self.user_show=True
         self.maybe_show()
 
-    def hide_window(self):
+    def hide_window(self, *unused):
         self.user_show=False
         self.maybe_show()
 
@@ -327,17 +331,21 @@ class DownloadManager(dbus.Object, rox.Window):
     def GetStats(self, method):
         act=[]
         for a in self.active:
-            client=self.clients[act]
-            act.append((client.id, client.fname, client.size, client.total,
-                        client.start, client.last))
+            client=self.clients[a]
+            act.append(str(client))
         
-        waiting=len(self.clients)-len(self.active)
-
-        return (act, waiting)
+        print 'returning', act
+        return act
 
     def ShowWindow(self, method, show):
         self.user_show=show
-        self.maybe_show()        
+        self.maybe_show()
+
+    def GetWaiting(self, method):
+        return len(self.clients)-len(self.active)
+
+    def GetActive(self, method):
+        return len(self.active)
     
     def opt_clicked(self, *unused):
         rox.edit_options()
