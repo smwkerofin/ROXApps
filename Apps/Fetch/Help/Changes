@@ -1,6 +1,16 @@
 Fetch
 =====
 
+12-Nov-2005
+~~~~~~~~~~~
+Update dclient.py from DownloadManager.
+Added injector feed.
+
+05-Nov-2005
+~~~~~~~~~~~
+Added option to control update of window title.
+Fix install instructions.
+
 11-Sep-2005 (0.1.2)
 ~~~~~~~~~~~
 Reduce redundant updates of the display and title (4* speed increase in my
@@ -104,4 +114,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.24 2005/09/11 13:04:26 stephen Exp $
+$Id: Changes,v 1.25 2005/10/08 11:18:17 stephen Exp $

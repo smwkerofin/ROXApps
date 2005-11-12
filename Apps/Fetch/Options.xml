@@ -1,15 +1,14 @@
 <?xml version='1.0'?>
 <options>
 <section title="General">
-<numentry name="wait_for" label="Wait after download" min='0' max='10'>How long to wait for after download has finished before
-closing window</numentry>
-<numentry name="block_size" label="Block size" min='256' max='16384'>Number of bytes to read in one operation.  Larger is quicker, but fewer updates to the window.</numentry>
+<numentry name="wait_for" label="Wait after download" min='0' max='10'>How long to wait for after download has finished before closing window</numentry>
+<numentry name="block_size" label="Block size" min='256' max='16384'>Number of bytes to read in one operation.  Larger is quicker, but there are fewer updates to the window when fetching a large file.</numentry>
 <toggle name="use_dl_manager" label="Use DownloadManager">Coordinate downloads with the DownloadManager</toggle>
+<toggle name="update_title" label="Update window title">Update the window title with the percentage of the file downloaded.  Disable this if it slows down your window manager unacceptably.</toggle>
 
 </section>
 <section title="Passwords">
-<toggle name="allow_pw_change" label="Prompt for password even when known">Should Fetch prompt for a username and password even when
-previously saved</toggle>
+<toggle name="allow_pw_change" label="Prompt for password even when known">Should Fetch prompt for a username and password even when previously saved?</toggle>
 
 </section>
 </options>

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.21 2005/08/13 13:08:25 stephen Exp $
+# $Id: AppRun,v 1.22 2005/09/11 13:04:26 stephen Exp $
 
 import os, sys
 import time
 
-import findrox; findrox.version(2, 0, 0)
+import findrox; findrox.version(2, 0, 2)
 import rox, rox.choices, rox.options, rox.processes, rox.mime
 
 import urlparse, urllib
@@ -19,7 +19,8 @@ rox.setup_app_options('Fetch', site='kerofin.demon.co.uk')
 allow_pw_change=rox.options.Option('allow_pw_change', True)
 wait_for=rox.options.Option('wait_for', 3)
 use_dl_manager=rox.options.Option('use_dl_manager', False)
-block_size=rox.options.Option('block_size', 4095)
+block_size=rox.options.Option('block_size', 8192)
+update_title=rox.options.Option('update_title', True)
 
 rox.app_options.notify()
 
@@ -254,7 +255,8 @@ class FetchWindow(rox.Dialog):
         if self.percent!=percent:
             self.percent=percent
             self.prog.set_text('%d%%' % (val*100))
-            self.set_title('%d%% %s' % (val*100, self.real_target))
+            if update_title.int_value:
+                self.set_title('%d%% %s' % (val*100, self.real_target))
 
         if self.start_time and total>0 and size>0:
             now=time.time()

@@ -1,10 +1,10 @@
-# $Id: fetch.py,v 1.7 2005/05/27 10:19:41 stephen Exp $
+# $Id: fetch.py,v 1.8 2005/09/11 13:04:26 stephen Exp $
 
 import os, sys
 import time
 import fcntl, termios, struct
 
-import findrox; findrox.version(2, 0, 0)
+import findrox; findrox.version(2, 0, 2)
 import rox, rox.choices, rox.options
 import gobject
 
@@ -20,6 +20,7 @@ allow_pw_change=rox.options.Option('allow_pw_change', True)
 wait_for=rox.options.Option('wait_for', 3)
 use_dl_manager=rox.options.Option('use_dl_manager', False)
 block_size=rox.options.Option('block_size', 8192)
+update_title=rox.options.Option('update_title', True)
 
 rox.app_options.notify()
 
