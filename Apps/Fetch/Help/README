@@ -11,8 +11,9 @@ Installation
 ============
 Copy the application directory to somewhere useful, usually ~/libs or 
 /usr/local/lib.  Then in ROX-Filer Options select "Drag and Drop" and as the
-download handler enter "/path/Fetch/AppRun %s", where /path is the directory
-you stored the Fetch application.
+download handler enter 
+  /path/Fetch/AppRun "$1"
+where /path is the directory you stored the Fetch application.
 
 The program is then run automatically when a file dragged to a
 ROX-Filer window is to be fetched from the net.
@@ -37,7 +38,7 @@ fact failed.  Fetch may warn you of this.
 Updates
 =======
 This program is available at http://www.kerofin.demon.co.uk/rox/fetch.html
-or via Zero Install at /uri/0install/www.kerofin.demon.co.uk/apps/Fetch
+or via Zero Install at http://www.kerofin.demon.co.uk/2005/interfaces/Fetch
 
 -- 
 Stephen Watson 
