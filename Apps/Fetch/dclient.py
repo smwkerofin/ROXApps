@@ -109,7 +109,34 @@ class Manager:
         self.object.connect_to_signal('slot_available', fn)
 
     def showOptions(self):
+        """Show the download manager's options window."""
         self.object.ShowOptions()
+
+    def getStats(self):
+        """Return a list of strings describing each active client."""
+        return self.object.GetStats()
+
+    def getActive(self):
+        """Return number of downloads in progress."""
+        return self.object.GetActive()
+
+    def getWaiting(self):
+        """Return number of clients waiting."""
+        return self.object.GetWaiting()
+
+    def showWindow(self, show=True):
+        """If show==True then show the download window, otherwise
+        hide it."""
+        self.object.ShowWindow(show)
+
+    def ping(self):
+        """Return True if the server is still responding."""
+        try:
+            ok=self.object.Ping()
+        except:
+            ok=False
+
+        return ok
 
 def connect(start=False):
     """Make connection to DownloadManager.
@@ -124,6 +151,17 @@ def connect(start=False):
             raise
 
         # Start DownloadManager here
+        import rox, time
+        path=os.getenv('APPDIRPATH', os.getenv('PATH'))
+        path=path.split(':')
+        for p in path:
+            x=os.path.join(p, 'DownloadManager')
+            if rox.isappdir(x):
+                #print >> sys.stderr, x
+                os.spawnl(os.P_NOWAIT, os.path.join(x, 'AppRun'),
+                          'DownloadManager')
+                time.sleep(1)
+                break
 
         man=Manager()
     return man
