@@ -3,13 +3,13 @@
   <Summary>Fetch files</Summary>
   <About>
     <Purpose>Fetch files by URL</Purpose>
-    <Version>0.1.2 (08 October 2005)</Version>
+    <Version>0.1.3 (16 November 2005)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
   </About>
   <Dependencies>
-    <AppDir><Name>ROX-Lib2</Name><NeedsVersion>2.0.0</NeedsVersion></AppDir>
+    <AppDir><Name>ROX-Lib2</Name><NeedsVersion>2.0.2</NeedsVersion></AppDir>
   </Dependencies>
   <AppMenu>
     <Item option="-o">
