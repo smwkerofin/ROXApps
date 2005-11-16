@@ -17,6 +17,8 @@ clients.  If it is delaying the start of a client then it will open a
 window to show the download queue, then close it again when the queue
 is closed.
 
+Alternatively drag it to a ROX-Filer panel to run as an applet.
+
 At the time of writing the only client available is Fetch version
 0.0.7 or later.
 

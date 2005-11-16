@@ -96,11 +96,16 @@ class Monitor(rox.applet.Applet):
         return False
 
 if __name__=='__main__':
-    try:
-        applet=Monitor(sys.argv[1])
-        rox.mainloop()
-    except:
-        rox.report_exception()
+    # Running the applet over dbus causes a memory leak, so for the moment
+    # run it directly
+    
+    #try:
+    #    applet=Monitor(sys.argv[1])
+    #    rox.mainloop()
+    #except:
+    #    rox.report_exception()
+    os.execlp(os.path.join(rox.app_dir, 'AppRun'), 'DownloadManager', '-a',
+              sys.argv[1])
 
 # We may have started the DownloadManager and it may have exited, so
 # try and reap it.

@@ -1,6 +1,11 @@
 DownloadManager
 ===============
 
+16-Nov-2005 (0.0.4)
+~~~~~~~~~~~
+New applet mode leaks memory (dbus problem?) so revert to original for this 
+release and see if new dbus fixes it.
+
 06-Nov-2005
 ~~~~~~~~~~~
 Changed applet mode totally: now an independant process which communicates
@@ -52,4 +57,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.10 2005/11/05 17:37:47 stephen Exp $
+$Id: Changes,v 1.11 2005/11/12 16:42:47 stephen Exp $
