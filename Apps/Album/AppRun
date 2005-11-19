@@ -6,8 +6,9 @@ try:
 except:
     import time
 import shutil, stat
+import urllib
 
-import findrox; findrox.version(2, 0, 0)
+import findrox; findrox.version(2, 0, 2)
 import rox, rox.saving, rox.choices, rox.loading
 import rox.Menu
 import rox.AppInfo
@@ -47,6 +48,8 @@ def scale_cover(pixbuf, csize=48):
     return pixbuf.scale_simple(int(scale*w), int(scale*h),
                                rox.g.gdk.INTERP_BILINEAR)
 
+moz_url='text/x-moz-url'
+
 class DropableImage(rox.g.Image, rox.loading.XDSLoader):
     """Extension of GtkImage to handle image files dropped"""
 
@@ -58,9 +61,10 @@ class DropableImage(rox.g.Image, rox.loading.XDSLoader):
         rox.g.Image.__init__(self)
 
 	# Get types supported by gdk-pixbuf
-	mtypes=[]
+	mtypes=[moz_url]
 	for fmt in rox.g.gdk.pixbuf_get_formats():
 		mtypes+=fmt['mime_types']
+        #print mtypes
         rox.loading.XDSLoader.__init__(self, mtypes)
 
 	self.set_from_file(resource('DirIcon.png'))
@@ -77,13 +81,25 @@ class DropableImage(rox.g.Image, rox.loading.XDSLoader):
 	    self.loaded=True
 
     def xds_load_from_stream(self, name, type, stream):
-	loader=rox.g.PixbufLoader()
-	buf=stream.read()
-	loader.write(buf)
-	pbuf=loader.get_pixbuf()
-	self.set_from_pixbuf(scale_cover(pbuf, self.size))
-	self.loaded=True
-	self.set_size_request(self.size, self.size)
+        #print name, type
+        if type==moz_url:
+            url=unicode(stream.readline().strip(), 'utf-16').encode()
+            self.load_from_url(url)
+        else:
+            loader=rox.g.gdk.PixbufLoader()
+            buf=stream.read()
+            loader.write(buf)
+            pbuf=loader.get_pixbuf()
+            self.set_from_pixbuf(scale_cover(pbuf, self.size))
+            self.loaded=True
+            self.set_size_request(self.size, self.size)
+
+    def load_from_url(self, url):
+        #print url
+        fname, headers=urllib.urlretrieve(url)
+        #print fname
+        self.xds_load_from_file(fname)
+        os.remove(fname)
 
 class AlbumWindow(rox.Window, rox.loading.XDSLoader, rox.saving.Saveable):
     def __init__(self):
