@@ -1,0 +1,20 @@
+<?xml version="1.0" ?>
+<interface xmlns="http://zero-install.sourceforge.net/2004/injector/interface"
+           uri="http://www.kerofin.demon.co.uk/2005/interfaces/Mem"
+	   main="Mem/AppRun">
+  <name>Mem</name>
+  <summary>Display memory usage.</summary>
+  <description>
+This applet displays the current memory usage and
+the current swap space usage.
+  </description>
+  <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/Mem.png'/>
+<group>
+    <requires interface="http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib">
+      <environment insert="." name="LIBDIRPATH"/>
+    </requires>
+    <implementation id=".." released='Snapshot' 
+		stability="testing" version="2.1.4" platform="Linux-ix86"/>
+  </group>
+<feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/Mem'/>
+</interface>

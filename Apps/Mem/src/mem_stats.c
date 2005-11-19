@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: mem_stats.c,v 1.1 2004/09/25 11:29:40 stephen Exp $
  *
  * mem_stats.c - the functions which get the stats
  */
@@ -56,6 +56,8 @@ static time_t last_proc_meminfo=0;
 /* For caching of /proc/meminfo data */
 static MemValue last_mem_total=0;
 static MemValue last_mem_avail=0;
+static MemValue last_mem_buffers=0;
+static MemValue last_mem_cached=0;
 static MemValue last_swap_total=0;
 static MemValue last_swap_avail=0;
 
@@ -300,6 +302,10 @@ static void read_proc_meminfo(void)
 	last_mem_total=decode_line(line);
       else if(starts(line, "MemFree:"))
 	last_mem_avail=decode_line(line);
+      else if(starts(line, "Buffers:"))
+	last_mem_buffers=decode_line(line);
+      else if(starts(line, "Cached:"))
+	last_mem_cached=decode_line(line);
       else if(starts(line, "SwapTotal:"))
 	last_swap_total=decode_line(line);
       else if(starts(line, "SwapFree:"))
@@ -324,7 +330,7 @@ static int get_mem_proc(MemValue *total, MemValue *avail)
   if(now-last_proc_meminfo<=1) {
     ok=TRUE;
     *total=last_mem_total;
-    *avail=last_mem_avail;
+    *avail=last_mem_avail+last_mem_cached+last_mem_buffers;
   } else {
     ok=FALSE;
   }
@@ -353,5 +359,8 @@ static int get_swap_proc(MemValue *total, MemValue *avail)
 }
 
 /*
- * $Log$
+ * $Log: mem_stats.c,v $
+ * Revision 1.1  2004/09/25 11:29:40  stephen
+ * Functions to get the Mem stats moved here
+ *
  */

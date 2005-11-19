@@ -1,6 +1,11 @@
 Mem
 ===
 
+31-Oct-2005
+~~~~~~~~~~~
+When using /proc/meminfo subtract the buffers and cache size (Peter Hyman).
+Added injector feed.
+
 16-Oct-2005 (2.1.4)
 ~~~~~~~~~~~
 Can get ROX-CLib via 0launch.
