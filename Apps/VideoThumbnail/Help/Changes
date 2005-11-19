@@ -3,6 +3,15 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+17-Nov-2005
+~~~~~~~~~~~
+Trying to fix install of MIME handlers when using the injector.
+
+12-Nov-2005
+~~~~~~~~~~~
+Experimenting with number of frames we should get from MPlayer.
+Added injector feed.
+
 07-Oct-2005 (0.1.6)
 ~~~~~~~~~~~
 Added support for using totem-video-thumbnailer instead of MPlayer
