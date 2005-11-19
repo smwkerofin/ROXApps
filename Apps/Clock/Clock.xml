@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<interface xmlns="http://zero-install.sourceforge.net/2004/injector/interface"
+           uri="http://www.kerofin.demon.co.uk/2005/interfaces/Clock"
+	   main="Clock/AppRun">
+  <name>Clock</name>
+  <summary>Clock panel applet</summary>
+  <description>
+This is a panel clock, with support for setting
+alarms.  It can also function in its own window.
+
+  </description>
+  <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/Clock.png'/>
+<group>
+    <requires interface="http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib">
+      <environment insert="." name="LIBDIRPATH"/>
+    </requires>
+    <implementation id=".." released='Snapshot' 
+		stability="testing" version="2.1.6" platform="Linux-ix86"/>
+  </group>
+  <feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/Clock'/>
+</interface>

@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<interface xmlns="http://zero-install.sourceforge.net/2004/injector/interface"
+           uri="http://www.kerofin.demon.co.uk/2005/interfaces/Load"
+	   main="Load/AppRun">
+  <name>Load</name>
+  <summary>Display the system load.</summary>
+  <description>
+Load displays the load average of your system (a
+measure of how much work it is trying to do).  It can function as
+either a panel applet or as an independant program which can draw a
+chart of load against time.
+
+  </description>
+  <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/Load.png'/>
+<group>
+    <requires interface="http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib">
+      <environment insert="." name="LIBDIRPATH"/>
+    </requires>
+    <implementation id=".." released='Snapshot'
+		stability="buggy" version="2.1.3" platform="Linux-ix86"/>
+  </group>
+<feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/Load'/>
+</interface>

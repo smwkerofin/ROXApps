@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+24-Oct-2005
+~~~~~~~~~~~
+Added Zero Install injector feed.
+
 12-Oct-2005 (2.1.6)
 ~~~~~~~~~~~
 Update for ROX-CLib changes, many externally visible symbols

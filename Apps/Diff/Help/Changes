@@ -1,6 +1,10 @@
 Changes to Diff
 ===============
 
+24-Oct-2005
+~~~~~~~~~~~
+Added Zero Install injector feed.
+
 12-Oct-2005 (2.1.3)
 ~~~~~~~~~~~
 Update for ROX-CLib changes, many externally visible symbols
