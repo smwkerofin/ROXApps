@@ -1,11 +1,11 @@
-# $Id: gui.py,v 1.18 2005/04/03 10:22:52 stephen Exp $
+# $Id: gui.py,v 1.19 2005/05/07 11:31:43 stephen Exp $
 
 import os
 import sys
 import string
 import math
 
-import findrox; findrox.version(2, 0, 0)
+import findrox; findrox.version(2, 0, 2)
 
 #import rox
 import rox.choices
@@ -140,13 +140,15 @@ vbox.pack_start(ifdisp, g.FALSE, g.FALSE)
 # Menu
 rox.Menu.set_save_name('NetStat')
 menu=rox.Menu.Menu('main', [
-    ('/Info', 'show_info', '<StockItem>', '', g.STOCK_DIALOG_INFO),
-    ('/sep', '', '<Separator>'),
-    ('/Active sockets...', 'show_active', ''),
-    ('/All sockets...', 'show_all', ''),
-    ('/Options...', 'edit_options', '<StockItem>', '', g.STOCK_PREFERENCES),
-    ('/sep', '', '<Separator>'),
-    ('/Quit', 'do_quit', '<StockItem>', '', g.STOCK_QUIT)
+    rox.Menu.Action('Info', 'show_info', stock=g.STOCK_DIALOG_INFO),
+    rox.Menu.Separator(),
+    rox.Menu.SubMenu('Sockets', [
+      rox.Menu.Action('Show active...', 'show_active'),
+      rox.Menu.Action('Show all..', 'show_all')
+    ]),
+    rox.Menu.Action('Options...', 'edit_options', stock=g.STOCK_PREFERENCES),
+    rox.Menu.Separator(),
+    rox.Menu.Action('Quit', 'do_quit', stock=g.STOCK_QUIT)
     ])
 
 class MenuHelper:
