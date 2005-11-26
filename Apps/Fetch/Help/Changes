@@ -1,7 +1,7 @@
 Fetch
 =====
 
-12-Nov-2005 (0.1.3)
+12-Nov-2005 (0.1.3, 0.2.0)
 ~~~~~~~~~~~
 Update dclient.py from DownloadManager.
 Added injector feed.
@@ -114,4 +114,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.26 2005/11/12 16:49:24 stephen Exp $
+$Id: Changes,v 1.27 2005/11/16 20:34:28 stephen Exp $
