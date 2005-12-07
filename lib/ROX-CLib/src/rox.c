@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.12 2005/10/12 11:19:06 stephen Exp $
+ * $Id: rox.c,v 1.13 2005/10/15 10:48:28 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -112,6 +112,9 @@ $ MAKE=gmake ROX-CLib/AppRun --compile
 
 #include <unistd.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "rox.h"
 #include "options.h"
 
@@ -119,6 +122,7 @@ static gchar *program_name=NULL;
 static gchar *domain_name=NULL;
 static GdkPixbuf *program_icon=NULL;
 const gchar *app_dir=NULL;
+static gboolean warn_deprecated=TRUE;
 
 /** Initialize the library.  Equivalent to
  * rox_init_with_domain(program, NULL, argc, argv).
@@ -151,12 +155,20 @@ void rox_init(const char *program, int *argc, char ***argv)
 void rox_init_with_domain(const char *program, const char *domain,
 			  int *argc, char ***argv)
 {
+  const gchar *v;
   
   gtk_init(argc, argv);
+
+  v=g_getenv("ROX_CLIB_DEPRECATED_WARNING");
+  if(v) {
+    warn_deprecated=atoi(v);
+  }
 
   program_name=g_strdup(program);
   if(domain)
     domain_name=g_strdup(domain);
+
+  rox_error_init();
   rox_debug_init(program); 
 
   choices_init();
@@ -335,8 +347,148 @@ void rox_main_quit(void)
   gtk_main_quit();
 }
 
+/**
+ * Warn about use of a deprecated function and indicate it's replacement.
+ * This warning is enabled by ROX_CLIB_DEPRECATION_WARNING=1 and
+ * disabled by ROX_CLIB_DEPRECATION_WARNING=0 (the default state depends on
+ * the release).
+ * This function is for internal use.
+ * @param[in] func name of function that is deprecated
+ * @param[in] use name or description of replacement
+ */
+void rox_deprecated_warning(const char *func, const char *use)
+{
+  if(warn_deprecated)
+    g_warning("%s is deprecated, use %s instead", func, use);
+}
+
+/**
+ * Confirm that @a path exists and is a valid AppDir.  This includes
+ * checking ownership and permissions.
+ *
+ * @param[in] path path to object to check
+ * @return @c FALSE if not a valid AppDir
+ */
+int rox_is_appdir(const char *path)
+{
+  char *run_path;
+  struct stat dirstat, runstat;
+  int t, x;
+
+  if(stat(path, &dirstat))
+    return FALSE;            /* Not there */
+
+  if(!S_ISDIR(dirstat.st_mode))
+    return FALSE;            /* Not a directory */
+
+  if(dirstat.st_mode & S_IWOTH)
+    return FALSE;            /* World writable */
+
+  run_path=g_build_filename(path, "AppRun", NULL);
+  t=stat(run_path, &runstat);
+  x=access(run_path, X_OK);
+  g_free(run_path);
+  if(t)
+    return FALSE;            /* No AppRun */
+  if(!x)
+    return FALSE;            /* Not executable */
+  
+  if(runstat.st_mode & S_IWOTH)
+    return FALSE;            /* World writable */
+
+  if(runstat.st_uid!=dirstat.st_uid)
+    return FALSE;            /* Owners differ */
+
+  return TRUE;
+}
+
+/**
+ * Return the path to an AppDir.
+ *
+ * @param[in] name name of application to find
+ * @param[in] dirs @c NULL terminated array of directories to look in.  If
+ * @a dirs is @c NULL then @a env_name is used instead
+ * @param[in] env_name if @a dirs is @c NULL then this is the name of an
+ * environment variable that will contain a colon-separated list of
+ * directories.  If @a env_name is @c NULL "APPDIRPATH" is used.  Default
+ * values for the variables "APPDIRPATH" and "LIBDIRPATH" are assumed if
+ * they are not set.
+ * @return path to AppDir (pass to g_free()), or @c NULL if not found.
+ */
+char *rox_find_appdir(const char *name, gchar **dirs,
+			     const char *env_name)
+{
+  static char *appdirpath=NULL;
+  static char *libdirpath=NULL;
+  gchar **tdirs=NULL;
+  const gchar *spath;
+  int i;
+  char *path;
+
+  if(dirs) {
+    for(i=0; dirs[i]; i++) {
+      path=g_build_filename(dirs[i], name, NULL);
+      if(rox_is_appdir(path))
+	return path;
+      g_free(path);
+    }
+
+    return NULL;
+  }
+
+  if(!env_name)
+    env_name="APPDIRPATH";
+
+  spath=g_getenv(env_name);
+
+  if(!spath) {
+    if(strcmp(env_name, "APPDIRPATH")==0) {
+      if(!appdirpath)
+	appdirpath=g_strdup_printf("%s/Apps:/usr/local/apps:/usr/apps",
+				   g_get_home_dir());
+      spath=appdirpath;
+
+    } else if(strcmp(env_name, "LIBDIRPATH")==0) {
+      if(!libdirpath)
+	libdirpath=g_strdup_printf("%s/lib:/usr/local/lib:/usr/lib",
+				   g_get_home_dir());
+      spath=libdirpath;
+
+    }
+  }
+  if(!spath)
+    return NULL;
+
+  tdirs=g_strsplit(spath, ":", 0);
+  for(i=0; tdirs[i]; i++) {
+    path=g_build_filename(tdirs[i], name, NULL);
+    if(rox_is_appdir(path))
+      break;
+    g_free(path);
+    path=NULL;
+  }
+  g_strfreev(tdirs);
+
+  return path;
+}
+
+/**
+ * Return the path to ROX-CLib's AppDir.
+ * @return path to ROX-CLib (pass to g_free()), or @c NULL if not found.
+ */
+char *rox_clib_find(void)
+{
+  return rox_find_appdir("ROX-CLib", NULL, "LIBDIRPATH");
+}
+
+/* Local functions */
+
 /*
  * $Log: rox.c,v $
+ * Revision 1.13  2005/10/15 10:48:28  stephen
+ * Externally visible symbols have rox_ or ROX prefixes.
+ * All still exist under the old names but in general will produce a warning message.
+ *
  * Revision 1.12  2005/10/12 11:19:06  stephen
  * Externally visible symbols have rox_ or ROX prefixes.
  * All still exist under the old names but in general will produce a warning message.

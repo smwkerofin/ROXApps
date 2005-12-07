@@ -1,5 +1,5 @@
 /*
- * $Id: rox.h,v 1.7 2004/10/29 13:36:07 stephen Exp $
+ * $Id: rox.h,v 1.8 2005/06/07 10:24:52 stephen Exp $
  *
  * rox.h - Top level header for ROX-CLib
  */
@@ -48,6 +48,8 @@ extern const char *rox_clib_version_string(void);
 extern int rox_clib_gtk_version_number(void);
 extern const char *rox_clib_gtk_version_string(void);
 
+extern void rox_deprecated_warning(const char *func, const char *use);
+
 /* Window counting */
 extern void rox_add_window(GtkWidget *window);
 extern int rox_get_n_windows(void);
@@ -55,10 +57,18 @@ extern int rox_get_n_windows(void);
 extern void rox_main_loop(void);
 extern void rox_main_quit(void);
 
+extern int rox_is_appdir(const char *path);
+extern char *rox_find_appdir(const char *name, gchar **dirs,
+			     const char *env_name);
+extern char *rox_clib_find(void);
+
 #endif
 
 /*
  * $Log: rox.h,v $
+ * Revision 1.8  2005/06/07 10:24:52  stephen
+ * Using doxygen to generate documentation
+ *
  * Revision 1.7  2004/10/29 13:36:07  stephen
  * Added rox_choices_load()/save()
  *
