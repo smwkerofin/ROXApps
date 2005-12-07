@@ -4,6 +4,17 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+07-Dec-2005
+~~~~~~~~~~~
+Direct support for Firefox when launching URI.
+Marked many strings as translatable.
+
+03-Dec-2005
+~~~~~~~~~~~
+Begun general error handling framework, now used by rox_soap and 
+rox_filer_action.
+Added extension area for GtkSavebox.
+
 23-Oct-2005
 ~~~~~~~~~~~
 Update version number in local feed.
@@ -273,4 +284,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.31 2005/10/22 16:47:05 stephen Exp $
+$Id: Changes,v 1.32 2005/11/19 12:48:11 stephen Exp $
