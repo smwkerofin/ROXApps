@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.9 2005/09/10 16:15:58 stephen Exp $
+ * $Id: rox_dnd.c,v 1.10 2005/10/15 10:48:15 stephen Exp $
  */
 
 /**
@@ -12,7 +12,7 @@
  * handled by #GtkSavebox.
  *
  * @author Stephen Watson
- * @version $Id: rox_dnd.c,v 1.9 2005/09/10 16:15:58 stephen Exp $
+ * @version $Id: rox_dnd.c,v 1.10 2005/10/15 10:48:15 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -218,8 +218,8 @@ static GSList *uri_list_to_gslist(char *uri_list)
     linebreak = strchr(uri_list, 13);
 
     if (!linebreak || linebreak[1] != 10) {
-      rox_error("uri_list_to_gslist: Incorrect or missing line "
-		      "break in text/uri-list data");
+      rox_error(_("uri_list_to_gslist: Incorrect or missing line "
+		  "break in text/uri-list data"));
       return list;
     }
     
@@ -314,7 +314,7 @@ static void got_uri_list(GtkWidget 		*widget,
   uri_list = uri_list_to_gslist(selection_data->data);
 
   if (!uri_list)
-    error = "No URIs in the text/uri-list (nothing to do!)";
+    error = _("No URIs in the text/uri-list (nothing to do!)");
   else if(rdata && rdata->uris) {
     rdata->uris(widget, uri_list, NULL, rdata->udata);
   }
@@ -394,7 +394,7 @@ static void got_xds(GtkWidget 		*widget,
       gtk_drag_get_data(widget, context, text_uri_list, time);
       return;
     } else {
-      rox_error("Drag & drop error: sender can't provide data");
+      rox_error(_("Drag & drop error: sender can't provide data"));
     }
     break;
 
@@ -414,7 +414,7 @@ static void got_xds(GtkWidget 		*widget,
     break;
 
   default:
-    rox_error("XDS protocol error, '%c' should be S, F or E", response);
+    rox_error(_("XDS protocol error, '%c' should be S, F or E"), response);
     break;
   }
 
@@ -455,13 +455,17 @@ static void drag_data_received(GtkWidget      	*widget,
   default:
     /*fprintf(stderr, "drag_data_received: unknown target\n");*/
     gtk_drag_finish(context, FALSE, FALSE, time);
-    rox_error("drag_data_received: unknown target");
+    rox_error(_("drag_data_received: unknown target"));
     break;
   }
 }
 
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.10  2005/10/15 10:48:15  stephen
+ * Externally visible symbols have rox_ or ROX prefixes.
+ * All still exist under the old names but in general will produce a warning message.
+ *
  * Revision 1.9  2005/09/10 16:15:58  stephen
  * Added doxygen comments
  *

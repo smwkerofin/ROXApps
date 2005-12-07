@@ -1,4 +1,6 @@
-/* The configure script will auto-generate rox-clib.h from rox-clib.h.in */
+/* -*- c -*-
+ * The configure script will auto-generate rox-clib.h from rox-clib.h.in 
+ */
 
 /** \file rox-clib.h
  * \brief Internal file
@@ -30,15 +32,22 @@
 
 #undef HAVE_APSYMBOLS_H
 #undef HAVE_APBUILD_APSYMBOLS_H
+#undef HAVE_LIBINTL_H
 #undef HAVE_LIBNSL
 #undef HAVE_MKDIR
 #undef HAVE_GETHOSTNAME
 #undef HAVE_GETHOSTBYNAME
+#undef HAVE_DGETTEXT
 #undef HAVE_XML
 #undef GTK2
 
 #ifndef _
+#if defined(HAVE_LIBINTL_H) && defined(HAVE_DGETTEXT)
+#include <libintl.h>
+#define _(String) dgettext("ROX-CLIB", String)
+#else
 #define _(String) (String)
+#endif
 #define N_(String) (String)
 #endif
 
@@ -50,12 +59,7 @@
 # define gdk_x11_atom_to_xatom(x) (x)
 #endif
 
-#if 0
-#define ROX_CLIB_DEPRECATED(use) \
-  g_warning("%s is deprecated, use %s instead", __func__, use)
-#else
-#define ROX_CLIB_DEPRECATED(use) ((void) 0)
-#endif
+#define ROX_CLIB_DEPRECATED(use) rox_deprecated_warning(__func__, use)
 
 #if defined(HAVE_APSYMBOLS_H)
 # include <apsymbols.h>

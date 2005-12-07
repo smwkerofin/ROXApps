@@ -1,5 +1,5 @@
 /*
- * $Id: options.c,v 1.7 2005/08/14 16:07:00 stephen Exp $
+ * $Id: options.c,v 1.8 2005/10/15 10:48:49 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -858,7 +858,7 @@ static void build_widget(xmlNode *widget, GtkWidget *box)
 
 		if (!option)
 		{
-			g_warning("No Option for '%s'!\n", oname);
+		  g_warning(_("No Option for '%s'!\n"), oname);
 			g_free(oname);
 			return;
 		}
@@ -874,7 +874,7 @@ static void build_widget(xmlNode *widget, GtkWidget *box)
 		GList *widgets, *next;
 
 		if (option && option->widget)
-			g_warning("Widget for option already exists!");
+		  g_warning(_("Widget for option already exists!"));
 
 		widgets = builder(option, widget, label);
 
@@ -886,7 +886,7 @@ static void build_widget(xmlNode *widget, GtkWidget *box)
 		g_list_free(widgets);
 	}
 	else
-		g_warning("Unknown option type '%s'\n", name);
+	  g_warning(_("Unknown option type '%s'\n"), name);
 
 	g_free(label);
 }
@@ -1162,7 +1162,7 @@ static void radio_group_set_value(GtkRadioButton *last, gchar *value)
 		}
 	}
 
-	g_warning("Can't find radio button with value %s\n", value);
+	g_warning(_("Can't find radio button with value %s\n"), value);
 }
 
 /* Given the last radio button in the group, return a copy of the
@@ -1948,7 +1948,7 @@ static void load_options(xmlDoc *doc)
 		value = xmlNodeGetContent(node);
 
 		if (g_hash_table_lookup(loading, name))
-			g_warning("Duplicate option found!");
+		  g_warning(_("Duplicate option found!"));
 
 		g_hash_table_insert(loading, name, value);
 
@@ -1988,6 +1988,10 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: options.c,v $
+ * Revision 1.8  2005/10/15 10:48:49  stephen
+ * Externally visible symbols have rox_ or ROX prefixes.
+ * All still exist under the old names but in general will produce a warning message.
+ *
  * Revision 1.7  2005/08/14 16:07:00  stephen
  * Added rox_resources_find_with_domain().
  * More doxygen additions.

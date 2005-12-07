@@ -84,13 +84,13 @@ AC_CHECK_LIB(nsl, gethostbyname)
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS(fcntl.h unistd.h apsymbols.h apbuild/apsymbols.h)
+AC_CHECK_HEADERS(apsymbols.h apbuild/apsymbols.h libintl.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(mkdir gethostname gethostbyname)
+AC_CHECK_FUNCS(mkdir gethostname gethostbyname dgettext)
 
 dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(version information)

@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap_server.c,v 1.8 2005/03/04 17:22:18 stephen Exp $
+ * $Id: rox_soap_server.c,v 1.9 2005/09/10 16:17:45 stephen Exp $
  *
  * rox_soap_server.c - Provide ROX-Filer like SOAP server
  *
@@ -15,7 +15,7 @@
  * no matter how many times they are started, much as ROX-Filer does itself.
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id$
+ * @version $Id: rox_soap_server.c,v 1.9 2005/09/10 16:17:45 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -257,8 +257,8 @@ static xmlNodePtr soap_invoke(ROXSOAPServer *server, xmlNode *method)
       node = get_subnode(method, server->ns_url, *arg);
       if (!node)
 	{
-	  g_warning("Missing required argument '%s' "
-		    "in call to method '%s'", *arg,
+	  g_warning(_("Missing required argument '%s' "
+		      "in call to method '%s'"), *arg,
 		    method->name);
 	  goto out;
 	}
@@ -318,7 +318,7 @@ static xmlDocPtr run_soap(ROXSOAPServer *server, xmlDocPtr soap)
       continue;
     
     if (node->ns == NULL || strcmp(node->ns->href, server->ns_url) != 0) {
-      g_warning("Unknown namespace %s (expected %s)",
+      g_warning(_("Unknown namespace %s (expected %s)"),
 		node->ns ? node->ns->href
 		: (xmlChar *) "(none)", server->ns_url);
       continue;
@@ -340,7 +340,7 @@ static xmlDocPtr run_soap(ROXSOAPServer *server, xmlDocPtr soap)
   goto out;
 
 bad_soap:
-  g_warning("Bad SOAP message received!");
+  g_warning(_("Bad SOAP message received!"));
   /*xmlDocDump(stderr, soap);*/
 
 out:
@@ -406,7 +406,7 @@ static gboolean client_event(GtkWidget *window,
   prop = gdk_x11_xatom_to_atom(event->data.l[1]);
   dprintf(3, "prop=%p", prop);
   if(gdk_error_trap_pop()) {
-    rox_error("SOAP server is confused (obtaining atom for %lx)",
+    rox_error(_("SOAP server is confused (obtaining atom for %lx)"),
 	      event->data.l[1]);
     return TRUE;
   }
@@ -414,7 +414,7 @@ static gboolean client_event(GtkWidget *window,
   gdk_error_trap_push();
   data = read_property(src_window, prop, &length);
   if(gdk_error_trap_pop()) {
-    rox_error("SOAP server is confused (obtaining property)");
+    rox_error(_("SOAP server is confused (obtaining property)"));
     return TRUE;
   }
   if (!data)
@@ -462,5 +462,8 @@ static gboolean client_event(GtkWidget *window,
 }
 
 /*
- * $Log$
+ * $Log: rox_soap_server.c,v $
+ * Revision 1.9  2005/09/10 16:17:45  stephen
+ * Added doxygen comments
+ *
  */
