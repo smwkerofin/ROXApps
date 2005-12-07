@@ -1,7 +1,7 @@
 /*
  * uri.c - utilities for uri handling and launching
  *
- * $Id: uri.c,v 1.1 2004/10/02 13:10:28 stephen Exp $
+ * $Id: uri.c,v 1.2 2005/09/10 16:17:55 stephen Exp $
  */
 
 /**
@@ -9,7 +9,7 @@
  * @brief Utilities for uri handling and launching.
  *
  * @author Stephen Watson
- * @version $Id$
+ * @version $Id: uri.c,v 1.2 2005/09/10 16:17:55 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -173,6 +173,11 @@ int rox_uri_launch(const char *uri)
   s=system(cmd);
   g_free(cmd);
   if(s) {
+    cmd=g_strdup_printf("firefox %s", uri);
+    s=system(cmd);
+    g_free(cmd);
+  }
+  if(s) {
     cmd=g_strdup_printf("mozilla %s", uri);
     s=system(cmd);
     g_free(cmd);
@@ -188,6 +193,9 @@ int rox_uri_launch(const char *uri)
 
 /*
  * $Log: uri.c,v $
+ * Revision 1.2  2005/09/10 16:17:55  stephen
+ * Added doxygen comments
+ *
  * Revision 1.1  2004/10/02 13:10:28  stephen
  * Added uri.h and rox_uri_launch() (and moved some stuff from rox_path
  * there) to better handle launching URIs.  ROXInfoWin now uses it.
