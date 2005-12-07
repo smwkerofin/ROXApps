@@ -1,12 +1,12 @@
 /*
- * $Id: rox_resources.c,v 1.4 2005/08/14 16:07:00 stephen Exp $
+ * $Id: rox_resources.c,v 1.5 2005/09/10 16:16:59 stephen Exp $
  */
 /**
  * @file rox_resources.c
  * @brief Find internationalized resource files.
  *
  * @author Stephen Watson
- * @version $Id$
+ * @version $Id: rox_resources.c,v 1.5 2005/09/10 16:16:59 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -150,6 +150,8 @@ gchar *rox_resources_find(const gchar *app_name,
   gchar *app_dir;
   gchar *answer=NULL;
 
+  ROX_CLIB_DEPRECATED("rox_resources_find_with_domain");
+
   if(!lang)
     lang=g_getenv("LANG");
 
@@ -216,6 +218,9 @@ gchar *rox_resources_find_with_domain(const gchar *app_name,
 
 /*
  * $Log: rox_resources.c,v $
+ * Revision 1.5  2005/09/10 16:16:59  stephen
+ * Added author and version info to the doxygen output
+ *
  * Revision 1.4  2005/08/14 16:07:00  stephen
  * Added rox_resources_find_with_domain().
  * More doxygen additions.
