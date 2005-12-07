@@ -70,7 +70,7 @@
  *	and update the pathname/uri for the file to the one given.
  *
  * @author Thomas Leonard
- * @version $Id$ based on
+ * @version $Id: gtksavebox.c,v 1.4 2005/08/21 13:06:38 stephen Exp $ based on
  * gtksavebox.c,v 1.28 2002/05/12 16:28:42 tal197 from ROX-Filer 1.3.5
  */
 
@@ -316,6 +316,9 @@ gtk_savebox_new (const gchar *action)
   GtkWidget *button;
   GtkDialog *dialog;
   GList	    *list, *next;
+
+  if(!action)
+    action=_("Save");
   
   dialog = GTK_DIALOG (gtk_widget_new (gtk_savebox_get_type(), NULL));
 
@@ -397,11 +400,34 @@ gtk_savebox_set_pathname (GtkSavebox *savebox, const gchar *pathname)
 void
 gtk_savebox_set_has_discard (GtkSavebox *savebox, gboolean setting)
 {
+  g_return_if_fail(GTK_IS_SAVEBOX(savebox));
+  
   if (setting)
     gtk_widget_show_all (savebox->discard_area);
   else
     gtk_widget_hide (savebox->discard_area);
 }
+
+/**
+ * Return the extension area, a vbox just above the buttons where
+ * additional widgets may be placed.
+ *
+ * @param[in,out] savebox Save box widget
+ */
+GtkWidget* gtk_savebox_get_extension_area(GtkSavebox *savebox)
+{
+  g_return_val_if_fail(GTK_IS_SAVEBOX(savebox), NULL);
+  
+  if(!savebox->extend) {
+    savebox->extend=gtk_vbox_new(FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(GTK_DIALOG(savebox)->vbox), savebox->extend,
+		       TRUE, TRUE, 0);
+  }
+
+  return savebox->extend;
+}
+
+/* Local functions */
 
 static void
 button_press_over_icon (GtkWidget *drag_box, GdkEventButton *event,
@@ -738,6 +764,9 @@ static GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: gtksavebox.c,v $
+ * Revision 1.4  2005/08/21 13:06:38  stephen
+ * Added doxygen comments
+ *
  * Revision 1.3  2003/03/05 15:31:23  stephen
  * First pass a conversion to GTK 2
  * Known problems in SOAP code.

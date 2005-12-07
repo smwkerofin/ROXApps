@@ -34,7 +34,7 @@
  * @brief Drag and drop saving widget for GTK+
  *
  * @author Thomas Leonard
- * @version $Id$
+ * @version $Id: gtksavebox.h,v 1.3 2005/08/21 13:06:38 stephen Exp $
  */
 
 #ifndef __GTK_SAVEBOX_H__
@@ -108,9 +108,10 @@ struct _GtkSavebox
   GtkDialog dialog;		/**< Instance of parent class */
 
   GtkWidget *discard_area;	/**< Normally hidden */
-  GtkWidget *drag_box;		/**< Event box - contains pixmap, or NULL */
+  GtkWidget *drag_box;		/**< Event box - contains pixmap, or @c NULL */
   GtkWidget *icon;		/**< The pixmap widget */
   GtkWidget *entry;		/**< Where the pathname goes */
+  GtkWidget *extend;            /**< Extension area, or @c NULL */
 
   GtkTargetList *targets;	/**< Formats that we can save in */
   gboolean  using_xds;		/**< Have we sent XDS reply 'S' or 'F' yet? */
@@ -136,6 +137,7 @@ void	   gtk_savebox_set_icon		(GtkSavebox *savebox,
 void	   gtk_savebox_set_pathname	(GtkSavebox *savebox,
 					 const gchar *pathname);
 void	   gtk_savebox_set_has_discard	(GtkSavebox *savebox, gboolean setting);
+GtkWidget* gtk_savebox_get_extension_area(GtkSavebox *savebox);
 
 
 #ifdef __cplusplus
@@ -146,6 +148,9 @@ void	   gtk_savebox_set_has_discard	(GtkSavebox *savebox, gboolean setting);
 #endif /* __GTK_SAVEBOX_H__ */
 
 /*
- * $Log$
+ * $Log: gtksavebox.h,v $
+ * Revision 1.3  2005/08/21 13:06:38  stephen
+ * Added doxygen comments
+ *
  */
   
