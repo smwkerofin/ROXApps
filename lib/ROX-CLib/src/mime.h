@@ -1,5 +1,5 @@
 /*
- * $Id: mime.h,v 1.4 2005/10/12 11:00:22 stephen Exp $
+ * $Id: mime.h,v 1.5 2005/10/15 10:47:41 stephen Exp $
  *
  * Shared MIME database functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief Shared MIME database functions for ROX-CLib
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id: mime.h,v 1.4 2005/10/12 11:00:22 stephen Exp $
+ * @version $Id: mime.h,v 1.5 2005/10/15 10:47:41 stephen Exp $
  */
 
 #ifndef _rox_mime_h
@@ -27,6 +27,7 @@ typedef struct rox_mime_type{
 } ROXMIMEType;
 #define MIMEType ROXMIMEType    /**< Alias for ROXMIMEType */
 
+#ifndef ROX_CLIB_NO_MIME_TYPE_EXPORT
 extern ROXMIMEType *text_plain;               /**< Default for plain file */
 extern ROXMIMEType *application_executable;   /**< Default for executable
 					       * file */
@@ -43,6 +44,7 @@ extern ROXMIMEType *inode_door;               /**< Door file, similar to
 					       * operating systems */
 extern ROXMIMEType *inode_unknown;            /**< Unknown type, probably
 					       * broken symbolic link */
+#endif
 
 /* Initialize MIME system.   */
 extern void rox_mime_init(void);
@@ -76,6 +78,9 @@ extern int mime_get_by_content(void);
 
 /*
  * $Log: mime.h,v $
+ * Revision 1.5  2005/10/15 10:47:41  stephen
+ * Added rox_mime_get_icon()
+ *
  * Revision 1.4  2005/10/12 11:00:22  stephen
  * Externally visible symbols have rox_ or ROX prefixes.
  * All still exist under the old names but in general will produce a warning message.

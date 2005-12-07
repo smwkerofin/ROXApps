@@ -1,5 +1,5 @@
 /*
- * $Id: mime.c,v 1.5 2005/10/15 10:47:28 stephen Exp $
+ * $Id: mime.c,v 1.6 2005/10/22 10:42:28 stephen Exp $
  *
  * Shared MIME databse functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief Shared MIME database functions for ROX-CLib
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id: mime.c,v 1.5 2005/10/15 10:47:28 stephen Exp $
+ * @version $Id: mime.c,v 1.6 2005/10/22 10:42:28 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -34,18 +34,27 @@
  */
 #define TYPE_NS "http://www.freedesktop.org/standards/shared-mime-info"
 
+#ifdef ROX_CLIB_NO_MIME_TYPE_EXPORT
+#define MIMEType_export static
+#else
+#define MIMEType_export
+#endif
+
 /* Globals */
-ROXMIMEType *text_plain;       /* Default for plain file */
-ROXMIMEType *application_executable;  /* Default for executable file */
-ROXMIMEType *application_octet_stream;  /* Default for binary file */
-ROXMIMEType *inode_directory;
-ROXMIMEType *inode_mountpoint;
-ROXMIMEType *inode_pipe;
-ROXMIMEType *inode_socket;
-ROXMIMEType *inode_block;
-ROXMIMEType *inode_char;
-ROXMIMEType *inode_door;
-ROXMIMEType *inode_unknown;
+MIMEType_export ROXMIMEType *text_plain;              /* Default for plain
+						       * file */
+MIMEType_export ROXMIMEType *application_executable;  /* Default for
+						       * executable file */
+MIMEType_export ROXMIMEType *application_octet_stream;/* Default for binary
+						       * file */
+MIMEType_export ROXMIMEType *inode_directory;
+MIMEType_export ROXMIMEType *inode_mountpoint;
+MIMEType_export ROXMIMEType *inode_pipe;
+MIMEType_export ROXMIMEType *inode_socket;
+MIMEType_export ROXMIMEType *inode_block;
+MIMEType_export ROXMIMEType *inode_char;
+MIMEType_export ROXMIMEType *inode_door;
+MIMEType_export ROXMIMEType *inode_unknown;
 
 /** Normal files of undefined type default to text/plain */
 #define UNKNOWN text_plain
@@ -114,6 +123,7 @@ void rox_mime_init(void)
 void mime_init(void)
 {
   ROX_CLIB_DEPRECATED("rox_mime_init");
+  rox_mime_init();
 }
 
 /**
@@ -762,6 +772,11 @@ static ROXMIMEType *type_by_path(const char *path)
 
 /*
  * $Log: mime.c,v $
+ * Revision 1.6  2005/10/22 10:42:28  stephen
+ * Renamed basedir functions to rox_basedir.
+ * Disabled deprecation warning.
+ * This is version 2.1.6
+ *
  * Revision 1.5  2005/10/15 10:47:28  stephen
  * Added rox_mime_get_icon()
  *
