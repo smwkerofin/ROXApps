@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.14 2005/03/04 17:22:18 stephen Exp $
+ * $Id: rox_soap.c,v 1.15 2005/09/10 16:17:33 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -15,12 +15,13 @@
  * no matter how many times they are started, much as ROX-Filer does itself.
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id$
+ * @version $Id: rox_soap.c,v 1.15 2005/09/10 16:17:33 stephen Exp $
  */
 
 #include "rox-clib.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <ctype.h>
 
@@ -109,20 +110,32 @@ static gboolean done_init=FALSE;
 static guint timeout=TIMEOUT;
 static gchar *host_name;
 
-static char *last_error=NULL;
-static char last_error_buffer[1024];
+/*static char *last_error=NULL;
+  static char last_error_buffer[1024];*/
 
 static GSList *dead_windows=NULL;
 
 static GdkWindow *get_existing_ipc_window(GdkAtom);
 
-#define rox_soap_return_if_fail(expr) \
-do{if(!(expr)){sprintf(last_error_buffer,"assertion '%s' failed",#expr); \
-last_error=last_error_buffer;return;}}while(0);
+static void queue_error(int code, const char *message);
 
-#define rox_soap_return_val_if_fail(expr, val) \
-do{if(!(expr)){sprintf(last_error_buffer,"assertion '%s' failed",#expr); \
-last_error=last_error_buffer;return val;}}while(0);
+#define rox_soap_return_if_fail(expr) do {			 \
+    if(!(expr)) {						 \
+      gchar *_m=g_strdup_printf(_("assertion '%s' failed)", #expr);	\
+      queue_error(1, _m);					 \
+      g_free(_m);						 \
+      return;							 \
+    }								 \
+  } while(0)
+
+#define rox_soap_return_val_if_fail(expr, val) do {		 \
+    if(!(expr)) {						 \
+      gchar *_m=g_strdup_printf(_("assertion '%s' failed"), #expr);	\
+      queue_error(2, _m);					 \
+      g_free(_m);						 \
+      return val;						 \
+    }								 \
+  } while(0)
 
 /**
  * Initialize the SOAP system.
@@ -373,7 +386,7 @@ xmlDocPtr rox_soap_build_xml(const char *action, const char *ns_url,
 
   doc=xmlNewDoc("1.0");
   if(!doc) {
-    last_error="XML document creation failed";
+    queue_error(3, _("XML document creation failed"));
     return;
   }
   
@@ -541,8 +554,7 @@ gboolean too_slow(gpointer data)
   if(sdata->timeout_tag) {
     /* Handler wasn't called */
     dprintf(2, "too_slow");
-    sprintf(last_error_buffer, "SOAP timed out");
-    last_error=last_error_buffer;
+    queue_error(4, _("SOAP timed out"));
 
     if(sdata->callback)
       sdata->callback(sdata->filer, FALSE, NULL, sdata->data);
@@ -602,8 +614,10 @@ gboolean rox_soap_send(ROXSOAP *prog, xmlDocPtr doc, gboolean run_prog,
     prog->existing_ipc_window=get_existing_ipc_window(prog->atom);
   dprintf(3, "existing_ipc_window %p", prog->existing_ipc_window);
   if(!prog->existing_ipc_window && (!run_prog || !prog->prog->command)) {
-    sprintf(last_error_buffer, "No %s to target", prog->prog->name);
-    last_error=last_error_buffer;
+    gchar *mess;
+    mess=g_strdup_printf(_("No %s to target"), prog->prog->name);
+    queue_error(11, mess);
+    g_free(mess);
     return FALSE;
   }
 
@@ -613,8 +627,7 @@ gboolean rox_soap_send(ROXSOAP *prog, xmlDocPtr doc, gboolean run_prog,
 
   xmlDocDumpMemory(doc, &mem, &size);
   if(size<0) {
-    sprintf(last_error_buffer, "Failed to dump XML doc to memory");
-    last_error=last_error_buffer;
+    queue_error(5, _("Failed to dump XML doc to memory"));
     return FALSE;
   }
   dprintf(3, "doc is %d bytes (%.10s)", size, mem);
@@ -664,6 +677,7 @@ gboolean rox_soap_send(ROXSOAP *prog, xmlDocPtr doc, gboolean run_prog,
 static void close_pipe(SoapPipeData *sdata, gboolean ok)
 {
   int stat;
+  gchar *mess;
   
   waitpid(sdata->child, &stat, 0);
   dprintf(2, "status 0x%x from %d, closing %d", stat, sdata->child, sdata->fd);
@@ -671,14 +685,18 @@ static void close_pipe(SoapPipeData *sdata, gboolean ok)
   if(WIFSIGNALED(stat)) {
     dprintf(1, "%d killed by signal %d %s", sdata->child, WTERMSIG(stat),
 	      strsignal(WTERMSIG(stat)));
-    sprintf(last_error_buffer , "%d killed by signal %d %s", sdata->child,
+    mess=g_strdup_printf("%d killed by signal %d %s", sdata->child,
 	    WTERMSIG(stat), strsignal(WTERMSIG(stat)));
-    last_error=last_error_buffer;
+    queue_error(6, mess);
+    g_free(mess);
+    
   } else if(WIFEXITED(stat) && WEXITSTATUS(stat)) {
     dprintf(1, "%d exited with status %d", sdata->child, WEXITSTATUS(stat));
-    sprintf(last_error_buffer, "child %d exited with status %d",
+    mess=g_strdup_printf("child %d exited with status %d",
 	    sdata->child, WEXITSTATUS(stat));
-    last_error=last_error_buffer;
+    queue_error(7, mess);
+    g_free(mess);
+    
   }
   gdk_input_remove(sdata->read_tag);
 
@@ -712,11 +730,14 @@ static void read_from_pipe(gpointer data, gint com, GdkInputCondition cond)
   } else if(nr==0) {
     close_pipe(sdata, TRUE);
   } else {
+    gchar *mess;
+    
     dprintf(1, "problem reading data from %d,%d: %s", sdata->child,
 	    sdata->fd, strerror(errno));
-    sprintf(last_error_buffer, "problem reading data from %d,%d: %s", 
+    mess=g_strdup_printf(_("problem reading data from %d,%d: %s"), 
 	    sdata->child, sdata->fd, strerror(errno));
-    last_error=last_error_buffer;
+    queue_error(8, mess);
+    g_free(mess);
     close_pipe(sdata, FALSE);
   }
 }
@@ -742,14 +763,16 @@ gboolean rox_soap_send_via_pipe(ROXSOAP *prog, xmlDocPtr doc,
   SoapPipeData *sdata;
   int tch[2], fch[2];
   FILE *out;
+  gchar *mess;
 
   rox_soap_return_val_if_fail(prog!=NULL, FALSE);
   rox_soap_return_val_if_fail(doc!=NULL, FALSE);
   rox_soap_return_val_if_fail(callback!=NULL, FALSE);
 
   if(!prog->prog->command) {
-    sprintf(last_error_buffer, "%s has no defined command", prog->prog->name);
-    last_error=last_error_buffer;
+    mess=g_strdup_printf(_("%s has no defined command"), prog->prog->name);
+    queue_error(9, mess);
+    g_free(mess);
   }
   
   sdata=g_new(SoapPipeData, 1);
@@ -764,8 +787,9 @@ gboolean rox_soap_send_via_pipe(ROXSOAP *prog, xmlDocPtr doc,
   switch(sdata->child) {
   case -1:
     dprintf(1, "failed to fork! %s", strerror(errno));
-    sprintf(last_error_buffer, "failed to fork! %s", strerror(errno));
-    last_error=last_error_buffer;
+    mess=g_strdup_printf(_("failed to fork! %s"), strerror(errno));
+    queue_error(10, mess);
+    g_free(mess);
     close(tch[0]);
     close(tch[1]);
     close(fch[0]);
@@ -815,26 +839,41 @@ void rox_soap_set_timeout(ROXSOAP *prog, guint ms)
 }
 
 /**
+ * @deprecated use rox_error_queue_fetch() instead.
  * @return text message of last error
  */
 const char *rox_soap_get_last_error(void)
 {
-  if(last_error)
-    return last_error;
+  GError *err=rox_error_queue_peek_last();
+  if(err)
+    return err->message;
 
-  return "No error";
+  return _("No error");
 }
 
 /**
  * Clear last error
+ * @deprecated use rox_error_queue_flush() instead.
  */
 void rox_soap_clear_error(void)
 {
-  last_error=NULL;
+  GError *err=rox_error_queue_fetch_last();
+  g_error_free(err);
+}
+
+static void queue_error(int code, const char *mess)
+{
+  GError *err=g_error_new_literal(rox_error_quark,
+				  code | ROX_SOAP_ERROR, mess);
+
+  rox_error_queue(err);
 }
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.15  2005/09/10 16:17:33  stephen
+ * Added author and version info to the doxygen output
+ *
  * Revision 1.14  2005/03/04 17:22:18  stephen
  * Use apsymbols.h if available to reduce problems re-using binary on different Linux distros
  *

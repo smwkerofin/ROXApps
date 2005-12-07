@@ -1,7 +1,7 @@
 /*
  * error.c - display error message
  *
- * $Id: error.c,v 1.5 2003/10/22 17:17:33 stephen Exp $
+ * $Id: error.c,v 1.6 2005/08/14 16:07:00 stephen Exp $
  */
 
 /**
@@ -19,6 +19,20 @@
 #include "rox.h"
 #include "error.h"
 #include "rox-clib.h"
+
+GQuark rox_error_quark=0;
+
+static GQueue *err_queue=NULL;
+
+/**
+ * Initialize error system.  This is called by rox_init_with_domain() and
+ * should not be called directly.
+ */
+void rox_error_init(void)
+{
+  rox_error_quark=g_quark_from_static_string("ROX-CLib");
+  err_queue=g_queue_new();
+}
 
 /**
  * Display an error message in a modal dialogue box.
@@ -52,8 +66,114 @@ void rox_error(const char *fmt, ...)
   g_free(mess);
 }
 
+/**
+ * Report an error (via rox_error()) stored in a GError type.
+ *
+ * @param[in,out] err error to report
+ * @param[in] del if non-zero the error is passed to g_error_free() after
+ * reporting.
+ */
+void rox_error_report_gerror(GError *err, int del)
+{
+  rox_error("%s: %s", g_quark_to_string(err->domain), err->message);
+  if(del)
+    g_error_free(err);
+}
+
+/**
+ * Push an error onto the end of the error queue.  ROX-CLib assumes
+ * responsibilty for deleting the error.
+ * @param[in] err error to queue
+ */
+void rox_error_queue(GError *err)
+{
+  g_queue_push_tail(err_queue, err);
+}
+
+/**
+ * @return @c TRUE if the are no errors in the queue.
+ */
+gboolean rox_error_queue_empty(void)
+{
+  return g_queue_is_empty(err_queue);
+}
+
+/**
+ * Return the error at the head of the error queue, leaving it on the queue.
+ * @return error, or @c NULL if no errors in queue
+ */
+GError *rox_error_queue_peek(void)
+{
+  return (GError *) g_queue_peek_head(err_queue);
+}
+
+/**
+ * Return the error at the head of the error queue and remove it from the
+ * queue.  The caller assumes
+ * responsibilty for deleting the error.
+ * @return error, or @c NULL if no errors in queue
+ */
+GError *rox_error_queue_fetch(void)
+{
+  return (GError *) g_queue_pop_head(err_queue);
+}
+
+/**
+ * Return the error at the end of the error queue, leaving it on the queue.
+ * @return error, or @c NULL if no errors in queue
+ */
+GError *rox_error_queue_peek_last(void)
+{
+  return (GError *) g_queue_peek_tail(err_queue);
+}
+
+/**
+ * Return the error at the end of the error queue and remove it from the
+ * queue.  The caller assumes
+ * responsibilty for deleting the error.
+ * @return error, or @c NULL if no errors in queue
+ */
+GError *rox_error_queue_fetch_last(void)
+{
+  return (GError *) g_queue_pop_tail(err_queue);
+}
+
+/**
+ * Delete all errors from the error queue.
+ */
+void rox_error_queue_flush(void)
+{
+  GError *err;
+
+  do {
+    err=(GError *) g_queue_pop_head(err_queue);
+    if(err)
+      g_error_free(err);
+  } while(err);
+}
+
+/**
+ * Report all errors (using rox_error_report_gerror()) in the queue in the
+ * order in which they were queued.
+ */
+void rox_error_queue_report(void)
+{
+  GError *err;
+
+  do {
+    err=(GError *) g_queue_pop_head(err_queue);
+    if(err)
+      rox_error_report_gerror(err, TRUE);
+  } while(err);
+}
+
+
 /*
  * $Log: error.c,v $
+ * Revision 1.6  2005/08/14 16:07:00  stephen
+ * Added rox_resources_find_with_domain().
+ * More doxygen additions.
+ *
  * Revision 1.5  2003/10/22 17:17:33  stephen
  * Put name of program (if we have it...) in error box
  *

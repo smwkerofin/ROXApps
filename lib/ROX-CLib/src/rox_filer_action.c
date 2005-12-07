@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.11 2004/05/05 19:24:18 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.12 2005/09/10 16:16:14 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -11,13 +11,14 @@
  * ROX-Filer/Help/Manual.html
  *
  * @author Stephen Watson
- * @version $Id$
+ * @version $Id: rox_filer_action.c,v 1.12 2005/09/10 16:16:14 stephen Exp $
  */
 
 #include "rox-clib.h"
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <glib.h>
 #include <libxml/parser.h>
@@ -32,8 +33,6 @@
 
 static gboolean doneinit=FALSE;
 static ROXSOAP *filer=NULL;
-static char *last_error=NULL;
-static char last_error_buffer[1024];
 
 struct fa_data {
   gboolean status;
@@ -56,6 +55,14 @@ void rox_filer_action_init(void)
   doneinit=TRUE;
 }
 
+static void queue_error(int code, const char *mess)
+{
+  GError *err=g_error_new_literal(rox_error_quark,
+				  code | ROX_FILER_ACTION_ERROR, mess);
+
+  rox_error_queue(err);
+}
+
 static void make_soap(const char *action, xmlDocPtr *rpc, xmlNodePtr *act)
 {
   *rpc=rox_soap_build_xml(action, ROX_NAMESPACE_URL, act);
@@ -70,8 +77,7 @@ static void expect_no_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
 
   data->status=status;
   if(!status) {
-    strcpy(last_error_buffer, rox_soap_get_last_error());
-    last_error=last_error_buffer;
+    queue_error(7, rox_soap_get_last_error());
   }
 
   gtk_main_quit();
@@ -152,6 +158,7 @@ void rox_filer_examine(const char *filename)
 static const char *panel_side(ROXPanelSide side)
 {
   const char *sidename;
+  gchar *mess;
 
   switch(side) {
   case ROXPS_TOP: sidename="Top"; break;
@@ -160,8 +167,9 @@ static const char *panel_side(ROXPanelSide side)
   case ROXPS_RIGHT: sidename="Right"; break;
   default:
     dprintf(0, "Illegal panel side: %d", side);
-    sprintf(last_error_buffer, "Illegal panel side: %d", side);
-    last_error=last_error_buffer;
+    mess=g_strdup_printf(_("Illegal panel side: %d"), side);
+    queue_error(1, mess);
+    g_free(mess);
     return NULL;
   }
 
@@ -448,6 +456,7 @@ static void string_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
 {
   struct fa_data *data=(struct fa_data *) udata;
   static gchar *resp=NULL;
+  gchar *mess;
 
   g_return_if_fail(data->udata!=NULL);
   
@@ -474,12 +483,12 @@ static void string_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
 	    continue;
 
 	  if(node->ns && strcmp(node->ns->href, ROX_NAMESPACE_URL)!=0) {
-	    /*g_warning("Unknown namespace %s",
-		      node->ns ? node->ns->href: (xmlChar *) "(none)");*/
-	    sprintf(last_error_buffer, "Unknown namespace %s for %s",
+	    
+	    mess=g_strdup_printf(_("Unknown namespace %s for %s"),
 		      node->ns ? node->ns->href: (xmlChar *) "(none)",
 		    node->name);
-	    last_error=last_error_buffer;
+	    queue_error(2, mess);
+	    g_free(mess);
 	    continue;
 	  }
 	  if(strcmp(node->name, resp)!=0)
@@ -494,25 +503,27 @@ static void string_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
 	    g_free(type);
 	    break;
 	  } else {
-	    last_error="No valid reply node found";
-	    sprintf(last_error_buffer, "No valid %s result node found",
+	    mess=g_strdup_printf(_("No valid %s result node found"),
 		    (gchar *) data->udata);
-	    last_error=last_error_buffer;
+	    queue_error(3, mess);
+	    g_free(mess);
 	  }
 	}
       } else {
-	sprintf(last_error_buffer, "No Body element found in SOAP reply");
-	last_error=last_error_buffer;
+	queue_error(4, _("No Body element found in SOAP reply"));
       }
     } else {
-      sprintf(last_error_buffer, "Root element has wrong namespace (%s)",
+      mess=g_strdup_printf(_("Root element has wrong namespace (%s)"),
+			   
 	      root->ns ? root->ns->href: (xmlChar *) "(none)");
-      last_error=last_error_buffer;
+      queue_error(5, mess);
+      g_free(mess);
     }
   } else if(status) {
-    sprintf(last_error_buffer, "No reply from filer: %s",
+    mess=g_strdup_printf(_("No reply from filer: %s"),
 	    rox_soap_get_last_error());
-    last_error=last_error_buffer;
+    queue_error(6, mess);
+    g_free(mess);
   }
 
   dprintf(2, "calling gtk_main_quit() from string_reply");
@@ -581,34 +592,43 @@ char *rox_filer_version(void)
  * reported back to the caller, but are recorded.  Only the most recent error
  * is returned.
  *
+ * @deprecated use rox_error_queue_empty() instead.
+ *
  * @return non-zero if an error is recorded.
  */
 int rox_filer_have_error(void)
 {
-  return !!last_error;
+  return !rox_error_queue_empty();
 }
 
 /**
+ * @deprecated use rox_error_queue_fetch() instead.
  * @return text string containing last known error, do not free
  */
 const char *rox_filer_get_last_error(void)
 {
-  if(last_error)
-    return last_error;
+  GError *err=rox_error_queue_peek_last();
+  if(err)
+    return err->message;
 
-  return "No error";
+  return _("No error");
 }
 
 /**
- * Clear any recorded error
+ * Clear any recorded error.
+ * @deprecated use rox_error_queue_flush() instead.
  */
 void rox_filer_clear_error(void)
 {
-  last_error=NULL;
+  GError *err=rox_error_queue_fetch_last();
+  g_error_free(err);
 }
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.12  2005/09/10 16:16:14  stephen
+ * Added doxygen comments
+ *
  * Revision 1.11  2004/05/05 19:24:18  stephen
  * Extra debug (problem when target for SOAP doesn't exist)
  *
