@@ -1,5 +1,5 @@
 /*
- * $Id: options.c,v 1.8 2005/10/15 10:48:49 stephen Exp $
+ * $Id: options.c,v 1.9 2005/12/07 11:44:29 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -327,7 +327,7 @@ void rox_option_check_widget(ROXOption *option)
  *
  * @param[in,out] option option to be updated.
  *
- * @deprecate Use rox_option_check_widget().
+ * @deprecated Use rox_option_check_widget().
  */
 void option_check_widget(ROXOption *option)
 {
@@ -1988,6 +1988,9 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: options.c,v $
+ * Revision 1.9  2005/12/07 11:44:29  stephen
+ * Internationalization work
+ *
  * Revision 1.8  2005/10/15 10:48:49  stephen
  * Externally visible symbols have rox_ or ROX prefixes.
  * All still exist under the old names but in general will produce a warning message.

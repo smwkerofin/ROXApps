@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.13 2005/10/15 10:48:28 stephen Exp $
+ * $Id: rox.c,v 1.14 2005/12/07 11:47:11 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -59,7 +59,7 @@ $ MAKE=gmake ROX-CLib/AppRun --compile
  *
  * You should include the main file:
 <pre>
-   #include &lt;rox/rox.h&gt;
+   # include &lt;rox/rox.h&gt;
 </pre>
  * and any of the others you need.
  *
@@ -87,20 +87,16 @@ $ MAKE=gmake ROX-CLib/AppRun --compile
 <pre>
    APP_DIR=`dirname $0`
    APP_DIR=`cd $APP_DIR;pwd`; export APP_DIR
+   ROX_CLIB=`$APP_DIR/libdir ROX-CLib` export ROX_CLIB
    if [ -z "$LD_LIBRARY_PATH" ]; then
-       LD_LIBRARY_PATH=`$APP_DIR/libdir ROX-CLib --runtime`
+       LD_LIBRARY_PATH=`"$ROX_CLIB/AppRun" --runtime`
    else
-       LD_LIBRARY_PATH=`$APP_DIR/libdir ROX-CLib --runtime`:$LD_LIBRARY_PATH
+       LD_LIBRARY_PATH=`"$ROX_CLIB/AppRun" --runtime`:$LD_LIBRARY_PATH
    fi
    export LD_LIBRARY_PATH
 </pre>
  * </li>
  * </ul>
- *
- * @subsection zero_sec Zero Install
- *
- * To use ROX-CLib through Zero Install change the use of <a href="libdir.html">libdir</a> to:
- * <pre>    ROX_CLIB="`$APP_DIR/libdir --0install www.kerofin.demon.co.uk ROX-CLib`/AppRun"</pre>
  *
  */
 
@@ -145,7 +141,12 @@ void rox_init(const char *program, int *argc, char ***argv)
  * - rox_dnd_init()
  * - mime_init()
  *
- * If @c .DirIcon exists in <var>$APP_DIR</var> it is set as the default icon for all windows
+ * If @c .DirIcon exists in <var>$APP_DIR</var> it is set as the default icon for all windows.
+ *
+ * If the ROX-CLib AppDir can be located by rox_clib_find() then the
+ * translations for ROX-CLib are made available from ROX-CLib/Messages.  The
+ * default location for the applications translations is set to
+ * $APP_DIR/Messages.
  *
  * @param[in] program name of program
  * @param[in] domain domain under the control of the programmer.  Used in options and choices
@@ -156,6 +157,7 @@ void rox_init_with_domain(const char *program, const char *domain,
 			  int *argc, char ***argv)
 {
   const gchar *v;
+  gchar *self, *mess;
   
   gtk_init(argc, argv);
 
@@ -168,12 +170,29 @@ void rox_init_with_domain(const char *program, const char *domain,
   if(domain)
     domain_name=g_strdup(domain);
 
+  app_dir=g_getenv("APP_DIR");
+  
   rox_error_init();
-  rox_debug_init(program); 
+  rox_debug_init(program);
+
+#ifdef HAVE_BINDTEXTDOMAIN
+  self=rox_clib_find();
+  if(self) {
+    mess=g_build_filename(self, "Messages", NULL);
+    bindtextdomain("ROX-CLib", mess);
+    g_free(mess);
+    g_free(self);
+  }
+  if(app_dir) {
+    mess=g_build_filename(self, "Messages", NULL);
+    bindtextdomain(program_name, mess);
+    textdomain(program_name);
+    g_free(mess);
+  }
+#endif
 
   choices_init();
 
-  app_dir=g_getenv("APP_DIR");
   if(app_dir) {
     gchar *options_file;
     gchar *dir_icon;
@@ -359,7 +378,7 @@ void rox_main_quit(void)
 void rox_deprecated_warning(const char *func, const char *use)
 {
   if(warn_deprecated)
-    g_warning("%s is deprecated, use %s instead", func, use);
+    g_warning(_("%s is deprecated, use %s instead"), func, use);
 }
 
 /**
@@ -390,7 +409,7 @@ int rox_is_appdir(const char *path)
   g_free(run_path);
   if(t)
     return FALSE;            /* No AppRun */
-  if(!x)
+  if(x)
     return FALSE;            /* Not executable */
   
   if(runstat.st_mode & S_IWOTH)
@@ -473,18 +492,44 @@ char *rox_find_appdir(const char *name, gchar **dirs,
 }
 
 /**
- * Return the path to ROX-CLib's AppDir.
+ * Return the path to ROX-CLib's AppDir.  This tries
+ * - $ROX_CLIB
+ * - rox_find_appdir("ROX-CLib", NULL, "LIBDIRPATH")
+ * - rox_find_appdir("ROX-CLib", NULL, "APPDIRPATH")
+ * - rox_find_appdir("ROX-CLib", NULL, "PATH")
+ * returning the first valid AppDir found.
+ *
  * @return path to ROX-CLib (pass to g_free()), or @c NULL if not found.
  */
 char *rox_clib_find(void)
 {
-  return rox_find_appdir("ROX-CLib", NULL, "LIBDIRPATH");
+  char *path;
+  const char *cpath;
+
+  cpath=g_getenv("ROX_CLIB");
+  if(rox_is_appdir(cpath))
+    return g_strdup(cpath);
+
+  path=rox_find_appdir("ROX-CLib", NULL, "LIBDIRPATH");
+  if(path)
+    return path;
+  
+  path=rox_find_appdir("ROX-CLib", NULL, "APPDIRPATH");
+  if(path)
+    return path;
+  
+  return rox_find_appdir("ROX-CLib", NULL, "PATH");
 }
 
 /* Local functions */
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.14  2005/12/07 11:47:11  stephen
+ * Adding an error handling framework.
+ * Locate app dirs, including ROX-CLib.
+ * Deprecation warnings handled via env variable
+ *
  * Revision 1.13  2005/10/15 10:48:28  stephen
  * Externally visible symbols have rox_ or ROX prefixes.
  * All still exist under the old names but in general will produce a warning message.

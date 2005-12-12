@@ -90,7 +90,7 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(mkdir gethostname gethostbyname dgettext)
+AC_CHECK_FUNCS(mkdir gethostname gethostbyname dgettext bindtextdomain)
 
 dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(version information)

@@ -141,6 +141,9 @@ ${LIBFILE.la}: ${LIBDIR} ${SLIBOBJECTS}
 ${PLATFORM_DIR}/lib/ROX-CLib.pc: ROX-CLib.pc.in Makefile
 	sed -e 's/@PLATFORM@/${PLATFORM}/' -e 's/@VERSION@/${ROXCLIB_VERSION_NUM}/' ROX-CLib.pc.in > $@
 
+messages.pot: $(SRCS)
+	xgettext --keyword=_ --keyword=N_ --output=messages.pot $(SRCS)
+
 clean:
 	rm -rf *.o *.lo Makefile.bak .libs
 

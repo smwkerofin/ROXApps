@@ -38,13 +38,14 @@
 #undef HAVE_GETHOSTNAME
 #undef HAVE_GETHOSTBYNAME
 #undef HAVE_DGETTEXT
+#undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_XML
 #undef GTK2
 
 #ifndef _
 #if defined(HAVE_LIBINTL_H) && defined(HAVE_DGETTEXT)
 #include <libintl.h>
-#define _(String) dgettext("ROX-CLIB", String)
+#define _(String) dgettext("ROX-CLib", String)
 #else
 #define _(String) (String)
 #endif

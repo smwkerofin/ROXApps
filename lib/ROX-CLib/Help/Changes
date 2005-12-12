@@ -4,6 +4,10 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+10-Dec-2005
+~~~~~~~~~~~
+Framework for i18n now in place.
+
 07-Dec-2005
 ~~~~~~~~~~~
 Direct support for Firefox when launching URI.
@@ -284,4 +288,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.32 2005/11/19 12:48:11 stephen Exp $
+$Id: Changes,v 1.33 2005/12/07 11:47:30 stephen Exp $

@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.10 2005/10/15 10:48:15 stephen Exp $
+ * $Id: rox_dnd.c,v 1.11 2005/12/07 11:44:41 stephen Exp $
  */
 
 /**
@@ -9,10 +9,10 @@
  * @brief  Utilities for using drag & drop with ROX apps.
  *
  * This provides the receiver part of the protocol.  The sender part is
- * handled by #GtkSavebox.
+ * handled by #_GtkSavebox.
  *
  * @author Stephen Watson
- * @version $Id: rox_dnd.c,v 1.10 2005/10/15 10:48:15 stephen Exp $
+ * @version $Id: rox_dnd.c,v 1.11 2005/12/07 11:44:41 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -462,6 +462,9 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.11  2005/12/07 11:44:41  stephen
+ * Internationalization work
+ *
  * Revision 1.10  2005/10/15 10:48:15  stephen
  * Externally visible symbols have rox_ or ROX prefixes.
  * All still exist under the old names but in general will produce a warning message.
