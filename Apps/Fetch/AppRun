@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.22 2005/09/11 13:04:26 stephen Exp $
+# $Id: AppRun,v 1.23 2005/11/12 16:49:24 stephen Exp $
 
 import os, sys
 import time
 
 import findrox; findrox.version(2, 0, 2)
 import rox, rox.choices, rox.options, rox.processes, rox.mime
+import gobject
 
 import urlparse, urllib
 
@@ -196,7 +197,7 @@ class FetchWindow(rox.Dialog):
         table.attach(self.prog, 0, 3, line, line+1)
 
         self.connect('delete_event', self.delete_event)
-        rox.g.timeout_add(delay, self.idle_update)
+        gobject.timeout_add(delay, self.idle_update)
 
         self.show_all()
         self.start()
@@ -398,7 +399,7 @@ class FetchWindow(rox.Dialog):
         
     def acquire(self):
         self.dl_man.register(self.on_slot_available)
-        self.wtag=rox.g.timeout_add(delay, self.waiting)
+        self.wtag=gobject.timeout_add(delay, self.waiting)
 
     def waiting(self):
         if self.proc:
@@ -438,7 +439,7 @@ class FetchWindow(rox.Dialog):
             ('python', rox.app_dir+'/fetch.py', self.url, self.target),
             None, os.fdopen(w, 'w', 1))
 
-        rox.g.input_add(self.con.fileno(), rox.g.gdk.INPUT_READ,
+        gobject.io_add_watch(self.con.fileno(), gobject.IO_IN,
                         self.read_some)
 
         try:
@@ -501,7 +502,7 @@ class FetchWindow(rox.Dialog):
                 mess=_('Done.  Warning: type mismatch')
                 t*=3
         self.message(mess)
-        rox.g.timeout_add(t, self.close)
+        gobject.timeout_add(t, self.close)
         
 def main():
     if len(sys.argv)==1 or (len(sys.argv)==2 and sys.argv[1]=='-o'):

@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.8 2005/09/11 13:04:26 stephen Exp $
+# $Id: fetch.py,v 1.9 2005/11/12 16:49:24 stephen Exp $
 
 import os, sys
 import time
@@ -123,9 +123,7 @@ class Fetcher:
         self.message(_('Downloading'))
         self.count=0
         self.report(0, self.size)
-        #rox.g.timeout_add(100, self.update)
-        #rox.g.idle_add(self.update)
-        rox.g.input_add(self.con.fileno(), rox.g.gdk.INPUT_READ,
+        gobject.io_add_watch(self.con.fileno(), gobject.IO_IN,
                         self.read_some)
         
         #print message
