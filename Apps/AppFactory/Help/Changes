@@ -1,6 +1,10 @@
 AppFactory
 ==========
 
+18-Dec-2005
+~~~~~~~~~~~
+Support for internationalization.
+
 22-Oct-2005
 ~~~~~~~~~~~
 Added Zero Install injector feed.

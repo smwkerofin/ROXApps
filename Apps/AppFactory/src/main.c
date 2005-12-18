@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.17 2005/05/27 10:12:46 stephen Exp $
+ * $Id: main.c,v 1.18 2005/10/16 11:56:25 stephen Exp $
  */
 #include "config.h"
 
@@ -107,9 +107,6 @@ int main(int argc, char *argv[])
   GtkWidget *hbox;
   GtkWidget *label;
   const gchar *app_dir;
-#ifdef HAVE_BINDTEXTDOMAIN
-  gchar *localedir;
-#endif
   gchar *icon_path;
   GdkPixmap *pixmap;
   GdkBitmap *mask;
@@ -133,13 +130,6 @@ int main(int argc, char *argv[])
 #endif
   /* What is the directory where our resources are? (set by AppRun) */
   app_dir=g_getenv("APP_DIR");
-#ifdef HAVE_BINDTEXTDOMAIN
-  /* More (untested) i18n support */
-  localedir=g_strconcat(app_dir, "/Messages", NULL);
-  bindtextdomain(PROJECT, localedir);
-  textdomain(PROJECT);
-  g_free(localedir);
-#endif
 
   author=g_get_real_name();
   read_config_xml();
@@ -163,7 +153,7 @@ int main(int argc, char *argv[])
       break;
     }
   if(nerr) {
-    fprintf(stderr, "%s: invalid options\n", argv[0]);
+    fprintf(stderr, _("%s: invalid options\n"), argv[0]);
     usage(argv[0]);
     exit(10);
   }
@@ -197,7 +187,7 @@ int main(int argc, char *argv[])
 
   /* A label is a text string the user cannot change.  We put it inside the
      hbox */
-  label=gtk_label_new("Program:");
+  label=gtk_label_new(_("Program:"));
   gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
   gtk_widget_show(label);
 
@@ -212,12 +202,13 @@ int main(int argc, char *argv[])
   gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
   gtk_widget_show(hbox);
 
-  label=gtk_label_new("Icon:");
+  label=gtk_label_new(_("Icon:"));
   gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
   gtk_widget_show(label);
 
-  icon_path=rox_resources_find(PROJECT, DEFAULT_ICON,
-			       ROX_RESOURCES_DEFAULT_LANG);
+  icon_path=rox_resources_find_with_domain(PROJECT, DEFAULT_ICON,
+					   ROX_RESOURCES_DEFAULT_LANG,
+					   "kerofin.demon.co.uk");
   dprintf(3, "icon_path=%s", icon_path? icon_path: "NULL");
 
   prog_icon=gtk_image_new_from_file(icon_path);
@@ -231,7 +222,7 @@ int main(int argc, char *argv[])
   gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
   gtk_widget_show(hbox);
 
-  label=gtk_label_new("Help files:");
+  label=gtk_label_new(_("Help files:"));
   gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
   gtk_widget_show(label);
 
@@ -242,7 +233,7 @@ int main(int argc, char *argv[])
   rox_dnd_register_uris(hbox, 0, help_dropped, prog_help);
   rox_dnd_register_uris(prog_help, 0, help_dropped, prog_help);
 
-  frame=gtk_frame_new("Options");
+  frame=gtk_frame_new(_("Options"));
   gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 0);
   gtk_widget_show(frame);
   
@@ -254,7 +245,7 @@ int main(int argc, char *argv[])
   gtk_box_pack_start(GTK_BOX(vbox2), hbox, FALSE, FALSE, 0);
   gtk_widget_show(hbox);
 
-  prompt_args=gtk_check_button_new_with_label("Prompt for program arguments");
+  prompt_args=gtk_check_button_new_with_label(_("Prompt for program arguments"));
   gtk_box_pack_start(GTK_BOX(hbox), prompt_args, TRUE, TRUE, 0);
   gtk_widget_show(prompt_args);  
   
@@ -262,7 +253,7 @@ int main(int argc, char *argv[])
   gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
   gtk_widget_show(hbox);
 
-  but=gtk_button_new_with_label("Create");
+  but=gtk_button_new_with_label(_("Create"));
   gtk_signal_connect(GTK_OBJECT(but), "clicked",
 		     GTK_SIGNAL_FUNC(begin_save), NULL);
   gtk_box_pack_start(GTK_BOX(hbox), but, TRUE, FALSE, 0);
@@ -428,7 +419,7 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   dprintf(1, "Creating %s (%s)", pathname, mleaf);
 
   if(mkdir(pathname, 0777)!=0) {
-    rox_error("Failed to make %s\n%s", pathname, strerror(errno));
+    rox_error(_("Failed to make %s\n%s"), pathname, strerror(errno));
     return GTK_XDS_SAVE_ERROR;
   }
 
@@ -437,7 +428,7 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
     fname=g_strconcat(pathname, "/", DIR_ICON, NULL);
     cmd=g_strdup_printf("cp %s %s", src, fname);
     if(system(cmd)!=0) {
-      rox_error("Failed to make %s\n%s", DIR_ICON, strerror(errno));
+      rox_error(_("Failed to make %s\n%s"), DIR_ICON, strerror(errno));
       g_free(fname);
       g_free(cmd);
       return GTK_XDS_SAVE_ERROR;
@@ -451,7 +442,7 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   fname=g_strconcat(pathname, "/AppRun", NULL);
   out=fopen(fname, "w");
   if(!out) {
-    rox_error("Failed to make %s\n%s", fname, strerror(errno));
+    rox_error(_("Failed to make %s\n%s"), fname, strerror(errno));
     return GTK_XDS_SAVE_ERROR;
   }
   fprintf(out, "#!/bin/sh\n\n");
@@ -464,8 +455,8 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   if(!prompt) {
     fprintf(out, "exec %s \"$@\"\n", acmd);
   } else {
-    fprintf(out, "args=`\"$APP_DIR\"/%s -p \"Options for %s\" \"$@\"`\n",
-	    PROMPT_UTIL, mleaf);
+    fprintf(out, "args=`\"$APP_DIR\"/%s -p \"%s %s\" \"$@\"`\n",
+	    PROMPT_UTIL, _("Options for "), mleaf);
     fprintf(out, "exec \"%s\" $args\n", acmd);
   }
   g_free(cmd);
@@ -505,7 +496,7 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
     dprintf(2, "Copy help directory from %s to %s", src, fname);
     cmd=g_strdup_printf("cp -r %s %s", src, fname);
     if(system(cmd)!=0) {
-      rox_error("Failed to make help files\n%s", strerror(errno));
+      rox_error(_("Failed to make help files\n%s"), strerror(errno));
     }
     g_free(cmd);
     g_free(fname);
@@ -515,12 +506,14 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
   if(prompt) {
     gchar *loc;
 
-    loc=rox_resources_find(PROJECT, PROMPT_UTIL, ROX_RESOURCES_DEFAULT_LANG);
+    loc=rox_resources_find_with_domain(PROJECT, PROMPT_UTIL,
+				       ROX_RESOURCES_DEFAULT_LANG,
+				       "kerofin.demon.co.uk");
     if(loc) {
       dprintf(2, "Copy prompt utility from %s", loc);
       cmd=g_strdup_printf("cp %s %s", loc, pathname);
       if(system(cmd)!=0) {
-	rox_error("Failed to copy prompt utility\n%s", strerror(errno));
+	rox_error(_("Failed to copy prompt utility\n%s"), strerror(errno));
       }
       g_free(cmd);
       g_free(loc);
@@ -530,7 +523,7 @@ static gint save_to_file(GtkWidget *widget, gchar *pathname, gpointer data)
       g_free(fname);
       
     } else {
-      rox_error("Failed to copy prompt utility\nfailed to find %s",
+      rox_error(_("Failed to copy prompt utility\nfailed to find %s"),
 		PROMPT_UTIL);
     }
   }
@@ -667,7 +660,7 @@ static GtkItemFactoryEntry menu_items[] = {
                                  GTK_STOCK_DIALOG_INFO},
   { N_("/Configure..."),	NULL, show_config_win, 0, "<StockItem>",
                                  GTK_STOCK_PROPERTIES},
-  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
+  { "/sep", 	                NULL, NULL, 0, "<Separator>" },
   { N_("/Quit"), 	        NULL, rox_main_quit, 0,  "<StockItem>",
                                  GTK_STOCK_QUIT},
 };
@@ -684,6 +677,11 @@ static void save_menus(void)
   }
 }
 
+static gchar *translate_menu(const gchar *path, gpointer udata)
+{
+  return gettext(path);
+}
+
 /* Create the pop-up menu */
 static GtkWidget *menu_create_menu(GtkWidget *window)
 {
@@ -697,6 +695,8 @@ static GtkWidget *menu_create_menu(GtkWidget *window)
 
   item_factory = gtk_item_factory_new(GTK_TYPE_MENU, "<system>", 
 				      accel_group);
+  gtk_item_factory_set_translate_func(item_factory, translate_menu,
+				      NULL, NULL);
 
   gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
 
@@ -748,6 +748,11 @@ static void show_info_win(void)
 }
 /*
  * $Log: main.c,v $
+ * Revision 1.18  2005/10/16 11:56:25  stephen
+ * Update for ROX-CLib changes, many externally visible symbols
+ * (functions and types) now have rox_ or ROX prefixes.
+ * Can get ROX-CLib via 0launch.
+ *
  * Revision 1.17  2005/05/27 10:12:46  stephen
  * Use apsymbols for Linux portability.
  *

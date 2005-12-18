@@ -18,11 +18,12 @@ if [ "x$MAKE" = x ]; then
   MAKE=make export MAKE
 fi
 
-ROX_CLIB=`"$APP_DIR/libdir" --0install www.kerofin.demon.co.uk ROX-CLib`/AppRun
+ROX_CLIB=`"$APP_DIR/libdir" --0install www.kerofin.demon.co.uk ROX-CLib`
+export ROX_CLIB
 if [ -z "$LD_LIBRARY_PATH" ]; then
-    LD_LIBRARY_PATH=`"$ROX_CLIB" --runtime`
+    LD_LIBRARY_PATH=`"$ROX_CLIB/AppRun" --runtime`
 else
-    LD_LIBRARY_PATH=`"$ROX_CLIB" --runtime`:$LD_LIBRARY_PATH
+    LD_LIBRARY_PATH=`"$ROX_CLIB/AppRun" --runtime`:$LD_LIBRARY_PATH
 fi
 export LD_LIBRARY_PATH
 
