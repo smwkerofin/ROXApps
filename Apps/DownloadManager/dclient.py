@@ -3,8 +3,13 @@ import dbus
 
 # DBus setup
 service_name='uk.co.demon.kerofin.DownloadManager'
-interface_name=service_name
+interface_name=service_name+'.Control'
 object_path='/DownloadManager'
+
+try:
+    new_dbus=dbus.version>=(0, 40, 0)
+except:
+    new_dbus=False
 
 defdelay=5
 inc=5
@@ -25,16 +30,27 @@ class Manager:
     def __init__(self, service=service_name, object=object_path):
         """Create and instance of the class.  Do not call this directly,
         use the connect() call below"""
-        self.bus=dbus.Bus(dbus.Bus.TYPE_SESSION)
-        self.service=self.bus.get_service(service)
-        interface_name=service
-        self.object=self.service.get_object(object, interface_name)
+        if new_dbus:
+            self.bus=dbus.SessionBus()
+        else:
+            self.bus=dbus.Bus(dbus.Bus.TYPE_SESSION)
 
-        running=False
+        if new_dbus:
+            self.object=self.bus.get_object(service, object)
+            self.iface=dbus.Interface(self.object, interface_name)
+        else:
+            tservice=self.bus.get_service(service)
+            self.object=tservice.get_object(object, interface_name)
+            self.iface=self.object
+
         try:
-            running=self.object.Ping()
+            if new_dbus:
+                running=self.iface.Ping()
+            else:
+                running=self.object.Ping()
         except:
-            pass
+            running=False
+            
         if not running:
             raise DMNotRunning
 
@@ -42,7 +58,7 @@ class Manager:
         """Return number of clients in the queue waiting to start.  If
         we are waiting then this will include us."""
         try:
-            return self.object.QueueSize()
+            return self.iface.QueueSize()
         except:
             pass
         raise DMNoAnswer
@@ -60,7 +76,7 @@ class Manager:
         check=True
         while check:
             try:
-                ok=self.object.CanIStart(host, fname)
+                ok=self.iface.CanIStart(host, fname)
             except:
                 raise DMNoAnswer
 
@@ -82,14 +98,14 @@ class Manager:
         size - number of bytes downloaded so far
         total - total number of bytes to download (optional)"""
         try:
-            self.object.Update(size, total)
+            self.iface.Update(size, total)
         except:
             pass
 
     def done(self):
         """Download has finished sucessfully"""
         try:
-            self.object.Done()
+            self.iface.Done()
         except:
             pass
 
@@ -97,7 +113,7 @@ class Manager:
         """Download was cancelled, either by user intervention or some error.
         why - string describing the reason the download was cancelled"""
         try:
-            self.object.Cancel(why)
+            self.iface.Cancel(why)
         except:
             pass
 
@@ -106,33 +122,33 @@ class Manager:
         fn - function to call, passed: interface, signal_name, service, path, message
         When this is called, you can then call acquire to try and claim
         this slot."""
-        self.object.connect_to_signal('slot_available', fn)
+        self.iface.connect_to_signal('slot_available', fn)
 
     def showOptions(self):
         """Show the download manager's options window."""
-        self.object.ShowOptions()
+        self.iface.ShowOptions()
 
     def getStats(self):
         """Return a list of strings describing each active client."""
-        return self.object.GetStats()
+        return self.iface.GetStats()
 
     def getActive(self):
         """Return number of downloads in progress."""
-        return self.object.GetActive()
+        return self.iface.GetActive()
 
     def getWaiting(self):
         """Return number of clients waiting."""
-        return self.object.GetWaiting()
+        return self.iface.GetWaiting()
 
     def showWindow(self, show=True):
         """If show==True then show the download window, otherwise
         hide it."""
-        self.object.ShowWindow(show)
+        self.iface.ShowWindow(show)
 
     def ping(self):
         """Return True if the server is still responding."""
         try:
-            ok=self.object.Ping()
+            ok=self.iface.Ping()
         except:
             ok=False
 

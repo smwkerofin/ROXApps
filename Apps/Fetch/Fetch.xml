@@ -16,7 +16,7 @@ calls a user-define download handler to fetch the object named by the link.
       <environment insert="ROX-Lib2/python" name="PYTHONPATH"/>
     </requires>
     <implementation id=".."
-		stability="testing" version="0.2,0"/>
+		stability="testing" version="0.3.0"/>
   </group>
   <feed-for interface="http://www.kerofin.demon.co.uk/2005/interfaces/Fetch"/>
 </interface>

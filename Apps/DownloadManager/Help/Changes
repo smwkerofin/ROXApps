@@ -1,6 +1,10 @@
 DownloadManager
 ===============
 
+21-Nov-2005
+~~~~~~~~~~~
+Handle both old and new DBUS.
+
 16-Nov-2005 (0.0.4)
 ~~~~~~~~~~~
 New applet mode leaks memory (dbus problem?) so revert to original for this 
@@ -57,4 +61,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.11 2005/11/12 16:42:47 stephen Exp $
+$Id: Changes,v 1.12 2005/11/16 20:30:39 stephen Exp $
