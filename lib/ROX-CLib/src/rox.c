@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.14 2005/12/07 11:47:11 stephen Exp $
+ * $Id: rox.c,v 1.15 2005/12/12 18:57:43 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -184,7 +184,7 @@ void rox_init_with_domain(const char *program, const char *domain,
     g_free(self);
   }
   if(app_dir) {
-    mess=g_build_filename(self, "Messages", NULL);
+    mess=g_build_filename(app_dir, "Messages", NULL);
     bindtextdomain(program_name, mess);
     textdomain(program_name);
     g_free(mess);
@@ -525,6 +525,9 @@ char *rox_clib_find(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.15  2005/12/12 18:57:43  stephen
+ * Implemented translating library's strings
+ *
  * Revision 1.14  2005/12/07 11:47:11  stephen
  * Adding an error handling framework.
  * Locate app dirs, including ROX-CLib.
