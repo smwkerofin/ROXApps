@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.36 2005/05/27 10:14:07 stephen Exp $
+ * $Id: clock.c,v 1.37 2005/10/16 11:56:51 stephen Exp $
  */
 #include "config.h"
 
@@ -241,12 +241,6 @@ int main(int argc, char *argv[])
   setlocale (LC_ALL, "");
 #endif
   app_dir=rox_get_app_dir();
-#ifdef HAVE_BINDTEXTDOMAIN
-  localedir=g_strconcat(app_dir, "/Messages", NULL);
-  bindtextdomain(PROJECT, localedir);
-  textdomain(PROJECT);
-  g_free(localedir);
-#endif
 
   /* Check for this argument by itself */
   if(argv[1] && strcmp(argv[1], "-v")==0 && !argv[2]) {
@@ -1083,6 +1077,11 @@ static void save_menus(void)
   }
 }
 
+static gchar *translate_menu(const gchar *path, gpointer udata)
+{
+  return gettext(path);
+}
+
 /* Create the pop-up menu */
 static void menu_create_menu(GtkWidget *window)
 {
@@ -1096,6 +1095,8 @@ static void menu_create_menu(GtkWidget *window)
 
   item_factory = gtk_item_factory_new(GTK_TYPE_MENU, "<system>", 
 				      accel_group);
+  gtk_item_factory_set_translate_func(item_factory, translate_menu,
+				      NULL, NULL);
 
   gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
 
@@ -1294,6 +1295,12 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.37  2005/10/16 11:56:51  stephen
+ * Update for ROX-CLib changes, many externally visible symbols
+ * (functions and types) now have rox_ or ROX prefixes.
+ * Can get ROX-CLib via 0launch.
+ * Alarms are show in the system tray.
+ *
  * Revision 1.36  2005/05/27 10:14:07  stephen
  * Fix for creating applets in remote mode, need to give the filer long enough
  * to notice the widget was created.

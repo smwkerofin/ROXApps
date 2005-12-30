@@ -1,0 +1,166 @@
+# Clock
+# Copyright (C) 2005, Stephen Watson
+# This file is distributed under the same license as the AppFactory package.
+# Stephen Watson <stephen@kerofin.demon.co.uk>, 2005.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Clock 2.1.7\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2005-12-30 16:34+0000\n"
+"PO-Revision-Date: 2005-12-30 16:34+0000\n"
+"Last-Translator: Stephen Watson <stephen@kerofin.demon.co.uk>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: clock.c:64
+msgid "24 hour"
+msgstr ""
+
+#: clock.c:65
+msgid "24 hour, no seconds"
+msgstr ""
+
+#: clock.c:66
+msgid "12 hour"
+msgstr ""
+
+#: clock.c:67
+msgid "12 hour, no seconds"
+msgstr ""
+
+#: clock.c:68
+msgid "Date"
+msgstr ""
+
+#: clock.c:69
+msgid "Full"
+msgstr ""
+
+#: clock.c:70
+msgid "User defined"
+msgstr ""
+
+#: clock.c:411
+#, c-format
+msgid "%s: failed to plug into socket %ld, not a XID?\n"
+msgstr ""
+
+#: clock.c:441
+msgid "Clock"
+msgstr ""
+
+#: clock.c:1063
+msgid "/Info"
+msgstr ""
+
+#: clock.c:1065
+msgid "/Configure..."
+msgstr ""
+
+#: clock.c:1067
+msgid "/Alarms..."
+msgstr ""
+
+#: clock.c:1068
+msgid "/Close"
+msgstr ""
+
+#: clock.c:1070
+msgid "/sep"
+msgstr ""
+
+#: clock.c:1071
+msgid "/Quit"
+msgstr ""
+
+#: alarm.c:50
+msgid "None"
+msgstr ""
+
+#: alarm.c:50
+msgid "Hourly"
+msgstr ""
+
+#: alarm.c:50
+msgid "Daily"
+msgstr ""
+
+#: alarm.c:50
+msgid "Weekdays only"
+msgstr ""
+
+#: alarm.c:50
+msgid "Weekly"
+msgstr ""
+
+#: alarm.c:51
+msgid "Monthly"
+msgstr ""
+
+#: alarm.c:51
+msgid "Yearly"
+msgstr ""
+
+#: alarm.c:52
+msgid "Weekdays (except Friday)"
+msgstr ""
+
+#: alarm.c:566
+msgid "Alarm"
+msgstr ""
+
+#: alarm.c:786
+msgid "Time"
+msgstr ""
+
+#: alarm.c:786
+msgid "Repeat"
+msgstr ""
+
+#: alarm.c:786 alarm.c:874
+msgid "Message"
+msgstr ""
+
+#: alarm.c:792
+msgid "Alarms"
+msgstr ""
+
+#: alarm.c:821
+msgid "Date (dd/mm/yyyy)"
+msgstr ""
+
+#: alarm.c:830 alarm.c:839
+msgid "/"
+msgstr ""
+
+#: alarm.c:852
+msgid "Time (HH:MM)"
+msgstr ""
+
+#: alarm.c:861
+msgid ":"
+msgstr ""
+
+#: alarm.c:886
+msgid "Repeat alarm"
+msgstr ""
+
+#: alarm.c:915
+msgid "Options"
+msgstr ""
+
+#: alarm.c:919
+msgid "Follow timezone"
+msgstr ""
+
+#: alarm.c:927
+msgid "Set alarm"
+msgstr ""
+
+#: alarm.c:933
+msgid "Delete alarm"
+msgstr ""

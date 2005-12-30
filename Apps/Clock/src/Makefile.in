@@ -32,6 +32,9 @@ ${PROG}: ${OBJECTS}
 ${PLATFORM_DIR}:
 	mkdir "${PLATFORM_DIR}"
 
+messages.pot: $(SRCS)
+	xgettext --keyword=_ --keyword=N_ --output=messages.pot $(SRCS)
+
 clean:
 	rm -f *.o Makefile.bak
 

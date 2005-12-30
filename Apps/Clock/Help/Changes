@@ -1,6 +1,11 @@
 Changes to Clock
 ================
 
+30-Dec-2005
+~~~~~~~~~~~
+Added i18n support.
+Remove deprecated call.
+
 24-Oct-2005
 ~~~~~~~~~~~
 Added Zero Install injector feed.
