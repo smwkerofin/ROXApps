@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.14 2005/10/08 10:57:22 stephen Exp $
+# $Id: vidthumb.py,v 1.15 2005/11/19 12:50:57 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -268,6 +268,9 @@ class VidThumbMPlayer(VidThumbNail):
 
         frfname=write_frame(inname, pos)
         if debug: print inname, pos, frfname
+        if frfname is None:
+            frfname=write_frame(inname, 0)
+            if debug: print inname, pos, frfname
         if frfname is None:
             return self.failed_image(rsize, 'Bad or missing frame file')
 
