@@ -3,6 +3,11 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+08-Jan-2006
+~~~~~~~~~~~
+If the frame file is missing, try getting the initial frame (fixes problem with
+short files having erroneous lengths).
+
 17-Nov-2005
 ~~~~~~~~~~~
 Trying to fix install of MIME handlers when using the injector.
