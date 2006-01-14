@@ -1,0 +1,83 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2003-07-14 16:23-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: main.c:47
+msgid "Try `SystemTray/AppRun --help' for more information.\n"
+msgstr ""
+
+#: main.c:50
+msgid "Try `SystemTray/AppRun -h' for more information.\n"
+msgstr ""
+
+#: main.c:52
+msgid ""
+"NOTE: Your system does not support long options - \n"
+"you must use the short versions instead.\n"
+"\n"
+msgstr ""
+
+#: main.c:59
+#, c-format
+msgid ""
+"Usage: %s [X-options] [gtk-options] [OPTION] [XID]\n"
+"where:\n"
+"\n"
+"  X-options\tstandard Xlib options\n"
+"  gtk-options\tstandard GTK+ options\n"
+"  -h, --help\tprint this help message\n"
+"  -v, --version\tdisplay version information\n"
+"  XID\tthe X id of the window to use for applet mode\n"
+msgstr ""
+
+#: main.c:73
+#, c-format
+msgid "Copyright 2003 %s\n"
+msgstr ""
+
+#: main.c:74
+msgid ""
+"Distributed under the terms of the GNU General Public License.\n"
+"(See the file COPYING in the Help directory).\n"
+msgstr ""
+
+#: main.c:134
+msgid "Info"
+msgstr ""
+
+#: main.c:139
+msgid "Quit"
+msgstr ""
+
+#: tray.c:114
+msgid "Another system tray is already running."
+msgstr ""
+
+#: rox_gettext.c:97
+#, c-format
+msgid "Invalid .gmo translation file (too short): %s"
+msgstr ""
+
+#: rox_gettext.c:110
+#, c-format
+msgid "Invalid .gmo translation file (GNU magic number not found): %s"
+msgstr ""
+
+#: rox_gettext.c:223
+msgid ""
+"\n"
+"---\n"
+msgstr ""
