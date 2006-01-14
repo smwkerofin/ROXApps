@@ -1,6 +1,10 @@
 Fetch
 =====
 
+18-Dec-2005 (0.3.0)
+~~~~~~~~~~~
+Avoid deprecation warnings.
+
 21-Nov-2005
 ~~~~~~~~~~~
 Adapt for new DBUS interface.
@@ -122,4 +126,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.28 2005/11/26 12:56:01 stephen Exp $
+$Id: Changes,v 1.29 2005/12/18 10:58:02 stephen Exp $

@@ -1,7 +1,7 @@
 DownloadManager
 ===============
 
-21-Nov-2005
+21-Nov-2005 (0.1.0)
 ~~~~~~~~~~~
 Handle both old and new DBUS.
 
@@ -61,4 +61,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.12 2005/11/16 20:30:39 stephen Exp $
+$Id: Changes,v 1.13 2005/12/18 10:59:33 stephen Exp $
