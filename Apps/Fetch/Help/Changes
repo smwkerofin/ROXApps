@@ -1,6 +1,12 @@
 Fetch
 =====
 
+16-Jan-2006
+~~~~~~~~~~~
+Increase maximum buffer size.
+Added install section on options, to help those that are expecting it to
+do something when run.
+
 18-Dec-2005 (0.3.0)
 ~~~~~~~~~~~
 Avoid deprecation warnings.
@@ -126,4 +132,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.29 2005/12/18 10:58:02 stephen Exp $
+$Id: Changes,v 1.30 2006/01/14 12:27:14 stephen Exp $

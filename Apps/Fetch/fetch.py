@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.9 2005/11/12 16:49:24 stephen Exp $
+# $Id: fetch.py,v 1.10 2005/12/18 10:55:32 stephen Exp $
 
 import os, sys
 import time
@@ -21,6 +21,8 @@ wait_for=rox.options.Option('wait_for', 3)
 use_dl_manager=rox.options.Option('use_dl_manager', False)
 block_size=rox.options.Option('block_size', 8192)
 update_title=rox.options.Option('update_title', True)
+install_path=rox.options.Option('install_path',
+                                '%s/AppRun "$1"' % rox.app_dir)
 
 rox.app_options.notify()
 
