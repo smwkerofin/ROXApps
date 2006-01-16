@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.15 2005/11/19 12:50:57 stephen Exp $
+# $Id: vidthumb.py,v 1.16 2006/01/08 13:12:00 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -296,6 +296,7 @@ def main(argv):
         outname=argv[1]
     except:
         pass
+    if debug: print 'save to', outname
     try:
         rsize=int(argv[2])
     except:
@@ -315,6 +316,7 @@ def main(argv):
                          leaf+'.png')
     elif not os.path.isabs(outname):
         outname=os.path.abspath(outname)
+    if debug: print 'save to', outname
     #print inname, outname, rsize
     thumbC = thumbnailers.pop(options.generator.value)
     if not thumbC.check_executable():

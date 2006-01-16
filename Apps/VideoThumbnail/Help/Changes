@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+16-Jan-2006 (0.1.7)
+~~~~~~~~~~~
+Bugfix: handle UTF-8 filenames (reported by Benjamin Peter).
+
 08-Jan-2006
 ~~~~~~~~~~~
 If the frame file is missing, try getting the initial frame (fixes problem with

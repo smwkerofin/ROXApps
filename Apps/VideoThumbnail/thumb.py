@@ -1,4 +1,4 @@
-# $Id: thumb.py,v 1.1 2003/12/22 11:30:45 stephen Exp $
+# $Id: thumb.py,v 1.2 2004/05/08 18:39:30 stephen Exp $
 
 
 """Template for a thumbnail generation program.  This provides a Python
@@ -102,7 +102,7 @@ class Thumbnailler:
               'tEXt::Thumb::Image::Height': str(oh),
               "tEXt::Thumb::Size": str(s.st_size),
               "tEXt::Thumb::MTime": str(s.st_mtime),
-              'tEXt::Thumb::URI': 'file://'+inname,
+              'tEXt::Thumb::URI': rox.escape('file://'+inname),
               'tEXt::Software': self.name})
         os.rename(outname+self.fname, outname)
         
