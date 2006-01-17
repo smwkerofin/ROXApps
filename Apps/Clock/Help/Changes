@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+05-Jan-2006
+~~~~~~~~~~~
+Fix problem with drawing alarm symbol far too small when panel initializing.
+
 30-Dec-2005
 ~~~~~~~~~~~
 Added i18n support.

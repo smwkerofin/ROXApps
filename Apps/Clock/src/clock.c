@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.37 2005/10/16 11:56:51 stephen Exp $
+ * $Id: clock.c,v 1.38 2005/12/30 16:46:21 stephen Exp $
  */
 #include "config.h"
 
@@ -316,7 +316,8 @@ int main(int argc, char *argv[])
     }
   }
 
-  aicon=rox_resources_find(PROJECT, "alarm.png", ROX_RESOURCES_NO_LANG);
+  aicon=rox_resources_find_with_domain(PROJECT, "alarm.png",
+				       ROX_RESOURCES_NO_LANG, AUTHOR_DOMAIN);
   if(aicon) {
     GError *err=NULL;
     
@@ -784,6 +785,8 @@ static gboolean do_update(ClockWindow *cwin)
 
       if(iwid>w/4) {
 	iwid=w/4;
+	if(iwid<4)
+	  iwid=4;
 	ihei=iwid;
 
 	icon=gdk_pixbuf_scale_simple(alarm_icon, iwid, ihei,
@@ -1295,6 +1298,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.38  2005/12/30 16:46:21  stephen
+ * Add i18n support
+ *
  * Revision 1.37  2005/10/16 11:56:51  stephen
  * Update for ROX-CLib changes, many externally visible symbols
  * (functions and types) now have rox_ or ROX prefixes.
