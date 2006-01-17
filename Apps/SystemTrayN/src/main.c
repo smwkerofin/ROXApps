@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.1.1.1 2003/07/12 16:51:14 andy Exp $
+ * $Id: main.c,v 1.1.1.1 2006/01/14 13:09:43 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -44,10 +44,10 @@ GtkWidget *t;
 static GtkWidget *create_menu(GtkWidget *window);
 
 #ifdef HAVE_GETOPT_LONG
-#  define USAGE   N_("Try `SystemTray/AppRun --help' for more information.\n")
+#  define USAGE   N_("Try `SystemTrayN/AppRun --help' for more information.\n")
 #  define SHORT_ONLY_WARNING ""
 #else
-#  define USAGE   N_("Try `SystemTray/AppRun -h' for more information.\n")
+#  define USAGE   N_("Try `SystemTrayN/AppRun -h' for more information.\n")
 #  define SHORT_ONLY_WARNING	\
 		_("NOTE: Your system does not support long options - \n" \
 		"you must use the short versions instead.\n\n")
@@ -118,7 +118,7 @@ gboolean show_menu (GtkWidget *widget, GdkEventButton *event,
 
   if (event->type == GDK_BUTTON_PRESS && event->button == 3)
     {
-      applet_popup_menu(plug, menu, event);
+      rox_applet_popup_menu(plug, menu, event);
       return TRUE;
     }
   return FALSE;
@@ -160,12 +160,6 @@ int x_error_handler (Display *display, XErrorEvent *error)
     return gdk_handler(display, error);
 }
 
-typedef struct applet_info {
-  PanelLocation loc;
-  int margin;
-} AppletInfo;
-AppletInfo *get_position(GtkWidget *plug);
-
 #define SHORT_OPS "hv"
 
 #ifdef HAVE_GETOPT_LONG
@@ -178,10 +172,10 @@ static struct option long_opts[] =
 
 
 int main(int argc, char *argv[]) {
-  AppletInfo *info = NULL;
+  ROXAppletInfo *info = NULL;
   long window_id;
   char c;
-  PanelLocation location = PANEL_UNKNOWN;
+  ROXPanelLocation location = PANEL_UNKNOWN;
   int long_index;
   GtkWidget *align;
   GtkWidget *eventbox;
@@ -231,7 +225,7 @@ int main(int argc, char *argv[]) {
       window_id = atol(argv[1]);
       plug = gtk_plug_new(window_id);
 
-      info = get_position(plug);
+      info = rox_applet_get_position(plug);
       if (info) 
 	{
 	  location = info->loc;

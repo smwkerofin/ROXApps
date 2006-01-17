@@ -4,9 +4,9 @@
   <Summary xml:lang="ru">Область уведомления (трей) для ROX-Filer</Summary>
   <About xml:lang="en">
     <Purpose>Display status icons</Purpose>
-    <Version>0.2 (14-July-2003)</Version>
-    <Authors>Andy Hanton</Authors>
+    <Version>0.3 (14-January-2006)</Version>
+    <Authors>Andy Hanton, Stephen Watson</Authors>
     <License>GNU General Public License</License>
-    <Homepage>http://home.comcast.net/~andyhanton/software</Homepage>
+    <Homepage>http://www.kerofin.demon.co.uk/rox/systemtrayn.html</Homepage>
   </About>
 </AppInfo>
