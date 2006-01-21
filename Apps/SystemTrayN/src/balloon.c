@@ -1,5 +1,5 @@
 /*
- * $Id: balloon.c,v 1.1.1.1 2003/07/12 16:51:14 andy Exp $
+ * $Id: balloon.c,v 1.1.1.1 2006/01/14 13:09:43 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -20,6 +20,9 @@
  */
 
 /* balloon.c - code for handling system tray balloon messages */
+
+#include <stdlib.h>
+#include <string.h>
 
 #include "main.h"
 #include "applet.h"
@@ -71,7 +74,7 @@ char *get_window_name(Window window)
 			 &bytes_remaining,
 			 &data);
       offset += bytes_returned / 4;
-      g_string_append(str, data);
+      g_string_append(str, (gchar *) data);
     }
 
   ret = str->str;
