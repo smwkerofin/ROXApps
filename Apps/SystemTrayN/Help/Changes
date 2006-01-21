@@ -2,6 +2,13 @@
 			A notification area applet for ROX-Filer
 			by Andy Hanton
 
+20-Jan-2006
+~~~~~~~~~~~
+Updates for current ROX-CLib practice: use libdir to find ROX-CLib,
+use rox_init_with_domain(), add Zero Install target to Makefile.
+May need to explicitly link against libX11, added configure test.
+Don't use guchar for strings, just causes gcc warnings.
+
 14-Jan-2006 (0.3)
 ~~~~~~~~~~~
 Maintainance (unilateraly) taken over by Stephen Watson.
