@@ -4,19 +4,27 @@ PROG=SystemTray
 
 APP_DIR=`dirname $0`
 APP_DIR=`cd "$APP_DIR";pwd`; export APP_DIR
+
+if [ "x$MAKE" = x ]; then
+  MAKE=make export MAKE
+fi
+
+if [ "x$PLATFORM" = x ]; then
+  ARCH=`uname -m`
+  case $ARCH in
+	  i?86) ARCH=ix86 ;;
+  esac
+
+  PLATFORM=`uname -s`-$ARCH export PLATFORM
+fi
+
+ROX_CLIB=`"$APP_DIR/libdir" --0install www.kerofin.demon.co.uk ROX-CLib`/AppRun
 if [ -z "$LD_LIBRARY_PATH" ]; then
-    LD_LIBRARY_PATH=`$APP_DIR/rox_run ROX-CLib --runtime`
+    LD_LIBRARY_PATH=`"$ROX_CLIB" --runtime`
 else
-    LD_LIBRARY_PATH=`$APP_DIR/rox_run ROX-CLib --runtime`:$LD_LIBRARY_PATH
+    LD_LIBRARY_PATH=`"$ROX_CLIB" --runtime`:$LD_LIBRARY_PATH
 fi
 export LD_LIBRARY_PATH
-
-ARCH=`uname -m`
-case $ARCH in
-	i?86) ARCH=ix86 ;;
-esac
-
-PLATFORM=`uname -s`-$ARCH
 
 DEBUGGER=""
 
@@ -39,7 +47,7 @@ case $1 in
 		cd "$APP_DIR/src" && ./configure --enable-rox	    \
 					--with-platform="$PLATFORM" \
 					"$@" \
-			&& make clean && make && echo Done >&2 && exit 0
+			&& $MAKE clean && $MAKE && echo Done >&2 && exit 0
 		echo Compile failed >&2
 		echo Press Return... >&2
 		read WAIT
