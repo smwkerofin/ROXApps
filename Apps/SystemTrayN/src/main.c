@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.1.1.1 2006/01/14 13:09:43 stephen Exp $
+ * $Id: main.c,v 1.2 2006/01/17 12:43:49 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -78,7 +78,7 @@ static void do_version(void)
 void do_quit(void)
 {
   tray_destroy(t);
-  gtk_main_quit();
+  rox_main_quit();
 }
 
 /* Make a destroy-frame into a close */
@@ -95,15 +95,9 @@ static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
 /* Show the info window */
 static void show_info_win(void)
 {
-  static GtkWidget *infowin = NULL;
+  GtkWidget *infowin;
 
-  if(!infowin) {
-    /* Need to make it first */
-    infowin = info_win_new(PROJECT, PURPOSE, VERSION, AUTHOR, WEBSITE);
-    gtk_signal_connect(GTK_OBJECT(infowin), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     infowin);
-  }
+  infowin=rox_info_win_new_from_appinfo(PROJECT);
 
   gtk_widget_show(infowin);
 }
@@ -183,8 +177,8 @@ int main(int argc, char *argv[]) {
   app_dir = g_strdup(getenv("APP_DIR"));
 
   i18n_init();
-  gtk_init(&argc, &argv);
-  gdk_rgb_init();
+  rox_init_with_domain(PROJECT, "kerofin.demon.co.uk", &argc, &argv);
+  /*gdk_rgb_init();*/
 
   while(1)
     {
@@ -235,6 +229,7 @@ int main(int argc, char *argv[]) {
 
   g_signal_connect(plug, "destroy", GTK_SIGNAL_FUNC (handle_destroy),
 		   NULL);
+  rox_add_window(plug);
 
   eventbox = gtk_event_box_new();
   gtk_container_add(GTK_CONTAINER(plug), eventbox);
@@ -249,6 +244,6 @@ int main(int argc, char *argv[]) {
   gtk_container_add(GTK_CONTAINER(align), t);
   gtk_widget_show_all(plug);
 
-  gtk_main();
+  rox_main_loop();
 }
 
