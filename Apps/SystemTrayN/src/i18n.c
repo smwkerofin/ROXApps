@@ -1,5 +1,5 @@
 /*
- * $Id: i18n.c,v 1.1.1.1 2003/07/12 16:51:14 andy Exp $
+ * $Id: i18n.c,v 1.1.1.1 2006/01/14 13:09:43 stephen Exp $
  *
  * ROX-Filer, filer for the ROX desktop project
  * Copyright (C) 2003, the ROX-Filer team.
@@ -45,7 +45,7 @@ extern const char *app_dir;
 char *current_lang = NULL;	/* Two-char country code, or NULL */
 
 /* Static Prototypes */
-static void set_trans(const guchar *lang);
+static void set_trans(const gchar *lang);
 static void null_g_free(gpointer p);
 static gboolean file_exists(const char *path);
 
@@ -67,7 +67,7 @@ void i18n_init(void)
  */
 GtkItemFactoryEntry *translate_entries(GtkItemFactoryEntry *entries, gint n)
 {
-	guchar	*first = NULL, *second = NULL;	/* Previous menu, submenu */
+	gchar	*first = NULL, *second = NULL;	/* Previous menu, submenu */
 	gint i;
 	GtkItemFactoryEntry *ret;
 
@@ -170,9 +170,9 @@ static void null_g_free(gpointer p)
 /* Load the 'Messages/<name>.gmo' translation.
  * Special values 'None' and 'From LANG' are also allowed.
  */
-static void set_trans(const guchar *lang)
+static void set_trans(const gchar *lang)
 {
-	guchar	*path;
+	gchar	*path;
 	gchar	*lang2 = NULL;
 
 	g_return_if_fail(lang != NULL);

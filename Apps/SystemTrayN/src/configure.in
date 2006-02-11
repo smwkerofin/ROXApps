@@ -36,9 +36,9 @@ AC_SUBST(ROX_RUN)
 PKG_CHECK_MODULES(NOTIFICATION, \
 		  gtk+-2.0)
 # Checks for header files.
+AC_HEADER_STDC
 AC_PATH_X
-#LIBS="$LIBS $X_LIBS -lX11 $X_EXTRA_LIBS"
-#CFLAGS="$CFLAGS $X_CFLAGS"
+AC_CHECK_LIB(X11, XInternAtom)
 AC_SUBST(LIBS)
 AC_CHECK_HEADERS([unistd.h sys/stat.h])
 
@@ -46,9 +46,16 @@ AC_CHECK_HEADERS([unistd.h sys/stat.h])
 AC_C_CONST
 
 # Checks for library functions.
-AC_HEADER_STDC
-AC_CHECK_FUNCS(bindtextdomain gettext getopt_long)
+AC_CHECK_FUNCS(bindtextdomain gettext)
+AC_CHECK_FUNCS(getopt_long)
+if test $ac_cv_func_getopt_long = no; then
+  AC_CHECK_LIB(gnugetopt, getopt_long)
+  AC_CHECK_FUNCS(getopt_long)
+fi
 
+dnl Check for ROX-CLib and version
+dnl Assume that if we have the right ROX-CLib we also have GTK+ and libxml
+ROX_CLIB_0LAUNCH(2, 1, 7)
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

@@ -1,10 +1,10 @@
 /* The configure script will auto-generate config.h from config.h.in */
 
-#define PROJECT "SystemTray"
+#define PROJECT "SystemTrayN"
 #define PURPOSE "Display status icons"
-#define VERSION "0.2 (14th July 2003)"
-#define AUTHOR  "Andy Hanton"
-#define WEBSITE "http://home.comcast.net/~andyhanton/software/"
+#define VERSION "0.3 (14th January 2006)"
+#define AUTHOR  "Andy Hanton, Stephen Watson"
+#define WEBSITE "http://www.kerofin.demon.co.uk/rox/systemtrayn.html"
 
 #include <sys/types.h>
 

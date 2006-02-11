@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.1.1.1 2003/07/12 16:51:14 andy Exp $
+ * $Id: main.c,v 1.4 2006/02/11 11:06:49 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -44,10 +44,10 @@ GtkWidget *t;
 static GtkWidget *create_menu(GtkWidget *window);
 
 #ifdef HAVE_GETOPT_LONG
-#  define USAGE   N_("Try `SystemTray/AppRun --help' for more information.\n")
+#  define USAGE   N_("Try `SystemTrayN/AppRun --help' for more information.\n")
 #  define SHORT_ONLY_WARNING ""
 #else
-#  define USAGE   N_("Try `SystemTray/AppRun -h' for more information.\n")
+#  define USAGE   N_("Try `SystemTrayN/AppRun -h' for more information.\n")
 #  define SHORT_ONLY_WARNING	\
 		_("NOTE: Your system does not support long options - \n" \
 		"you must use the short versions instead.\n\n")
@@ -78,7 +78,7 @@ static void do_version(void)
 void do_quit(void)
 {
   tray_destroy(t);
-  gtk_main_quit();
+  rox_main_quit();
 }
 
 /* Make a destroy-frame into a close */
@@ -95,15 +95,9 @@ static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
 /* Show the info window */
 static void show_info_win(void)
 {
-  static GtkWidget *infowin = NULL;
+  GtkWidget *infowin;
 
-  if(!infowin) {
-    /* Need to make it first */
-    infowin = info_win_new(PROJECT, PURPOSE, VERSION, AUTHOR, WEBSITE);
-    gtk_signal_connect(GTK_OBJECT(infowin), "delete_event", 
-		     GTK_SIGNAL_FUNC(trap_frame_destroy), 
-		     infowin);
-  }
+  infowin=rox_info_win_new_from_appinfo(PROJECT);
 
   gtk_widget_show(infowin);
 }
@@ -118,10 +112,21 @@ gboolean show_menu (GtkWidget *widget, GdkEventButton *event,
 
   if (event->type == GDK_BUTTON_PRESS && event->button == 3)
     {
-      applet_popup_menu(plug, menu, event);
+      rox_applet_popup_menu(plug, menu, event);
       return TRUE;
     }
   return FALSE;
+}
+
+static void save_menus(void)
+{
+  char	*menurc;
+	
+  menurc = rox_choices_save("menus", PROJECT, "kerofin.demon.co.uk");
+  if (menurc) {
+    gtk_accel_map_save(menurc);
+    g_free(menurc);
+  }
 }
 
 /* Create the pop-up menu */
@@ -129,17 +134,41 @@ static GtkWidget *create_menu(GtkWidget *window)
 {
   GtkWidget *item;
   GtkWidget *menu;
+  GtkAccelGroup	*accel_group;
+  gchar *menurc;
+  GtkStockItem stock;
 
   menu = gtk_menu_new();
-  item = gtk_menu_item_new_with_label(_("Info"));
+  /*item = gtk_menu_item_new_with_label(_("Info"));*/
+  item = gtk_image_menu_item_new_from_stock(GTK_STOCK_DIALOG_INFO, NULL);
+  gtk_menu_item_set_accel_path(GTK_MENU_ITEM(item), "<main>/Info");
+  if(gtk_stock_lookup(GTK_STOCK_DIALOG_INFO, &stock)) {
+    gtk_accel_map_add_entry("<main>/Info", stock.keyval, stock.modifier);
+  }
   g_signal_connect(item, "activate", show_info_win, NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
   gtk_widget_show(item);
 
-  item = gtk_menu_item_new_with_label(_("Quit"));
+  /*item = gtk_menu_item_new_with_label(_("Quit"));*/
+  item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, NULL);
+  gtk_menu_item_set_accel_path(GTK_MENU_ITEM(item), "<main>/Quit");
+  if(gtk_stock_lookup(GTK_STOCK_QUIT, &stock)) {
+    gtk_accel_map_add_entry("<main>/Quit", stock.keyval, stock.modifier);
+  }
   g_signal_connect(item, "activate", do_quit, NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
   gtk_widget_show(item);
+
+  accel_group = gtk_accel_group_new();
+  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
+  
+  menurc=rox_choices_load("menus", PROJECT, "kerofin.demon.co.uk");
+  if(menurc) {
+    gtk_accel_map_load(menurc);
+    g_free(menurc);
+  }
+
+  atexit(save_menus);
 
   return menu;
 }
@@ -160,12 +189,6 @@ int x_error_handler (Display *display, XErrorEvent *error)
     return gdk_handler(display, error);
 }
 
-typedef struct applet_info {
-  PanelLocation loc;
-  int margin;
-} AppletInfo;
-AppletInfo *get_position(GtkWidget *plug);
-
 #define SHORT_OPS "hv"
 
 #ifdef HAVE_GETOPT_LONG
@@ -178,10 +201,10 @@ static struct option long_opts[] =
 
 
 int main(int argc, char *argv[]) {
-  AppletInfo *info = NULL;
+  ROXAppletInfo *info = NULL;
   long window_id;
-  char c;
-  PanelLocation location = PANEL_UNKNOWN;
+  int c;
+  ROXPanelLocation location = PANEL_UNKNOWN;
   int long_index;
   GtkWidget *align;
   GtkWidget *eventbox;
@@ -189,8 +212,8 @@ int main(int argc, char *argv[]) {
   app_dir = g_strdup(getenv("APP_DIR"));
 
   i18n_init();
-  gtk_init(&argc, &argv);
-  gdk_rgb_init();
+  rox_init_with_domain(PROJECT, "kerofin.demon.co.uk", &argc, &argv);
+  /*gdk_rgb_init();*/
 
   while(1)
     {
@@ -231,7 +254,7 @@ int main(int argc, char *argv[]) {
       window_id = atol(argv[1]);
       plug = gtk_plug_new(window_id);
 
-      info = get_position(plug);
+      info = rox_applet_get_position(plug);
       if (info) 
 	{
 	  location = info->loc;
@@ -241,6 +264,7 @@ int main(int argc, char *argv[]) {
 
   g_signal_connect(plug, "destroy", GTK_SIGNAL_FUNC (handle_destroy),
 		   NULL);
+  rox_add_window(plug);
 
   eventbox = gtk_event_box_new();
   gtk_container_add(GTK_CONTAINER(plug), eventbox);
@@ -255,6 +279,6 @@ int main(int argc, char *argv[]) {
   gtk_container_add(GTK_CONTAINER(align), t);
   gtk_widget_show_all(plug);
 
-  gtk_main();
+  rox_main_loop();
 }
 
