@@ -19,5 +19,5 @@ This is based on the SystemTray applet, but updated.
     <implementation id=".." release="Snapshot"
 		stability="testing" version="0.3.1" arch="Linux-i486"/>
   </group>
-  <feed-for interface='http://www.kerofin.demon.co.uk/2007/interfaces/SystemTrayN'/>
+  <feed-for interface='http://www.kerofin.demon.co.uk/2006/interfaces/SystemTrayN'/>
 </interface>

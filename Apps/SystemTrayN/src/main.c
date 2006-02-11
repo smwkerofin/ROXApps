@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.3 2006/01/21 14:55:57 stephen Exp $
+ * $Id: main.c,v 1.4 2006/02/11 11:06:49 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -141,9 +141,9 @@ static GtkWidget *create_menu(GtkWidget *window)
   menu = gtk_menu_new();
   /*item = gtk_menu_item_new_with_label(_("Info"));*/
   item = gtk_image_menu_item_new_from_stock(GTK_STOCK_DIALOG_INFO, NULL);
-  gtk_menu_item_set_accel_path(GTK_MENU_ITEM(item), "/Info");
+  gtk_menu_item_set_accel_path(GTK_MENU_ITEM(item), "<main>/Info");
   if(gtk_stock_lookup(GTK_STOCK_DIALOG_INFO, &stock)) {
-    gtk_accel_map_add_entry("/Info", stock.keyval, stock.modifier);
+    gtk_accel_map_add_entry("<main>/Info", stock.keyval, stock.modifier);
   }
   g_signal_connect(item, "activate", show_info_win, NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
@@ -151,9 +151,9 @@ static GtkWidget *create_menu(GtkWidget *window)
 
   /*item = gtk_menu_item_new_with_label(_("Quit"));*/
   item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, NULL);
-  gtk_menu_item_set_accel_path(GTK_MENU_ITEM(item), "/Quit");
+  gtk_menu_item_set_accel_path(GTK_MENU_ITEM(item), "<main>/Quit");
   if(gtk_stock_lookup(GTK_STOCK_QUIT, &stock)) {
-    gtk_accel_map_add_entry("/Quit", stock.keyval, stock.modifier);
+    gtk_accel_map_add_entry("<main>/Quit", stock.keyval, stock.modifier);
   }
   g_signal_connect(item, "activate", do_quit, NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
