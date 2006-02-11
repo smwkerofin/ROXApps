@@ -1,6 +1,10 @@
 DownloadManager
 ===============
 
+11-Feb-2006
+~~~~~~~~~~~
+Implementation of slot_available signal was missing under new DBus interface.
+
 14-Jan-2006 (0.1.1)
 ~~~~~~~~~~~
 Three new (and important!) files were missing.
@@ -65,4 +69,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.14 2006/01/14 12:24:22 stephen Exp $
+$Id: Changes,v 1.15 2006/01/14 12:49:14 stephen Exp $

@@ -55,7 +55,7 @@ class Client:
 
 class DownloadManager(dbus.service.Object):
     def __init__(self, bus, xid=None):
-        print bus
+        #print bus
         bus_name=dbus.service.BusName(service_name, bus)
         dbus.service.Object.__init__(self, bus_name, object_path)
 
@@ -122,6 +122,7 @@ class DownloadManager(dbus.service.Object):
         else:
             client=Client(id, server, fname)
             self.clients[id]=client
+            #print 'Added', id
         #print 'Start request from', id
         #print 'active', self.active
 
@@ -157,7 +158,7 @@ class DownloadManager(dbus.service.Object):
     def Done(self):
         id=self.current.get_sender()
         client=self.clients[id]
-        print 'Done', id, client
+        #print 'Done', id, client
         ##print client, 'has finished'
         self.lose_client(id)
 
@@ -165,7 +166,7 @@ class DownloadManager(dbus.service.Object):
     def Cancel(self, reason):
         #print 'in cancel', self, method, reason
         id=self.current.get_sender()
-        client=self.clients[id]
+        #client=self.clients[id]
         #print client, 'has been cancelled', reason
         self.lose_client(id=id)
 
@@ -180,7 +181,7 @@ class DownloadManager(dbus.service.Object):
             client=self.clients[a]
             act.append(str(client))
         
-        print 'returning', act
+        #print 'returning', act
         return act
 
     @dbus.service.method(interface_name)
@@ -205,7 +206,10 @@ class DownloadManager(dbus.service.Object):
             
         if id in self.active:
             self.active.remove(id)
+        #print len(self.clients)
         del self.clients[id]
+        #print 'removed', id
+        #print len(self.clients), self.clients.keys()
 
         self.check_available()
         #print 'checked for available slot'
@@ -220,18 +224,14 @@ class DownloadManager(dbus.service.Object):
                 #print client, 'has expired'
                 self.lose_client(c)
 
-    def slotAvailable(self):
-        #print 'in slotAvailable'
-        self.emit_signal(interface=interface_name,
-                         signal_name='slot_available')
-        #print 'emitted signal'
-        #print rox._toplevel_windows
-        #print rox._in_mainloops
+    @dbus.service.signal(interface_name)
+    def slot_available(self):
+        pass
 
     def check_available(self):
         #print 'in check_available', len(self.active), allow_nclient.int_value
         if len(self.active)<options.allow_nclient.int_value:
-            self.slotAvailable()
+            self.slot_available()
 
     def __str__(self, *args):
         return 'DownloadManager-%s' % id(self)
