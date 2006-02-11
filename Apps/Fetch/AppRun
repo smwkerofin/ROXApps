@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.24 2005/12/18 10:55:32 stephen Exp $
+# $Id: AppRun,v 1.25 2006/01/16 22:15:42 stephen Exp $
 
 import os, sys
 import time
@@ -213,8 +213,7 @@ class FetchWindow(rox.Dialog):
 
     def do_response(self, *unused):
         #print self.dl_man
-        if self.dl_man:
-            self.dl_man.cancel(_('Cancelled'))
+        self.do_cancel(_('Cancelled'))
         if self.proc:
             self.kill_proc=True
             #print >> sys.stderr, self, unused
@@ -226,7 +225,9 @@ class FetchWindow(rox.Dialog):
                 msg+='(%d%%) ' % int(100.*self.count/self.size)
             msg+='in %s' % self.target
         msg+='.'
+        #print >> sys.stderr, 'Report cancel status'
         rox.info(msg)
+        #print >> sys.stderr, 'Exit now'
         sys.exit(0)
 
     def idle_update(self, *unused):
@@ -295,10 +296,20 @@ class FetchWindow(rox.Dialog):
         self.prog.set_text('')
         self.prog.pulse()
 
+    def unwait(self):
+        if self.wtag:
+            gobject.source_remove(self.wtag)
+            self.wtag=None
+
+    def do_cancel(self, why):
+        if self.dl_man:
+            self.dl_man.cancel(why)
+            self.dl_man=None
+        self.unwait()
+
     def close(self):
         #print 'close'
-        if self.dl_man:
-            self.dl_man.cancel(_('Window closed'))
+        self.do_cancel(_('Window closed'))
         if self.proc:
             try:
                 #print >>sys.stderr, "window closed"
@@ -403,7 +414,7 @@ class FetchWindow(rox.Dialog):
         #print interface, signal_name, service, path, message
         if self.dl_man:
             if not self.waiting():
-                rox.g.timeout_remove(self.wtag)
+                self.unwait()
                 
         
     def acquire(self):

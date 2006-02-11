@@ -1,6 +1,10 @@
 Fetch
 =====
 
+11-Feb-2006
+~~~~~~~~~~~
+Fix problems relating to cancelling fetches.
+
 16-Jan-2006
 ~~~~~~~~~~~
 Increase maximum buffer size.
@@ -132,4 +136,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.30 2006/01/14 12:27:14 stephen Exp $
+$Id: Changes,v 1.31 2006/01/16 22:15:42 stephen Exp $

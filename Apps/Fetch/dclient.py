@@ -115,6 +115,7 @@ class Manager:
         try:
             self.iface.Cancel(why)
         except:
+            #self.report_exception('Cancel (%s)' % why)
             pass
 
     def register(self, fn):
@@ -154,10 +155,14 @@ class Manager:
 
         return ok
 
+    def report_exception(self, what):
+        obj=sys.exc_info()[1]
+        print >>sys.stderr, 'Exception in %s: %s' % (what, obj)
+
 def connect(start=False):
     """Make connection to DownloadManager.
     start - if True and the DownloadManager is not running attempt to start it
-            (defaults to False) (not yet implemented)
+            (defaults to False)
     Returns a Manager object representing the connect.
     Can raise a DMException."""
     try:
