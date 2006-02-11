@@ -1,6 +1,11 @@
 			SystemTrayN
 			A notification area applet for ROX-Filer
-			by Andy Hanton
+			by Andy Hanton and Stephen Watson
+
+21-Jan-2006
+~~~~~~~~~~~
+Add injector feed.  Fix parsing of options.  Added support for menu
+shortcuts.
 
 20-Jan-2006
 ~~~~~~~~~~~

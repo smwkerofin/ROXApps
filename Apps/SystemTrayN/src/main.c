@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.2 2006/01/17 12:43:49 stephen Exp $
+ * $Id: main.c,v 1.3 2006/01/21 14:55:57 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -118,22 +118,57 @@ gboolean show_menu (GtkWidget *widget, GdkEventButton *event,
   return FALSE;
 }
 
+static void save_menus(void)
+{
+  char	*menurc;
+	
+  menurc = rox_choices_save("menus", PROJECT, "kerofin.demon.co.uk");
+  if (menurc) {
+    gtk_accel_map_save(menurc);
+    g_free(menurc);
+  }
+}
+
 /* Create the pop-up menu */
 static GtkWidget *create_menu(GtkWidget *window)
 {
   GtkWidget *item;
   GtkWidget *menu;
+  GtkAccelGroup	*accel_group;
+  gchar *menurc;
+  GtkStockItem stock;
 
   menu = gtk_menu_new();
-  item = gtk_menu_item_new_with_label(_("Info"));
+  /*item = gtk_menu_item_new_with_label(_("Info"));*/
+  item = gtk_image_menu_item_new_from_stock(GTK_STOCK_DIALOG_INFO, NULL);
+  gtk_menu_item_set_accel_path(GTK_MENU_ITEM(item), "/Info");
+  if(gtk_stock_lookup(GTK_STOCK_DIALOG_INFO, &stock)) {
+    gtk_accel_map_add_entry("/Info", stock.keyval, stock.modifier);
+  }
   g_signal_connect(item, "activate", show_info_win, NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
   gtk_widget_show(item);
 
-  item = gtk_menu_item_new_with_label(_("Quit"));
+  /*item = gtk_menu_item_new_with_label(_("Quit"));*/
+  item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, NULL);
+  gtk_menu_item_set_accel_path(GTK_MENU_ITEM(item), "/Quit");
+  if(gtk_stock_lookup(GTK_STOCK_QUIT, &stock)) {
+    gtk_accel_map_add_entry("/Quit", stock.keyval, stock.modifier);
+  }
   g_signal_connect(item, "activate", do_quit, NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
   gtk_widget_show(item);
+
+  accel_group = gtk_accel_group_new();
+  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
+  
+  menurc=rox_choices_load("menus", PROJECT, "kerofin.demon.co.uk");
+  if(menurc) {
+    gtk_accel_map_load(menurc);
+    g_free(menurc);
+  }
+
+  atexit(save_menus);
 
   return menu;
 }
@@ -168,7 +203,7 @@ static struct option long_opts[] =
 int main(int argc, char *argv[]) {
   ROXAppletInfo *info = NULL;
   long window_id;
-  char c;
+  int c;
   ROXPanelLocation location = PANEL_UNKNOWN;
   int long_index;
   GtkWidget *align;

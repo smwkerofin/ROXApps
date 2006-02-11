@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<interface xmlns="http://zero-install.sourceforge.net/2004/injector/interface"
+           uri="http://www.kerofin.demon.co.uk/2006/interfaces/SystemTrayN"
+	   main="SystemTrayN/AppRun">
+  <name>SystemTrayN</name>
+  <summary>notification area panel applet</summary>
+  <description>
+This panel applet provides a system tray (also known as
+a notification area) for ROX.
+
+This is based on the SystemTray applet, but updated.
+
+  </description>
+  <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/SystemTrayN.png'/>
+<group>
+    <requires interface="http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib">
+      <environment insert="." name="LIBDIRPATH"/>
+    </requires>
+    <implementation id=".." release="Snapshot"
+		stability="testing" version="0.3.1" arch="Linux-i486"/>
+  </group>
+  <feed-for interface='http://www.kerofin.demon.co.uk/2007/interfaces/SystemTrayN'/>
+</interface>
