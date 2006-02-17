@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.16 2006/01/08 13:12:00 stephen Exp $
+# $Id: vidthumb.py,v 1.17 2006/01/16 10:50:44 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -198,6 +198,8 @@ class VidThumbMPlayer(VidThumbNail):
                 # print l[:10]
                 if l[:10]=='ID_LENGTH=':
                     return float(l.strip()[10:])
+                
+            return 0.
 
         def write_frame(fname, pos):
             """Return filename of a single frame from the source, taken 

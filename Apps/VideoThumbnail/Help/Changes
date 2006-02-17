@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+11-Feb-2006
+~~~~~~~~~~~
+Return length as 0 if we can't work it out.
+
 16-Jan-2006 (0.1.7)
 ~~~~~~~~~~~
 Bugfix: handle UTF-8 filenames (reported by Benjamin Peter).
