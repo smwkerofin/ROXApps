@@ -3,6 +3,11 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+01-Mar-2006 (0.1.9)
+~~~~~~~~~~~
+Another bug in installing handlers under Zero Install (reported by 
+José Silva).
+
 28-Feb-2006 (0.1.8)
 ~~~~~~~~~~~
 Fix typo when installing handlers under Zero Install (reported by Henning 

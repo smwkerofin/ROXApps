@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id: options.py,v 1.9 2005/11/19 12:51:09 stephen Exp $
+# $Id: options.py,v 1.10 2006/03/01 10:06:35 stephen Exp $
 
 import os
 
@@ -60,7 +60,7 @@ def install_button_handler(*args):
                     types=win.get_active()
 
                     for tname in types:
-                        mime_type = mime.lookup(tname)
+                        mime_type = rox.mime.lookup(tname)
 
                         sname=rox.mime_handler.save_path('rox.sourceforge.net',
                                                          'MIME-thumb',
@@ -78,7 +78,7 @@ def install_button_handler(*args):
                     types=win.get_uninstall()
 
                     for tname in types:
-                        mime_type = mime.lookup(tname)
+                        mime_type = rox.mime.lookup(tname)
                         
                         sname=rox.mime_handler.save_path('rox.sourceforge.net',
                                                          'MIME-thumb',
