@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id: options.py,v 1.11 2006/03/01 23:04:41 stephen Exp $
+# $Id: options.py,v 1.12 2006/03/01 23:24:08 stephen Exp $
 
 import os
 
@@ -74,7 +74,7 @@ def install_button_handler(*args):
                         f.close()
                         os.chmod(tmp, 0755)
                         # os.symlink(rox.app_dir, tmp)
-                        os.rename(tmp, path)
+                        os.rename(tmp, sname)
 
                     types=win.get_uninstall()
 
