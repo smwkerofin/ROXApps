@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id: options.py,v 1.8 2005/10/08 10:57:22 stephen Exp $
+# $Id: options.py,v 1.9 2005/11/19 12:51:09 stephen Exp $
 
 import os
 
@@ -43,7 +43,7 @@ def install_button_handler(*args):
                         break
 
             if in_zeroinstall:
-                app_info_path = os.path.join(rox.app_pdir, 'AppInfo.xml')
+                app_info_path = os.path.join(rox.app_dir, 'AppInfo.xml')
                 ainfo = rox.AppInfo.AppInfo(app_info_path)
                 can_thumbnail = ainfo.getCanThumbnail()
 
@@ -72,7 +72,7 @@ def install_button_handler(*args):
                         f.write('0launch http://www.kerofin.demon.co.uk/2005/interfaces/VideoThumbnail\n')
                         f.close()
                         os.chmod(tmp, 0755)
-                        os.symlink(app_dir, tmp)
+                        os.symlink(rox.app_dir, tmp)
                         os.rename(tmp, path)
 
                     types=win.get_uninstall()

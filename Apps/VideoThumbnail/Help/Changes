@@ -3,6 +3,11 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+28-Feb-2006 (0.1.8)
+~~~~~~~~~~~
+Fix typo when installing handlers under Zero Install (reported by Henning 
+Jacobsen). 
+
 11-Feb-2006
 ~~~~~~~~~~~
 Return length as 0 if we can't work it out.

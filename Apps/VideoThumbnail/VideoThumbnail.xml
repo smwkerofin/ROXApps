@@ -16,7 +16,7 @@ appropriate options and post-processing the output.
       <environment insert="ROX-Lib2/python" name="PYTHONPATH"/>
     </requires>
     <implementation id=".."
-		stability="testing" version="0.1.7"/>
+		stability="testing" version="0.1.8"/>
   </group>
   <feed-for interface="http://www.kerofin.demon.co.uk/2005/interfaces/VideoThumbnail"/>
 </interface>
