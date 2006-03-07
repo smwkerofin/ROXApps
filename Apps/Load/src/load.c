@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.26 2005/05/27 10:21:11 stephen Exp $
+ * $Id: load.c,v 1.27 2005/10/16 11:59:50 stephen Exp $
  *
  * Log at end of file
  */
@@ -1159,7 +1159,7 @@ static GtkItemFactoryEntry menu_items[] = {
                                                 GTK_STOCK_PREFERENCES},
   { N_("/Close"), 	NULL, close_window, 0,   "<StockItem>",
                                                 GTK_STOCK_CLOSE},
-  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
+  { "/sep", 	        NULL, NULL, 0, "<Separator>" },
   { N_("/Quit"),	NULL, rox_main_quit, 0,   "<StockItem>",
                                                 GTK_STOCK_QUIT},
 };
@@ -1259,12 +1259,12 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 
   parent=args->data;
   if(parent) {
-    gchar *str;
+    xmlChar *str;
 
     str=xmlNodeGetContent(parent);
     if(str) {
-      xid=(guint32) atol(str);
-      g_free(str);
+      xid=(guint32) atol((char *) str);
+      xmlFree(str);
     }
   }
 
@@ -1370,6 +1370,11 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.27  2005/10/16 11:59:50  stephen
+ * Update for ROX-CLib changes, many externally visible symbols
+ * (functions and types) now have rox_ or ROX prefixes.
+ * Can get ROX-CLib via 0launch.
+ *
  * Revision 1.26  2005/05/27 10:21:11  stephen
  * Fix for creating applets in remote mode, need to give the filer long enough
  * to notice the widget was created.

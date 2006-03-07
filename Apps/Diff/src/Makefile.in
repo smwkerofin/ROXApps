@@ -8,8 +8,8 @@ PLATFORM_DIR = ../${PLATFORM}
 ROX_CLIB = "@ROX_CLIB_PATH@/AppRun"
 
 CC = @CC@
-CFLAGS = @CFLAGS@ `${PKG_CONFIG} --cflags gtk+-2.0 libxml-2.0` -I. `${ROX_CLIB} --cflags`
-LDFLAGS = @LDFLAGS@ `${PKG_CONFIG} --libs gtk+-2.0 libxml-2.0` ${LIBS} `${ROX_CLIB} --libs`
+CFLAGS = @CFLAGS@ -I. `${ROX_CLIB} --cflags`
+LDFLAGS = @LDFLAGS@ ${LIBS} `${ROX_CLIB} --libs`
 EXEC = ${PLATFORM_DIR}/${PROG}
 
 ############ Things to change for different programs
@@ -32,6 +32,9 @@ ${PROG}: ${OBJECTS}
 ${PLATFORM_DIR}:
 	mkdir ${PLATFORM_DIR}
 
+messages.pot: $(SRCS)
+	xgettext --keyword=_ --keyword=N_ --output=messages.pot $(SRCS)
+
 clean:
 	rm -f *.o Makefile.bak
 
@@ -52,6 +55,3 @@ config.status: configure
 
 configure: configure.in
 	autoconf
-
-${PROG}.po: $(SRCS)
-	xgettext --keyword=_ --keyword=N_ --default-domain=${PROG} $(SRCS)

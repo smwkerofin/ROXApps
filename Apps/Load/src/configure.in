@@ -35,7 +35,7 @@ AC_CHECK_LIB(gnugetopt, getopt_long)
 AC_CHECK_FUNCS(getopt_long)
 
 dnl Check for ROX-CLib and version
-ROX_CLIB_0LAUNCH(2, 1, 6)
+ROX_CLIB_0LAUNCH(2, 1, 8)
 
 dnl Extract version info from AppInfo.xml
 ROX_SELF_VERSION

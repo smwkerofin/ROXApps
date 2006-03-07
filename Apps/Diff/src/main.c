@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.14 2005/10/08 11:10:41 stephen Exp $
+ * $Id: main.c,v 1.15 2005/10/16 11:57:13 stephen Exp $
  */
 #include "config.h"
 
@@ -347,10 +347,10 @@ static DiffWindow *make_window()
 }
 
 
-/* Read in the config.  */
+/* Read in the config.  This is the old config, pre-options system.*/
 static void read_config(void)
 {
-  guchar *fname;
+  gchar *fname;
 
   /* Use the choices system to locate the file to read */
   fname=rox_choices_load("options.xml", PROJECT, "kerofin.demon.co.uk");
@@ -373,7 +373,7 @@ static void read_config(void)
       return;
     }
 
-    if(strcmp(root->name, PROJECT)!=0) {
+    if(strcmp((char *) root->name, PROJECT)!=0) {
       g_free(fname);
       xmlFreeDoc(doc);
       return;
@@ -386,24 +386,24 @@ static void read_config(void)
 	continue;
 
       /* Process your elements here */
-      if(strcmp(node->name, "font")==0) {
+      if(strcmp((char *) node->name, "font")==0) {
 	string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 	if(!string)
 	  continue;
 	if(options.font_name)
 	  g_free(options.font_name);
-	options.font_name=g_strdup(string);
-	free(string);
+	options.font_name=g_strdup((char *) string);
+	xmlFree(string);
 
-      } else if(strcmp(node->name, "unified")==0) {
+      } else if(strcmp((char *) node->name, "unified")==0) {
 	string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 	if(!string)
 	  continue;
-	if(strcmp(string, "yes")==0)
+	if(strcmp((char *) string, "yes")==0)
 	  options.use_unified=TRUE;
-	else if(strcmp(string, "no")==0)
+	else if(strcmp((char *) string, "no")==0)
 	  options.use_unified=FALSE;
-	free(string);
+	xmlFree(string);
 
       }
     }
@@ -845,6 +845,11 @@ static void show_choices_win(void)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.15  2005/10/16 11:57:13  stephen
+ * Update for ROX-CLib changes, many externally visible symbols
+ * (functions and types) now have rox_ or ROX prefixes.
+ * Can get ROX-CLib via 0launch.
+ *
  * Revision 1.14  2005/10/08 11:10:41  stephen
  * Bugfix: selection of unified mode from options was broken, reported by
  *         Peter Hyman.

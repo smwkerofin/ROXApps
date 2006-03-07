@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.31 2005/05/27 10:20:47 stephen Exp $
+ * $Id: freefs.c,v 1.32 2005/10/16 11:58:53 stephen Exp $
  */
 #include "config.h"
 
@@ -962,7 +962,7 @@ static void show_config_win(int ignored)
 static GtkItemFactoryEntry menu_items[] = {
   { N_("/Info"),		NULL, show_info_win, 0,
                                 "<StockItem>", GTK_STOCK_DIALOG_INFO},
-  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
+  {"/sep",  	                NULL, NULL, 0, "<Separator>" },
   { N_("/Configure..."),	NULL, show_config_win, 0, 
                                 "<StockItem>", GTK_STOCK_PREFERENCES},
   { N_("/Update Now"),	        NULL, do_update, 0,   
@@ -973,10 +973,10 @@ static GtkItemFactoryEntry menu_items[] = {
   { N_("/Open/FS root"),	NULL, do_opendir, 1,       
                                 "<StockItem>", GTK_STOCK_OPEN},
   { N_("/Scan"),                NULL, NULL, 0, NULL},
-  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
+  { "/sep", 	                NULL, NULL, 0, "<Separator>" },
   { N_("/Close"), 	        NULL, close_window, 0,      
                                 "<StockItem>", GTK_STOCK_CLOSE},
-  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
+  { "/sep", 	                NULL, NULL, 0, "<Separator>" },
   { N_("/Quit"), 	        NULL, rox_main_quit, 0,      
                                 "<StockItem>", GTK_STOCK_QUIT},
 };
@@ -1412,6 +1412,11 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.32  2005/10/16 11:58:53  stephen
+ * Update for ROX-CLib changes, many externally visible symbols
+ * (functions and types) now have rox_ or ROX prefixes.
+ * Added a local injector feed.
+ *
  * Revision 1.31  2005/05/27 10:20:47  stephen
  * Fix for creating applets in remote mode, need to give the filer long enough
  * to notice the widget was created.
