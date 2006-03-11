@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.15 2005/12/12 18:57:43 stephen Exp $
+ * $Id: rox.c,v 1.16 2005/12/18 10:51:28 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -67,8 +67,12 @@ $ MAKE=gmake ROX-CLib/AppRun --compile
 <pre>   ROX-CLib --cflags
    ROX-CLib --libs</pre>
  * to your link line, e.g.
-<pre>   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"</pre>
-    <pre>   gcc `$ROX_CLIB --cflags` -o main main.o `$ROX_CLIB --libs`</pre>
+  <pre>   ROX_CLIB="`$APP_DIR/libdir ROX-CLib`/AppRun"</pre>
+  <pre>   gcc `$ROX_CLIB --cflags` -o main main.o `$ROX_CLIB --libs`</pre>
+ *
+ * If you are using other libraries in conjunction with pkg-config you
+ * can use the alternative:
+ * <pre>$ROX_CLIB --pkg-config --cflags ROX-CLib <i>other-pkg</i></pre>
  *
  * If you are using autoconf and building a ROX program then:
  * <ul>
@@ -525,6 +529,9 @@ char *rox_clib_find(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.16  2005/12/18 10:51:28  stephen
+ * Fix bug setting app's translation
+ *
  * Revision 1.15  2005/12/12 18:57:43  stephen
  * Implemented translating library's strings
  *

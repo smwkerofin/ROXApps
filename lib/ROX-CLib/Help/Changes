@@ -4,6 +4,10 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+11-Mar-2006
+~~~~~~~~~~~
+Added options --env and --pkg-config and made strings in pkg.c translatable.
+
 10-Dec-2005
 ~~~~~~~~~~~
 Framework for i18n now in place.
@@ -288,4 +292,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.33 2005/12/07 11:47:30 stephen Exp $
+$Id: Changes,v 1.34 2005/12/12 18:57:43 stephen Exp $
