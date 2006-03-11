@@ -135,7 +135,7 @@ ac_version=`expr $[1] \* 10000 + $[2] \* 100 + $[3]`
 AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ac_version)
 ])
 
-dnl ROX-CLib, first via 0launch 
+dnl ROX-CLib, via 0launch or local install
 AC_DEFUN(ROX_CLIB_0LAUNCH, [
 ac_url=http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib
 AC_MSG_CHECKING(for ROX-CLib via 0launch)
