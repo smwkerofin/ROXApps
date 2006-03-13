@@ -1,6 +1,10 @@
 Changes to FreeFS
 =================
 
+07-Mar-2006 (2.1.5)
+~~~~~~~~~~~
+Added internationalization support.
+
 17-Oct-2005 (2.1.4)
 ~~~~~~~~~~~
 Update local feed interface to support feed-for.
