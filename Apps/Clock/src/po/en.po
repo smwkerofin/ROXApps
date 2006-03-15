@@ -1,6 +1,6 @@
 # Clock
 # Copyright (C) 2005, Stephen Watson
-# This file is distributed under the same license as the AppFactory package.
+# This file is distributed under the same license as the Clock package.
 # Stephen Watson <stephen@kerofin.demon.co.uk>, 2005.
 #
 #, fuzzy
