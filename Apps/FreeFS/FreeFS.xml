@@ -21,8 +21,8 @@ view the program info, change the configuration or quit the program.
     <requires interface="http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib">
       <environment insert="." name="LIBDIRPATH"/>
     </requires>
-    <implementation stability="testing" version="2.1.5"
-platform="Linux-ix86" id=".." released="2006-03-13"/>
+    <implementation stability="testing" version="2.1.6"
+platform="Linux-ix86" id=".." released="2006-03-15"/>
   </group>
   <feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/FreeFS'/>
 </interface>

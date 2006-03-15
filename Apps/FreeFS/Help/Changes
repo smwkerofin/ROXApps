@@ -1,6 +1,10 @@
 Changes to FreeFS
 =================
 
+15-Mar-2006
+~~~~~~~~~~~
+Removed some deprecated calls and some compiler warnings.
+
 07-Mar-2006 (2.1.5)
 ~~~~~~~~~~~
 Added internationalization support.

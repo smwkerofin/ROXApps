@@ -4,7 +4,7 @@
   <Summary xml:lang="it">Mostra l'utilizzo di un file system.</Summary>
   <About>
     <Purpose>Monitor file system usage</Purpose>
-	<Version>2.1.5 (13 March 2006)</Version>
+	<Version>2.1.6 (15 March 2006)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>

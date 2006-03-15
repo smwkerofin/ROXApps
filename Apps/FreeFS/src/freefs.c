@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.32 2005/10/16 11:58:53 stephen Exp $
+ * $Id: freefs.c,v 1.33 2006/03/07 19:23:44 stephen Exp $
  */
 #include "config.h"
 
@@ -186,10 +186,6 @@ int main(int argc, char *argv[])
   gchar *df_dir;
   gchar *fname;
   guint xid=0;
-  gchar *app_dir;
-#ifdef HAVE_BINDTEXTDOMAIN
-  gchar *localedir;
-#endif
   int c, do_exit, nerr;
   const char *options="vha:nrom:R";
   gboolean minimal=FALSE;
@@ -206,14 +202,6 @@ int main(int argc, char *argv[])
 
   rox_init_with_domain(PROJECT, DOMAIN, &argc, &argv);
 
-  app_dir=rox_get_app_dir();
-#ifdef HAVE_BINDTEXTDOMAIN
-  localedir=rox_resources_find(PROGRAM, "Messages", ROX_RESOURCES_NO_LANG);
-  bindtextdomain(PROGRAM, localedir);
-  textdomain(PROGRAM);
-  g_free(localedir);
-#endif
-  
   /* Process remaining arguments */
   nerr=0;
   do_exit=FALSE;
@@ -261,7 +249,8 @@ int main(int argc, char *argv[])
   init_options();
 
   /* Pick the gtkrc file up from CHOICESPATH */
-  fname=rox_resources_find(PROJECT, "gtkrc", ROX_RESOURCES_DEFAULT_LANG);
+  fname=rox_resources_find_with_domain(PROJECT, "gtkrc",
+				       ROX_RESOURCES_DEFAULT_LANG, DOMAIN);
   if(!fname)
     fname=rox_choices_load("gtkrc", PROGRAM, DOMAIN);
   if(fname) {
@@ -1154,7 +1143,7 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   dprintf(3, "rpc_Open(%p, \"%s\", %p, %p)", server, action_name, args, udata);
 
   path=args->data;
-  str=xmlNodeGetContent(path);
+  str=(gchar *) xmlNodeGetContent(path);
   dir=g_strdup(str);
   g_free(str);
 
@@ -1163,7 +1152,7 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   parent=args->data;
   if(parent) {
 
-    str=xmlNodeGetContent(parent);
+    str=(gchar *) xmlNodeGetContent(parent);
     if(str) {
       xid=(guint32) atol(str);
       g_free(str);
@@ -1174,7 +1163,7 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   mini=args->data;
   if(mini) {
 
-    str=xmlNodeGetContent(mini);
+    str=(gchar *) xmlNodeGetContent(mini);
     if(str) {
       minimal=(strcmp(str, "yes")==0);
       g_free(str);
@@ -1184,7 +1173,7 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   args=g_list_next(args);
   id=args->data;
   if(id) {
-    idstr=xmlNodeGetContent(id);
+    idstr=(gchar *) xmlNodeGetContent(id);
   }
   
   if(dir && dir[0])
@@ -1213,13 +1202,13 @@ static xmlNodePtr rpc_Change(ROXSOAPServer *server, const char *action_name,
 	  args, udata);
 
   path=args->data;
-  str=xmlNodeGetContent(path);
+  str=(gchar *) xmlNodeGetContent(path);
   dir=g_strdup(str);
   g_free(str);
 
   args=g_list_next(args);
   id=args->data;
-  str=xmlNodeGetContent(id);
+  str=(gchar *) xmlNodeGetContent(id);
   ids=g_strdup(str);
   g_free(str);
 
@@ -1278,12 +1267,13 @@ static gboolean open_remote(guint32 xid, const char *path, gboolean mini)
     return FALSE;
   }
 
-  xmlNewChild(node, NULL, "Path", path);
+  xmlNewChild(node, NULL, (xmlChar *) "Path", (xmlChar *) path);
   if(xid) {
     sprintf(buf, "%lu", xid);
-    xmlNewChild(node, NULL, "Parent", buf);
+    xmlNewChild(node, NULL, (xmlChar *) "Parent", (xmlChar *) buf);
   }
-  xmlNewChild(node, NULL, "Minimal", mini? "yes": "no");
+  xmlNewChild(node, NULL, (xmlChar *) "Minimal",
+	      (xmlChar *) (mini? "yes": "no"));
 
   sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
   dprintf(3, "sent %d", sent);
@@ -1412,6 +1402,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.33  2006/03/07 19:23:44  stephen
+ * Added i18n support (with ROX-CLib 2.1.8)
+ *
  * Revision 1.32  2005/10/16 11:58:53  stephen
  * Update for ROX-CLib changes, many externally visible symbols
  * (functions and types) now have rox_ or ROX prefixes.
