@@ -3,7 +3,7 @@
            uri="http://www.kerofin.demon.co.uk/2005/interfaces/AppFactory"
 	   main="AppFactory/AppRun">
   <name>AppFactory</name>
-  <summary>Construct AppDir wrappers for applications.</summary>
+  <summary>construct AppDir wrappers for applications.</summary>
   <description>
 This program automates the creation of ROX wrappers for non-ROX
 programs
