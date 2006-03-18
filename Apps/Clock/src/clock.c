@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.38 2005/12/30 16:46:21 stephen Exp $
+ * $Id: clock.c,v 1.39 2006/01/17 11:43:24 stephen Exp $
  */
 #include "config.h"
 
@@ -928,7 +928,7 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 
 static gboolean read_config_xml(void)
 {
-  guchar *fname;
+  gchar *fname;
 
   fname=rox_choices_load("options.xml", PROJECT, AUTHOR_DOMAIN);
 
@@ -950,7 +950,7 @@ static gboolean read_config_xml(void)
       return FALSE;
     }
 
-    if(strcmp(root->name, "Clock")!=0) {
+    if(strcmp((char *) root->name, "Clock")!=0) {
       g_free(fname);
       xmlFreeDoc(doc);
       return FALSE;
@@ -962,58 +962,58 @@ static gboolean read_config_xml(void)
       if(node->type!=XML_ELEMENT_NODE)
 	continue;
 
-      if(strcmp(node->name, "format")==0) {
+      if(strcmp((char *) node->name, "format")==0) {
 	int i;
 	
-	str=xmlGetProp(node, "name");
+	str=xmlGetProp(node, (xmlChar *) "name");
 	if(!str)
 	  continue;
 
 	for(i=0; formats[i].name; i++)
-	  if(strcmp(str, formats[i].name)==0)
+	  if(strcmp((char *) str, formats[i].name)==0)
 	    break;
 	if(formats[i].name)
 	  default_mode.format=i;
 	free(str);
 	
-      } else if(strcmp(node->name, "flags")==0) {
+      } else if(strcmp((char *) node->name, "flags")==0) {
 	int flags;
- 	str=xmlGetProp(node, "value");
+ 	str=xmlGetProp(node, (xmlChar *) "value");
 	if(!str)
 	  continue;
-	flags=atoi(str);
+	flags=atoi((char *) str);
 	free(str);
 
 	default_mode.seconds=!!(flags & MODE_SECONDS);
 	default_mode.show_text=!(flags & MODE_NO_TEXT);
 	default_mode.hours=!!(flags & MODE_HOURS);
 
-      } else if(strcmp(node->name, "interval")==0) {
- 	str=xmlGetProp(node, "value");
+      } else if(strcmp((char *) node->name, "interval")==0) {
+ 	str=xmlGetProp(node, (xmlChar *) "value");
 	if(!str)
 	  continue;
-	default_mode.interval=atol(str);
+	default_mode.interval=atol((char *) str);
 	free(str);
 
-      } else if(strcmp(node->name, "user-format")==0) {
+      } else if(strcmp((char *) node->name, "user-format")==0) {
 	str=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 	if(!str)
 	  continue;
-	strncpy(user_defined, str, sizeof(user_defined));
+	strncpy(user_defined, (char *) str, sizeof(user_defined));
 	free(str);
 
-      } else if(strcmp(node->name, "font")==0) {
+      } else if(strcmp((char *) node->name, "font")==0) {
 	str=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 	if(!str)
 	  continue;
-	default_mode.font_name=g_strdup(str);
+	default_mode.font_name=g_strdup((char *) str);
 	free(str);
 
-      } else if(strcmp(node->name, "applet")==0) {
- 	str=xmlGetProp(node, "initial-size");
+      } else if(strcmp((char *) node->name, "applet")==0) {
+ 	str=xmlGetProp(node, (xmlChar *) "initial-size");
 	if(!str)
 	  continue;
-	default_mode.init_size=atoi(str);
+	default_mode.init_size=atoi((char *) str);
 	free(str);
 
       }
@@ -1189,11 +1189,11 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 
   parent=args->data;
   if(parent) {
-    gchar *str;
+    xmlChar *str;
 
     str=xmlNodeGetContent(parent);
     if(str) {
-      xid=(guint32) atol(str);
+      xid=(guint32) atol((char *) str);
       g_free(str);
     }
   }
@@ -1243,7 +1243,7 @@ static gboolean open_remote(guint32 xid)
   }
 
   sprintf(buf, "%lu", xid);
-  xmlNewChild(node, NULL, "Parent", buf);
+  xmlNewChild(node, NULL, (xmlChar *) "Parent", (xmlChar *) buf);
 
   sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
   dprintf(3, "sent %d", sent);
@@ -1298,6 +1298,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.39  2006/01/17 11:43:24  stephen
+ * Fix problem with drawing alarm symbol far too small when panel initializing.
+ *
  * Revision 1.38  2005/12/30 16:46:21  stephen
  * Add i18n support
  *
