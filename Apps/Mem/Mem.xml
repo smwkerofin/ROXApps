@@ -3,7 +3,7 @@
            uri="http://www.kerofin.demon.co.uk/2005/interfaces/Mem"
 	   main="Mem/AppRun">
   <name>Mem</name>
-  <summary>Display memory usage.</summary>
+  <summary>display memory usage.</summary>
   <description>
 This applet displays the current memory usage and
 the current swap space usage.
@@ -14,7 +14,7 @@ the current swap space usage.
       <environment insert="." name="LIBDIRPATH"/>
     </requires>
     <implementation id=".." released='Snapshot' 
-		stability="testing" version="2.1.4" platform="Linux-ix86"/>
+		stability="testing" version="2.1.5" platform="Linux-ix86"/>
   </group>
 <feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/Mem'/>
 </interface>
