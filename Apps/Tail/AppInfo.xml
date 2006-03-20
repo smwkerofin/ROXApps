@@ -2,14 +2,14 @@
 <AppInfo>
   <About>
     <Purpose>Monitor a growing file</Purpose>
-	<Version>2.1.3 (22 October 2005)</Version>
+	<Version>2.1.4 (20 March 2006)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
   </About>
   <About xml:lang="it">
     <Purpose label="Scopo">monitorare un file in crescita</Purpose>
-    <Version label="Versione">2.1.3</Version>
+    <Version label="Versione">2.1.4</Version>
     <Authors label="Autore">Stephen Watson</Authors>
     <License label="Licenza"/>
     <Homepage label="Sito web">http://www.kerofin.demon.co.uk/rox/</Homepage>
@@ -17,6 +17,6 @@
   <Summary>Display a file as it grows.</Summary>
   <Summary xml:lang="it">Mostra il contenuto di un file in crescita.</Summary>
   <Dependencies>
-    <AppDir><Name>ROX-CLib</Name><NeedsVersion>2.1.6</NeedsVersion></AppDir>
+    <AppDir><Name>ROX-CLib</Name><NeedsVersion>2.1.8</NeedsVersion></AppDir>
   </Dependencies>
 </AppInfo>
