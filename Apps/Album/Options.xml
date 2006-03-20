@@ -1,7 +1,0 @@
-<?xml version='1.0'?>
-<options>
-<section title="General">
-<toggle name="use_music_box" label="Use MusicBox">Send files to MusicBox rather than xmms</toggle>
-
-</section>
-</options>
