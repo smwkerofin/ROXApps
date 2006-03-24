@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.19 2005/08/03 13:19:05 stephen Exp $
+ * $Id: alarm.c,v 1.20 2005/10/16 11:56:51 stephen Exp $
  */
 #include "config.h"
 
@@ -122,7 +122,7 @@ int alarm_load_xml(const gchar *fname)
     return FALSE;
   }
 
-  if(strcmp(root->name, "Alarms")!=0) {
+  if(strcmp((char *) root->name, "Alarms")!=0) {
     xmlFreeDoc(doc);
     return FALSE;
   }
@@ -136,19 +136,19 @@ int alarm_load_xml(const gchar *fname)
     
     if(node->type!=XML_ELEMENT_NODE)
       continue;
-    if(strcmp(node->name, "alarm")!=0)
+    if(strcmp((char *) node->name, "alarm")!=0)
       continue;
 
-    string=xmlGetProp(node, "time");
+    string=xmlGetProp(node, (xmlChar *) "time");
     if(string) {
-      when=atol(string);
+      when=atol((char *) string);
       free(string);
     } else {
-      string=xmlGetProp(node, "date");
+      string=xmlGetProp(node, (xmlChar *) "date");
       if(string) {
 	gchar **words;
 
-	words=g_strsplit(string, " ", 5);
+	words=g_strsplit((char *) string, " ", 5);
 	if(words) {
 	  if(words[0] && words[1] && words[2] && words[3] && words[4]) {
 	    struct tm tdate;
@@ -179,18 +179,18 @@ int alarm_load_xml(const gchar *fname)
       }
     }
     
-    string=xmlGetProp(node, "repeat");
+    string=xmlGetProp(node, (xmlChar *) "repeat");
     if(!string) {
       rep=REPEAT_NONE;
     } else {
       if(isdigit(string[0])) {
-	rep=atoi(string);
+	rep=atoi((char *) string);
       } else {
 	int i;
 
 	rep=REPEAT_NONE;
 	for(i=0; repeat_text[i]; i++) {
-	  if(strcmp(string, repeat_text[i])==0) {
+	  if(strcmp((char *) string, repeat_text[i])==0) {
 	    rep=i;
 	    break;
 	  }
@@ -199,11 +199,11 @@ int alarm_load_xml(const gchar *fname)
       free(string);
     }
     
-    string=xmlGetProp(node, "flags");
+    string=xmlGetProp(node, (xmlChar *) "flags");
     if(!string) {
       flags=0;
     } else {
-      flags=atoi(string);
+      flags=atoi((char *) string);
       free(string);
     }
 
@@ -488,26 +488,28 @@ void alarm_save(void)
     GList *rover;
     FILE *out;
 
-    doc = xmlNewDoc("1.0");
-    doc->children=xmlNewDocNode(doc, NULL, "Alarms", NULL);
-    xmlSetProp(doc->children, "version", VERSION);
+    doc = xmlNewDoc((xmlChar *) "1.0");
+    doc->children=xmlNewDocNode(doc, NULL, (xmlChar *) "Alarms", NULL);
+    xmlSetProp(doc->children, (xmlChar *) "version",(xmlChar *)  VERSION);
 
     for(rover=alarms; rover; rover=g_list_next(rover)) {
       Alarm *alarm=(Alarm *) rover->data;
-      tree=xmlNewChild(doc->children, NULL, "alarm", alarm->message);
+      tree=xmlNewChild(doc->children, NULL,
+		       (xmlChar *) "alarm", (xmlChar *) alarm->message);
       if(alarm->repeat==REPEAT_NONE) {
 	sprintf(buf, "%ld", alarm->when);
-	xmlSetProp(tree, "time", buf);
+	xmlSetProp(tree, (xmlChar *) "time",(xmlChar *)  buf);
       } else {
 	struct tm *tmp;
 	tmp=localtime(&alarm->when);
 	sprintf(buf, "%d %d %d %d %d", tmp->tm_hour, tmp->tm_min,
 	      tmp->tm_mday, tmp->tm_mon+1, tmp->tm_year+1900);
-	xmlSetProp(tree, "date", buf);
+	xmlSetProp(tree, (xmlChar *) "date", (xmlChar *) buf);
       }
-      xmlSetProp(tree, "repeat", repeat_text[alarm->repeat]);
+      xmlSetProp(tree, (xmlChar *) "repeat",
+		 (xmlChar *) repeat_text[alarm->repeat]);
       sprintf(buf, "%u", alarm->flags);
-      xmlSetProp(tree, "flags", buf);
+      xmlSetProp(tree, (xmlChar *) "flags", (xmlChar *) buf);
     }
 
     ok=(xmlSaveFormatFileEnc(fname, doc, NULL, 1)>=0);
@@ -1000,6 +1002,12 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.20  2005/10/16 11:56:51  stephen
+ * Update for ROX-CLib changes, many externally visible symbols
+ * (functions and types) now have rox_ or ROX prefixes.
+ * Can get ROX-CLib via 0launch.
+ * Alarms are show in the system tray.
+ *
  * Revision 1.19  2005/08/03 13:19:05  stephen
  * Made alarm windows sticky
  *

@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+24-Mar-2006
+~~~~~~~~~~~
+Added es translation (Juan Carlos Jimenez Garcia).
+
 18-Mar-2006 (2.1.7)
 ~~~~~~~~~~~
 Cast strings passed to/from libxml to avoid compiler warnings.
