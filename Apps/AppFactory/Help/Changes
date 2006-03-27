@@ -1,6 +1,10 @@
 AppFactory
 ==========
 
+24-Mar-2006
+~~~~~~~~~~~
+Added es translation (Juan Carlos Jimenez Garcia).
+
 18-Dec-2005 (2.1.5)
 ~~~~~~~~~~~
 Support for internationalization.

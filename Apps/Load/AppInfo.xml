@@ -4,7 +4,7 @@
   <Summary xml:lang="it">Mostra il carico medio di sistema.</Summary>
   <About>
     <Purpose>Display system load</Purpose>
-	<Version>2.1.4 (20 March 2006)</Version>
+	<Version>2.1.5 (24 March 2006)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>

@@ -4,7 +4,7 @@
   <Summary xml:lang="it">Costruisce wrapper ROX per programmi non ROX</Summary>
   <About>
     	<Purpose>Construct ROX wrappers for non-ROX programs</Purpose>
-	<Version>2.1.5 (18 December 2005)</Version>
+	<Version>2.1.6 (24 March 2006)</Version>
     	<Authors>Stephen Watson</Authors>
     	<License>GNU General Public License</License>
     	<Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>

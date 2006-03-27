@@ -4,7 +4,7 @@
   <Summary xml:lang="it">Mostra l'utilizzo della memoria e dello swap.</Summary>
   <About>
     <Purpose>Monitor memory and swap usage</Purpose>
-	<Version>2.1.5 (20 March 2006)</Version>
+	<Version>2.1.6 (24 March 2006)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
