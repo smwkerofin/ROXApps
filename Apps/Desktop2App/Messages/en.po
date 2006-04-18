@@ -1,0 +1,52 @@
+# Desktop2App.
+# Copyright (C) 2006 Stephen Watson
+# Stephen Watson <stephen@kerofin.demon.co.uk>, 2006.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Desktop2App 0.1.5\n"
+"POT-Creation-Date: 2006-04-18 11:16+BST\n"
+"PO-Revision-Date: 2006-04-18 11:16+BST\n"
+"Last-Translator: Stephen Watson <stephen@kerofin.demon.co.uk>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: DesktopFile.py:91
+msgid "No valid command"
+msgstr ""
+
+#: DesktopFile.py:135 DesktopFile.py:159
+msgid "Name of app not given"
+msgstr ""
+
+#: DesktopFile.py:139
+msgid ""
+"# AppRun for %s created by %s\n"
+msgstr ""
+
+#: DesktopFile.py:178 DesktopFile.py:201
+msgid "Cannot write to %s"
+msgstr ""
+
+#: DesktopFile.py:211
+msgid "Failed to copy icon: %s %s"
+msgstr ""
+
+#: DesktopFile.py:212
+msgid "Was copying %s to %s"
+msgstr ""
+
+#: DesktopFile.py:398
+msgid "Need one or more desktop files as arguments"
+msgstr ""
+
+#: gui.py:22
+msgid ""
+"No apps have been generated.  First drop a\n"
+"        .desktop file or directory onto the icon."
+msgstr ""
+

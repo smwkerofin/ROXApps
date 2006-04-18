@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.4 2005/05/07 11:08:06 stephen Exp $
+# $Id: gui.py,v 1.5 2005/05/27 10:14:40 stephen Exp $
 
 import findrox; findrox.version(2, 0, 0)
 
@@ -6,18 +6,21 @@ import rox
 import rox.choices
 import rox.basedir
 import rox.filer
+import rox.i18n
 import DesktopFile
 
 import os
 import sys
 import stat
 
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
+
 cdir=rox.basedir.save_config_path('kerofin.demon.co.uk', 'Desktop2App', 'Apps')
 
 if len(sys.argv)<2:
     if os.access(cdir, os.R_OK)==0:
-        rox.alert("""No apps have been generated.  First drop a
-        .desktop file or directory onto the icon.""")
+        rox.alert(_("""No apps have been generated.  First drop a
+        .desktop file or directory onto the icon."""))
         sys.exit(1)
     rox.filer.open_dir(cdir)
     sys.exit(0)

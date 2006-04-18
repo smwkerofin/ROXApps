@@ -1,4 +1,4 @@
-# $Id: DesktopFile.py,v 1.5 2005/05/27 10:14:40 stephen Exp $
+# $Id: DesktopFile.py,v 1.6 2005/10/16 12:03:29 stephen Exp $
 
 """Scan .desktop files and generate rox wrappers for programs"""
 
@@ -88,7 +88,7 @@ class DesktopEntry:
     def command(self, arg):
         cmd=self.exc
         if cmd is None:
-            raise 'No valid command'
+            raise _('No valid command')
         while 1:
             per=string.find(cmd, '%')
             if per<0:
@@ -132,12 +132,12 @@ class DesktopEntry:
 
     def writeAppRun(self, fname):
         if self.name is None:
-            raise 'Name of app not given'
+            raise _('Name of app not given')
         out=file(fname, 'w')
 
         out.write('#!/bin/sh\n')
-        out.write('# AppRun for %s created by %s\n' % (self.name,
-                                                       credit))
+        out.write(_('# AppRun for %s created by %s\n') % (self.name,
+                                                          credit))
         out.write('# %s\n\n' % self.comment)
 
         if self.path:
@@ -156,7 +156,7 @@ class DesktopEntry:
 
     def writeAppInfo(self, fname):
         if self.name is None:
-            raise 'Name of app not given'
+            raise _('Name of app not given')
         out=file(fname, 'w')
 
         out.write('<?xml version="1.0"?>\n')
@@ -175,7 +175,7 @@ class DesktopEntry:
             self.hidden or self.type!='Application' or self.no_display):
             return None
         if os.access(parent, os.W_OK)!=1:
-            raise 'Cannot write to '+parent
+            raise _('Cannot write to %s') % parent
 
         if self.type:
             tdir=os.path.join(parent, self.type)
@@ -190,26 +190,26 @@ class DesktopEntry:
                 main_cat=c
                 break
         if main_cat:
-            dir=os.path.join(tdir, main_cat, self.name)
+            wdir=os.path.join(tdir, main_cat, self.name)
             back='..'
         else:
-            dir=os.path.join(tdir, self.name)
+            wdir=os.path.join(tdir, self.name)
             back='.'
-        if os.access(dir, os.F_OK)!=1:
-            os.makedirs(dir)
-        if os.access(dir, os.W_OK)!=1:
-            raise 'Cannot write to '+dir
-        self.writeAppRun(os.path.join(dir, 'AppRun'))
-        self.writeAppInfo(os.path.join(dir, 'AppInfo.xml'))
+        if os.access(wdir, os.F_OK)!=1:
+            os.makedirs(wdir)
+        if os.access(wdir, os.W_OK)!=1:
+            raise _('Cannot write to %s') % wdir
+        self.writeAppRun(os.path.join(wdir, 'AppRun'))
+        self.writeAppInfo(os.path.join(wdir, 'AppInfo.xml'))
         ifile=self.findIconFile()
         if ifile:
             #print 'Copy %s to .DirIcon' % ifile
             try:
-                _copy(ifile, os.path.join(dir, '.DirIcon'))
+                _copy(ifile, os.path.join(wdir, '.DirIcon'))
             except:
                 type, value=sys.exc_info()[:2]
-                print 'Failed to copy icon: %s %s' % (type, value)
-                print 'Was copying %s to %s' % (ifile, os.path.join(dir, '.DirIcon'))
+                print _('Failed to copy icon: %s %s') % (type, value)
+                print _('Was copying %s to %s') % (ifile, os.path.join(wdir, '.DirIcon'))
 
         if main_cat:
             for c in self.categories:
@@ -377,15 +377,15 @@ class DesktopFile:
         for sect in other.sections:
             self.sections.append(sect)
 
-    def makeAppDirs(self, dir, locale=None):
-        if os.access(dir, os.F_OK)!=1:
-            os.makedirs(dir)
+    def makeAppDirs(self, odir, locale=None):
+        if os.access(odir, os.F_OK)!=1:
+            os.makedirs(odir)
         for sect in self.sections:
             ent=sect.getDesktopEntry(locale)
             if ent:
                 # print ent.type, ent.name
                 # print 'Icon:', ent.findIconFile()
-                dir=ent.makeAppDir(dir)
+                odir=ent.makeAppDir(odir)
                 #if dir: print dir
             
 
@@ -395,13 +395,13 @@ if __name__=='__main__':
     except KeyError:
         locale=None
     if len(sys.argv)<2:
-        raise 'Need one or more desktop files as arguments'
-    dir='tmp'
+        raise _('Need one or more desktop files as arguments')
+    odir='tmp'
     start=1
     if sys.argv[1]=='-t':
-        dir=sys.argv[2]
+        odir=sys.argv[2]
         start=3
     for dfile in sys.argv[start:]:
         desk=DesktopFile(dfile)
-        desk.makeAppDirs(dir, locale)
+        desk.makeAppDirs(odir, locale)
             

@@ -1,6 +1,10 @@
 Desktop2App
 ===========
 
+18-Apr-2006
+~~~~~~~~~~~
+Added i18n support.
+
 12-Oct-2005
 ~~~~~~~~~~~
 Add some quoting of arguments in the generated AppRun.
@@ -25,4 +29,4 @@ More places to look for icons.  Use more recent ROX-Lib.
 ~~~~~~~~~~~
 
 -- 
-$Id: Changes,v 1.6 2005/05/27 10:14:40 stephen Exp $
+$Id: Changes,v 1.7 2005/10/16 12:03:29 stephen Exp $
