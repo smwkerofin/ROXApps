@@ -9,9 +9,11 @@ import shutil, stat
 import urllib
 
 import findrox; findrox.version(2, 0, 2)
-import rox, rox.saving, rox.choices, rox.loading
+import rox, rox.saving, rox.choices, rox.loading, rox.i18n
 import rox.Menu
 import rox.AppInfo
+
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
 try:
     import ID3
@@ -106,7 +108,7 @@ class AlbumWindow(rox.Window, rox.loading.XDSLoader, rox.saving.Saveable):
         rox.Window.__init__(self)
         rox.loading.XDSLoader.__init__(self, None)
 
-        self.set_title('Album AppDir creation')
+        self.set_title(_('Album AppDir creation'))
         self.set_default_size(256, 256)
 
         vbox=rox.g.VBox(spacing=2)
@@ -115,19 +117,22 @@ class AlbumWindow(rox.Window, rox.loading.XDSLoader, rox.saving.Saveable):
         table=rox.g.Table(3, 2)
         vbox.pack_start(table, False)
 
-        table.attach(rox.g.Label('Artist'), 0, 1, 0, 1, rox.g.SHRINK, 0, 0, 0)
+        table.attach(rox.g.Label(_('Artist')), 0, 1, 0, 1, rox.g.SHRINK,
+                     0, 0, 0)
 
         self.artist=rox.g.Entry()
         table.attach(self.artist, 1, 2, 0, 1, rox.g.EXPAND|rox.g.FILL,
                      0, 0, 0)
 
-        table.attach(rox.g.Label('Album'), 0, 1, 1, 2, rox.g.SHRINK, 0, 0, 0)
+        table.attach(rox.g.Label(_('Album')), 0, 1, 1, 2, rox.g.SHRINK,
+                     0, 0, 0)
 
         self.album=rox.g.Entry()
         table.attach(self.album, 1, 2, 1, 2, rox.g.EXPAND|rox.g.FILL,
                      0, 0, 0)
 
-        table.attach(rox.g.Label('Cover'), 0, 1, 2, 3, rox.g.SHRINK, 0, 0, 0)
+        table.attach(rox.g.Label(_('Cover')), 0, 1, 2, 3, rox.g.SHRINK,
+                     0, 0, 0)
 
         self.cover=DropableImage()
         icon=resource('DirIcon.png')
@@ -146,12 +151,12 @@ class AlbumWindow(rox.Window, rox.loading.XDSLoader, rox.saving.Saveable):
         scr.add(self.view)
 
         cell=rox.g.CellRendererText()
-        column=rox.g.TreeViewColumn('File', cell, text=PATH)
+        column=rox.g.TreeViewColumn(_('File'), cell, text=PATH)
         self.view.append_column(column)
         column.set_sort_column_id(PATH)
 
         cell=rox.g.CellRendererText()
-        column=rox.g.TreeViewColumn('Track', cell, text=NAME)
+        column=rox.g.TreeViewColumn(_('Track'), cell, text=NAME)
         self.view.append_column(column)
         column.set_sort_column_id(NAME)
 
@@ -194,7 +199,7 @@ class AlbumWindow(rox.Window, rox.loading.XDSLoader, rox.saving.Saveable):
         icon=self.cover.get_pixbuf()
         uri=self.album.get_text().replace('/', ':')
         if not uri:
-            uri='DigitalAlbum'
+            uri=_('DigitalAlbum')
         sbox=rox.saving.SaveBox(self, uri, 'inode/directory')
         sbox.set_type('inode/directory', self.cover)
         sbox.show()
@@ -204,7 +209,7 @@ class AlbumWindow(rox.Window, rox.loading.XDSLoader, rox.saving.Saveable):
         self.add_track(path)
 
     def xds_load_from_stream(self, name, type, stream):
-        raise "not load from stream"
+        raise _("not load from stream")
 
     def detect_name(self, fname):
         title, artist, album=identify(fname)
@@ -266,9 +271,9 @@ class AlbumWindow(rox.Window, rox.loading.XDSLoader, rox.saving.Saveable):
             user=os.getenv('USER')
 
         if not artist:
-            artist='Unknown'
+            artist=_('Unknown')
         if not album:
-            album='Unknown'
+            album=_('Unknown')
         
         os.mkdir(path)
 
@@ -308,14 +313,14 @@ class AlbumWindow(rox.Window, rox.loading.XDSLoader, rox.saving.Saveable):
             ext=self.model.get_value(iter, EXT)
 
             dfn=os.path.join(audio_dir, '%02d %s%s' % (i, name, ext))
-            sid=self.set_status('Copying %s' % name)
+            sid=self.set_status(_('Copying %s') % name)
             shutil.copy(fname, dfn)
 
             i+=1
             iter=self.model.iter_next(iter)
 
         dfn=os.path.join(path, '.DirIcon')
-        self.set_status('Copying icon')
+        self.set_status(_('Copying icon'))
         icon.save(dfn, 'png')
 
         self.unset_status()
