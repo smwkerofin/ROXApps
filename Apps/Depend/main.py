@@ -1,11 +1,13 @@
-# $Id: main.py,v 1.1.1.1 2004/04/17 11:34:56 stephen Exp $
+# $Id: main.py,v 1.2 2005/05/07 11:06:48 stephen Exp $
 
 """err"""
 
-import sys
+import sys, os
 
 import findrox; findrox.version(2, 0, 0)
-import rox
+import rox, rox.i18n
+
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
 from DepWin import DepWin
 

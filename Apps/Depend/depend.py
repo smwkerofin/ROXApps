@@ -1,4 +1,4 @@
-# $Id: depend.py,v 1.2 2004/05/12 18:32:31 stephen Exp $
+# $Id: depend.py,v 1.3 2004/05/12 18:46:49 stephen Exp $
 
 """depend"""
 
@@ -9,7 +9,7 @@ from xml.dom import Node, minidom
 OK=0
 VERSION=1
 MISSING=2
-stat_msgs=('Ok', 'Old version', 'Missing')
+stat_msgs=(_('Ok'), _('Old version'), _('Missing'))
 
 import appinfo
 
@@ -132,7 +132,7 @@ def make_depend(node):
             uri=data(subnode)
 
     if name is None:
-        raise 'No name defined for dependency'
+        raise _('No name defined for dependency')
     try:
         return _readers[type](name, version, uri)
     except:

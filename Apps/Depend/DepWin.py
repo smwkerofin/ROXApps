@@ -1,4 +1,4 @@
-# $Id: DepWin.py,v 1.2 2004/05/12 18:46:49 stephen Exp $
+# $Id: DepWin.py,v 1.3 2004/05/12 18:48:26 stephen Exp $
 """Window"""
 
 import rox
@@ -26,7 +26,7 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
     def __init__(self, fname=None):
         rox.Window.__init__(self)
 
-        self.set_title('Dependencies')
+        self.set_title(_('Dependencies'))
         self.set_default_size(400, 300)
 
         vbox=rox.g.VBox()
@@ -47,22 +47,22 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
         view.connect('row-activated', self.activate_row)
 
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Type', cell, text = TYPE)
+        column = rox.g.TreeViewColumn(_('Type'), cell, text = TYPE)
         view.append_column(column)
         column.set_sort_column_id(TYPE)
         
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Name', cell, text = NAME)
+        column = rox.g.TreeViewColumn(_('Name'), cell, text = NAME)
         view.append_column(column)
         column.set_sort_column_id(NAME)
 
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Version', cell, text = VERSION)
+        column = rox.g.TreeViewColumn(_('Version'), cell, text = VERSION)
         view.append_column(column)
         column.set_sort_column_id(VERSION)
 
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Status', cell, text = STATUS,
+        column = rox.g.TreeViewColumn(_('Status'), cell, text = STATUS,
                                       background=COLOUR)
         view.append_column(column)
         column.set_sort_column_id(STATUS)
@@ -73,12 +73,13 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
         column.set_sort_column_id(PATH)
 
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Installed version', cell, text = ACTUAL)
+        column = rox.g.TreeViewColumn(_('Installed version'), cell,
+                                      text = ACTUAL)
         view.append_column(column)
         column.set_sort_column_id(ACTUAL)
 
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Web site', cell, text = LINK)
+        column = rox.g.TreeViewColumn(_('Web site'), cell, text = LINK)
         view.append_column(column)
         column.set_sort_column_id(LINK)
 
@@ -97,9 +98,9 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
             #err=sys.exc_info()[1]
             import errno
             if err.errno==errno.ENOENT:
-                rox.alert('%s not found, cannot check' % fname)
+                rox.alert(_('%s not found, cannot check') % fname)
             elif err.errno==errno.EPERM:
-                rox.alert('%s is not readable' %s)
+                rox.alert(_('%s is not readable') % fname)
             else:
                 rox.report_exception()
             return
@@ -119,15 +120,15 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
     def xds_load_from_stream(self, name, mtype, stream):
         #print name, mtype, stream
         if name:
-            self.set_title('Dependencies of %s' % name)
+            self.set_title(_('Dependencies of %s') % name)
         else:
-            self.set_title('Dependencies')
+            self.set_title(_('Dependencies'))
 
         app=appinfo.read_app_info(name, stream)
         #print app
         if app is None:
-            rox.alert('Failed to read %s' % name)
-            self.set_title('Dependencies')
+            rox.alert(_('Failed to read %s') % name)
+            self.set_title(_('Dependencies'))
             return
 
         self.load_app(name, app)
@@ -139,11 +140,11 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
         #print app.getDependencies()
         deps=app.getDependencies()
         if deps is None:
-            rox.info('%s has not declared any dependencies' % pname)
+            rox.info(_('%s has not declared any dependencies') % pname)
             #sys.exit(0)
             return
         elif len(deps)<1:
-            rox.info('%s claims not to depend on anything' % pname)
+            rox.info(_('%s claims not to depend on anything') % pname)
             return
         for dep in deps:
             #print dep
@@ -171,20 +172,20 @@ class DepWin(rox.Window, rox.loading.XDSLoader):
             if where:
                 rox.filer.show_file(where)
         elif dep.status==depend.VERSION:
-            rox.alert('%s is installed on your system at %s, but is an old version (%s < %s).' % (dep.name, where, dep.actual_version, dep.version))
+            rox.alert(_('%s is installed on your system at %s, but is an old version (%s < %s).') % (dep.name, where, dep.actual_version, dep.version))
             if where:
                 rox.filer.show_file(where)
             link=dep.getLink()
-            if link and rox.confirm("Do you want to visit the web site '%s'?" %
+            if link and rox.confirm(_("Do you want to visit the web site '%s'?") %
                                     link, rox.g.STOCK_JUMP_TO):
                 webbrowser.open_new(link)
             
         else:
-            rox.alert("""%s could not be found on your system.  You may need
+            rox.alert(_("""%s could not be found on your system.  You may need
 to set some environment variables to locate it, install it from
-your distribution discs or download it from a web site.""" %
+your distribution discs or download it from a web site.""") %
                       dep.name)
             link=dep.getLink()
-            if link and rox.confirm("Do you want to visit the web site '%s'?" %
+            if link and rox.confirm(_("Do you want to visit the web site '%s'?") %
                                     link, rox.g.STOCK_JUMP_TO):
                 webbrowser.open_new(link)

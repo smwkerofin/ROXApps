@@ -1,6 +1,10 @@
 Depend
 ======
 
+18-Apr-2006
+~~~~~~~~~~~
+Added i18n support.
+
 23-Apr-2005
 -----------
 Require ROX-Lib 2.0.0.
