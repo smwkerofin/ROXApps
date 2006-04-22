@@ -4,6 +4,10 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+22-Apr-2006
+~~~~~~~~~~~
+Option to build using GTK 2.4 (headers) (Thomas Leonard).
+
 11-Mar-2006 (2.1.8)
 ~~~~~~~~~~~
 Added options --env and --pkg-config and made strings in pkg.c translatable.
@@ -292,4 +296,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.35 2006/03/11 12:10:28 stephen Exp $
+$Id: Changes,v 1.36 2006/03/13 12:24:31 stephen Exp $

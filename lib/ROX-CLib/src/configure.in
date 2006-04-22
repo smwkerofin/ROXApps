@@ -33,10 +33,22 @@ fi
 AC_SUBST(PKG_CONFIG)
 AC_DEFINE_UNQUOTED(PKG_CONFIG, "$PKG_CONFIG")
 
+AC_MSG_CHECKING(whether we are using Zero Install to get the headers)
+dnl changequote(,)dnl
+if test "$GTKHEADERS" != "" ; then
+  dnl We're using 0launch on the source interface; correct for new .pc file locations
+  PKG_CONFIG_FLAGS="--define-variable=gtkprefix=\"$GTKHEADERS\" --define-variable=glibprefix=\"$GLIBHEADERS\""
+  AC_MSG_RESULT(yes; GTK headers are in $GTKHEADERS)
+else
+  PKG_CONFIG_FLAGS=
+  AC_MSG_RESULT(no)
+fi
+dnl changequote([,])dnl
+
 AC_DEFINE(GTK2)
 gtk2=1
-GTK_CFLAGS="$PKG_CONFIG gtk+-2.0 --cflags"
-GTK_LIBS="$PKG_CONFIG gtk+-2.0 --libs"
+GTK_CFLAGS="$PKG_CONFIG $PKG_CONFIG_FLAGS gtk+-2.0 --cflags"
+GTK_LIBS="$PKG_CONFIG $PKG_CONFIG_FLAGS gtk+-2.0 --libs"
 
 AC_SUBST(GTK_CFLAGS)
 AC_SUBST(GTK_LIBS)
@@ -60,12 +72,12 @@ fi
 
 AC_DEFUN(ROX_REQUIRE, [
 AC_MSG_CHECKING(that $1 (version >= $2) is installed)
-if "$PKG_CONFIG" --atleast-version=$2 $1 ; then
+if "$PKG_CONFIG" $PKG_CONFIG_FLAGS --atleast-version=$2 $1 ; then
   AC_MSG_RESULT(yes)
 else
   AC_MSG_RESULT(no)
-  if "$PKG_CONFIG" --exists $1 ; then
-    AC_MSG_ERROR(Current version is only `"$PKG_CONFIG" "$1" --modversion`)
+  if "$PKG_CONFIG" $PKG_CONFIG_FLAGS --exists $1 ; then
+    AC_MSG_ERROR(Current version is only `"$PKG_CONFIG" $PKG_CONFIG_FLAGS "$1" --modversion`)
   else
     AC_MSG_ERROR(Package is not installed)
   fi
@@ -76,7 +88,7 @@ ROX_REQUIRE(gtk+-2.0, 2.0.1)
 ROX_REQUIRE(glib-2.0, 2.0.3)
 ROX_REQUIRE(libxml-2.0, 2.4.0)
 
-XML_CONFIG="$PKG_CONFIG libxml-2.0"
+XML_CONFIG="$PKG_CONFIG $PKG_CONFIG_FLAGS libxml-2.0"
 AC_SUBST(XML_CONFIG)
 
 dnl Checks for libraries.
