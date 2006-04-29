@@ -1,4 +1,4 @@
-# $Id: main.py,v 1.3 2004/05/19 19:04:24 stephen Exp $
+# $Id: main.py,v 1.4 2005/05/07 11:37:22 stephen Exp $
 
 import findrox; findrox.version(2, 0, 0)
 
@@ -6,7 +6,10 @@ import os, sys
 import stat
 import time
 import urlparse
-import rox
+import rox, rox.filer
+import gobject
+
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
 NAME=0
 COUNT=1
@@ -42,33 +45,33 @@ class Win(rox.Window):
         self.dirs=[]
         self.sbuttons=[]
 
-        self.set_title('Thumbnails')
+        self.set_title(_('Thumbnails'))
 
         vbox=rox.g.VBox()
         self.add(vbox)
 
-        vbox.pack_start(rox.g.Label('Thumbnail directories'))
+        vbox.pack_start(rox.g.Label(_('Thumbnail directories')))
 
         swin=rox.g.ScrolledWindow()
         swin.set_size_request(256, 128)
         swin.set_policy(rox.g.POLICY_NEVER, rox.g.POLICY_AUTOMATIC)
-        vbox.pack_start(swin, rox.g.TRUE, rox.g.TRUE, 0)
+        vbox.pack_start(swin, True, True, 0)
 
         self.store=rox.g.ListStore(str, str, str, str)
         self.view=rox.g.TreeView(self.store)
 
         cell=rox.g.CellRendererText()
-        col=rox.g.TreeViewColumn('Name', cell, text=NAME)
+        col=rox.g.TreeViewColumn(_('Name'), cell, text=NAME)
         col.set_sort_column_id(NAME)
         self.view.append_column(col)
 
         cell=rox.g.CellRendererText()
-        col=rox.g.TreeViewColumn('Items', cell, text=COUNT)
+        col=rox.g.TreeViewColumn(_('Items'), cell, text=COUNT)
         col.set_sort_column_id(COUNT)
         self.view.append_column(col)
 
         cell=rox.g.CellRendererText()
-        col=rox.g.TreeViewColumn('Size', cell, text=SIZE)
+        col=rox.g.TreeViewColumn(_('Size'), cell, text=SIZE)
         col.set_sort_column_id(SIZE)
         self.view.append_column(col)
 
@@ -83,21 +86,21 @@ class Win(rox.Window):
         hbox=rox.g.HBox()
         vbox.pack_start(hbox)
         
-        but=rox.ButtonMixed(rox.g.STOCK_OPEN, '_Show')
+        but=rox.ButtonMixed(rox.g.STOCK_OPEN, _('Show'))
         but.connect('clicked', self.show_dirs)
-        hbox.pack_start(but, rox.g.FALSE, rox.g.FALSE)
+        hbox.pack_start(but, False, False)
         self.sbuttons.append(but)
 
         hbox=rox.g.HBox()
         vbox.pack_start(hbox)
         
-        hbox.pack_start(rox.g.Label('Age (days)'))
+        hbox.pack_start(rox.g.Label(_('Age (days)')))
 
         adj=rox.g.Adjustment(7, 1, 365, 1, 10, 10)
         self.age=rox.g.SpinButton(adj)
         hbox.pack_start(self.age)
 
-        but=rox.ButtonMixed(rox.g.STOCK_DELETE, 'Purge _old')
+        but=rox.ButtonMixed(rox.g.STOCK_DELETE, _('Purge old'))
         but.connect('clicked', self.purge_by_age)
         hbox.pack_start(but)
         self.sbuttons.append(but)
@@ -105,12 +108,12 @@ class Win(rox.Window):
         hbox=rox.g.HBox()
         vbox.pack_start(hbox)
         
-        but=rox.ButtonMixed(rox.g.STOCK_DELETE, 'Purge _missing')
+        but=rox.ButtonMixed(rox.g.STOCK_DELETE, _('Purge missing'))
         but.connect('clicked', self.purge_missing)
         hbox.pack_start(but)
         self.sbuttons.append(but)
 
-        but=rox.ButtonMixed(rox.g.STOCK_DELETE, 'Purge _changed')
+        but=rox.ButtonMixed(rox.g.STOCK_DELETE, _('Purge changed'))
         but.connect('clicked', self.purge_changed)
         hbox.pack_start(but)
         self.sbuttons.append(but)
@@ -124,7 +127,7 @@ class Win(rox.Window):
         vbox.show_all()
 
         def on_show(widget):
-            rox.g.idle_add(widget.scan_dirs)
+            gobject.idle_add(widget.scan_dirs)
 
         self.connect('show', on_show)
 
@@ -141,6 +144,7 @@ class Win(rox.Window):
         return l, size
 
     def scan_dirs(self):
+        self.stat.set_text(_('Scanning directories'))
         self.store.clear()
         items=os.listdir(thumbdir)
         items.sort()
@@ -161,6 +165,7 @@ class Win(rox.Window):
                            COUNT, '%5d' % l, SIZE, size_str(size),
                            PATH, dir)
         self.check_selection()
+        self.stat.set_text('')
             
     def check_selection(self, ignored=None):
         sel=self.view.get_selection()
@@ -192,7 +197,8 @@ class Win(rox.Window):
         def get_dirs(model, path, iter, dat):
             #print model, iter
             d=model.get_value(iter, PATH)
-            os.system('rox %s' % d)
+            #os.system('rox %s' % d)
+            rox.filer.open_dir(d)
         sel.selected_foreach(get_dirs, None)
 
     def scan_selected(self):
@@ -237,9 +243,9 @@ class Win(rox.Window):
                     failed+=1
         self.scan_selected()
         if failed==0:
-            self.stat.set_text('%i checked, %d purged' % (i, count))
+            self.stat.set_text(_('%d checked, %d purged') % (i, count))
         else:
-            self.stat.set_text('%i checked, %d purged (%d failed)' %
+            self.stat.set_text(_('%d checked, %d purged (%d failed)') %
                                (i, count, failed))
 
     def purge_by_age(self, ignored=None):
