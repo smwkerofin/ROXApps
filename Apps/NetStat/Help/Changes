@@ -1,6 +1,11 @@
 NetStat
 =======
 
+29-Apr-2006
+~~~~~~~~~~~
+Added i18n support.
+Changed some deprecated code.
+
 21-Nov-2005
 ~~~~~~~~~~~
 Use newer menu system.

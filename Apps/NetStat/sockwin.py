@@ -1,4 +1,4 @@
-# $Id: sockwin.py,v 1.1 2003/06/09 17:29:11 stephen Exp $
+# $Id: sockwin.py,v 1.2 2005/05/07 11:32:32 stephen Exp $
 import os
 import sys
 import string
@@ -15,7 +15,8 @@ RECVQ=4
 STATE=5
 
 class SocketsWindow(rox.Window):
-    titles=('Type', 'Local address', 'Remote', 'Send-Q', 'Recv-Q', 'State')
+    titles=(_('Type'), _('Local address'), _('Remote'), _('Send-Q'),
+            _('Recv-Q'), _('State'))
 
     def __init__(self, stats, servers=0):
         self.stats=stats
@@ -23,9 +24,9 @@ class SocketsWindow(rox.Window):
         
         rox.Window.__init__(self)
         if servers:
-            self.set_title('All Sockets')
+            self.set_title(_('All Sockets'))
         else:
-            self.set_title('Active Sockets')
+            self.set_title(_('Active Sockets'))
             
         vbox=rox.g.VBox()
         self.add(vbox)

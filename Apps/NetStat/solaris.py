@@ -1,4 +1,4 @@
-# $Id: solaris.py,v 1.1 2003/06/09 17:29:11 stephen Exp $
+# $Id: solaris.py,v 1.2 2004/03/17 18:39:46 stephen Exp $
 
 """netstat implementation for Solaris 8"""
 
@@ -36,7 +36,7 @@ def sockets_inet4(servers):
         else:
             netstat=os.popen('netstat -f inet', 'r')
     except:
-        print 'oops'
+        print _('oops')
         return None
 
     socks=[]

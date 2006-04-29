@@ -1,4 +1,4 @@
-# $Id: netstat.py,v 1.7 2004/03/17 18:48:39 stephen Exp $
+# $Id: netstat.py,v 1.8 2005/05/07 11:34:19 stephen Exp $
 
 """Interface to network statistics, under Linux.  The function stat() returns
 the data."""
@@ -14,8 +14,9 @@ if sys.platform[:5]=='linux':
 elif sys.platform=='sunos5':
     from solaris import stat, sockets
 else:
-    sys.stderr.write('No implementation for platform %s\n' % sys.platform)
-    sys.stderr.write('You could try writing one...\n')
+    sys.stderr.write(_('No implementation for platform %s\n') % sys.platform)
+    sys.stderr.write(_('You could try writing one...\n'))
+    sys.stderr.write(_('... and sending it to <stephen@kerofin.demon.co.uk>\n'))
     def stat():
         return None
     def sockets(servers=0):

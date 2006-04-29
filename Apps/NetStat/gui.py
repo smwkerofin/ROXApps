@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.19 2005/05/07 11:31:43 stephen Exp $
+# $Id: gui.py,v 1.20 2005/11/21 18:29:20 stephen Exp $
 
 import os
 import sys
@@ -7,11 +7,11 @@ import math
 
 import findrox; findrox.version(2, 0, 2)
 
-#import rox
+import rox
 import rox.choices
 
 from rox import g
-import pango
+import pango, gobject
 
 import netstat
 import rox.Menu
@@ -135,20 +135,21 @@ can=g.DrawingArea()
 vbox.pack_start(can)
 
 ifdisp=g.Label(iface)
-vbox.pack_start(ifdisp, g.FALSE, g.FALSE)
+vbox.pack_start(ifdisp, False, False)
 
 # Menu
 rox.Menu.set_save_name('NetStat')
 menu=rox.Menu.Menu('main', [
-    rox.Menu.Action('Info', 'show_info', stock=g.STOCK_DIALOG_INFO),
+    rox.Menu.Action(_('Info'), 'show_info', stock=g.STOCK_DIALOG_INFO),
     rox.Menu.Separator(),
-    rox.Menu.SubMenu('Sockets', [
-      rox.Menu.Action('Show active...', 'show_active'),
-      rox.Menu.Action('Show all..', 'show_all')
+    rox.Menu.SubMenu(_('Sockets'), [
+      rox.Menu.Action(_('Show active...'), 'show_active'),
+      rox.Menu.Action(_('Show all..'), 'show_all')
     ]),
-    rox.Menu.Action('Options...', 'edit_options', stock=g.STOCK_PREFERENCES),
+    rox.Menu.Action(_('Options...'), 'edit_options',
+                    stock=g.STOCK_PREFERENCES),
     rox.Menu.Separator(),
-    rox.Menu.Action('Quit', 'do_quit', stock=g.STOCK_QUIT)
+    rox.Menu.Action(_('Quit'), 'do_quit', stock=g.STOCK_QUIT)
     ])
 
 class MenuHelper:
@@ -467,7 +468,7 @@ def expose(widget, event):
 
     try:
         area=None
-        style.apply_default_background(widget.window, g.TRUE, g.STATE_NORMAL,
+        style.apply_default_background(widget.window, True, g.STATE_NORMAL,
                                        area,
                                        0, 0, width, height)
     except:
@@ -515,7 +516,7 @@ def update():
     can.queue_draw()
     return 1
 
-tag=g.timeout_add(1000, update)
+tag=gobject.timeout_add(1000, update)
 
 win.show_all()
 rox.mainloop()

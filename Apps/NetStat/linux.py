@@ -1,4 +1,4 @@
-# $Id: linux.py,v 1.3 2004/03/17 18:39:46 stephen Exp $
+# $Id: linux.py,v 1.4 2005/05/07 11:34:19 stephen Exp $
 
 """netstat implementation for Linux"""
 
@@ -53,10 +53,10 @@ def stat():
         return None
     return res
 
-states={1: 'Established', 2: 'SYN sent', 3: 'SYN received',
-        4: 'FIN wait 1', 5: 'FIN wait 2', 6: 'Time wait',
-        7: 'Close', 8: 'Close wait', 9: 'Last ACK',
-        10: 'Listen', 11: 'Closing'
+states={1: _('Established'), 2: _('SYN sent'), 3: _('SYN received'),
+        4: _('FIN wait 1'), 5: _('FIN wait 2'), 6: _('Time wait'),
+        7: _('Close'), 8: _('Close wait'), 9: _('Last ACK'),
+        10: _('Listen'), 11: _('Closing')
         }
 def get_state(state):
     s=int(state, 16)
