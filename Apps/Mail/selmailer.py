@@ -25,13 +25,13 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
         self.list_size=0
             
         g.Dialog.__init__(self)
-        self.set_title('Select mail program')
+        self.set_title(_('Select mail program'))
 
         self.vbox.set_spacing(4)
         hbox=g.HBox(spacing=4)
         self.vbox.pack_start(hbox)
 
-        label=g.Label('Mailers')
+        label=g.Label(_('Mailers'))
         hbox.pack_start(label, g.FALSE)
 
         self.mailer_menu=g.OptionMenu()
@@ -66,7 +66,7 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
         table=g.Table(6, 2)
         self.vbox.pack_start(table)
 
-        label=g.Label('Name')
+        label=g.Label(_('Name'))
         table.attach(label, 0, 1, 0, 1, xoptions=g.FILL, yoptions=g.FILL,
                      xpadding=2, ypadding=2)
 
@@ -83,7 +83,7 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
 
         self.name_ent.connect('changed', name_change, self)
         
-        label=g.Label('Location')
+        label=g.Label(_('Location'))
         table.attach(label, 0, 1, 1, 2, xoptions=g.FILL, yoptions=g.FILL,
                      xpadding=2, ypadding=2)
 
@@ -102,7 +102,7 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
 
         self.loc.connect('changed', loc_change, self)
         
-        label=g.Label('Read command')
+        label=g.Label(_('Read command'))
         table.attach(label, 0, 1, 2, 3, xoptions=g.FILL, yoptions=g.FILL,
                      xpadding=2, ypadding=2)
 
@@ -123,7 +123,7 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
         self.read_expl.set_text(defmailer.read_command())
         table.attach(self.read_expl, 1, 2, 3, 4, xpadding=2, ypadding=2)
        
-        label=g.Label('Send command')
+        label=g.Label(_('Send command'))
         table.attach(label, 0, 1, 4, 5, xoptions=g.FILL, yoptions=g.FILL,
                      xpadding=2, ypadding=2)
 
@@ -142,8 +142,8 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
 
         self.send_expl=g.Label('')
         self.send_expl.set_text(defmailer.send_command('root@localhost',
-                                                      'file_to_send',
-                                                'This is the file you wanted'))
+                                                      _('file_to_send'),
+                                             _('This is the file you wanted')))
         table.attach(self.send_expl, 1, 2, 5, 6, xpadding=2, ypadding=2)
        
         self.vbox.show_all()
@@ -175,11 +175,11 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
                 
         hbox=self.action_area
 
-        button=g.Button("Cancel")
+        button=g.Button(_("Cancel"))
         button.connect('clicked', cancel, self)
         hbox.pack_end(button, expand=g.FALSE)
 
-        button=g.Button("Set")
+        button=g.Button(_("Set"))
         button.connect('clicked', set, self)
         hbox.pack_end(button, expand=g.FALSE)
         
@@ -187,7 +187,7 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
         #button.connect('clicked', edit, self)
         #hbox.pack_end(button, expand=FALSE)
         
-        button=g.Button("New mailer")
+        button=g.Button(_("New mailer"))
         button.connect('clicked', newm, self)
         hbox.pack_end(button, expand=g.FALSE)
         
@@ -243,8 +243,8 @@ class SelectMailer(g.Dialog, rox.loading.XDSLoader):
         self.send.set_text(self.current.send)
 
         self.send_expl.set_text(self.current.send_command('root@localhost',
-                                                      'file_to_send',
-                                                'This is the file you wanted'))
+                                                      _('file_to_send'),
+                                                _('This is the file you wanted')))
         self.read_expl.set_text(self.current.read_command())
         self.updating=0
 

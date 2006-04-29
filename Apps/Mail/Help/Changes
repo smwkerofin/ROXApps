@@ -1,6 +1,10 @@
 Versions of Mail
 ================
 
+29-Apr-2006
+~~~~~~~~~~~
+Added i18n support.
+
 06-Nov-2005
 ~~~~~~~~~~~
 Use newer menu system.
@@ -69,4 +73,4 @@ Check child processes to avoid zombies where possible.
 First released version
 
 -- 
-$Id: Changes,v 1.6 2005/10/08 11:24:04 stephen Exp $
+$Id: Changes,v 1.7 2005/11/21 18:30:21 stephen Exp $

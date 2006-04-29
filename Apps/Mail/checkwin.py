@@ -22,7 +22,7 @@ class CheckWin(g.Dialog):
             self.all=[]
         
         g.Dialog.__init__(self)
-        self.set_title('Setup checking programs')
+        self.set_title(_('Setup checking programs'))
 
         self.vbox.set_spacing(4)
         hbox=g.HBox(spacing=4)
@@ -40,11 +40,11 @@ class CheckWin(g.Dialog):
         self.progs=view
 
         cell=g.CellRendererText()
-        column = g.TreeViewColumn('Program', cell, text = COMMAND)
+        column = g.TreeViewColumn(_('Program'), cell, text = COMMAND)
         view.append_column(column)
         
         cell=g.CellRendererText()
-        column = g.TreeViewColumn('Interval', cell, text = INTERVAL)
+        column = g.TreeViewColumn(_('Interval'), cell, text = INTERVAL)
         view.append_column(column)
         
         for p in self.all:
@@ -59,7 +59,7 @@ class CheckWin(g.Dialog):
         hbox=g.HBox(spacing=4)
         self.vbox.pack_start(hbox)
 
-        label=g.Label("Command")
+        label=g.Label(_("Command"))
         hbox.pack_start(label)
 
         self.cmd=g.Entry()
@@ -68,7 +68,7 @@ class CheckWin(g.Dialog):
         hbox=g.HBox(spacing=4)
         self.vbox.pack_start(hbox)
 
-        label=g.Label("Interval")
+        label=g.Label(_("Interval"))
         hbox.pack_start(label)
 
         self.int=g.Entry()

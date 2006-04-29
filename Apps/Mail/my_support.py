@@ -1,4 +1,4 @@
-# $Id: my_support.py,v 1.3 2002/10/19 14:34:39 stephen Exp $
+# $Id: my_support.py,v 1.4 2005/06/04 10:30:43 stephen Exp $
 
 import sys
 import os.path
@@ -11,7 +11,7 @@ from socket import gethostbyaddr, gethostname
 def run_prog(command):
     child_pid = os.fork()
     if child_pid == -1:
-        report_error("fork() failed!")
+        report_error(_("fork() failed!"))
         return 127
     if child_pid == 0:
         try:

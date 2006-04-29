@@ -38,7 +38,7 @@ class SendFile(rox.Window):
         hbox=g.HBox(FALSE)
         vbox.pack_start(hbox, FALSE, FALSE, 0)
 
-        label=g.Label("To:")
+        label=g.Label(_("To:"))
         hbox.pack_start(label, FALSE, FALSE, 0)
         mail_to=g.Entry()
         hbox.pack_start(mail_to, TRUE, TRUE, 0)
@@ -47,7 +47,7 @@ class SendFile(rox.Window):
         hbox=g.HBox(FALSE)
         vbox.pack_start(hbox, FALSE, FALSE, 0)
 
-        label=g.Label("Subject:")
+        label=g.Label(_("Subject:"))
         hbox.pack_start(label, FALSE, FALSE, 0)
         subject=g.Entry()
         hbox.pack_start(subject, TRUE, TRUE, 0)
@@ -56,7 +56,7 @@ class SendFile(rox.Window):
         hbox=g.HBox(FALSE)
         vbox.pack_start(hbox, FALSE, FALSE, 0)
 
-        uuencode=g.CheckButton("Encode as binary")
+        uuencode=g.CheckButton(_("Encode as binary"))
         hbox.pack_start(uuencode, FALSE, FALSE, 0)
         
         mime=self.mime_type.split('/')
@@ -67,7 +67,7 @@ class SendFile(rox.Window):
 
         self.uuencode=uuencode
 
-        go=g.Button("Send")
+        go=g.Button(_("Send"))
         hbox.pack_start(go, FALSE, FALSE, 0)
 
         vbox.show_all()

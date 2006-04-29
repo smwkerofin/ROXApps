@@ -24,7 +24,7 @@ class Mailer:
 
     def send_command(self, to, file, subject=None):
         if subject==None:
-            subject="No subject"
+            subject=_("No subject")
         if self.send!=None:
             args={
                 'Command': self.loc,
