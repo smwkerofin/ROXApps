@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.11 2006/01/16 22:15:42 stephen Exp $
+# $Id: fetch.py,v 1.12 2006/04/29 10:22:22 stephen Exp $
 
 import os, sys
 import time
@@ -11,6 +11,8 @@ import gobject
 import urllib, urlparse
 
 import xml.dom, xml.dom.minidom
+
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
 rox.setup_app_options('Fetch', site='kerofin.demon.co.uk')
 
