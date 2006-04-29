@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.5 2005/01/23 12:41:29 stephen Exp $
+# $Id: AppRun,v 1.6 2005/05/07 11:27:28 stephen Exp $
 
 import os, sys
 import urlparse
 
-import findrox; findrox.version(2, 0, 0)
+import findrox; findrox.version(2, 0, 2)
 import rox
 import rox.options
 import rox.OptionsBox
 import rox.filer
+
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
 from xml.dom import Node, minidom
 
@@ -24,14 +26,14 @@ rox.app_options=options
 
 BROWSER=os.getenv('BROWSER')
 if BROWSER:
-	web_cmd=BROWSER+' %s'
+	if '%s' in BROWSER:
+		web_cmd=BROWSER
+	else:
+		web_cmd=BROWSER+' %s'
 else:
 	web_cmd='mozilla -remote "openURL(%s,new-window)"'
 
 http_cmd=rox.options.Option('http', web_cmd, options)
-#ftp_cmd=rox.options.Option('ftp', '', options)
-#mailto_cmd=rox.options.Option('mailto', '', options)
-#print options.pending
 
 schemes=rox.options.ListOption('schemes', ('http=%s' % web_cmd,), options)
 
@@ -105,7 +107,7 @@ def run_file(fl):
     uri=uri_from_file(fl)
     #print 'uri from %s is %s' % (fl, uri)
     if not uri:
-        rox.alert('No URI found in %s' % fl.name)
+        rox.alert(_('No URI found in %s') % fl.name)
         return
     launch_uri(uri)
 

@@ -1,6 +1,10 @@
 Launch
 ======
 
+29-Apr-2006
+~~~~~~~~~~~
+Added i18n support.
+
 23-Apr-2005 (0.1.4)
 ~~~~~~~~~~~
 Use $BROWSER for default http handler.
