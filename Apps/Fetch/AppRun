@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.25 2006/01/16 22:15:42 stephen Exp $
+# $Id: AppRun,v 1.26 2006/02/11 13:03:30 stephen Exp $
 
 import os, sys
 import time
@@ -13,7 +13,7 @@ import urlparse, urllib
 
 import dclient
 
-_=rox._
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
 real_install='%s/AppRun "$1"' % rox.app_dir
 
@@ -218,13 +218,13 @@ class FetchWindow(rox.Dialog):
             self.kill_proc=True
             #print >> sys.stderr, self, unused
             self.proc.kill()
-        msg='Fetch of %s cancelled' % self.url
+        msg=_('Fetch of %s cancelled') % self.url
         if self.count:
-            msg+=', %d bytes ' % self.count
+            msg+=_(', %d bytes ') % self.count
             if self.size:
                 msg+='(%d%%) ' % int(100.*self.count/self.size)
-            msg+='in %s' % self.target
-        msg+='.'
+            msg+=_('in %s') % self.target
+        msg+=_('.')
         #print >> sys.stderr, 'Report cancel status'
         rox.info(msg)
         #print >> sys.stderr, 'Exit now'
@@ -235,7 +235,7 @@ class FetchWindow(rox.Dialog):
         if self.last_time:
             now=time.time()
             if now-self.last_time>60:
-                self.message('Stalled? Last update %ds ago' %
+                self.message(_('Stalled? Last update %ds ago') %
                              int(now-self.last_time))
             #print now, now-self.last_time
 
@@ -350,7 +350,7 @@ class FetchWindow(rox.Dialog):
         #print self.con
 
         self.last_time=time.time()
-        self.message('Downloading')
+        self.message(_('Downloading'))
 
         data=''
         while True:
@@ -388,7 +388,7 @@ class FetchWindow(rox.Dialog):
                 self.finished()
                 return False
             elif code=='x':
-                self.message('Helper process crashed: %s' % arg.strip())
+                self.message(_('Helper process crashed: %s') % arg.strip())
                 self.finished()
                 return False
             
@@ -504,7 +504,7 @@ class FetchWindow(rox.Dialog):
         try:
             os.rename(self.target, self.real_target)
         except OSError:
-            rox.info('Rename failed, data left in temporary file %s' %
+            rox.info(_('Rename failed, data left in temporary file %s') %
                      self.target)
         try:
             self.con.close()

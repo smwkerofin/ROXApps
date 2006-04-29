@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.10 2005/12/18 10:55:32 stephen Exp $
+# $Id: fetch.py,v 1.11 2006/01/16 22:15:42 stephen Exp $
 
 import os, sys
 import time
@@ -11,8 +11,6 @@ import gobject
 import urllib, urlparse
 
 import xml.dom, xml.dom.minidom
-
-_=rox._
 
 rox.setup_app_options('Fetch', site='kerofin.demon.co.uk')
 
@@ -198,7 +196,7 @@ class PasswordWindow(rox.Dialog):
         self.realm=realm
         
         rox.Dialog.__init__(self)
-        self.set_title(_('Password for %s' % host))
+        self.set_title(_('Password for %s') % host)
         self.add_button(rox.g.STOCK_CANCEL, rox.g.RESPONSE_CANCEL)
         self.add_button(rox.g.STOCK_OK, rox.g.RESPONSE_OK)
         self.connect('response', self.do_response)

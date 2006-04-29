@@ -1,6 +1,10 @@
 Fetch
 =====
 
+29-Apr-2006
+~~~~~~~~~~~
+Added i18n support.
+
 11-Feb-2006 (0.3.1)
 ~~~~~~~~~~~
 Fix problems relating to cancelling fetches.
@@ -136,4 +140,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.32 2006/02/11 13:03:30 stephen Exp $
+$Id: Changes,v 1.33 2006/02/17 10:00:25 stephen Exp $
