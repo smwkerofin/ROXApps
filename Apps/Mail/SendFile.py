@@ -9,8 +9,7 @@ import os
 import string
 
 from rox import g
-TRUE=g.TRUE
-FALSE=g.FALSE
+import gobject
 
 #import SendFile
 from my_support import run_prog
@@ -32,43 +31,43 @@ class SendFile(rox.Window):
         self.path=path
         self.mime_type=mime_type
 
-        vbox=g.VBox(FALSE)
+        vbox=g.VBox(False)
         self.add(vbox)
 
-        hbox=g.HBox(FALSE)
-        vbox.pack_start(hbox, FALSE, FALSE, 0)
+        hbox=g.HBox(False)
+        vbox.pack_start(hbox, False, False, 0)
 
         label=g.Label(_("To:"))
-        hbox.pack_start(label, FALSE, FALSE, 0)
+        hbox.pack_start(label, False, False, 0)
         mail_to=g.Entry()
-        hbox.pack_start(mail_to, TRUE, TRUE, 0)
+        hbox.pack_start(mail_to, True, True, 0)
         self.mail_to=mail_to
                 
-        hbox=g.HBox(FALSE)
-        vbox.pack_start(hbox, FALSE, FALSE, 0)
+        hbox=g.HBox(False)
+        vbox.pack_start(hbox, False, False, 0)
 
         label=g.Label(_("Subject:"))
-        hbox.pack_start(label, FALSE, FALSE, 0)
+        hbox.pack_start(label, False, False, 0)
         subject=g.Entry()
-        hbox.pack_start(subject, TRUE, TRUE, 0)
+        hbox.pack_start(subject, True, True, 0)
         self.subject=subject
                 
-        hbox=g.HBox(FALSE)
-        vbox.pack_start(hbox, FALSE, FALSE, 0)
+        hbox=g.HBox(False)
+        vbox.pack_start(hbox, False, False, 0)
 
         uuencode=g.CheckButton(_("Encode as binary"))
-        hbox.pack_start(uuencode, FALSE, FALSE, 0)
+        hbox.pack_start(uuencode, False, False, 0)
         
         mime=self.mime_type.split('/')
         if mime[0] == 'text':
-            uuencode.set_active(FALSE)
+            uuencode.set_active(False)
         else:
-            uuencode.set_active(TRUE)
+            uuencode.set_active(True)
 
         self.uuencode=uuencode
 
         go=g.Button(_("Send"))
-        hbox.pack_start(go, FALSE, FALSE, 0)
+        hbox.pack_start(go, False, False, 0)
 
         vbox.show_all()
         go.connect('clicked', self.send_it)
@@ -91,6 +90,6 @@ class SendFile(rox.Window):
                                      self.subject.get_text())
 
         child_pid=run_prog(cmd)
-        g.timeout_add(1000, check_child, child_pid);
+        gobject.timeout_add(1000, check_child, child_pid);
 
         self.destroy()

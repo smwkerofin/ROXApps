@@ -1,8 +1,10 @@
 import findrox; findrox.version(2, 0, 2)
-import rox.choices
+import rox, rox.choices
 
 import sys
 import os
+
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
 #import rox.support
 

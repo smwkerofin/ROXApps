@@ -4,6 +4,8 @@ import os
 import findrox; findrox.version(2, 0, 2)
 from rox import g
 
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
+
 from SendFile import SendFile
 
 try:
