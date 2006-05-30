@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.17 2006/01/16 10:50:44 stephen Exp $
+# $Id: vidthumb.py,v 1.18 2006/02/17 09:59:00 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -69,7 +69,7 @@ class VidThumbNail(thumb.Thumbnailler):
     def failed_image(self, rsize, tstr):
         if debug: print 'failed_image', self, rsize, tstr
         if not tstr:
-            tstr='Error!'
+            tstr=_('Error!')
         w=rsize
         h=rsize/4*3
         try:
@@ -257,7 +257,7 @@ class VidThumbMPlayer(VidThumbNail):
             vlen=get_length(inname)
         except:
             self.report_exception()
-            return self.failed_image(rsize, 'Bad length')
+            return self.failed_image(rsize, _('Bad length'))
 
         self.total_time=vlen
         if debug: print vlen
@@ -274,7 +274,7 @@ class VidThumbMPlayer(VidThumbNail):
             frfname=write_frame(inname, 0)
             if debug: print inname, pos, frfname
         if frfname is None:
-            return self.failed_image(rsize, 'Bad or missing frame file')
+            return self.failed_image(rsize, _('Bad or missing frame file'))
 
         # Now we load the raw image in
 
@@ -326,19 +326,19 @@ def main(argv):
         for (name, cls) in thumbnailers.iteritems():
             if cls.check_executable():
                 thumbC = cls
-                msg = """VideoThumbnail could not find the program "%s", but another thumbnail generator is available.
+                msg = _("""VideoThumbnail could not find the program "%s", but another thumbnail generator is available.
                 
-Should "%s" be used from now on?"""
+Should "%s" be used from now on?""")
                 if rox.confirm(msg % (origbin, thumbC._binary), rox.g.STOCK_YES):
                     options.generator.value = name
                     rox.app_options.save()
                     pass
                 break
         else:
-            msg = """VideoThumbnail could not find any usable thumbnail generator.
+            msg = _("""VideoThumbnail could not find any usable thumbnail generator.
             
 You need to install either MPlayer (http://www.mplayerhq.hu)
-or Totem (http://www.gnome.org/projects/totem/)."""
+or Totem (http://www.gnome.org/projects/totem/).""")
             rox.croak(msg)
             
     thumb = thumbC(options.report.int_value)

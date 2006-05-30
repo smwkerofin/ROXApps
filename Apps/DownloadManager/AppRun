@@ -4,8 +4,10 @@ import dbus
 import sys, time, os
 
 import findrox; findrox.version(2, 0, 2)
-import rox, rox.options, rox.applet, rox.Menu, rox.InfoWin
+import rox, rox.options, rox.applet, rox.Menu, rox.InfoWin, rox.i18n
 import gobject
+
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
 try:
     new_version=(dbus.version>=(0, 40, 0))
@@ -36,7 +38,7 @@ class DMWindow(rox.Window):
     def __init__(self, bus, xid=None):
         rox.Window.__init__(self)
 
-        self.set_title('Download Manager')
+        self.set_title(_('Download Manager'))
         self.set_default_size(400, 100)
 
         self.dserve=dserve.DownloadManager(bus)
@@ -56,35 +58,35 @@ class DMWindow(rox.Window):
         swin.add(view)
 
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Client', cell, text = ID)
+        column = rox.g.TreeViewColumn(_('Client'), cell, text = ID)
         view.append_column(column)
         
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Server', cell, text = SERVER)
+        column = rox.g.TreeViewColumn(_('Server'), cell, text = SERVER)
         view.append_column(column)
         
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('File', cell, text = FNAME)
+        column = rox.g.TreeViewColumn(_('File'), cell, text = FNAME)
         view.append_column(column)
         
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('State', cell, text = STATE)
+        column = rox.g.TreeViewColumn(_('State'), cell, text = STATE)
         view.append_column(column)
         
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Fetched', cell, text = SIZE)
+        column = rox.g.TreeViewColumn(_('Fetched'), cell, text = SIZE)
         view.append_column(column)
         
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Total', cell, text = TOTAL)
+        column = rox.g.TreeViewColumn(_('Total'), cell, text = TOTAL)
         view.append_column(column)
         
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Progress', cell, text = PER)
+        column = rox.g.TreeViewColumn(_('Progress'), cell, text = PER)
         view.append_column(column)
 
         cell = rox.g.CellRendererText()
-        column = rox.g.TreeViewColumn('Age', cell, text = AGE)
+        column = rox.g.TreeViewColumn(_('Age'), cell, text = AGE)
         view.append_column(column)
 
         optbut=rox.ButtonMixed(rox.g.STOCK_PREFERENCES, 'Options')
@@ -118,19 +120,19 @@ class DMWindow(rox.Window):
 
             rox.Menu.set_save_name('DownloadManager')
             self.applet_menu=rox.Menu.Menu('applet', [
-                rox.Menu.Action('/Info', 'show_info',
+                rox.Menu.Action(_('/Info'), 'show_info',
                             stock=rox.g.STOCK_DIALOG_INFO),
                 rox.Menu.Separator(),
-                rox.Menu.Action('/Options', 'opt_clicked',
+                rox.Menu.Action(_('/Options'), 'opt_clicked',
                             stock=rox.g.STOCK_PREFERENCES),
                 rox.Menu.Separator(),
-                rox.Menu.Action('/Show window', 'show_window'),
-                rox.Menu.Action('/Hide window', 'hide_window'),
+                rox.Menu.Action(_('/Show window'), 'show_window'),
+                rox.Menu.Action(_('/Hide window'), 'hide_window'),
                 rox.Menu.Separator(),
-                rox.Menu.Action('/Close applet', 'close_applet',
+                rox.Menu.Action(_('/Close applet'), 'close_applet',
                             stock=rox.g.STOCK_CLOSE),
                 rox.Menu.Separator(),
-                rox.Menu.Action('/Quit', 'do_quit',
+                rox.Menu.Action(_('/Quit'), 'do_quit',
                             stock=rox.g.STOCK_QUIT)
                 ])
 
@@ -187,7 +189,7 @@ class DMWindow(rox.Window):
             iter=self.model.append()
             self.model.set(iter, ID, act, SERVER, client.server,
                            FNAME, client.fname,
-                           STATE, 'active', SIZE, str(client.size),
+                           STATE, _('active'), SIZE, str(client.size),
                            AGE, str(int(time.time()-client.last)))
             if client.total>0:
                 self.model.set(iter, TOTAL, str(client.total),
@@ -203,7 +205,7 @@ class DMWindow(rox.Window):
                 client=self.dserve.clients[id]
                 iter=self.model.append()
                 self.model.set(iter, ID, id, SERVER, client.server,
-                               FNAME, client.fname, STATE, 'waiting',
+                               FNAME, client.fname, STATE, _('waiting'),
                                AGE, str(int(time.time()-client.last)))
                 nwait+=1
 

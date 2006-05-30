@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+29-Apr-2006
+~~~~~~~~~~~
+Added i18n support.
+
 01-Mar-2006 (0.1.12)
 ~~~~~~~~~~~
 Yet more bugs in installing handlers under Zero Install.

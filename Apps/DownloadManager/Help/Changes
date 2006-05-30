@@ -1,6 +1,10 @@
 DownloadManager
 ===============
 
+18-Apr-2006
+~~~~~~~~~~~
+Added i18n support.
+
 11-Feb-2006 (0.1.2)
 ~~~~~~~~~~~
 Implementation of slot_available signal was missing under new DBus interface.
@@ -69,4 +73,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.16 2006/02/11 13:03:15 stephen Exp $
+$Id: Changes,v 1.17 2006/02/17 10:02:13 stephen Exp $

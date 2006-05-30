@@ -171,7 +171,7 @@ class DownloadManager(dbus.Object):
             client=self.clients[a]
             act.append(str(client))
         
-        print 'returning', act
+        #print 'returning', act
         return act
 
     def ShowWindow(self, method, show):

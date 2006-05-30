@@ -1,4 +1,4 @@
-# $Id: thumb.py,v 1.2 2004/05/08 18:39:30 stephen Exp $
+# $Id: thumb.py,v 1.3 2006/01/16 10:50:44 stephen Exp $
 
 
 """Template for a thumbnail generation program.  This provides a Python
@@ -64,7 +64,7 @@ class Thumbnailler:
 
     def get_image(self, inname, rsize):
         """Method you must define for your thumbnailler to do anything"""
-        raise "Thumbnail not implemented"
+        raise _("Thumbnail not implemented")
 
     def process_image(self, img, rsize):
         """Take the raw image and scale it to the correct size.
