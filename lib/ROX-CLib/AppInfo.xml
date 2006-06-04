@@ -5,7 +5,7 @@
   <Summary xml:lang="it">Libreria C per applicazioni ROX</Summary>
   <About>
     <Purpose>C library for ROX apps</Purpose>
-        <Version>2.1.8 (13th March 2006)</Version>
+        <Version>2.1.9 (3rd June 2006)</Version>
     <Authors>Stephen Watson, Thomas Leonard</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>

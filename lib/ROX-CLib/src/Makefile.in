@@ -42,7 +42,7 @@ SRCS = pkg.c error.c choices.c infowin.c rox_debug.c rox_dnd.c
 SRCS += gtksavebox.c rox_path.c rox_resources.c rox_soap.c test.c
 SRCS += rox_filer_action.c applet.c rox.c rox_soap_server.c 
 SRCS += options.c basedir.c mime.c appinfo.c mime_handler.c uri.c
-SRCS += systray.c
+SRCS += systray.c menu.c
 
 OBJECTS = pkg.o 
 
@@ -50,19 +50,19 @@ LIBOBJECTS = error.o choices.o infowin.o rox_debug.o rox_dnd.o
 LIBOBJECTS += gtksavebox.o rox_path.o rox_resources.o rox_soap.o
 LIBOBJECTS += rox_filer_action.o applet.o rox.o rox_soap_server.o 
 LIBOBJECTS += options.o basedir.o mime.o appinfo.o mime_handler.o uri.o
-LIBOBJECTS += systray.o
+LIBOBJECTS += systray.o menu.o
 
 SLIBOBJECTS = error.lo choices.lo infowin.lo rox_debug.lo rox_dnd.lo
 SLIBOBJECTS += gtksavebox.lo rox_path.lo rox_resources.lo rox_soap.lo
 SLIBOBJECTS += rox_filer_action.lo applet.lo rox.lo rox_soap_server.lo
 SLIBOBJECTS += options.lo basedir.lo mime.lo appinfo.lo mime_handler.lo uri.lo
-SLIBOBJECTS += systray.lo
+SLIBOBJECTS += systray.lo menu.lo
 
 INCLUDES = rox-clib.h error.h choices.h infowin.h rox_debug.h rox_dnd.h
 INCLUDES += gtksavebox.h rox_path.h rox_resources.h rox_soap.h
 INCLUDES += rox_filer_action.h applet.h rox.h rox_soap_server.h
 INCLUDES += options.h basedir.h mime.h appinfo.h mime_handler.h uri.h
-INCLUDES += systray.h
+INCLUDES += systray.h menu.h
 
 ############ Things to keep the same
 

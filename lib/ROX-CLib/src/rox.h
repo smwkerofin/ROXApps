@@ -1,5 +1,5 @@
 /*
- * $Id: rox.h,v 1.8 2005/06/07 10:24:52 stephen Exp $
+ * $Id: rox.h,v 1.9 2005/12/07 11:47:11 stephen Exp $
  *
  * rox.h - Top level header for ROX-CLib
  */
@@ -23,6 +23,7 @@
 #include "error.h"
 #include "infowin.h"
 #include "rox_resources.h"
+#include "menu.h"
 
 /* Initialize GTK+ and bits of ROX-CLib */
 extern void rox_init(const char *program, int *argc, char ***argv);
@@ -32,6 +33,8 @@ extern void rox_init_with_domain(const char *program, const char *domain,
 /* Return name of program as passed to rox_init.
    Returns NULL if rox_init not called. */
 extern const gchar *rox_get_program_name(void);
+
+extern const gchar *rox_get_program_domain(void);
 
 /* Return icon of program (.DirIcon).  Pass to g_object_ref when done.
    Returns NULL if not available. */
@@ -66,6 +69,11 @@ extern char *rox_clib_find(void);
 
 /*
  * $Log: rox.h,v $
+ * Revision 1.9  2005/12/07 11:47:11  stephen
+ * Adding an error handling framework.
+ * Locate app dirs, including ROX-CLib.
+ * Deprecation warnings handled via env variable
+ *
  * Revision 1.8  2005/06/07 10:24:52  stephen
  * Using doxygen to generate documentation
  *

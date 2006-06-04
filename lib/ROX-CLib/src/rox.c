@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.16 2005/12/18 10:51:28 stephen Exp $
+ * $Id: rox.c,v 1.17 2006/03/11 12:10:28 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -229,6 +229,15 @@ void rox_init_with_domain(const char *program, const char *domain,
 const gchar *rox_get_program_name(void)
 {
   return program_name;
+}
+
+/** Returns the program domain as passed to rox_init_with_domain()
+ *
+ * @return the domain, or @c NULL if no domain was given.
+ */
+const gchar *rox_get_program_domain(void)
+{
+  return domain_name;
 }
 
 /** Returns the application directory.
@@ -529,6 +538,9 @@ char *rox_clib_find(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.17  2006/03/11 12:10:28  stephen
+ * Added options --env and --pkg-config and made strings in pkg.c translatable.
+ *
  * Revision 1.16  2005/12/18 10:51:28  stephen
  * Fix bug setting app's translation
  *
