@@ -37,7 +37,7 @@ AC_MSG_CHECKING(whether we are using Zero Install to get the headers)
 dnl changequote(,)dnl
 if test "$GTKHEADERS" != "" ; then
   dnl We're using 0launch on the source interface; correct for new .pc file locations
-  PKG_CONFIG_FLAGS="--define-variable=gtkprefix=\"$GTKHEADERS\" --define-variable=glibprefix=\"$GLIBHEADERS\""
+  PKG_CONFIG_FLAGS="--define-variable=gtkprefix=\"$GTKHEADERS\" --define-variable=glibprefix=\"$GLIBHEADERS\" --define-variable=pangoprefix=\"$PANGOHEADERS\""
   AC_MSG_RESULT(yes; GTK headers are in $GTKHEADERS)
 else
   PKG_CONFIG_FLAGS=
