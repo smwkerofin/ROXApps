@@ -1,6 +1,10 @@
 Changes to FreeFS
 =================
 
+31-May-2006
+~~~~~~~~~~~
+Monitor home directory when no argument given, not the AppDir.
+
 24-Mar-2006
 ~~~~~~~~~~~
 Added es translation (Juan Carlos Jimenez Garcia).

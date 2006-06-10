@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.33 2006/03/07 19:23:44 stephen Exp $
+ * $Id: freefs.c,v 1.34 2006/03/15 22:36:54 stephen Exp $
  */
 #include "config.h"
 
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
   if(optind<argc && argv[optind])
     df_dir=g_strdup(argv[optind]);
   else
-    df_dir=g_dirname(argv[0]);
+    df_dir=g_strdup(g_get_home_dir());
   if(!g_path_is_absolute(df_dir)) {
     gchar *tmp=df_dir;
     gchar *dir=g_get_current_dir();
@@ -1402,6 +1402,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.34  2006/03/15 22:36:54  stephen
+ * Removed some deprecated calls and some compiler warnings.
+ *
  * Revision 1.33  2006/03/07 19:23:44  stephen
  * Added i18n support (with ROX-CLib 2.1.8)
  *
