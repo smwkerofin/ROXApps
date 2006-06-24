@@ -1,0 +1,28 @@
+XPlanet
+=======
+
+A wrapper for the xplanet program.
+
+Normal use
+----------
+
+Running XPlanet simply runs the xplanet program with default options
+and shows the result in a window.  In future it may be possible to
+change the defaults, but not yet.
+
+Pinboard backdrop
+-----------------
+
+This is the more useful mode.
+
+Right click on XPlanet's icon and select "Set as backdrop App".  This
+will set XPlanet as ROX-Filers backdrop application and draw the
+current planet as the pinboard image, updating every few minutes.
+
+Options
+-------
+
+Right click on XPlanet's icon and select "Options".
+
+-- 
+stephen@kerofin.demon.co.uk

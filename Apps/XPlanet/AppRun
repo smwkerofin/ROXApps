@@ -1,0 +1,108 @@
+#!/usr/bin/env python
+
+import os, sys
+
+import findrox; findrox.version(2, 0, 3)
+import rox, rox.options, rox.filer
+import time
+import xml.dom.minidom
+
+rox.setup_app_options('XPlanet', site='kerofin.demon.co.uk')
+
+backdrop_delay=rox.options.Option('backdrop_delay', 10)
+
+rox.app_options.notify()
+
+def main(argv):
+    if len(argv)>1:
+        if argv[1]=='--backdrop':
+            backdrop_daemon()
+        elif argv[1]=='-b':
+            set_backdrop_app()
+        elif argv[1]=='-o':
+            show_options()
+    else:
+        show_window()
+
+def show_options():
+    rox.edit_options()
+    rox.mainloop()
+
+def show_window():
+    os.system('xplanet -window')
+
+def backdrop_daemon():
+    try:
+        while True:
+            backdrop()
+            time.sleep(backdrop_delay.int_value*60)
+    except IOError, ex:
+        import errno
+        if ex.errno==errno.EPIPE:
+            return
+        raise
+
+def set_backdrop_app():
+    xml="""<?xml version="1.0"?>
+    <env:Envelope xmlns:env="http://www.w3.org/2001/12/soap-envelope">
+    <env:Body xmlns="http://rox.sourceforge.net/SOAP/ROX-Filer">
+    <SetBackdropApp>
+    <App>%s</App>
+    </SetBackdropApp>
+    </env:Body>
+    </env:Envelope>"""
+    
+    cin = os.popen('rox -R', 'w')
+    cin.write(xml % rox.app_dir)
+
+def get_cache_dir():
+    fallback='/tmp'
+    try:
+        cdir=os.getenv('XDG_CACHE_HOME', os.path.expanduser('~/.cache'))
+        if os.access(cdir, os.F_OK)!=1:
+            os.mkdir(cdir)
+        if not os.path.isdir(cdir):
+            return fallback
+        ddir=os.path.join(cdir, 'kerofin.demon.co.uk')
+        if os.access(ddir, os.F_OK)!=1:
+            os.mkdir(ddir)
+        if not os.path.isdir(ddir):
+            return fallback
+        wdir=os.path.join(ddir, 'XPlanet')
+        if os.access(wdir, os.F_OK)!=1:
+            os.mkdir(wdir)
+        if not os.path.isdir(wdir):
+            return fallback
+        return wdir
+    except:
+        return fallback
+
+cache_dir=get_cache_dir()
+
+def get_cache_file(ext='.png'):
+    base='backdrop_%d_%f%s' % (os.getuid(), time.time(), ext)
+    return os.path.join(cache_dir, base)
+
+def backdrop():
+    fname=get_cache_file()
+    try:
+        width=rox.g.gdk.screen_width()
+        height=rox.g.gdk.screen_height()
+        cmd='xplanet -geometry %dx%d+0+0 -projection mercator -output %s -num_times 1' % (width, height, fname)
+        os.system(cmd)
+        sys.stdout.write('centre %s\n' % fname)
+        sys.stdout.flush()
+
+        line=sys.stdin.readline()
+        while line!='ok\n':
+            #print >> sys.stderr, line
+            line=sys.stdin.readline()
+        #print >> sys.stderr, 'It was Ok'
+        
+    finally:
+        try:
+            os.remove(fname)
+        except:
+            pass
+        
+main(sys.argv)
