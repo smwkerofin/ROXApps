@@ -1,4 +1,4 @@
-# $Id$
+# $Id: xattr.py,v 1.1.1.1 2005/08/13 11:27:43 stephen Exp $
 
 import os, sys, errno
 
@@ -68,7 +68,17 @@ if object and hasattr(object, 'attropen'):
 
         os.write(fd, value)
         object.close(fd)
+
+    def delete(path, attr):
+        pass
+
+    name_invalid_chars='/\0'
+    def name_valid(name):
+        return name_invalid_chars not in name
     
+    def binary_value_supported():
+        return True
+
 elif object and hasattr(object, 'getxattr'):
     #print 'getxattr'
 
@@ -104,21 +114,41 @@ elif object and hasattr(object, 'getxattr'):
         if not os.access(path, os.F_OK):
             raise OSError(errno.ENOENT, 'No such file or directory', path)
 
-        buf=ctypes.c_buffer(1024)
-        n=object.listxattr(path, ctypes.byref(buf), 1024)
-        if n>1024:
-            buf=ctypes.c_buffer(n+1)
-            n=object.listxattr(path, ctypes.byref(buf), n+1)
-        if n<1:
+        size=object.listxattr(path, None, 0)
+        #print size
+        if size<1:
             return []
-        return buf.value.split('\0')
+        buf=ctypes.create_string_buffer(size)
+        n=object.listxattr(path, ctypes.byref(buf), size)
+        names=buf.raw[:-1].split('\0')
+        return names
 
     def set(path, attr, value):
+        #print 'set', path, attr, value
         if not os.access(path, os.F_OK):
             raise OSError(errno.ENOENT, 'No such file or directory', path)
 
-        object.setxattr(path, attr, value, len(value), 0)
+        #print path, attr, value, len(value), 0
+        res=object.setxattr(path, attr, value, len(value), 0)
+        #print res
+        if res==-1:
+            raise EnvironmentError('Failed to set %s on %s' % (attr, path))
     
+    def delete(path, attr):
+        if not os.access(path, os.F_OK):
+            raise OSError(errno.ENOENT, 'No such file or directory', path)
+        
+        object.removexattr(path, attr)
+
+    name_invalid_chars='\0'
+    def name_valid(name):
+        if '.' not in name or name[0]=='.':
+            return False
+        return name_invalid_chars not in name
+    
+    def binary_value_supported():
+        return False
+
 else:
     #print 'none'
     
@@ -136,6 +166,12 @@ else:
 
     def set(path, attr, value):
         raise NoXAttr(path)
+
+    def name_valid(name):
+        return False
+
+    def binary_value_supported():
+        return False
 
 if __name__=='__main__':
     if len(sys.argv)>1:

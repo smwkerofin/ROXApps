@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<interface xmlns="http://zero-install.sourceforge.net/2004/injector/interface"
+           uri="http://www.kerofin.demon.co.uk/2006/interfaces/XAttr"
+	   main="XAttr/AppRun">
+  <name>XAttr</name>
+  <summary>view and edit extended attributes</summary>
+  <description>
+XAttr is a utility for viewing or editing extended attributes which
+are supported by more modern file systems.
+
+  </description>
+  <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/XAttr.png'/>
+<group>
+    <requires interface="http://rox.sourceforge.net/2005/interfaces/ROX-Lib">
+      <environment insert="ROX-Lib2/python" name="PYTHONPATH"/>
+    </requires>
+    <implementation id=".."
+		stability="testing" version="0.0.1"/>
+  </group>
+  <feed-for interface="http://www.kerofin.demon.co.uk/2006/interfaces/XAttr"/>
+</interface>

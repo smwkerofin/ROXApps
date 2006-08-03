@@ -7,7 +7,16 @@ Usage
 =====
 
 Drag a file to the XAttr icon.  A dialog window pops up showing a list of
-extended attributes and their values, shown as a text string.
+extended attributes and their values, shown as a text string.  Double click 
+on a row to edit the value.
+
+Click on the Add button to add a new attribute and set its value.  Note that 
+under Linux the name of the attribute must contain a '.' character and under
+Solaris it cannot contain a '/' character.
+
+Attribute values are classed as "STRING", "TEXT" or "DATA".  "STRING"
+and "TEXT" must be valid UTF-8, and "TEXT" may contain '\n'
+characters.  "DATA" values cannot be edited or created, only viewed.
 
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>

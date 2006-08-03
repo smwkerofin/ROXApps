@@ -2,50 +2,95 @@
 
 import os, sys
 
-import findrox; findrox.version(2, 0, 0)
+import findrox; findrox.version(2, 0, 3)
 import rox
 
 try:
     import rox.xattr as xattr
-except:
+except ImportError:
+    # xattr not yet part of ROX-Lib
     import xattr
-    
-class XAttrWin(rox.Dialog):
-    def __init__(self, path):
-        rox.Dialog.__init__(self, title='%s extended attributes' % path,
-                            buttons=(rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE))
 
+TYPE_STRING=1
+TYPE_TEXT=2
+TYPE_DATA=3
+
+COL_NAME=0
+COL_DATA=1
+COL_PRINTABLE=2
+COL_TYPE=3
+COL_TYPE_NAME=4
+    
+class XAttrWin(rox.Window):
+    def __init__(self, path):
+        rox.Window.__init__(self)
+        self.set_title('%s extended attributes' % path)
+
+        self.supported=xattr.supported(path)
         self.path=path
 
         self.set_default_size(256, 128)
 
-        vbox=self.vbox
+        vbox=rox.g.VBox()
+        self.add(vbox)
+
+        lbl=rox.g.Label(os.path.dirname(path))
+        lbl.set_alignment(0.0, 0.5)
+        vbox.pack_start(lbl, False, False, 4)
+        lbl=rox.g.Label(os.path.basename(path))
+        lbl.set_alignment(0.0, 0.5)
+        vbox.pack_start(lbl, False, False, 4)
 
         swin=rox.g.ScrolledWindow()
         swin.set_policy(rox.g.POLICY_AUTOMATIC, rox.g.POLICY_ALWAYS)
 
         vbox.pack_start(swin, True, True, 4)
 
-        store=rox.g.ListStore(str, str)
+        store=rox.g.ListStore(str, str, str, int, str)
         self.store=store
 
         view=rox.g.TreeView(store)
+        self.view=view
         swin.add(view)
         view.set_search_column(0)
 
         cell=rox.g.CellRendererText()
-        col=rox.g.TreeViewColumn('Attribute', cell, text=0)
+        col=rox.g.TreeViewColumn('Attribute', cell, text=COL_NAME)
         view.append_column(col)
         col.set_sort_column_id(0)
 
         cell=rox.g.CellRendererText()
-        col=rox.g.TreeViewColumn('Value', cell, text=1)
+        col=rox.g.TreeViewColumn('Type', cell, text=COL_TYPE_NAME)
+        view.append_column(col)
+        col.set_sort_column_id(1)
+
+        cell=rox.g.CellRendererText()
+        col=rox.g.TreeViewColumn('Value', cell, text=COL_PRINTABLE)
         view.append_column(col)
         col.set_sort_column_id(1)
 
         self.load_table()
 
+        bbox=rox.g.HButtonBox()
+        vbox.pack_start(bbox, False, False, 4)
+        bbox.set_layout(rox.g.BUTTONBOX_END)
+
+        self.add_button=rox.g.Button(stock=rox.g.STOCK_ADD)
+        if not self.supported:
+            self.add_button.set_sensitive(False)
+        bbox.pack_start(self.add_button)
+
+        self.remove_button=rox.g.Button(stock=rox.g.STOCK_REMOVE)
+        self.remove_button.set_sensitive(False)
+        bbox.pack_start(self.remove_button)
+
         vbox.show_all()
+
+        view.connect('row-activated', self.activate_row)
+        sel=view.get_selection()
+        sel.connect('changed', self.sel_changed)
+        self.add_button.connect('clicked', self.add_attr)
+        self.remove_button.connect('clicked', self.remove_attr)
 
     def load_table(self):
 
@@ -53,6 +98,7 @@ class XAttrWin(rox.Dialog):
 
         try:
             names=xattr.listx(self.path)
+            #print names
 
             for at in names:
                 try:
@@ -62,10 +108,88 @@ class XAttrWin(rox.Dialog):
 
                 # convert to utf-8 ?
                 name=printable(at)
+                typ, prv, tname=get_type(val)
+                #prv=printable(val)
+                #print typ, prv, tname
 
-                self.store.append((name, val))
+                self.store.append((name, val, prv, typ, tname))
         except:
             rox.report_exception()
+
+    def activate_row(self, view, path, col):
+        #print self, view, path, col
+        iter=self.store.get_iter(path)
+        name, typ, val=self.store.get(iter, COL_NAME, COL_TYPE, COL_DATA)
+        self.edit_type(name, typ, val)
+
+    def edit_type(self, name, typ, val):
+        #print rox._toplevel_windows
+        if typ==TYPE_STRING:
+            win=StringViewer(self.path, name, val)
+        elif typ==TYPE_TEXT:
+            win=TextViewer(self.path, name, val)
+        elif typ==TYPE_DATA:
+            win=DataViewer(self.path, name, val)
+        else:
+            win=None
+
+        if win:
+            #print rox._toplevel_windows
+            if win.run()==rox.g.RESPONSE_OK:
+                #print 'update to', printable(win.get_value())
+                try:
+                    xattr.set(self.path, name, win.get_value())
+                    self.update_attr(name, win.get_value())
+                except:
+                    rox.report_exception()
+
+            #print rox._toplevel_windows
+            win.destroy()
+            #del win
+            #print rox._toplevel_windows
+
+    def update_attr(self, name, val):
+        typ, prv, tname=get_type(val)
+        itr=self.store.get_iter_first()
+        while itr:
+            rname=self.store.get(itr, COL_NAME)[0]
+            if name==rname:
+                self.store.set(itr, COL_DATA, val, COL_PRINTABLE, prv)
+                return
+            itr=self.store.iter_next(itr)
+
+        self.store.append((name, val, prv, typ, tname))
+
+    def sel_changed(self, select):
+        model, titer=select.get_selected()
+        if self.supported:
+            self.remove_button.set_sensitive(titer is not None)
+
+    def add_attr(self, button):
+        w=AddAttr(self.path)
+        try:
+            name, typ=w.get_name_and_type()
+        finally:
+            w.destroy()
+
+        if not name:
+            return
+
+        try:
+            value=xattr.get(self.path, name)
+        except:
+            value=''
+        
+        self.edit_type(name, typ, value)
+            
+
+    def remove_attr(self, button):
+        print 'remove_attr'
+        select=self.view.get_selection()
+        model, titer=select.get_selected()
+        print model, titer
+        name=self.store.get(titer, COL_NAME)[0]
+        print name
 
 bad=unichr(0xfffd)
 ctrl=range(32)
@@ -97,10 +221,176 @@ def printable(s, mch=None):
 
     return t
 
+def get_type(buf):
+    try:
+        s=unicode(buf, 'utf-8')
+    except:
+        #print sys.exc_info()[:2]
+        return TYPE_DATA, '', 'DATA'
+    if s.find('\0')>=0:
+        return TYPE_DATA, '', 'DATA'
+    if s.find('\n')<0:
+        return TYPE_STRING, s, 'STRING'
+    return TYPE_TEXT, printable(s), 'TEXT'
+
+class AddAttr(rox.Dialog):
+    def __init__(self, path):
+        self.path=path
+        rox.Dialog.__init__(self, title='Add attribute for %s' % path,
+                            buttons=(rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE,
+                                     rox.g.STOCK_OK, rox.g.RESPONSE_OK))
+
+        self.aname=rox.g.Entry()
+        self.vbox.pack_start(self.aname, True, True, 2)
+
+        self.string_type=rox.g.RadioButton(None, 'String')
+        self.string_type.xattr_type_code=TYPE_STRING
+        self.vbox.pack_start(self.string_type, True, True, 2)
+        self.text_type=rox.g.RadioButton(self.string_type, 'Text')
+        self.text_type.xattr_type_code=TYPE_TEXT
+        self.vbox.pack_start(self.text_type, True, True, 2)
+        #if xattr.binary_value_supported():
+        #    self.data_type=rox.g.RadioButton(self.string_type, 'Data')
+        #    self.data_type.xattr_type_code=TYPE_DATA
+        #    self.vbox.pack_start(self.data_type, True, True, 2)
+
+    def get_name_and_type(self):
+        self.vbox.show_all()
+        res=self.run()
+        self.hide()
+
+        if res==rox.g.RESPONSE_OK:
+            name=self.aname.get_text()
+            if not name or not xattr.name_valid(name):
+                rox.alert('"%s" is not a valid attribute name' % name)
+                return None, None
+
+            for button in self.string_type.get_group():
+                if button.get_active():
+                    return name, button.xattr_type_code
+
+        return None, None
+    
+class Viewer(rox.Dialog):
+    def __init__(self, path, aname, avalue):
+        self.path=path
+        self.attr_name=aname
+        self.attr_value=avalue
+
+        rox.Dialog.__init__(self, title='%s: %s' % (path, printable(aname)),
+                            buttons=(rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE,
+                                     rox.g.STOCK_OK, rox.g.RESPONSE_OK))
+
+        tab=rox.g.Table(2, 2)
+        self.vbox.pack_start(tab, True, True, 4)
+
+        lbl=rox.g.Label('File')
+        lbl.set_alignment(0.0, 0.5)
+        tab.attach(lbl, 0, 1, 0, 1)
+        
+        lbl=rox.g.Label(os.path.basename(path))
+        lbl.set_alignment(0.0, 0.5)
+        tab.attach(lbl, 1, 2, 0, 1)
+
+        lbl=rox.g.Label('Attribute')
+        lbl.set_alignment(0.0, 0.5)
+        tab.attach(lbl, 0, 1, 1, 2)
+        
+        lbl=rox.g.Label(printable(aname))
+        lbl.set_alignment(0.0, 0.5)
+        tab.attach(lbl, 1, 2, 1, 2)
+
+
+    def get_value(self):
+        return self.attr_value
+
+class StringViewer(Viewer):
+    def __init__(self, path, aname, avalue):
+        Viewer.__init__(self, path, aname, avalue)
+
+        self.entry=rox.g.Entry()
+        self.entry.set_text(unicode(self.attr_value, 'utf-8'))
+        self.entry.select_region(0, -1)
+        self.vbox.pack_start(self.entry, True, True, 4)
+        
+        self.connect('response', self.handle_response)
+
+        self.vbox.show_all()
+
+    def handle_response(self, dialog, response):
+        #print dialog, response
+        self.attr_value=self.entry.get_text()
+        self.hide()
+        #rox.toplevel_unref()
+        
+
+class TextViewer(Viewer):
+    def __init__(self, path, aname, avalue):
+        Viewer.__init__(self, path, aname, avalue)
+
+        swin=rox.g.ScrolledWindow()
+        swin.set_policy(rox.g.POLICY_AUTOMATIC, rox.g.POLICY_ALWAYS)
+        self.vbox.pack_start(swin, True, True, 4)
+        
+        self.text=rox.g.TextView()
+        buffer=self.text.get_buffer()
+        buffer.set_text(unicode(self.attr_value, 'utf-8'))
+        swin.add(self.text)
+        
+        self.connect('response', self.handle_response)
+
+        self.vbox.show_all()
+
+    def handle_response(self, dialog, response):
+        #print dialog, response
+        buf=self.text.get_buffer()
+        self.attr_value=buf.get_text(buf.get_start_iter(), buf.get_end_iter())
+        self.hide()
+        #rox.toplevel_unref()
+        
+
+class DataViewer(Viewer):
+    def __init__(self, path, aname, avalue):
+        Viewer.__init__(self, path, aname, avalue)
+
+        swin=rox.g.ScrolledWindow()
+        swin.set_policy(rox.g.POLICY_AUTOMATIC, rox.g.POLICY_ALWAYS)
+        self.vbox.pack_start(swin, True, True, 4)
+        
+        self.table=rox.g.Table(1, 17)
+        swin.add(self.table)
+
+        row=0
+        col=0
+        for c in avalue:
+            if col==16:
+                col=0
+                row+=1
+            if col==0:
+                t=row*16
+                l=rox.g.Label('0x%04x' % t)
+                l.set_alignment(0.0, 0.5)
+                self.table.attach(l, 0, 1, row, row+1)
+            l=rox.g.Label('%02x' % ord(c))
+            l.set_alignment(0.5, 0.5)
+            self.table.attach(l, col+1, col+2, row, row+1)
+            col+=1
+        
+        self.connect('response', self.handle_response)
+
+        self.vbox.show_all()
+
+    def handle_response(self, dialog, response):
+        #print dialog, response
+        self.hide()
+        #rox.toplevel_unref()
+        
+
 if __name__=='__main__':
     if len(sys.argv)>1:
-        w=XAttrWin(sys.argv[1])
-        w.run()
+        for fname in sys.argv[1:]:
+            XAttrWin(fname).show()
+        rox.mainloop()
 
     else:
         rox.croak('Need a file name argument')
