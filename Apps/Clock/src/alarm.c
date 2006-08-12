@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.20 2005/10/16 11:56:51 stephen Exp $
+ * $Id: alarm.c,v 1.21 2006/03/24 18:25:59 stephen Exp $
  */
 #include "config.h"
 
@@ -68,7 +68,6 @@ static time_t alarms_saved=(time_t) 0;
 
 static int nalarm_show=0;
 static GtkWidget *alarm_notify=NULL;
-static int notify_id=0;
 
 /* For the alarm list */
 enum alarm_list_cols {
@@ -603,12 +602,14 @@ static void show_message(const Alarm *alarm)
       label=gtk_image_new_from_pixbuf(tmp);
       gtk_container_add(GTK_CONTAINER(alarm_notify), label);
       g_object_unref(tmp);
+
+      g_signal_connect(alarm_notify, "destroy", G_CALLBACK(systray_gone),
+		       NULL);
     }
   }
   if(alarm_notify) {
     gtk_widget_show_all(alarm_notify);
     
-    notify_id=rox_systray_send_message(alarm_notify, alarm->message, 5000);
   }
 }
 
@@ -1002,6 +1003,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.21  2006/03/24 18:25:59  stephen
+ * Added es translation (Juan Carlos Jimenez Garcia).
+ *
  * Revision 1.20  2005/10/16 11:56:51  stephen
  * Update for ROX-CLib changes, many externally visible symbols
  * (functions and types) now have rox_ or ROX prefixes.
