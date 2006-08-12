@@ -1,7 +1,7 @@
 /*
  * systray.c - Interface to the system tray.
  *
- * $Id$
+ * $Id: systray.c,v 1.1 2005/06/07 10:22:54 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -109,6 +109,10 @@ GtkWidget *rox_systray_new_on_screen(GdkScreen *screen)
 /**
  * Send a balloon message to the system tray icon.
  *
+ * This shows the message immediately.  If instead you wish to show a tooltip
+ * when the mouse hovers over the icon then you should instead pack your
+ * icon in a GtkEventBox and set the tooltip on that instead.
+ *
  * @param[in] systray system tray container as returned by rox_systray_new()
  * or rox_systray_new_on_screen().
  * @param[in] message message to display
@@ -211,6 +215,9 @@ void rox_systray_cancel_message(GtkWidget *systray, int id)
 }
 
 /*
- * $Log$
+ * $Log: systray.c,v $
+ * Revision 1.1  2005/06/07 10:22:54  stephen
+ * Added system tray interface
+ *
  */
 
