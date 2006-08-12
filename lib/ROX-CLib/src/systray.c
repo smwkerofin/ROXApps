@@ -1,7 +1,7 @@
 /*
  * systray.c - Interface to the system tray.
  *
- * $Id: systray.c,v 1.1 2005/06/07 10:22:54 stephen Exp $
+ * $Id: systray.c,v 1.2 2006/08/12 10:45:38 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include <unistd.h>
 
@@ -72,7 +73,6 @@ GtkWidget *rox_systray_new_on_screen(GdkScreen *screen)
   gchar *selstr;
   GtkWidget *plug;
   GdkEventClient ev;
-  GdkWindow *owner;
   Window xowner;
   GdkDisplay *display;
 
@@ -216,6 +216,9 @@ void rox_systray_cancel_message(GtkWidget *systray, int id)
 
 /*
  * $Log: systray.c,v $
+ * Revision 1.2  2006/08/12 10:45:38  stephen
+ * Add note to documentation of rox_systray_send_message().
+ *
  * Revision 1.1  2005/06/07 10:22:54  stephen
  * Added system tray interface
  *

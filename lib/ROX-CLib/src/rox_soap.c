@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap.c,v 1.15 2005/09/10 16:17:33 stephen Exp $
+ * $Id: rox_soap.c,v 1.16 2005/12/07 11:45:57 stephen Exp $
  *
  * rox_soap.c - interface to ROX-Filer using the SOAP protocol
  * (Yes, that's protocol twice on the line above.  Your problem?)
@@ -15,7 +15,7 @@
  * no matter how many times they are started, much as ROX-Filer does itself.
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id: rox_soap.c,v 1.15 2005/09/10 16:17:33 stephen Exp $
+ * @version $Id: rox_soap.c,v 1.16 2005/12/07 11:45:57 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -24,6 +24,7 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+#include <signal.h>
 
 #include <unistd.h>
 #include <netdb.h>
@@ -387,7 +388,7 @@ xmlDocPtr rox_soap_build_xml(const char *action, const char *ns_url,
   doc=xmlNewDoc("1.0");
   if(!doc) {
     queue_error(3, _("XML document creation failed"));
-    return;
+    return NULL;
   }
   
   doc->children=xmlNewDocNode(doc, env_ns, "Envelope", NULL);
@@ -597,7 +598,6 @@ gboolean rox_soap_send(ROXSOAP *prog, xmlDocPtr doc, gboolean run_prog,
 		       rox_soap_callback callback, gpointer udata)
 {
   GtkWidget	*ipc_window;
-  Window		xwindow;
   xmlChar *mem;
   int	size;
   GdkEventClient event;
@@ -871,6 +871,9 @@ static void queue_error(int code, const char *mess)
 
 /*
  * $Log: rox_soap.c,v $
+ * Revision 1.16  2005/12/07 11:45:57  stephen
+ * Adding an error handling framework
+ *
  * Revision 1.15  2005/09/10 16:17:33  stephen
  * Added author and version info to the doxygen output
  *

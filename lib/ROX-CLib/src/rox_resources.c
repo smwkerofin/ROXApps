@@ -1,12 +1,12 @@
 /*
- * $Id: rox_resources.c,v 1.5 2005/09/10 16:16:59 stephen Exp $
+ * $Id: rox_resources.c,v 1.6 2005/12/07 11:45:23 stephen Exp $
  */
 /**
  * @file rox_resources.c
  * @brief Find internationalized resource files.
  *
  * @author Stephen Watson
- * @version $Id: rox_resources.c,v 1.5 2005/09/10 16:16:59 stephen Exp $
+ * @version $Id: rox_resources.c,v 1.6 2005/12/07 11:45:23 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -18,8 +18,10 @@
 #include <unistd.h>
 
 #include <glib.h>
+#include <gtk/gtk.h>
 
 #define DEBUG 1
+#include "rox.h"
 #include "rox_debug.h"
 #include "choices.h"
 #include "rox_resources.h"
@@ -145,7 +147,6 @@ gchar *rox_resources_find(const gchar *app_name,
 				 const gchar *leaf,
 				 const gchar *lang)
 {
-  int i;
   GPtrArray *dirs;
   gchar *app_dir;
   gchar *answer=NULL;
@@ -194,7 +195,6 @@ gchar *rox_resources_find_with_domain(const gchar *app_name,
 				      const gchar *lang,
 				      const gchar *domain)
 {
-  int i;
   GPtrArray *dirs;
   gchar *app_dir;
   gchar *answer=NULL;
@@ -218,6 +218,9 @@ gchar *rox_resources_find_with_domain(const gchar *app_name,
 
 /*
  * $Log: rox_resources.c,v $
+ * Revision 1.6  2005/12/07 11:45:23  stephen
+ * Added a deprecation warning
+ *
  * Revision 1.5  2005/09/10 16:16:59  stephen
  * Added author and version info to the doxygen output
  *

@@ -8,6 +8,7 @@
 ~~~~~~~~~~~
 Fix use of deprecated function in options.c.
 Add note to documentation of rox_systray_send_message().
+General clean up to remove most compilation warnings.
 
 11-Jun-2006
 ~~~~~~~~~~~
@@ -310,4 +311,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.39 2006/08/12 10:04:25 stephen Exp $
+$Id: Changes,v 1.40 2006/08/12 10:46:01 stephen Exp $

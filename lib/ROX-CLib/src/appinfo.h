@@ -1,7 +1,7 @@
 /*
  * A GObject to hold a parsed AppInfo.xml file
  *
- * $Id: appinfo.h,v 1.1 2004/05/22 17:03:57 stephen Exp $
+ * $Id: appinfo.h,v 1.2 2005/08/21 13:06:16 stephen Exp $
  */
 
 #ifndef __ROX_APPINFO_H__
@@ -79,7 +79,7 @@ extern const gchar *rox_appinfo_get_summary(ROXAppInfo *ai);
 extern gchar *rox_appinfo_get_about(ROXAppInfo *ai, const gchar *lbl);
 extern gchar *rox_appinfo_get_about_label(ROXAppInfo *ai, const gchar *lbl);
 
-extern const xmlNodePtr rox_appinfo_get_element(ROXAppInfo *ai,
+extern const xmlNode *rox_appinfo_get_element(ROXAppInfo *ai,
 						const gchar *element);
 
 extern GList *rox_appinfo_get_mime_type_list(ROXAppInfo *ai,

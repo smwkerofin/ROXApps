@@ -1,7 +1,7 @@
 /*
  * Install handlers for MIME types
  *
- * $Id: mime_handler.c,v 1.3 2005/09/10 16:14:37 stephen Exp $
+ * $Id: mime_handler.c,v 1.4 2005/10/12 11:00:22 stephen Exp $
  */
 
 /**
@@ -13,7 +13,7 @@
  * asked to confirm any changes to their set up.
  *
  * @author Stephen Watson
- * @version $Id: mime_handler.c,v 1.3 2005/09/10 16:14:37 stephen Exp $
+ * @version $Id: mime_handler.c,v 1.4 2005/10/12 11:00:22 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -189,8 +189,8 @@ static GtkWidget *make_install_list(const gchar *app_dir,
   gtk_widget_show_all(vbox);
 
   g_object_set_data(G_OBJECT(win), "check", GINT_TO_POINTER(check));
-  g_object_set_data(G_OBJECT(win), "dir", dir);
-  g_object_set_data(G_OBJECT(win), "app_dir", app_dir);
+  g_object_set_data(G_OBJECT(win), "dir", (gpointer) dir);
+  g_object_set_data(G_OBJECT(win), "app_dir", (gpointer) app_dir);
   g_object_set_data(G_OBJECT(win), "types", types);
   g_object_set_data(G_OBJECT(win), "view", view);
   g_object_set_data(G_OBJECT(win), "model", model);
@@ -211,7 +211,8 @@ static void load_types(GtkWidget *win, GList *types)
   gboolean check;
   GList *rover;
   ROXMIMEType *type;
-  gchar *dir, *app_dir;
+  const gchar *dir;
+  const gchar *app_dir;
   GtkTreeIter iter;
   gchar *tname;
 
@@ -581,6 +582,10 @@ void rox_mime_install_from_appinfo(void)
 
 /*
  * $Log: mime_handler.c,v $
+ * Revision 1.4  2005/10/12 11:00:22  stephen
+ * Externally visible symbols have rox_ or ROX prefixes.
+ * All still exist under the old names but in general will produce a warning message.
+ *
  * Revision 1.3  2005/09/10 16:14:37  stephen
  * Added doxygen comments
  *

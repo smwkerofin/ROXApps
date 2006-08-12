@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Id: infowin.c,v 1.13 2005/08/14 16:07:00 stephen Exp $
+ * $Id: infowin.c,v 1.14 2005/10/12 10:59:27 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -482,7 +482,8 @@ GtkWidget *rox_info_win_new_from_appinfo(const char *program)
 	  continue;
 
 	lang=xmlNodeGetLang(node);
-	rox_debug_printf(2, "About node with lang %s", lang? lang: "NULL");
+	rox_debug_printf(2, "About node with lang %s",
+			 lang? ((char *)lang): "NULL");
 
 	if(lang) {
 	  use_this=FALSE;
@@ -575,6 +576,7 @@ GtkWidget *rox_info_win_get_extension_area(ROXInfoWin *iw)
  */
 GType info_win_get_type(void)
 {
+  ROX_CLIB_DEPRECATED("rox_info_win_get_type");
   return rox_info_win_get_type();
 }
 
@@ -629,6 +631,10 @@ void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.14  2005/10/12 10:59:27  stephen
+ * Externally visible symbols have rox_ or ROX prefixes.
+ * All still exist under the old names but in general will produce a warning message.
+ *
  * Revision 1.13  2005/08/14 16:07:00  stephen
  * Added rox_resources_find_with_domain().
  * More doxygen additions.

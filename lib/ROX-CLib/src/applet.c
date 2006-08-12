@@ -1,5 +1,5 @@
 /*
- * $Id: applet.c,v 1.6 2005/10/02 11:35:47 stephen Exp $
+ * $Id: applet.c,v 1.7 2005/10/12 11:00:22 stephen Exp $
  *
  * applet.c - Utilities for rox applets
  */
@@ -7,7 +7,7 @@
  * @file applet.c
  * @brief Implementing ROX applets
  *
- * @version $Id$
+ * @version $Id: applet.c,v 1.7 2005/10/12 11:00:22 stephen Exp $
  * @author Stephen Watson stephen@kerofin.demon.co.uk
  */
 
@@ -21,6 +21,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 
+#include "rox.h"
 #include "error.h"
 
 #define DEBUG 1
@@ -76,7 +77,6 @@ static void decode_location2(const char *prop, ROXAppletInfo *inf)
  */
 ROXAppletInfo *rox_applet_get_position(GtkWidget *plug)
 {
-  guint32 xid;
   GdkWindow *gwin;
   Window xwin, parent, root, *children;
   int nchild;
@@ -105,7 +105,7 @@ ROXAppletInfo *rox_applet_get_position(GtkWidget *plug)
     gint res;
     Atom xtype;
     GdkAtom type;
-    gint format, length;
+    gint format;
     gulong nitems, remain;
     guchar *data;
 
@@ -238,6 +238,10 @@ void applet_popup_menu(GtkWidget *plug, GtkWidget *menu, GdkEventButton *evbut)
 
 /*
  * $Log: applet.c,v $
+ * Revision 1.7  2005/10/12 11:00:22  stephen
+ * Externally visible symbols have rox_ or ROX prefixes.
+ * All still exist under the old names but in general will produce a warning message.
+ *
  * Revision 1.6  2005/10/02 11:35:47  stephen
  * Properly declare an internal function that SystemTray was using and shouldn't
  * have been.

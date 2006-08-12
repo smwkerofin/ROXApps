@@ -1,5 +1,5 @@
 /*
- * $Id: rox_filer_action.c,v 1.12 2005/09/10 16:16:14 stephen Exp $
+ * $Id: rox_filer_action.c,v 1.13 2005/12/07 11:45:02 stephen Exp $
  *
  * rox_filer_action.c - drive the filer via SOAP
  */
@@ -11,7 +11,7 @@
  * ROX-Filer/Help/Manual.html
  *
  * @author Stephen Watson
- * @version $Id: rox_filer_action.c,v 1.12 2005/09/10 16:16:14 stephen Exp $
+ * @version $Id: rox_filer_action.c,v 1.13 2005/12/07 11:45:02 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -21,8 +21,10 @@
 #include <string.h>
 
 #include <glib.h>
+#include <gtk/gtk.h>
 #include <libxml/parser.h>
 
+#include "rox.h"
 #include "rox_soap.h"
 #include "error.h"
 
@@ -80,7 +82,7 @@ static void expect_no_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
     queue_error(7, rox_soap_get_last_error());
   }
 
-  gtk_main_quit();
+  rox_main_quit();
 }
 
 static void send_soap(xmlDocPtr rpc, rox_soap_callback callback,
@@ -96,12 +98,12 @@ static void send_soap(xmlDocPtr rpc, rox_soap_callback callback,
   rox_debug_printf(3, "status=%d", data.status);
 
   rox_debug_printf(2, "Entering gtk_main() for rox_soap_send");
-  gtk_main();
+  rox_main_loop();
   dprintf(3, "status=%d", data.status);
   if(!data.status) {
     rox_soap_send_via_pipe(filer, rpc, callback, &data);
     rox_debug_printf(2, "Entering gtk_main() for rox_soap_send_via_pipe");
-    gtk_main();
+    rox_main_loop();
     rox_debug_printf(3, "status=%d", data.status);
   }
 }
@@ -526,8 +528,8 @@ static void string_reply(ROXSOAP *filer, gboolean status, xmlDocPtr reply,
     g_free(mess);
   }
 
-  dprintf(2, "calling gtk_main_quit() from string_reply");
-  gtk_main_quit();
+  dprintf(2, "calling rox_main_quit() from string_reply");
+  rox_main_quit();
   dprintf(2, "returning from string_reply");
 }
 
@@ -626,6 +628,9 @@ void rox_filer_clear_error(void)
 
 /*
  * $Log: rox_filer_action.c,v $
+ * Revision 1.13  2005/12/07 11:45:02  stephen
+ * Adding an error handling framework
+ *
  * Revision 1.12  2005/09/10 16:16:14  stephen
  * Added doxygen comments
  *

@@ -1,7 +1,7 @@
 /*
  * rox_dnd.c - utilities for using drag & drop with ROX apps.
  *
- * $Id: rox_dnd.c,v 1.11 2005/12/07 11:44:41 stephen Exp $
+ * $Id: rox_dnd.c,v 1.12 2005/12/12 18:57:43 stephen Exp $
  */
 
 /**
@@ -12,7 +12,7 @@
  * handled by #_GtkSavebox.
  *
  * @author Stephen Watson
- * @version $Id: rox_dnd.c,v 1.11 2005/12/07 11:44:41 stephen Exp $
+ * @version $Id: rox_dnd.c,v 1.12 2005/12/12 18:57:43 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -250,7 +250,6 @@ static gboolean drag_drop(GtkWidget 	  *widget,
 			  gpointer	  data)
 {
   char *leafname=NULL;
-  char *path=NULL;
   GdkAtom target = GDK_NONE;
   ROXData *rdata=(ROXData *) data;
 
@@ -307,9 +306,6 @@ static void got_uri_list(GtkWidget 		*widget,
   GSList		*uri_list;
   char		*error = NULL;
   GSList		*next_uri;
-  gboolean	send_reply = TRUE;
-  char		*path=NULL, *server=NULL;
-  const char		*uri;
 
   uri_list = uri_list_to_gslist(selection_data->data);
 
@@ -462,6 +458,9 @@ static void drag_data_received(GtkWidget      	*widget,
 
 /*
  * $Log: rox_dnd.c,v $
+ * Revision 1.12  2005/12/12 18:57:43  stephen
+ * Implemented translating library's strings
+ *
  * Revision 1.11  2005/12/07 11:44:41  stephen
  * Internationalization work
  *

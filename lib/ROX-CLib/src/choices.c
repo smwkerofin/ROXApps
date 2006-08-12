@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.9 2005/10/12 10:56:12 stephen Exp $
+ * $Id: choices.c,v 1.10 2005/10/22 10:42:28 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -36,13 +36,13 @@
  * - choices_find_path_load()
  * - choices_find_path_save()
  *
- * @version $Id: choices.c,v 1.9 2005/10/12 10:56:12 stephen Exp $
+ * @version $Id: choices.c,v 1.10 2005/10/22 10:42:28 stephen Exp $
  * @author Thomas Leonard, Stephen Watson.
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
  * Copyright (C) 2000, Thomas Leonard, <tal197@users.sourceforge.net>.
  *
- * @version $Id: choices.c,v 1.9 2005/10/12 10:56:12 stephen Exp $
+ * @version $Id: choices.c,v 1.10 2005/10/22 10:42:28 stephen Exp $
  * @author Thomas Leonard, Stephen Watson.
  */
 
@@ -57,6 +57,8 @@
 
 #include <glib.h>
 
+#define DEBUG 1
+#include "rox_debug.h"
 #include "choices.h"
 #include "basedir.h"
 
@@ -83,12 +85,9 @@ static void init_choices(void);
  */
 void choices_init(void)
 {
-	char	*evar;
-
 	g_return_if_fail(dir_list == NULL);
 
 	init_choices();
-
 }
 
 /** Returns an array of the directories in CHOICESPATH which contain
@@ -423,6 +422,11 @@ static void init_choices(void)
 
 /*
  * $Log: choices.c,v $
+ * Revision 1.10  2005/10/22 10:42:28  stephen
+ * Renamed basedir functions to rox_basedir.
+ * Disabled deprecation warning.
+ * This is version 2.1.6
+ *
  * Revision 1.9  2005/10/12 10:56:12  stephen
  * Mark the old choices_*() functions as deprecated.
  *

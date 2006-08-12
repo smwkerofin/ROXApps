@@ -1,7 +1,7 @@
 /*
  * menu.c - The ROX menu system.
  *
- * $Id: menu.c,v 1.1 2006/06/04 11:42:50 stephen Exp $
+ * $Id: menu.c,v 1.2 2006/08/12 10:04:25 stephen Exp $
  */
 
 /** @file menu.c
@@ -16,6 +16,7 @@
 
 #include "rox.h"
 #include "menu.h"
+#include "applet.h"
 
 typedef struct _link {
   GtkWidget *menu;
@@ -225,13 +226,15 @@ static gboolean popup_menu(GtkWidget *window, gpointer udata)
   g_return_val_if_fail(GTK_IS_MENU(link->menu), FALSE);
   
   if(link->filter && !link->filter(link->menu, window, link->udata))
-    return;
+    return FALSE;
      
   if(link->is_applet) 
     rox_applet_popup_menu(window, link->menu, NULL);
   else
     gtk_menu_popup(GTK_MENU(link->menu), NULL, NULL, NULL, NULL,
 		   0, gtk_get_current_event_time());
+
+  return TRUE;
 }
 
 static void save_menus(void)
@@ -253,6 +256,9 @@ static gchar *translate_menu(const gchar *path, gpointer udata)
 
 /*
  * $Log: menu.c,v $
+ * Revision 1.2  2006/08/12 10:04:25  stephen
+ * Added function to retrieve menu item from built menu, to allow for updating menus.
+ *
  * Revision 1.1  2006/06/04 11:42:50  stephen
  * Add menu API.
  *

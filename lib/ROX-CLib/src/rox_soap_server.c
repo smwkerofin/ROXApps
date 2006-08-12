@@ -1,5 +1,5 @@
 /*
- * $Id: rox_soap_server.c,v 1.9 2005/09/10 16:17:45 stephen Exp $
+ * $Id: rox_soap_server.c,v 1.10 2005/12/07 11:45:40 stephen Exp $
  *
  * rox_soap_server.c - Provide ROX-Filer like SOAP server
  *
@@ -15,13 +15,14 @@
  * no matter how many times they are started, much as ROX-Filer does itself.
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id: rox_soap_server.c,v 1.9 2005/09/10 16:17:45 stephen Exp $
+ * @version $Id: rox_soap_server.c,v 1.10 2005/12/07 11:45:40 stephen Exp $
  */
 
 #include "rox-clib.h"
 
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 
 #include <unistd.h>
 #include <netdb.h>
@@ -300,7 +301,7 @@ static xmlDocPtr run_soap(ROXSOAPServer *server, xmlDocPtr soap)
   g_return_val_if_fail(soap != NULL, NULL);
 
   node = xmlDocGetRootElement(soap);
-  dprintf(3, "node->ns=%s", node->ns? node->ns: "NULL");
+  dprintf(3, "node->ns=%s", node->ns? ((char *) node->ns): "NULL");
   if (!node->ns)
     goto bad_soap;
 
@@ -463,6 +464,9 @@ static gboolean client_event(GtkWidget *window,
 
 /*
  * $Log: rox_soap_server.c,v $
+ * Revision 1.10  2005/12/07 11:45:40  stephen
+ * Internationalization work
+ *
  * Revision 1.9  2005/09/10 16:17:45  stephen
  * Added doxygen comments
  *

@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.17 2006/03/11 12:10:28 stephen Exp $
+ * $Id: rox.c,v 1.18 2006/06/04 11:42:50 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -107,16 +107,20 @@ $ MAKE=gmake ROX-CLib/AppRun --compile
 #include "rox-clib.h"
 
 #include <stdlib.h>
-#include <glib.h>
-#include <gtk/gtk.h>
+#include <string.h>
 
 #include <unistd.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <glib.h>
+#include <gtk/gtk.h>
+
 #include "rox.h"
 #include "options.h"
+#include "rox_dnd.h"
+#include "mime.h"
 
 static gchar *program_name=NULL;
 static gchar *domain_name=NULL;
@@ -455,7 +459,7 @@ char *rox_find_appdir(const char *name, gchar **dirs,
   gchar **tdirs=NULL;
   const gchar *spath;
   int i;
-  char *path;
+  char *path=NULL;
 
   if(dirs) {
     for(i=0; dirs[i]; i++) {
@@ -538,6 +542,9 @@ char *rox_clib_find(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.18  2006/06/04 11:42:50  stephen
+ * Add menu API.
+ *
  * Revision 1.17  2006/03/11 12:10:28  stephen
  * Added options --env and --pkg-config and made strings in pkg.c translatable.
  *

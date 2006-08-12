@@ -1,11 +1,13 @@
 /*
- * $Id: pkg.c,v 1.6 2004/08/04 18:20:37 stephen Exp $
+ * $Id: pkg.c,v 1.7 2006/03/11 12:10:28 stephen Exp $
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+
+#include <unistd.h>
 
 #include <glib.h>
 
@@ -212,6 +214,9 @@ static int do_pkgconfig(const char *app_dir, const char *platform,
 
 /*
  * $Log: pkg.c,v $
+ * Revision 1.7  2006/03/11 12:10:28  stephen
+ * Added options --env and --pkg-config and made strings in pkg.c translatable.
+ *
  * Revision 1.6  2004/08/04 18:20:37  stephen
  * Use pkg-config
  *

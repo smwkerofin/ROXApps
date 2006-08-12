@@ -1,7 +1,7 @@
 /*
  * A GObject to hold a parsed AppInfo.xml file
  *
- * $Id: appinfo.c,v 1.2 2005/08/21 13:06:16 stephen Exp $
+ * $Id: appinfo.c,v 1.3 2005/10/12 11:00:22 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -30,7 +30,7 @@ static void rox_appinfo_finalize (GObject *object);
 
 static GObjectClass *parent_class=NULL;
 
-static void rox_appinfo_class_init(ROXAppInfoClass *aic)
+static void rox_appinfo_class_init(gpointer aic)
 {
   GObjectClass *object_class;
 
@@ -160,7 +160,8 @@ static void scan_appinfo(ROXAppInfo *ai)
       continue;
     
     lang=xmlNodeGetLang(node);
-    dprintf(3, "node->name=%s lang=%s", node->name, lang? lang: "NULL");
+    dprintf(3, "node->name=%s lang=%s", node->name,
+	    lang? ((char *) lang): "NULL");
     
     if(strcmp(node->name, "About")==0) {
       if(!lang)
@@ -275,8 +276,6 @@ static gchar *get_about_from_node(xmlNodePtr about, const gchar *lbl,
  */
 gchar *rox_appinfo_get_about(ROXAppInfo *ai, const gchar *lbl)
 {
-  xmlNodePtr node;
-  xmlChar *value;
   gchar *answer=NULL;
 
   g_return_val_if_fail(ROX_IS_APPINFO(ai), NULL);
@@ -303,8 +302,6 @@ gchar *rox_appinfo_get_about(ROXAppInfo *ai, const gchar *lbl)
  */
 gchar *rox_appinfo_get_about_label(ROXAppInfo *ai, const gchar *lbl)
 {
-  xmlNodePtr node;
-  xmlChar *value;
   gchar *answer=NULL;
 
   g_return_val_if_fail(ROX_IS_APPINFO(ai), NULL);
@@ -330,7 +327,7 @@ gchar *rox_appinfo_get_about_label(ROXAppInfo *ai, const gchar *lbl)
  * @param[in] element name of element to fetch
  * @return the elment
  */
-const xmlNodePtr rox_appinfo_get_element(ROXAppInfo *ai, const gchar *element)
+const xmlNode *rox_appinfo_get_element(ROXAppInfo *ai, const gchar *element)
 {
   xmlNodePtr node;
   
@@ -359,7 +356,7 @@ const xmlNodePtr rox_appinfo_get_element(ROXAppInfo *ai, const gchar *element)
 GList *rox_appinfo_get_mime_type_list(ROXAppInfo *ai, const gchar *element)
 {
   GList *list=NULL;
-  const xmlNodePtr node=rox_appinfo_get_element(ai, element);
+  const xmlNode *node=rox_appinfo_get_element(ai, element);
   xmlNodePtr sub;
   xmlChar *value;
   MIMEType *type;
@@ -419,6 +416,10 @@ GList *rox_appinfo_get_can_thumbnail_list(ROXAppInfo *ai)
 
 /*
  * $Log: appinfo.c,v $
+ * Revision 1.3  2005/10/12 11:00:22  stephen
+ * Externally visible symbols have rox_ or ROX prefixes.
+ * All still exist under the old names but in general will produce a warning message.
+ *
  * Revision 1.2  2005/08/21 13:06:16  stephen
  * Added doxygen comments.
  * Renamed struct to ROXAppInfo

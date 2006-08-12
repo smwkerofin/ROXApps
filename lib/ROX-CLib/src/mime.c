@@ -1,5 +1,5 @@
 /*
- * $Id: mime.c,v 1.6 2005/10/22 10:42:28 stephen Exp $
+ * $Id: mime.c,v 1.7 2005/12/07 11:44:09 stephen Exp $
  *
  * Shared MIME databse functions for ROX-CLib
  */
@@ -9,13 +9,15 @@
  * @brief Shared MIME database functions for ROX-CLib
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id: mime.c,v 1.6 2005/10/22 10:42:28 stephen Exp $
+ * @version $Id: mime.c,v 1.7 2005/12/07 11:44:09 stephen Exp $
  */
 
 #include "rox-clib.h"
 
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+
 #include <sys/param.h>
 #include <fnmatch.h>
 #include <sys/types.h>
@@ -134,8 +136,8 @@ void mime_init(void)
  * on the name.
  *
  * If the object does exist then the type of file is checked.  If it is a
- * non-file object (such as a directory)  then the appropriate inode/* type
- * is returned.  If it is a file and is executable and the
+ * non-file object (such as a directory)  then the appropriate inode/subtype
+ * type is returned.  If it is a file and is executable and the
  * mime_get_ignore_exec_bit() value is @c FALSE then application/executable
  * is returned.
  *
@@ -281,7 +283,7 @@ static void get_comment_file(const gchar *fname, ROXMIMEType *type,
       continue;
 
     lang=xmlNodeGetLang(node);
-    rox_debug_printf(3, "lang=%s", lang? lang: "NULL");
+    rox_debug_printf(3, "lang=%s", lang? ((char *) lang): "NULL");
 
     if(!lang && !req_lang) {
       best=xmlNodeListGetString(node->doc, node->xmlChildrenNode, 1);
@@ -298,7 +300,7 @@ static void get_comment_file(const gchar *fname, ROXMIMEType *type,
       xmlFree(lang);
       break;
     }
-    rox_debug_printf(3, "best=%s", best? best: "NULL");
+    rox_debug_printf(3, "best=%s", best? ((char *) best): "NULL");
     
     xmlFree(lang);
     
@@ -501,8 +503,8 @@ static GdkPixbuf *theme_try_load(const char *root, int dot, const char *theme,
   g_free(tname);
   icon=try_load(path, msize);
   g_free(path);
-  if(icon)
-    return icon;
+ 
+  return icon;
 }
 
 /**
@@ -741,7 +743,7 @@ static ROXMIMEType *type_by_path(const char *path)
   /* Extensions */
   ext=leafname;
 
-  while(dot=strchr(ext, '.')) {
+  while((dot=strchr(ext, '.'))) {
     ext=dot+1;
     
     type=g_hash_table_lookup(exten, ext);
@@ -772,6 +774,9 @@ static ROXMIMEType *type_by_path(const char *path)
 
 /*
  * $Log: mime.c,v $
+ * Revision 1.7  2005/12/07 11:44:09  stephen
+ * Can suppress export of MIMEType objects
+ *
  * Revision 1.6  2005/10/22 10:42:28  stephen
  * Renamed basedir functions to rox_basedir.
  * Disabled deprecation warning.
