@@ -1,7 +1,7 @@
 /*
  * menu.h - Interface to the ROX menu system.
  *
- * $Id$
+ * $Id: menu.h,v 1.1 2006/06/04 11:42:50 stephen Exp $
  */
 
 /** @file menu.h
@@ -43,9 +43,15 @@ extern void rox_menu_attach_to_applet(GtkWidget *menu,
 				      ROXMenuPreFilter filter,
 				      gpointer udata);
 
+extern GtkWidget *rox_menu_get_widget(GtkWidget *menu,
+				      const char *path);
+
 
 #endif
 
 /*
- * $Log$
+ * $Log: menu.h,v $
+ * Revision 1.1  2006/06/04 11:42:50  stephen
+ * Add menu API.
+ *
  */

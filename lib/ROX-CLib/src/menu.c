@@ -1,7 +1,7 @@
 /*
  * menu.c - The ROX menu system.
  *
- * $Id$
+ * $Id: menu.c,v 1.1 2006/06/04 11:42:50 stephen Exp $
  */
 
 /** @file menu.c
@@ -52,7 +52,8 @@ GtkWidget *rox_menu_build(GtkWidget *window, GtkItemFactoryEntry *menu_items,
 			  int n_menu, const gchar *menu_name,
 			  const gchar *accel_name)
 {
-  GtkItemFactory	*item_factory;
+  GtkWidget *menu;
+  GtkItemFactory *item_factory;
   GtkAccelGroup	*accel_group;
   gchar *menurc;
 
@@ -82,8 +83,36 @@ GtkWidget *rox_menu_build(GtkWidget *window, GtkItemFactoryEntry *menu_items,
     }
   }
 
-  return gtk_item_factory_get_widget(item_factory,
+  menu=gtk_item_factory_get_widget(item_factory,
 				     menu_name? menu_name: "<system>");
+  g_object_set_data(G_OBJECT(menu), "rox-clib-item-factory", item_factory);
+
+  return menu;
+}
+
+/**
+ * Look up a menu widget by its path in a menu created by
+ * rox_menu_build().
+ *
+ * @param[in] menu menu created by rox_menu_build().
+ * @param[in] path path of a menu widget, one of the @a menu_items passed
+ * to rox_menu_build().
+ * @return menu widget or @c NULL if not found.
+ */
+GtkWidget *rox_menu_get_widget(GtkWidget *menu, const char *path)
+{
+  gpointer data;
+  GtkItemFactory *item_factory;
+
+  g_return_val_if_fail(GTK_IS_MENU(menu), NULL);
+  g_return_val_if_fail(path!=NULL, NULL);
+
+  data=g_object_get_data(G_OBJECT(menu), "rox-clib-item-factory");
+  if(!data || !GTK_IS_ITEM_FACTORY(data))
+    return NULL;
+
+  item_factory=GTK_ITEM_FACTORY(data);
+  return gtk_item_factory_get_widget(item_factory, path);
 }
 
 /**
@@ -174,7 +203,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   g_return_val_if_fail(GTK_IS_MENU(link->menu), FALSE);
   
   if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
-    if(link->filter && !link->filter(window, link->menu, link->udata))
+    if(link->filter && !link->filter(link->menu, window, link->udata))
       return FALSE;
        
     if(link->is_applet) 
@@ -195,7 +224,7 @@ static gboolean popup_menu(GtkWidget *window, gpointer udata)
   g_return_val_if_fail(GTK_IS_WIDGET(window), FALSE);
   g_return_val_if_fail(GTK_IS_MENU(link->menu), FALSE);
   
-  if(link->filter && !link->filter(window, link->menu, link->udata))
+  if(link->filter && !link->filter(link->menu, window, link->udata))
     return;
      
   if(link->is_applet) 
@@ -223,5 +252,8 @@ static gchar *translate_menu(const gchar *path, gpointer udata)
 }
 
 /*
- * $Log$
+ * $Log: menu.c,v $
+ * Revision 1.1  2006/06/04 11:42:50  stephen
+ * Add menu API.
+ *
  */
