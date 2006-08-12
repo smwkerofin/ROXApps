@@ -1,5 +1,5 @@
 /*
- * $Id: options.c,v 1.9 2005/12/07 11:44:29 stephen Exp $
+ * $Id: options.c,v 1.10 2005/12/12 18:57:43 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -703,7 +703,7 @@ static void open_fontsel(GtkWidget *button, ROXOption *option)
 /* These are used during parsing... */
 static xmlDocPtr options_doc = NULL;
 
-#define DATA(node) (xmlNodeListGetString(options_doc, node->xmlChildrenNode, 1))
+#define DATA(node) ((gchar*)xmlNodeListGetString(options_doc, node->xmlChildrenNode, 1))
 
 static void may_add_tip(GtkWidget *widget, xmlNode *element)
 {
@@ -726,7 +726,7 @@ static int get_int(xmlNode *node, gchar *attr)
 	gchar *txt;
 	int	retval;
 
-	txt = xmlGetProp(node, attr);
+	txt = (gchar *) xmlGetProp(node, (xmlChar *) attr);
 	if (!txt)
 		return 0;
 
@@ -751,7 +751,7 @@ static void add_to_size_group(xmlNode *node, GtkWidget *widget)
 	g_return_if_fail(node != NULL);
 	g_return_if_fail(widget != NULL);
 
-	name = xmlGetProp(node, "sizegroup");
+	name = (gchar *) xmlGetProp(node, (xmlChar *) "sizegroup");
 	if (!name)
 		return;
 
@@ -781,7 +781,7 @@ static GtkWidget *build_radio(xmlNode *radio, GtkWidget *prev)
 	GtkRadioButton	*prev_button = (GtkRadioButton *) prev;
 	gchar		*label;
 
-	label = xmlGetProp(radio, "label");
+	label = (gchar *) xmlGetProp(radio, (xmlChar *) "label");
 
 	button = gtk_radio_button_new_with_label(
 			prev_button ? gtk_radio_button_get_group(prev_button)
@@ -792,7 +792,7 @@ static GtkWidget *build_radio(xmlNode *radio, GtkWidget *prev)
 	may_add_tip(button, radio);
 
 	g_object_set_data(G_OBJECT(button), "value",
-			  xmlGetProp(radio, "value"));
+			  (gchar *) xmlGetProp(radio, (xmlChar *) "value"));
 
 	return button;
 }
@@ -802,7 +802,7 @@ static void build_menu_item(xmlNode *node, GtkWidget *option_menu)
 	GtkWidget	*item, *menu;
 	gchar		*label;
 
-	g_return_if_fail(strcmp(node->name, "item") == 0);
+	g_return_if_fail(strcmp((const char *) node->name, "item") == 0);
 
 	label = xmlGetProp(node, "label");
 	item = gtk_menu_item_new_with_label(_(label));
@@ -937,7 +937,9 @@ static void build_options_window(void)
 	
 	notebook = build_window_frame(&tree);
 
-	path=rox_resources_find(PROJECT, "Options.xml", ROX_RESOURCES_NO_LANG);
+	path=rox_resources_find_with_domain(PROJECT, "Options.xml",
+					    ROX_RESOURCES_NO_LANG,
+					    rox_get_program_domain());
 	if(!path) {
 	  app_dir=g_getenv("APP_DIR");
 	  path = g_strconcat(app_dir, "/Options.xml", NULL);
@@ -1988,6 +1990,9 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: options.c,v $
+ * Revision 1.10  2005/12/12 18:57:43  stephen
+ * Implemented translating library's strings
+ *
  * Revision 1.9  2005/12/07 11:44:29  stephen
  * Internationalization work
  *
