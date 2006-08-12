@@ -4,6 +4,11 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+12-Aug-2006
+~~~~~~~~~~~
+Fix use of deprecated function in options.c.
+Add note to documentation of rox_systray_send_message().
+
 11-Jun-2006
 ~~~~~~~~~~~
 Added function to retrieve menu item from built menu, to allow for updating
@@ -305,4 +310,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.38 2006/06/04 11:42:50 stephen Exp $
+$Id: Changes,v 1.39 2006/08/12 10:04:25 stephen Exp $
