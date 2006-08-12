@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.39 2006/01/17 11:43:24 stephen Exp $
+ * $Id: clock.c,v 1.40 2006/03/18 14:50:05 stephen Exp $
  */
 #include "config.h"
 
@@ -94,7 +94,6 @@ static Mode default_mode={
   0, 1, 1, 0, 500, 32, "Serif 12"
 };
 
-static GtkWidget *menu=NULL;          /* Popup menu */
 static GdkColormap *cmap = NULL;
 static GdkColor colours[]={
   /* If you change these, change the enums below */
@@ -141,6 +140,7 @@ typedef struct clock_window {
   guint update_tag;            /* Handle for the timeout */
   GdkGC *gc;
   GdkPixbuf *clock_face;
+  GtkWidget *menu;        /* Popup menu */
 } ClockWindow;
 
 static GList *windows=NULL;
@@ -161,13 +161,12 @@ static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
 			    gpointer data);
                                     /* Window needs redrawing */
 static void check_clock_face(ClockWindow *cwin);
-static void menu_create_menu(GtkWidget *window);
-                                    /* create the pop-up menu */
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win); /* button press on canvas */
 static gboolean popup_menu(GtkWidget *window, gpointer udata);
 static void show_info_win(void);
 static void show_conf_win(void);
+static void close_window(void);
 static gboolean check_alarms(gpointer data);
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
@@ -186,6 +185,20 @@ static ROXSOAPServerActions actions[]={
   {"Options", NULL, NULL, rpc_Options, NULL},
 
   {NULL}
+};
+
+/* Pop-up menu */
+static GtkItemFactoryEntry menu_items[] = {
+  { N_("/Info"),		NULL, show_info_win, 0, "<StockItem>",
+                                GTK_STOCK_DIALOG_INFO},
+  { N_("/Configure..."),       	NULL, show_conf_win, 0, "<StockItem>",
+                                GTK_STOCK_PROPERTIES},
+  { N_("/Alarms..."),		NULL, alarm_show_window, 0, NULL },
+  { N_("/Close"), 	        NULL, close_window, 0, "<StockItem>",
+                                GTK_STOCK_CLOSE},
+  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
+  { N_("/Quit"), 	        NULL, rox_main_quit, 0, "<StockItem>",
+                                GTK_STOCK_QUIT},
 };
 
 static void usage(const char *argv0)
@@ -417,8 +430,6 @@ static ClockWindow *make_window(guint32 socket)
     /* We want to pop up a menu on a button press */
     gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), cwin);
-    gtk_signal_connect(GTK_OBJECT(plug), "popup-menu",
-		       GTK_SIGNAL_FUNC(popup_menu), cwin);
     gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
 
     
@@ -444,8 +455,6 @@ static ClockWindow *make_window(guint32 socket)
     /* We want to pop up a menu on a button press */
     gtk_signal_connect(GTK_OBJECT(cwin->win), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), cwin);
-    gtk_signal_connect(GTK_OBJECT(cwin->win), "popup-menu",
-		       GTK_SIGNAL_FUNC(popup_menu), cwin);
     gtk_widget_add_events(cwin->win, GDK_BUTTON_PRESS_MASK);
     gtk_widget_realize(cwin->win);
 
@@ -485,6 +494,14 @@ static ClockWindow *make_window(guint32 socket)
   gtk_box_pack_start(GTK_BOX(vbox), cwin->digital_out, FALSE, FALSE, 2);
   if(o_show_text.int_value)
     gtk_widget_show(cwin->digital_out);
+
+  cwin->menu=rox_menu_build(cwin->win,
+			    menu_items, sizeof(menu_items)/sizeof(*menu_items),
+			    "<system>", "menus");
+  if(cwin->applet_mode)
+    rox_menu_attach_to_applet(cwin->menu, cwin->win, NULL, cwin);
+  else
+    rox_menu_attach(cwin->menu, cwin->win, TRUE, NULL, cwin);
 
   if(cwin->win)
     gtk_widget_show(cwin->win);
@@ -1055,69 +1072,6 @@ static void close_window(void)
   current_window=NULL;
 }
 
-/* Pop-up menu */
-static GtkItemFactoryEntry menu_items[] = {
-  { N_("/Info"),		NULL, show_info_win, 0, "<StockItem>",
-                                GTK_STOCK_DIALOG_INFO},
-  { N_("/Configure..."),       	NULL, show_conf_win, 0, "<StockItem>",
-                                GTK_STOCK_PROPERTIES},
-  { N_("/Alarms..."),		NULL, alarm_show_window, 0, NULL },
-  { N_("/Close"), 	        NULL, close_window, 0, "<StockItem>",
-                                GTK_STOCK_CLOSE},
-  { N_("/sep"), 	        NULL, NULL, 0, "<Separator>" },
-  { N_("/Quit"), 	        NULL, rox_main_quit, 0, "<StockItem>",
-                                GTK_STOCK_QUIT},
-};
-
-static void save_menus(void)
-{
-  char	*menurc;
-	
-  menurc = rox_choices_save("menus", PROJECT, AUTHOR_DOMAIN);
-  if (menurc) {
-    gtk_accel_map_save(menurc);
-    g_free(menurc);
-  }
-}
-
-static gchar *translate_menu(const gchar *path, gpointer udata)
-{
-  return gettext(path);
-}
-
-/* Create the pop-up menu */
-static void menu_create_menu(GtkWidget *window)
-{
-  GtkItemFactory	*item_factory;
-  GtkAccelGroup	*accel_group;
-  gint 		n_items = sizeof(menu_items) / sizeof(*menu_items);
-  gchar *menurc;
-
-  accel_group = gtk_accel_group_new();
-  /*gtk_accel_group_lock(accel_group);*/
-
-  item_factory = gtk_item_factory_new(GTK_TYPE_MENU, "<system>", 
-				      accel_group);
-  gtk_item_factory_set_translate_func(item_factory, translate_menu,
-				      NULL, NULL);
-
-  gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
-
-  /* Attach the new accelerator group to the window. */
-  /*gtk_accel_group_attach(accel_group, GTK_OBJECT(window));*/
-  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
-
-  menu = gtk_item_factory_get_widget(item_factory, "<system>");
-
-  menurc=rox_choices_load("menus", PROJECT, AUTHOR_DOMAIN);
-  if(menurc) {
-    gtk_accel_map_load(menurc);
-    g_free(menurc);
-  }
-
-  atexit(save_menus);
-}
-
 /* Button press in canvas */
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win)
@@ -1126,59 +1080,17 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 
   current_window=cwin;
   
-  if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
-    if(bev->state & GDK_CONTROL_MASK) /* ctrl-menu */
-      return FALSE; /* Let it pass */
-    /* Pop up the menu */
-    if(!menu) 
-      menu_create_menu(GTK_WIDGET(cwin->win));
-
-    if(!save_alarms || !load_alarms) {
-      GList *children=GTK_MENU_SHELL(menu)->children;
-      GtkWidget *alarms=GTK_WIDGET(g_list_nth(children, 2));
-      
-      gtk_widget_set_sensitive(alarms, FALSE);
-    }
-
-    if(cwin->applet_mode)
-      rox_applet_popup_menu(cwin->win, menu, bev);
-    else
-      gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-		     bev->button, bev->time);
-    return TRUE;
-  } else if(bev->button==1 && cwin->applet_mode) {
+  if(bev->type==GDK_BUTTON_PRESS) {
+    if(bev->button==1 && cwin->applet_mode) {
       ClockWindow *nwin=make_window(0);
 
       gtk_widget_show(nwin->win);
 
       return TRUE;
+    }
   }
 
   return FALSE;
-}
-
-static gboolean popup_menu(GtkWidget *window, gpointer udata)
-{
-  ClockWindow *cwin=(ClockWindow *) udata;
-
-  if(!menu) 
-    menu_create_menu(GTK_WIDGET(cwin->win));
-
-  if(!save_alarms || !load_alarms) {
-    GList *children=GTK_MENU_SHELL(menu)->children;
-    GtkWidget *alarms=GTK_WIDGET(g_list_nth(children, 2));
-      
-    gtk_widget_set_sensitive(alarms, FALSE);
-  }
-
-  if(cwin->applet_mode)
-    rox_applet_popup_menu(cwin->win, menu, NULL);
-  else
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-		   0, gtk_get_current_event_time());
-
-  return TRUE;
-  
 }
 
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
@@ -1298,6 +1210,10 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.40  2006/03/18 14:50:05  stephen
+ * Cast strings passed to/from libxml to avoid compiler warnings.
+ * New release.
+ *
  * Revision 1.39  2006/01/17 11:43:24  stephen
  * Fix problem with drawing alarm symbol far too small when panel initializing.
  *

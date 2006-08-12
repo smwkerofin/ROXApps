@@ -4,7 +4,7 @@
   <Summary xml:lang="it">Mostra l'ora.</Summary>
   <About>
     <Purpose>Tell the time</Purpose>
-    <Version>2.1.8 (18 March 2006)</Version>
+    <Version>2.1.8 (12 August 2006)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
@@ -17,7 +17,7 @@
     <Homepage label="Sito web"/>
   </About>
   <Dependencies>
-    <AppDir><Name>ROX-CLib</Name><NeedsVersion>2.1.8</NeedsVersion></AppDir>
+    <AppDir><Name>ROX-CLib</Name><NeedsVersion>2.1.9</NeedsVersion></AppDir>
   </Dependencies>
   <AppMenu>
     <Item option="-o">

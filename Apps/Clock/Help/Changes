@@ -1,6 +1,10 @@
 Changes to Clock
 ================
 
+12-Aug-2006
+~~~~~~~~~~~
+Use new menu API.
+
 07-Aug-2006
 ~~~~~~~~~~~
 Fix systray interaction.
