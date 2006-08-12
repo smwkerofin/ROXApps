@@ -2,6 +2,10 @@
 			A notification area applet for ROX-Filer
 			by Andy Hanton and Stephen Watson
 
+07-Aug-2006
+~~~~~~~~~~~
+Fix positioning of message window.
+
 11-Feb-2006 (0.3.1)
 ~~~~~~~~~~~
 Fix for menu shortcuts.

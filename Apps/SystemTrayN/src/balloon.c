@@ -1,5 +1,5 @@
 /*
- * $Id: balloon.c,v 1.1.1.1 2006/01/14 13:09:43 stephen Exp $
+ * $Id: balloon.c,v 1.2 2006/01/21 14:56:50 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -220,20 +220,20 @@ static void show_message(balloon *b)
   switch (b->t->location) 
     {
     case PANEL_BOTTOM:
-      message_x = icon_x + icon_width / 2 - message_width / 2;
+      message_x = top_x + top_width / 2 - message_width / 2;
       message_y = top_y - message_height;
       break;
     case PANEL_TOP:
-      message_x = icon_x + icon_width / 2  - message_width / 2;
+      message_x = top_x + top_width / 2  - message_width / 2;
       message_y = top_y + top_height;
       break;
     case PANEL_RIGHT:
       message_x = top_x - message_width;
-      message_y = icon_y + icon_height / 2 - message_height / 2;
+      message_y = top_y + top_height / 2 - message_height / 2;
       break;
     case PANEL_LEFT:
       message_x = top_x + top_width;
-      message_y = icon_y + icon_height / 2 - message_height / 2;
+      message_y = top_y + top_height / 2 - message_height / 2;
       break;
     }
 
