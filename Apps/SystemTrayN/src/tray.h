@@ -10,15 +10,15 @@
 typedef struct tray {
   GtkWidget *toplevel;
   GtkWidget *box;
-  GtkWidget *spacer;
   GtkSeparator *gliph;
   GtkWidget *manager_window;
-  PanelLocation location;
+  ROXPanelLocation location;
   void *bdata;
 } tray;
 
-GtkWidget *tray_new(GtkWidget *top, PanelLocation side);
-void tray_destroy(GtkWidget *tray_widget);
+extern void tray_init(void);
+extern GtkWidget *tray_new(GtkWidget *top, ROXPanelLocation side);
+extern void tray_destroy(GtkWidget *tray_widget);
 
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.4 2006/02/11 11:06:49 stephen Exp $
+ * $Id: main.c,v 1.5 2006/02/11 11:28:23 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -90,7 +90,10 @@ static int trap_frame_destroy(GtkWidget *widget, GdkEvent *event,
   return TRUE;
 }
 
-
+static void show_options(void)
+{
+  rox_options_show();
+}
 
 /* Show the info window */
 static void show_info_win(void)
@@ -149,6 +152,15 @@ static GtkWidget *create_menu(GtkWidget *window)
   gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
   gtk_widget_show(item);
 
+  item = gtk_image_menu_item_new_from_stock(GTK_STOCK_PREFERENCES, NULL);
+  gtk_menu_item_set_accel_path(GTK_MENU_ITEM(item), "<main>/Options");
+  if(gtk_stock_lookup(GTK_STOCK_DIALOG_INFO, &stock)) {
+    gtk_accel_map_add_entry("<main>/Options", stock.keyval, stock.modifier);
+  }
+  g_signal_connect(item, "activate", show_options, NULL);
+  gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+  gtk_widget_show(item);
+
   /*item = gtk_menu_item_new_with_label(_("Quit"));*/
   item = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, NULL);
   gtk_menu_item_set_accel_path(GTK_MENU_ITEM(item), "<main>/Quit");
@@ -200,7 +212,8 @@ static struct option long_opts[] =
 #endif
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   ROXAppletInfo *info = NULL;
   long window_id;
   int c;
@@ -242,6 +255,8 @@ int main(int argc, char *argv[]) {
 	return EXIT_FAILURE;
       }
     }
+
+  tray_init();
 
   gdk_handler = XSetErrorHandler(&x_error_handler);
 

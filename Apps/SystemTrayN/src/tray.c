@@ -1,5 +1,5 @@
 /*
- * $Id: tray.c,v 1.4 2003/07/14 21:14:08 andy Exp $
+ * $Id: tray.c,v 1.1.1.1 2006/01/14 13:09:43 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -36,30 +36,32 @@ Atom system_tray_atom, selection_atom, system_tray_data_atom;
 #define SYSTEM_TRAY_BEGIN_MESSAGE   1
 #define SYSTEM_TRAY_CANCEL_MESSAGE  2
 
-int exiting = 0;
+static int exiting = 0;
+static int icon_count = 0;
 
-int icon_count = 0;
+static ROXOption o_min_size;
 
+static GList *trays=NULL;
 
-GtkWidget *tray_new(GtkWidget *top, PanelLocation side);
-void tray_destroy(GtkWidget *tray_widget);
-void show_selection_error();
-GdkFilterReturn client_event_filter(XEvent *xevent,
+static void show_selection_error();
+static GdkFilterReturn client_event_filter(XEvent *xevent,
 				    GdkEvent *event,
 				    gpointer data);
-void manager_selection_announce(tray *t);
-void manager_selection_acquire(tray *t);
-void manager_selection_release(tray *t);
-void add_spacer(tray *t);
-gboolean handle_lost_selection(GtkWidget *widget,
+static void manager_selection_announce(tray *t);
+static void manager_selection_acquire(tray *t);
+static void manager_selection_release(tray *t);
+static gboolean handle_lost_selection(GtkWidget *widget,
 			       GdkEventSelection *event,
 			       gpointer user_data);
-void shrink_spacer(tray *t);
-void grow_spacer(tray *t);
-gboolean handle_remove(GtkSocket *socket, gpointer user_data);
-void remove_item(GtkWidget *widget, gpointer data);
+static gboolean handle_remove(GtkSocket *socket, gpointer user_data);
+static void remove_item(GtkWidget *widget, gpointer data);
 
-GtkWidget *tray_new(GtkWidget *top, PanelLocation side)
+void tray_init(void)
+{
+  rox_option_add_int(&o_min_size, "min_size", 16);
+}
+
+GtkWidget *tray_new(GtkWidget *top, ROXPanelLocation side)
 {
   GtkWidget *box;
   tray *t;
@@ -85,9 +87,10 @@ GtkWidget *tray_new(GtkWidget *top, PanelLocation side)
       break;
     }  
 
+  gtk_widget_set_size_request(t->box, o_min_size.int_value,
+			      o_min_size.int_value);
   gtk_box_pack_start (GTK_BOX(t->box), GTK_WIDGET(t->gliph), TRUE, TRUE, FALSE);
   g_object_set_data(G_OBJECT(t->box), "tray", t);
-  add_spacer(t);
 
   gtk_main_iteration_do(FALSE);//FIME: do I need this?
   manager_selection_acquire(t);
@@ -108,7 +111,7 @@ void tray_destroy(GtkWidget *tray_widget)
   manager_selection_release(t);
 }
 
-void show_selection_error()
+static void show_selection_error()
 {
   GtkWidget *dialog;
   const char *text = _("Another system tray is already running.");
@@ -120,7 +123,7 @@ void show_selection_error()
   gtk_dialog_run(GTK_DIALOG(dialog));
 }
 
-GdkFilterReturn client_event_filter(XEvent *xevent,
+static GdkFilterReturn client_event_filter(XEvent *xevent,
 			  GdkEvent *event,
 			  gpointer data)
 {
@@ -132,9 +135,6 @@ GdkFilterReturn client_event_filter(XEvent *xevent,
 	{
 	  GtkWidget *socket;
 	  GtkWidget *label;
-
-	  if (icon_count == 0)
-	    shrink_spacer((tray *)data);
 
 	  socket = gtk_socket_new();
 
@@ -166,7 +166,7 @@ GdkFilterReturn client_event_filter(XEvent *xevent,
   return GDK_FILTER_REMOVE;
 }
 
-void manager_selection_announce(tray *t)
+static void manager_selection_announce(tray *t)
 {
   XClientMessageEvent xev;
   int timestamp;
@@ -190,7 +190,7 @@ void manager_selection_announce(tray *t)
 	      False, StructureNotifyMask, (XEvent *)&xev);
 }
 
-void manager_selection_acquire(tray *t)
+static void manager_selection_acquire(tray *t)
 {
   Display *display;
   Window selection_window;
@@ -240,7 +240,7 @@ void manager_selection_acquire(tray *t)
     }
 }
 
-void manager_selection_release(tray *t)
+static void manager_selection_release(tray *t)
 {
   gint timestamp;
 
@@ -256,16 +256,8 @@ void manager_selection_release(tray *t)
     }
 }
 
-void add_spacer(tray *t)
-{
-      t->spacer = gtk_label_new("");
-      gtk_widget_set_size_request(t->spacer, 24, 24);
-      gtk_container_add(GTK_CONTAINER(t->box), t->spacer);
-      gtk_widget_show(t->spacer);
-}
 
-
-gboolean handle_lost_selection(GtkWidget *widget,
+static gboolean handle_lost_selection(GtkWidget *widget,
 			       GdkEventSelection *event,
 			       gpointer user_data)
 {
@@ -277,34 +269,14 @@ gboolean handle_lost_selection(GtkWidget *widget,
   return TRUE;
 }
 
-void manager_selection_release(tray *t);
-
-void shrink_spacer(tray *t)
-{
-  if (t->location == PANEL_TOP || t->location == PANEL_BOTTOM)
-    gtk_widget_set_size_request(t->spacer, 0, 24);
-  else
-    gtk_widget_set_size_request(t->spacer, 24, 0);
-
-}
-
-void grow_spacer(tray *t)
-{
-  gtk_widget_set_size_request(t->spacer, 24, 24);
-}
-
-void add_spacer(tray *t);
-
-gboolean handle_remove(GtkSocket *socket, gpointer user_data)
+static gboolean handle_remove(GtkSocket *socket, gpointer user_data)
 {
   icon_count--;
-  if (icon_count == 0)
-    grow_spacer((tray *)user_data);
 
   return FALSE;
 }
 
-void remove_item(GtkWidget *widget, gpointer data)
+static void remove_item(GtkWidget *widget, gpointer data)
 {
   gtk_container_remove(GTK_CONTAINER(((tray *)data)->box), widget);
 }

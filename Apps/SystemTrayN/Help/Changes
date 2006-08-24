@@ -2,6 +2,10 @@
 			A notification area applet for ROX-Filer
 			by Andy Hanton and Stephen Watson
 
+24-Aug-2006
+~~~~~~~~~~~
+Better way of enforcing a minimum size.  Minimum size is now an option.
+
 07-Aug-2006
 ~~~~~~~~~~~
 Fix positioning of message window.
