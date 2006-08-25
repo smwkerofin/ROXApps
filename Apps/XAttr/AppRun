@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os, sys
+import errno
 
 import findrox; findrox.version(2, 0, 3)
 import rox
@@ -23,11 +24,17 @@ COL_TYPE_NAME=4
     
 class XAttrWin(rox.Window):
     def __init__(self, path):
+        if not os.access(path, os.F_OK):
+            raise OSRrror(errno.ENOENT, 'No such file or directory', path)
+        if not os.access(path, os.R_OK):
+            raise OSRrror(errno.EPERM, 'Permission denied', path)
+        
         rox.Window.__init__(self)
         self.set_title('%s extended attributes' % path)
 
-        self.supported=xattr.supported(path)
         self.path=path
+        self.supported=xattr.supported(path)
+        self.changable=os.access(path, os.W_OK)
 
         self.set_default_size(256, 128)
 
@@ -76,7 +83,7 @@ class XAttrWin(rox.Window):
         bbox.set_layout(rox.g.BUTTONBOX_END)
 
         self.add_button=rox.g.Button(stock=rox.g.STOCK_ADD)
-        if not self.supported:
+        if not self.supported or not self.changable:
             self.add_button.set_sensitive(False)
         bbox.pack_start(self.add_button)
 
@@ -125,17 +132,17 @@ class XAttrWin(rox.Window):
     def edit_type(self, name, typ, val):
         #print rox._toplevel_windows
         if typ==TYPE_STRING:
-            win=StringViewer(self.path, name, val)
+            win=StringViewer(self.path, name, val, self.changable)
         elif typ==TYPE_TEXT:
-            win=TextViewer(self.path, name, val)
+            win=TextViewer(self.path, name, val, self.changable)
         elif typ==TYPE_DATA:
-            win=DataViewer(self.path, name, val)
+            win=DataViewer(self.path, name, val, self.changable)
         else:
             win=None
 
         if win:
             #print rox._toplevel_windows
-            if win.run()==rox.g.RESPONSE_OK:
+            if win.run()==rox.g.RESPONSE_OK and self.changable:
                 #print 'update to', printable(win.get_value())
                 try:
                     xattr.set(self.path, name, win.get_value())
@@ -162,7 +169,7 @@ class XAttrWin(rox.Window):
 
     def sel_changed(self, select):
         model, titer=select.get_selected()
-        if self.supported:
+        if self.supported and self.changable:
             self.remove_button.set_sensitive(titer is not None)
 
     def add_attr(self, button):
@@ -177,6 +184,8 @@ class XAttrWin(rox.Window):
 
         try:
             value=xattr.get(self.path, name)
+            if value is None:
+                value=''
         except:
             value=''
         
@@ -184,12 +193,18 @@ class XAttrWin(rox.Window):
             
 
     def remove_attr(self, button):
-        print 'remove_attr'
+        #print 'remove_attr'
         select=self.view.get_selection()
         model, titer=select.get_selected()
-        print model, titer
+        #print model, titer
         name=self.store.get(titer, COL_NAME)[0]
-        print name
+        #print name
+        try:
+            xattr.delete(self.path, name)
+        except:
+            rox.report_exception()
+            return
+        self.store.remove(titer)
 
 bad=unichr(0xfffd)
 ctrl=range(32)
@@ -272,14 +287,20 @@ class AddAttr(rox.Dialog):
         return None, None
     
 class Viewer(rox.Dialog):
-    def __init__(self, path, aname, avalue):
+    def __init__(self, path, aname, avalue, change):
         self.path=path
         self.attr_name=aname
         self.attr_value=avalue
+        self.can_change=change
+
+        if self.can_change:
+            butt=(rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE,
+                  rox.g.STOCK_OK, rox.g.RESPONSE_OK)
+        else:
+            butt=(rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE)
 
         rox.Dialog.__init__(self, title='%s: %s' % (path, printable(aname)),
-                            buttons=(rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE,
-                                     rox.g.STOCK_OK, rox.g.RESPONSE_OK))
+                            buttons=butt)
 
         tab=rox.g.Table(2, 2)
         self.vbox.pack_start(tab, True, True, 4)
@@ -305,12 +326,15 @@ class Viewer(rox.Dialog):
         return self.attr_value
 
 class StringViewer(Viewer):
-    def __init__(self, path, aname, avalue):
-        Viewer.__init__(self, path, aname, avalue)
+    def __init__(self, path, aname, avalue, change):
+        Viewer.__init__(self, path, aname, avalue, change)
 
         self.entry=rox.g.Entry()
         self.entry.set_text(unicode(self.attr_value, 'utf-8'))
-        self.entry.select_region(0, -1)
+        if self.can_change:
+            self.entry.select_region(0, -1)
+        else:
+            self.entry.set_editable(False)
         self.vbox.pack_start(self.entry, True, True, 4)
         
         self.connect('response', self.handle_response)
@@ -325,8 +349,8 @@ class StringViewer(Viewer):
         
 
 class TextViewer(Viewer):
-    def __init__(self, path, aname, avalue):
-        Viewer.__init__(self, path, aname, avalue)
+    def __init__(self, path, aname, avalue, change):
+        Viewer.__init__(self, path, aname, avalue, change)
 
         swin=rox.g.ScrolledWindow()
         swin.set_policy(rox.g.POLICY_AUTOMATIC, rox.g.POLICY_ALWAYS)
@@ -335,6 +359,8 @@ class TextViewer(Viewer):
         self.text=rox.g.TextView()
         buffer=self.text.get_buffer()
         buffer.set_text(unicode(self.attr_value, 'utf-8'))
+        if not self.can_change:
+            self.text.set_editable(False)
         swin.add(self.text)
         
         self.connect('response', self.handle_response)
@@ -350,8 +376,8 @@ class TextViewer(Viewer):
         
 
 class DataViewer(Viewer):
-    def __init__(self, path, aname, avalue):
-        Viewer.__init__(self, path, aname, avalue)
+    def __init__(self, path, aname, avalue, change):
+        Viewer.__init__(self, path, aname, avalue, change)
 
         swin=rox.g.ScrolledWindow()
         swin.set_policy(rox.g.POLICY_AUTOMATIC, rox.g.POLICY_ALWAYS)
@@ -389,7 +415,10 @@ class DataViewer(Viewer):
 if __name__=='__main__':
     if len(sys.argv)>1:
         for fname in sys.argv[1:]:
-            XAttrWin(fname).show()
+            try:
+                XAttrWin(fname).show()
+            except:
+                rox.report_exception()
         rox.mainloop()
 
     else:

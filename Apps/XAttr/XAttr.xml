@@ -15,7 +15,7 @@ are supported by more modern file systems.
       <environment insert="ROX-Lib2/python" name="PYTHONPATH"/>
     </requires>
     <implementation id=".."
-		stability="testing" version="0.0.1"/>
+		stability="testing" version="0.0.3"/>
   </group>
   <feed-for interface="http://www.kerofin.demon.co.uk/2006/interfaces/XAttr"/>
 </interface>

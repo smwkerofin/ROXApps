@@ -1,7 +1,20 @@
                    XAttr
                    View eXtended Attributes
 
-03-Aug-2006
+25-Aug-2006
+~~~~~~~~~~~
+Better error checking and reporting in xattr.py.
+
+14-Aug-2006
+~~~~~~~~~~~
+Implemented removing an attribute.
+Implement xattr.delete() for Solaris.
+
+11-Aug-2006
+~~~~~~~~~~~
+Implement listx() for Solaris.
+
+03-Aug-2006 (0.0.2)
 ~~~~~~~~~~~
 Added view/edit/add functions.
 

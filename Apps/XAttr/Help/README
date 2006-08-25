@@ -18,5 +18,12 @@ Attribute values are classed as "STRING", "TEXT" or "DATA".  "STRING"
 and "TEXT" must be valid UTF-8, and "TEXT" may contain '\n'
 characters.  "DATA" values cannot be edited or created, only viewed.
 
+Requirements
+------------
+
+XAttr uses the Python ctypes module which is standard in Python 2.5
+onwards.  If you have Python 2.4.x or earlier you may need to install
+ctypes separately. 
+
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>

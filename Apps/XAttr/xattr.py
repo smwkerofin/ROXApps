@@ -1,24 +1,30 @@
-# $Id: xattr.py,v 1.1.1.1 2005/08/13 11:27:43 stephen Exp $
+# $Id: xattr.py,v 1.2 2006/08/03 11:00:54 stephen Exp $
 
 import os, sys, errno
 
 try:
     import ctypes
     try:
-        object=ctypes.cdll.LoadLibrary('')
+        libc=ctypes.cdll.LoadLibrary('')
     except:
-        object=ctypes.cdll.LoadLibrary('libc.so')
+        libc=ctypes.cdll.LoadLibrary('libc.so')
+
 except:
-    object=None
+    libc=None
 
 class NoXAttr(OSError):
     def __init__(self, path):
-        self.OSError.__init__(errno.EOPNOTSUP, 'No xattr support on %s' % path,
-                              path)
+        OSError.__init__(self, errno.EOPNOTSUP, 'No xattr support',path)
         
 
-if object and hasattr(object, 'attropen'):
+if libc and hasattr(libc, 'attropen'):
     #print 'attropen'
+    libc_errno=ctypes.c_int.in_dll(libc, 'errno')
+    def _get_errno():
+        return libc_errno.value
+    def _error_check(res, path):
+        if res<0:
+            raise OSError(_get_errno(), os.strerror(_get_errno()), path)
 
     try:
         _PC_XATTR_ENABLED=os.pathconf_names['PC_XATTR_ENABLED']
@@ -43,8 +49,8 @@ if object and hasattr(object, 'attropen'):
         if os.pathconf(path, _PC_XATTR_EXISTS)<=0:
             return
 
-        fd=object.attropen(path, attr, os.O_RDONLY, 0)
-        if fd<=0:
+        fd=libc.attropen(path, attr, os.O_RDONLY, 0)
+        if fd<0:
             return
 
         v=''
@@ -54,23 +60,41 @@ if object and hasattr(object, 'attropen'):
                 break
             v+=buf
 
-        object.close(fd)
+        libc.close(fd)
 
         return v
 
     def listx(path):
-        return []
+        if os.pathconf(path, _PC_XATTR_EXISTS)<=0:
+            return []
+
+        fd=libc.attropen(path, '.', os.O_RDONLY, 0)
+        if fd<0:
+            return []
+
+        odir=os.getcwd()
+        os.fchdir(fd)
+        attrs=os.listdir('.')
+        os.chdir(odir)
+        libc.close(fd)
+
+        return attrs
 
     def set(path, attr, value):
-        fd=object.attropen(path, attr, os.O_WRONLY|os.O_CREAT, 0644)
-        if fd<=0:
-            raise NoXAttr(path)
+        fd=libc.attropen(path, attr, os.O_WRONLY|os.O_CREAT, 0644)
+        _error_check(fd, path)
 
-        os.write(fd, value)
-        object.close(fd)
+        res=os.write(fd, value)
+        libc.close(fd)
+        _error_check(res, path)
 
     def delete(path, attr):
-        pass
+        fd=libc.attropen(path, '.', os.O_RDONLY, 0)
+        _error_check(fd, path)
+
+        res=libc.unlinkat(fd, attr, 0)
+        libc.close(fd)
+        _error_check(res, path)
 
     name_invalid_chars='/\0'
     def name_valid(name):
@@ -79,8 +103,27 @@ if object and hasattr(object, 'attropen'):
     def binary_value_supported():
         return True
 
-elif object and hasattr(object, 'getxattr'):
+elif libc and hasattr(libc, 'getxattr'):
     #print 'getxattr'
+    #print hasattr(libc, 'errno')
+    if hasattr(libc, '__errno_location'):
+        libc.__errno_location.restype=ctypes.c_int # _p
+        errno_loc=libc.__errno_location()
+        #print errno_loc
+        libc_errno=ctypes.c_int.from_address(errno_loc)
+        #print libc_errno, libc_errno.value
+        
+    elif hasattr(libc, 'errno'):
+        libc_errno=ctypes.c_int.in_dll(lib, 'errno')
+
+    else:
+        libc_errno=ctypes.c_int(errno.EOPNOTSUP)
+
+    def _get_errno():
+        return libc_errno.value
+    def _error_check(res, path):
+        if res<0:
+            raise OSError(_get_errno(), os.strerror(_get_errno()), path)
 
     def supported(path=None):
         if not path:
@@ -96,7 +139,7 @@ elif object and hasattr(object, 'getxattr'):
             raise OSError(errno.ENOENT, 'No such file or directory', path)
 
         buf=ctypes.c_buffer(1024)
-        n=object.listxattr(path, ctypes.byref(buf), 1024)
+        n=libc.listxattr(path, ctypes.byref(buf), 1024)
         #print n, buf.value
         return n>0
 
@@ -104,22 +147,26 @@ elif object and hasattr(object, 'getxattr'):
         if not os.access(path, os.F_OK):
             raise OSError(errno.ENOENT, 'No such file or directory', path)
 
-        size=object.getxattr(path, attr, '', 0)
+        size=libc.getxattr(path, attr, '', 0)
+        if size<0:
+            #aise OSError(libc_errno.value, os.strerror(libc_errno.value),
+            #              path
+            return
         #print size
         buf=ctypes.c_buffer(size+1)
-        object.getxattr(path, attr, ctypes.byref(buf), size)
+        libc.getxattr(path, attr, ctypes.byref(buf), size)
         return buf.value
 
     def listx(path):
         if not os.access(path, os.F_OK):
             raise OSError(errno.ENOENT, 'No such file or directory', path)
 
-        size=object.listxattr(path, None, 0)
+        size=libc.listxattr(path, None, 0)
         #print size
         if size<1:
             return []
         buf=ctypes.create_string_buffer(size)
-        n=object.listxattr(path, ctypes.byref(buf), size)
+        n=libc.listxattr(path, ctypes.byref(buf), size)
         names=buf.raw[:-1].split('\0')
         return names
 
@@ -129,16 +176,16 @@ elif object and hasattr(object, 'getxattr'):
             raise OSError(errno.ENOENT, 'No such file or directory', path)
 
         #print path, attr, value, len(value), 0
-        res=object.setxattr(path, attr, value, len(value), 0)
-        #print res
-        if res==-1:
-            raise EnvironmentError('Failed to set %s on %s' % (attr, path))
+        res=libc.setxattr(path, attr, value, len(value), 0)
+        _error_check(res, path)
+
     
     def delete(path, attr):
         if not os.access(path, os.F_OK):
             raise OSError(errno.ENOENT, 'No such file or directory', path)
         
-        object.removexattr(path, attr)
+        res=libc.removexattr(path, attr)
+        _error_check(res, path)
 
     name_invalid_chars='\0'
     def name_valid(name):
@@ -183,4 +230,9 @@ if __name__=='__main__':
     print path, present(path)
     print path, get(path, 'user.mime_type')
     print path, listx(path)
-        
+
+    set(path, 'user.test', 'this is a test')
+    print path, listx(path)
+    print path, get(path, 'user.test')
+    delete(path, 'user.test')
+    print path, listx(path)
