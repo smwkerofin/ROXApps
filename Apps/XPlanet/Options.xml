@@ -1,8 +1,0 @@
-<?xml version='1.0'?>
-<options>
-<section title="Backdrop mode">
-<numentry name="backdrop_delay" label="Minutes between update" min='1'
-max='60'>How long to wait before refreshing the backdrop</numentry>
-
-</section>
-</options>
