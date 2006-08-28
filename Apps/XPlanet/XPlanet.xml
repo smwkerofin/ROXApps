@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <interface xmlns="http://zero-install.sourceforge.net/2004/injector/interface"
            uri="http://www.kerofin.demon.co.uk/2006/interfaces/XPlanet"
-	   main="Fetch/AppRun">
+	   main="XPlanet/AppRun">
   <name>XPlanet</name>
   <summary>show a planet</summary>
   <description>
@@ -9,7 +9,7 @@ XPlanet is a wrapper for xplanet for the ROX desktop.  Its most useful
 mode is as a backdrop application.
 
   </description>
-  <icon type='image/png' href='http://www.kerofin.demon.co.uk/2006/interfaces/XPlanet.png'/>
+  <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/XPlanet.png'/>
 <group>
     <requires interface="http://rox.sourceforge.net/2005/interfaces/ROX-Lib">
       <environment insert="ROX-Lib2/python" name="PYTHONPATH"/>

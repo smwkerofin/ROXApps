@@ -3,33 +3,83 @@
 import os, sys
 
 import findrox; findrox.version(2, 0, 3)
-import rox, rox.options, rox.filer
+import rox, rox.options, rox.filer, rox.OptionsBox
 import time
 import xml.dom.minidom
 
 rox.setup_app_options('XPlanet', site='kerofin.demon.co.uk')
 
+program_name=rox.options.Option('program_name', 'xplanet')
+start_mode=rox.options.Option('start_mode', 0)
+
 backdrop_delay=rox.options.Option('backdrop_delay', 10)
+
+window_body=rox.options.Option('window_body', 'earth')
+window_proj=rox.options.Option('window_proj', '')
+window_wait=rox.options.Option('window_wait', 0)
+window_timewarp=rox.options.Option('window_timewarp', 1)
+
+def build_set_as_backdrop(box, node, label):
+    #print label, `label`
+    button=rox.g.Button(label)
+    box.may_add_tip(button, node)
+    def set_as_backdrop(*unused):
+        check_binary()
+        backdrop_daemon()
+    button.connect('clicked', set_as_backdrop)
+    return [button]
+
+def build_run_in_window(box, node, label):
+    button=rox.g.Button(label)
+    box.may_add_tip(button, node)
+    def run_in_window(*unused):
+        check_binary()
+        show_window(False)
+    button.connect('clicked', run_in_window)
+    return [button]
+
+rox.OptionsBox.widget_registry['set-as-backdrop']=build_set_as_backdrop
+rox.OptionsBox.widget_registry['run-in-window']=build_run_in_window
 
 rox.app_options.notify()
 
 def main(argv):
+    mode=start_mode.int_value
     if len(argv)>1:
         if argv[1]=='--backdrop':
-            backdrop_daemon()
-        elif argv[1]=='-b':
-            set_backdrop_app()
+            mode=2
+            
         elif argv[1]=='-o':
-            show_options()
-    else:
+            mode=0
+            
+        elif argv[1]=='-b':
+            check_binary()
+            set_backdrop_app()
+            return
+
+    if mode==0:
+        show_options()
+    elif mode==1:
+        check_binary()
         show_window()
+    else:
+        backdrop_daemon()
 
 def show_options():
     rox.edit_options()
     rox.mainloop()
 
-def show_window():
-    os.system('xplanet -window')
+def show_window(block=True):
+    cmd=program_name.value+' -window'
+    cmd+=' -body %s' % window_body.value
+    if window_proj.value:
+        cmd+=' -projection %s' % window_proj.value
+    if window_wait.int_value:
+        cmd+=' -wait %d' % window_wait.int_value
+    cmd+=' -timewarp %d' % window_timewarp.int_value
+    if not block:
+        cmd+=' &'
+    os.system(cmd)
 
 def backdrop_daemon():
     try:
@@ -88,7 +138,7 @@ def backdrop():
     try:
         width=rox.g.gdk.screen_width()
         height=rox.g.gdk.screen_height()
-        cmd='xplanet -geometry %dx%d+0+0 -projection mercator -output %s -num_times 1' % (width, height, fname)
+        cmd=program_name.value+' -geometry %dx%d+0+0 -projection mercator -output %s -num_times 1' % (width, height, fname)
         os.system(cmd)
         sys.stdout.write('centre %s\n' % fname)
         sys.stdout.flush()
@@ -104,5 +154,23 @@ def backdrop():
             os.remove(fname)
         except:
             pass
+
+def find_binary(name='xplanet'):
+    if '/' in name:
+        if os.access(name, os.X_OK):
+            return name
+        return None
+    
+    for xdir in os.getenv('PATH').split(':'):
+        path=os.path.join(xdir, name)
+        if os.access(path, os.X_OK):
+            return path
+
+def check_binary(name=None):
+    if not name:
+        name=program_name.value
+    if not find_binary(name):
+        rox.alert('Program "%s" does not appear to exist on this system' %
+                  name)
         
 main(sys.argv)
