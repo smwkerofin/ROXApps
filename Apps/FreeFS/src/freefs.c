@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.34 2006/03/15 22:36:54 stephen Exp $
+ * $Id: freefs.c,v 1.35 2006/06/10 19:27:58 stephen Exp $
  */
 #include "config.h"
 
@@ -63,9 +63,6 @@
 
 #define TIP_PRIVATE "For more information see the help file"
 
-/* GTK+ objects */
-static GtkWidget *menu=NULL;
-
 static ROXOption opt_update_sec;
 static ROXOption opt_applet_size;
 static ROXOption opt_applet_show_dir;
@@ -73,6 +70,7 @@ static ROXOption opt_applet_show_dir;
 typedef struct free_window {
   GtkWidget *win;
   GtkWidget *fs_name, *fs_total, *fs_used, *fs_free, *fs_per;
+  GtkWidget *menu;
   
   gboolean is_applet;
   gboolean minimal;
@@ -110,13 +108,17 @@ static FreeWindow *find_window(const gchar *id);
 static gboolean update_fs_values(FreeWindow *);
 static void do_update(void);
 static void init_options(void);
+static void show_info_win(void);
 static void show_config_win(int ignored);
-static void menu_create_menu(GtkWidget *);
+static void do_opendir(gpointer dat, guint action, GtkWidget *wid);
+static void close_window(void);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer unused);
-static gboolean popup_menu(GtkWidget *window, gpointer udata);
 static gboolean handle_uris(GtkWidget *widget, GSList *uris, gpointer data,
 			   gpointer udata);
+static void menu_set_target(gchar *mount);
+static gboolean update_menus(GtkWidget *menu, GtkWidget *window,
+			     gpointer udata);
 
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
@@ -130,6 +132,29 @@ static xmlNodePtr rpc_Change(ROXSOAPServer *server, const char *action_name,
 static int soap_from_file(FILE *in);
 
 static void get_mount_points(void);
+
+/* Pop-up menu */
+static GtkItemFactoryEntry menu_items[] = {
+  { N_("/Info"),		NULL, show_info_win, 0,
+                                "<StockItem>", GTK_STOCK_DIALOG_INFO},
+  {"/sep",  	                NULL, NULL, 0, "<Separator>" },
+  { N_("/Configure..."),	NULL, show_config_win, 0, 
+                                "<StockItem>", GTK_STOCK_PREFERENCES},
+  { N_("/Update Now"),	        NULL, do_update, 0,   
+                                "<StockItem>", GTK_STOCK_REFRESH},
+  { N_("/Open"),                NULL, NULL, 0, "<Branch>"},
+  { N_("/Open/Directory"),	NULL, do_opendir, 0,     
+                                "<StockItem>", GTK_STOCK_OPEN},
+  { N_("/Open/FS root"),	NULL, do_opendir, 1,       
+                                "<StockItem>", GTK_STOCK_OPEN},
+  { N_("/Scan"),                NULL, NULL, 0, NULL},
+  { "/sep", 	                NULL, NULL, 0, "<Separator>" },
+  { N_("/Close"), 	        NULL, close_window, 0,      
+                                "<StockItem>", GTK_STOCK_CLOSE},
+  { "/sep", 	                NULL, NULL, 0, "<Separator>" },
+  { N_("/Quit"), 	        NULL, rox_main_quit, 0,      
+                                "<StockItem>", GTK_STOCK_QUIT},
+};
 
 static ROXSOAPServerActions actions[]={
   {"Open", "Path", "Parent,Minimal,ID", rpc_Open, NULL},
@@ -525,13 +550,14 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
     fwin->win=plug;
     fwin->is_applet=TRUE;
   }
-  if(!menu)
-    menu_create_menu(fwin->win);
+  fwin->menu=rox_menu_build(fwin->win,
+			    menu_items, sizeof(menu_items)/sizeof(*menu_items),
+			    "<system>", "menus");
+  if(fwin->is_applet)
+    rox_menu_attach_to_applet(fwin->menu, fwin->win, update_menus, fwin);
+  else
+    rox_menu_attach(fwin->menu, fwin->win, TRUE, update_menus, fwin);
 
-
-  gtk_signal_connect(GTK_OBJECT(fwin->win), "popup-menu",
-		     GTK_SIGNAL_FUNC(popup_menu), fwin);
-  
   dprintf(3, "update_fs_values(%s)", fwin->df_dir);
   update_fs_values(fwin);
 
@@ -947,42 +973,6 @@ static void show_config_win(int ignored)
   rox_options_show();
 }
 
-/* Pop-up menu */
-static GtkItemFactoryEntry menu_items[] = {
-  { N_("/Info"),		NULL, show_info_win, 0,
-                                "<StockItem>", GTK_STOCK_DIALOG_INFO},
-  {"/sep",  	                NULL, NULL, 0, "<Separator>" },
-  { N_("/Configure..."),	NULL, show_config_win, 0, 
-                                "<StockItem>", GTK_STOCK_PREFERENCES},
-  { N_("/Update Now"),	        NULL, do_update, 0,   
-                                "<StockItem>", GTK_STOCK_REFRESH},
-  { N_("/Open"),                NULL, NULL, 0, "<Branch>"},
-  { N_("/Open/Directory"),	NULL, do_opendir, 0,     
-                                "<StockItem>", GTK_STOCK_OPEN},
-  { N_("/Open/FS root"),	NULL, do_opendir, 1,       
-                                "<StockItem>", GTK_STOCK_OPEN},
-  { N_("/Scan"),                NULL, NULL, 0, NULL},
-  { "/sep", 	                NULL, NULL, 0, "<Separator>" },
-  { N_("/Close"), 	        NULL, close_window, 0,      
-                                "<StockItem>", GTK_STOCK_CLOSE},
-  { "/sep", 	                NULL, NULL, 0, "<Separator>" },
-  { N_("/Quit"), 	        NULL, rox_main_quit, 0,      
-                                "<StockItem>", GTK_STOCK_QUIT},
-};
-
-static void save_menus(void)
-{
-  char	*menurc;
-	
-  menurc = rox_choices_save("menus", PROJECT, DOMAIN);
-  if (menurc) {
-    gtk_accel_map_save(menurc);
-    g_free(menurc);
-  }
-}
-
-static GtkWidget *scan_menu=NULL;
-
 static void menu_set_target(gchar *mount)
 {
   dprintf(3, "menu_set_target(%s)", mount? mount: "NULL");
@@ -996,14 +986,20 @@ static void menu_item_destroyed(GtkWidget *item, gpointer data)
   g_free(data);
 }
 
-static void update_menus(void)
+static gboolean update_menus(GtkWidget *menu, GtkWidget *window,
+			     gpointer udata)
 {
   GtkWidget *item;
   gchar *mount;
   gchar *lbl;
-  GtkWidget *mount_menu, *l;
+  GtkWidget *mount_menu, *l, *scan_menu;
   int i;
   
+  /* Find where to attach it */
+  scan_menu=rox_menu_get_widget(menu, "/Scan");
+  if(!scan_menu)
+    return TRUE;
+
   mount_menu=gtk_menu_new();
 
   dprintf(3, "mount_menu=%p", mount_menu);
@@ -1042,40 +1038,8 @@ static void update_menus(void)
 
   gtk_widget_show_all(mount_menu);
   gtk_menu_item_set_submenu(GTK_MENU_ITEM(scan_menu), mount_menu);
-}
 
-static void menu_create_menu(GtkWidget *window)
-{
-  GtkItemFactory	*item_factory;
-  GtkAccelGroup	*accel_group;
-  gint 		n_items = sizeof(menu_items) / sizeof(*menu_items);
-  gchar *menurc;
-
-  accel_group = gtk_accel_group_new();
-  /*gtk_accel_group_lock(accel_group);*/
-
-  item_factory = gtk_item_factory_new(GTK_TYPE_MENU, "<system>", 
-				      accel_group);
-
-  gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
-
-	/* Attach the new accelerator group to the window. */
-  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
-
-  menurc=rox_choices_load("menus", PROJECT, DOMAIN);
-  if(menurc) {
-    gtk_accel_map_load(menurc);
-    g_free(menurc);
-  }
-
-  atexit(save_menus);
-
-  menu = gtk_item_factory_get_widget(item_factory, "<system>");
-
-  /*name=g_strdup_printf("%s")*/
-  scan_menu=gtk_item_factory_get_widget(item_factory,
-						"/Scan");
-  dprintf(3, "scan_menu=%p", scan_menu);
+  return TRUE;
 }
 
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
@@ -1087,21 +1051,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 
   rox_debug_printf(3, "in button_press %d", bev->button);
   if(bev->type==GDK_BUTTON_PRESS) {
-    if(bev->button==3) {
-      rox_debug_printf(3, "menu=%p", menu);
-      if(!menu)
-	menu_create_menu(window);
-      update_menus();
-      rox_debug_printf(3, "menu=%p", menu);
-      
-      if(fwin->is_applet) {
-	rox_applet_popup_menu(fwin->win, menu, bev);
-      } else {
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-		     bev->button, bev->time);
-      }
-      return TRUE;
-    } else if(bev->button==1 && fwin->is_applet) {
+    if(bev->button==1 && fwin->is_applet) {
       FreeWindow *nwin=make_window(0, fwin->df_dir, FALSE, NULL);
 
       gtk_widget_show(nwin->win);
@@ -1111,24 +1061,6 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   }
 
   return FALSE;
-}
-
-static gboolean popup_menu(GtkWidget *window, gpointer udata)
-{
-  FreeWindow *fwin=(FreeWindow *) udata;
-
-  if(!menu) 
-    menu_create_menu(GTK_WIDGET(fwin->win));
-  update_menus();
-
-  if(fwin->is_applet)
-    rox_applet_popup_menu(fwin->win, menu, NULL);
-  else
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-		   0, gtk_get_current_event_time());
-
-  return TRUE;
-  
 }
 
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
@@ -1402,6 +1334,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.35  2006/06/10 19:27:58  stephen
+ * Monitor home directory when no argument given, not the AppDir.
+ *
  * Revision 1.34  2006/03/15 22:36:54  stephen
  * Removed some deprecated calls and some compiler warnings.
  *
