@@ -1,6 +1,12 @@
 Changes to Clock
 ================
 
+28-Aug-2006
+~~~~~~~~~~~
+Another change to systray interaction, delete icon rather than just hiding
+it.
+Check alarms more frequently.
+
 12-Aug-2006
 ~~~~~~~~~~~
 Use new menu API.
