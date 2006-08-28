@@ -1,7 +1,7 @@
 /*
  * alarm.c - alarms for the Clock program
  *
- * $Id: alarm.c,v 1.21 2006/03/24 18:25:59 stephen Exp $
+ * $Id: alarm.c,v 1.22 2006/08/12 09:56:32 stephen Exp $
  */
 #include "config.h"
 
@@ -544,7 +544,8 @@ static void remove_window(GtkWidget *wid, gpointer data)
   gtk_widget_destroy(win);
 
   if(--nalarm_show<1 && alarm_notify) {
-    gtk_widget_hide(alarm_notify);
+    gtk_widget_destroy(alarm_notify);
+    alarm_notify=NULL;
   }
 }
 
@@ -1003,6 +1004,9 @@ void alarm_show_window(void)
 
 /*
  * $Log: alarm.c,v $
+ * Revision 1.22  2006/08/12 09:56:32  stephen
+ * Fix systray interaction
+ *
  * Revision 1.21  2006/03/24 18:25:59  stephen
  * Added es translation (Juan Carlos Jimenez Garcia).
  *
