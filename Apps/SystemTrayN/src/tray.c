@@ -1,5 +1,5 @@
 /*
- * $Id: tray.c,v 1.1.1.1 2006/01/14 13:09:43 stephen Exp $
+ * $Id: tray.c,v 1.2 2006/08/24 21:20:10 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -37,7 +37,6 @@ Atom system_tray_atom, selection_atom, system_tray_data_atom;
 #define SYSTEM_TRAY_CANCEL_MESSAGE  2
 
 static int exiting = 0;
-static int icon_count = 0;
 
 static ROXOption o_min_size;
 
@@ -54,11 +53,15 @@ static gboolean handle_lost_selection(GtkWidget *widget,
 			       GdkEventSelection *event,
 			       gpointer user_data);
 static gboolean handle_remove(GtkSocket *socket, gpointer user_data);
+static void check_size(tray *t);
 static void remove_item(GtkWidget *widget, gpointer data);
+static void option_changed(void);
 
 void tray_init(void)
 {
   rox_option_add_int(&o_min_size, "min_size", 16);
+
+  rox_option_add_notify(option_changed);
 }
 
 GtkWidget *tray_new(GtkWidget *top, ROXPanelLocation side)
@@ -69,6 +72,7 @@ GtkWidget *tray_new(GtkWidget *top, ROXPanelLocation side)
   t = g_new(tray, 1);
   t->toplevel = top;
   t->location = side;
+  t->icon_count=0;
 
   if (t->location == PANEL_UNKNOWN)
     t->location = PANEL_BOTTOM;
@@ -79,24 +83,29 @@ GtkWidget *tray_new(GtkWidget *top, ROXPanelLocation side)
     case PANEL_BOTTOM:
       t->box = gtk_hbox_new(FALSE, 0);
       t->gliph = GTK_SEPARATOR(gtk_vseparator_new());
+      t->ishoriz=TRUE;
       break;
     case PANEL_RIGHT:
     case PANEL_LEFT:
       t->box = gtk_vbox_new(FALSE, 0);
       t->gliph = GTK_SEPARATOR(gtk_hseparator_new());
+      t->ishoriz=TRUE;
       break;
     }  
 
   gtk_widget_set_size_request(t->box, o_min_size.int_value,
 			      o_min_size.int_value);
-  gtk_box_pack_start (GTK_BOX(t->box), GTK_WIDGET(t->gliph), TRUE, TRUE, FALSE);
+  gtk_box_pack_start (GTK_BOX(t->box), GTK_WIDGET(t->gliph), TRUE, TRUE, 0);
   g_object_set_data(G_OBJECT(t->box), "tray", t);
+  check_size(t);
 
   gtk_main_iteration_do(FALSE);//FIME: do I need this?
   manager_selection_acquire(t);
   gtk_widget_show_all(t->box);
 
   balloon_init(t);
+  trays=g_list_append(trays, t);
+  
   return t->box;
 }
 
@@ -109,6 +118,16 @@ void tray_destroy(GtkWidget *tray_widget)
 			(gpointer)t);
 
   manager_selection_release(t);
+  trays=g_list_remove(trays, t);
+}
+
+static void option_changed(void)
+{
+  GList *p;
+
+  for(p=trays; p; p=g_list_next(p)) {
+    check_size((tray *) p->data);
+  }
 }
 
 static void show_selection_error()
@@ -128,40 +147,40 @@ static GdkFilterReturn client_event_filter(XEvent *xevent,
 			  gpointer data)
 {
   Display *display = GDK_DISPLAY_XDISPLAY(gdk_display_get_default());
+    tray *t=(tray *)data;
 
-  if (xevent->xclient.message_type == system_tray_atom)
-    {
-      if (xevent->xclient.data.l[1] == SYSTEM_TRAY_REQUEST_DOCK)
-	{
-	  GtkWidget *socket;
-	  GtkWidget *label;
+  if (xevent->xclient.message_type == system_tray_atom) {
+    
+    if (xevent->xclient.data.l[1] == SYSTEM_TRAY_REQUEST_DOCK) {
+      GtkWidget *socket;
+      GtkWidget *label;
 
-	  socket = gtk_socket_new();
+      socket = gtk_socket_new();
 
-	  gtk_box_pack_start_defaults(GTK_BOX(((tray *)data)->box), socket);
-	  gtk_widget_show(socket);
-	  gtk_socket_add_id(GTK_SOCKET(socket), xevent->xclient.data.l[2]);
-	  g_signal_connect(socket, "plug_removed", 
-			   GTK_SIGNAL_FUNC(handle_remove), 
-			   data);
+      gtk_box_pack_start_defaults(GTK_BOX(t->box), socket);
+      gtk_widget_show(socket);
+      gtk_socket_add_id(GTK_SOCKET(socket), xevent->xclient.data.l[2]);
+      g_signal_connect(socket, "plug_removed", 
+		       GTK_SIGNAL_FUNC(handle_remove), 
+		       data);
 
-	  icon_count++;
-	}
-      else if (xevent->xclient.data.l[1] == SYSTEM_TRAY_BEGIN_MESSAGE)
-	{
-	  new_balloon((tray *)data, &xevent->xclient);
-	}
-      else if (xevent->xclient.data.l[1] == SYSTEM_TRAY_CANCEL_MESSAGE)
-	{
-	  cancel_balloon((tray *)data, &xevent->xclient);
-	}
-      return TRUE;
+      t->icon_count++;
+      check_size(t);
+      
+    } else if (xevent->xclient.data.l[1] == SYSTEM_TRAY_BEGIN_MESSAGE) {
+      new_balloon(t, &xevent->xclient);
+      
+    } else if (xevent->xclient.data.l[1] == SYSTEM_TRAY_CANCEL_MESSAGE) {
+      cancel_balloon(t, &xevent->xclient);
+      
     }
-  else if (xevent && xevent->xclient.message_type == system_tray_data_atom)
-    {
-      add_balloon_data((tray *)data, &xevent->xclient);
-      return TRUE;
-    }
+    return TRUE;
+    
+  } else if (xevent && xevent->xclient.message_type==system_tray_data_atom) {
+    add_balloon_data(t, &xevent->xclient);
+    
+    return TRUE;
+  }
 
   return GDK_FILTER_REMOVE;
 }
@@ -271,7 +290,9 @@ static gboolean handle_lost_selection(GtkWidget *widget,
 
 static gboolean handle_remove(GtkSocket *socket, gpointer user_data)
 {
-  icon_count--;
+  tray *t=(tray *) user_data;
+  t->icon_count--;
+  check_size(t);
 
   return FALSE;
 }
@@ -279,5 +300,21 @@ static gboolean handle_remove(GtkSocket *socket, gpointer user_data)
 static void remove_item(GtkWidget *widget, gpointer data)
 {
   gtk_container_remove(GTK_CONTAINER(((tray *)data)->box), widget);
+}
+
+static void check_size(tray *t)
+{
+  int msize=o_min_size.int_value;
+  int other;
+
+  if(t->icon_count<1)
+    other=msize;
+  else
+    other=-1;
+
+  if(t->ishoriz)
+    gtk_widget_set_size_request(t->box, other, msize);
+  else
+    gtk_widget_set_size_request(t->box, msize, other);
 }
 

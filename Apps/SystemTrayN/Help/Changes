@@ -2,6 +2,11 @@
 			A notification area applet for ROX-Filer
 			by Andy Hanton and Stephen Watson
 
+28-Aug-2006
+~~~~~~~~~~~
+Partially reverted to old way to set minimum size, due to what I think is
+a limitation in GTK.
+
 24-Aug-2006
 ~~~~~~~~~~~
 Better way of enforcing a minimum size.  Minimum size is now an option.

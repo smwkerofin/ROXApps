@@ -14,6 +14,8 @@ typedef struct tray {
   GtkWidget *manager_window;
   ROXPanelLocation location;
   void *bdata;
+  gboolean ishoriz;
+  int icon_count;
 } tray;
 
 extern void tray_init(void);
