@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: clock.c,v 1.40 2006/03/18 14:50:05 stephen Exp $
+ * $Id: clock.c,v 1.41 2006/08/12 17:12:54 stephen Exp $
  */
 #include "config.h"
 
@@ -344,7 +344,7 @@ int main(int argc, char *argv[])
 
     gtk_widget_show(cwin->win);
 
-    g_timeout_add(30*1000, check_alarms, NULL);
+    g_timeout_add(10*1000, check_alarms, NULL);
   } else {
     show_conf_win();
   }
@@ -1210,6 +1210,9 @@ static void show_info_win(void)
 
 /*
  * $Log: clock.c,v $
+ * Revision 1.41  2006/08/12 17:12:54  stephen
+ * Use new menu API
+ *
  * Revision 1.40  2006/03/18 14:50:05  stephen
  * Cast strings passed to/from libxml to avoid compiler warnings.
  * New release.
