@@ -13,33 +13,37 @@ image handler</radio>
 </section>
 <section title="Backdrop mode">
 <set-as-backdrop label="Install as backdrop image handler"/>
+<label help="1">Restart the backdrop mode to have changes made below take affect</label>
+<frame label="Display options">
+<body-selector name="backdrop_body" label="Body to show">
+Which astronomical body to show.  Not all bodies available have full graphics.
+</body-selector>
 <numentry name="backdrop_delay" label="Minutes between update" min='1'
 max='60'>How long to wait before refreshing the backdrop</numentry>
+</frame>
 
 </section>
 <section title="Windowed mode">
 <run-in-window label="Run in windowed mode"/>
 
-<frame label="Body to show">
-<radio-group name="window_body">
-<radio value="earth" label="Earth"/>
-<radio value="moon" label="The Moon"/>
-<radio value="mars" label="Mars"/>
-</radio-group>
-</frame>
+<body-selector name="window_body" label="Body to show">
+Which astronomical body to show.  Not all bodies available have full graphics.
+</body-selector>
 
-<frame label="Projection">
-<radio-group name="window_proj">
-<radio value="" label="Default"/>
-<radio value="mercator" label="Mercator"/>
-<radio value="ancient" label="Ancient"/>
-</radio-group>
-</frame>
+<projection-selector name="window_proj" label="Projection">
+How to project features on a sphere to a flat surface.  For "None", 
+draw a sphere.
+</projection-selector>
 
+<numentry name="window_lat" label="Latitude" min="-90" max="90" unit="degrees" size-group="position">Latitude to view from</numentry>
+<numentry name="window_lon" label="Longitude" min="-180" max="180" unit="degrees" size-group="position">Latitude to view from</numentry>
+
+<hbox>
 <numentry name="window_wait" label="Wait" min='0'
 max='600'>Interval in seconds between updates (0=default)</numentry>
 <numentry name="window_timewarp" label="Time warp" min='1'
 max='1000'>How much to accelerate time by</numentry>
+</hbox>
 
 <label help="1">Some of these options may make more sense after reading the xplanet(1) manual page</label>
 

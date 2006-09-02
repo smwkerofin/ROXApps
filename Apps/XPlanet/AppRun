@@ -7,15 +7,31 @@ import rox, rox.options, rox.filer, rox.OptionsBox
 import time
 import xml.dom.minidom
 
+# xplanet parameters
+bodies=('default', 'sun', 'mercury', 'venus', 'earth', 'moon', 'mars',
+        'phobos', 'deimos', 'jupiter', 'io', 'europa',  'ganymede',
+        'callisto',  'saturn',
+        'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan',
+        'hyperion', 'iapetus',
+        'phoebe', 'uranus', 'miranda', 'ariel', 'umbriel', 'titania',
+        'oberon',  'neptune', 'triton', 'nereid', 'pluto', 'charon',
+        'random',  'major')
+projections=('none', 'ancient',  'azimuthal',  'hemisphere',  'lambert',
+             'mercator', 'mollweide', 'peters', 'orthographic', 
+             'rectangular')
+
 rox.setup_app_options('XPlanet', site='kerofin.demon.co.uk')
 
 program_name=rox.options.Option('program_name', 'xplanet')
 start_mode=rox.options.Option('start_mode', 0)
 
 backdrop_delay=rox.options.Option('backdrop_delay', 10)
+backdrop_delay=rox.options.Option('backdrop_body', 10)
 
 window_body=rox.options.Option('window_body', 'earth')
-window_proj=rox.options.Option('window_proj', '')
+window_lat=rox.options.Option('window_lat', 0)
+window_lon=rox.options.Option('window_lon', 0)
+window_proj=rox.options.Option('window_proj', 0)
 window_wait=rox.options.Option('window_wait', 0)
 window_timewarp=rox.options.Option('window_timewarp', 1)
 
@@ -38,8 +54,16 @@ def build_run_in_window(box, node, label):
     button.connect('clicked', run_in_window)
     return [button]
 
+def build_body_selector(box, node, label, option):
+    return build_selector(box, node, label, option, bodies)
+
+def build_projection_selector(box, node, label, option):
+    return build_selector(box, node, label, option, projections)
+
 rox.OptionsBox.widget_registry['set-as-backdrop']=build_set_as_backdrop
 rox.OptionsBox.widget_registry['run-in-window']=build_run_in_window
+rox.OptionsBox.widget_registry['body-selector']=build_body_selector
+rox.OptionsBox.widget_registry['projection-selector']=build_projection_selector
 
 rox.app_options.notify()
 
@@ -69,14 +93,22 @@ def show_options():
     rox.edit_options()
     rox.mainloop()
 
+def get_body(option):
+    return bodies[option.int_value]
+def get_projection(option):
+    return projections[option.int_value]
+
 def show_window(block=True):
     cmd=program_name.value+' -window'
-    cmd+=' -body %s' % window_body.value
-    if window_proj.value:
-        cmd+=' -projection %s' % window_proj.value
+    if window_body.int_value:
+        cmd+=' -body %s' % get_body(window_body)
+    if window_proj.int_value:
+        cmd+=' -projection %s' % get_projection(window_proj)
     if window_wait.int_value:
         cmd+=' -wait %d' % window_wait.int_value
     cmd+=' -timewarp %d' % window_timewarp.int_value
+    cmd+=' -latitude '+window_lat.value
+    cmd+=' -longitude '+window_lon.value
     if not block:
         cmd+=' &'
     os.system(cmd)
@@ -138,7 +170,12 @@ def backdrop():
     try:
         width=rox.g.gdk.screen_width()
         height=rox.g.gdk.screen_height()
-        cmd=program_name.value+' -geometry %dx%d+0+0 -projection mercator -output %s -num_times 1' % (width, height, fname)
+        cmd=program_name.value+' -geometry %dx%d+0+0' % (width, height)
+        cmd+=' -projection mercator'
+        if backdrop_body.int_value:
+            cmd+=' -body %s' % get_body(backdrop_body.int_value)
+        cmd+=' -output %s -num_times 1' % fname
+        
         os.system(cmd)
         sys.stdout.write('centre %s\n' % fname)
         sys.stdout.flush()
@@ -172,5 +209,40 @@ def check_binary(name=None):
     if not find_binary(name):
         rox.alert('Program "%s" does not appear to exist on this system' %
                   name)
-        
+
+def build_selector_option_menu(box, node, label, option, values):
+    lbl=rox.g.Label(label)
+    opt=rox.g.OptionMenu()
+    box.may_add_tip(opt, node)
+    menu=rox.g.Menu()
+    for val in values:
+        menu.append(rox.g.MenuItem(val.capitalize()))
+    opt.set_menu(menu)
+    #opt.set_history(option.int_value)
+    box.handlers[option]=(
+        lambda: str(opt.get_history()),
+        lambda: opt.set_history(option.int_value))
+    opt.connect('changed', lambda w: box.check_widget(option))
+
+    return [lbl, opt]
+
+def build_selector_combo_box(box, node, label, option, values):
+    lbl=rox.g.Label(label)
+    combo=rox.g.combo_box_new_text()
+    box.may_add_tip(combo, node)
+    for value in values:
+        combo.append_text(value.capitalize())
+
+    box.handlers[option]=(
+        lambda: str(combo.get_active()),
+        lambda: combo.set_active(option.int_value))
+    combo.connect('changed', lambda w: box.check_widget(option))
+
+    return [lbl, combo]
+    
+def build_selector(box, node, label, option, values):
+    if rox.g.gtk_version>=(2, 4, 0):
+        return build_selector_combo_box(box, node, label, option, values)
+    return build_selector_option_menu(box, node, label, option, values)
+    
 main(sys.argv)
