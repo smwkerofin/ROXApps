@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: main.c,v 1.15 2005/10/16 11:57:13 stephen Exp $
+ * $Id: main.c,v 1.16 2006/03/07 19:23:34 stephen Exp $
  */
 #include "config.h"
 
@@ -45,44 +45,11 @@
 #define WIN_WIDTH  320
 #define WIN_HEIGHT 240
 
-typedef struct diff_window {
-  GtkWidget *win;
-  GtkWidget *file[2];
-  GtkWidget *diffs;
-  gchar *fname[2];
-  int tag;
-  int pid;
-  gboolean last_was_nl;
-  GtkTextTag *ctag;
-  GtkTextTag *add, *del, *chn, *ctl;
-  gboolean unified;
-} DiffWindow;
-
-/* Currently only support one window at a time */
-static DiffWindow *window;
-
-static GdkColormap *cmap;
-static GdkColor col_add={0, 0, 0x8000, 0};
-static GdkColor col_del={0, 0xffff, 0, 0};
-static GdkColor col_chn={0, 0, 0, 0xffff};
-static GdkColor col_ctl={0, 0xffff, 0, 0xffff};
-
-typedef struct options {
-  gchar *font_name;
-  gboolean use_unified;
-} Options;
-
-static Options options={
-  "fixed", FALSE
-};
-
-static ROXOption o_font_name;
-static ROXOption o_use_unified;
-
 /* Declare functions in advance */
+typedef struct diff_window DiffWindow;
+
 static DiffWindow *make_window(void);
 static void add_menu_entries(GtkTextView *view, GtkMenu *menu, DiffWindow *);
-static gboolean show_menu(GtkWidget *widget, DiffWindow *window);
 static void setup_config(void);
 static void show_info_win(void);        /* Show information box */
 static void show_choices_win(void);     /* Show configuration window */
@@ -93,6 +60,47 @@ static gboolean load_from_uri(GtkWidget *widget, GSList *uris, gpointer data,
 static gboolean load_from_xds(GtkWidget *widget, const char *path,
 			      gpointer data, gpointer udata);
 static void show_diffs(DiffWindow *win);
+
+struct diff_window {
+  GtkWidget *win;
+  GtkWidget *menu;
+  GtkWidget *file[2];
+  GtkWidget *diffs;
+  gchar *fname[2];
+  int tag;
+  int pid;
+  gboolean last_was_nl;
+  GtkTextTag *ctag;
+  GtkTextTag *add, *del, *chn, *ctl;
+  gboolean unified;
+};
+
+/* Currently only support one window at a time */
+static DiffWindow *window;
+
+static GdkColormap *cmap;
+static GdkColor col_add={0, 0, 0x8000, 0};
+static GdkColor col_del={0, 0xffff, 0, 0};
+static GdkColor col_chn={0, 0, 0, 0xffff};
+static GdkColor col_ctl={0, 0xffff, 0, 0xffff};
+
+static gchar *font_name=NULL;
+static gboolean use_unified=FALSE;
+
+/*
+ * Pop-up menu
+ */
+static GtkItemFactoryEntry menu_items[] = {
+  { N_("/Info"),       NULL, show_info_win, 0, "<StockItem>",
+                                               GTK_STOCK_DIALOG_INFO },
+  { N_("/Choices..."), NULL, show_choices_win, 0, "<StockItem>",
+                                               GTK_STOCK_PREFERENCES },
+  { N_("/Quit"),       NULL, rox_main_quit, 0, "<StockItem>",
+                                               GTK_STOCK_QUIT},
+};
+
+static ROXOption o_font_name;
+static ROXOption o_use_unified;
 
 static void usage(const char *argv0)
 {
@@ -222,12 +230,10 @@ static void opts_changed(void)
 
 static void setup_config(void)
 {
-  options.font_name=g_strdup(options.font_name);
-  
   read_config();
 
-  rox_option_add_string(&o_font_name, "font", options.font_name);
-  rox_option_add_int(&o_use_unified, "unified", options.use_unified);
+  rox_option_add_string(&o_font_name, "font", font_name? font_name: "fixed");
+  rox_option_add_int(&o_use_unified, "unified", use_unified);
 
   rox_option_add_notify(opts_changed);
 }
@@ -253,10 +259,8 @@ static DiffWindow *make_window()
 		     GTK_SIGNAL_FUNC(gtk_main_quit), 
 		     "WM destroy");
 
-  /* We want to pop up a menu */
-  g_signal_connect(win, "popup-menu", G_CALLBACK(show_menu), window);
-
   window->win=win;
+  window->menu=NULL;
 
   /* A vbox contains widgets arranged vertically */
   vbox=gtk_vbox_new(FALSE, 4);
@@ -390,9 +394,9 @@ static void read_config(void)
 	string=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 	if(!string)
 	  continue;
-	if(options.font_name)
-	  g_free(options.font_name);
-	options.font_name=g_strdup((char *) string);
+	if(font_name)
+	  g_free(font_name);
+	font_name=g_strdup((char *) string);
 	xmlFree(string);
 
       } else if(strcmp((char *) node->name, "unified")==0) {
@@ -400,9 +404,9 @@ static void read_config(void)
 	if(!string)
 	  continue;
 	if(strcmp((char *) string, "yes")==0)
-	  options.use_unified=TRUE;
+	  use_unified=TRUE;
 	else if(strcmp((char *) string, "no")==0)
-	  options.use_unified=FALSE;
+	  use_unified=FALSE;
 	xmlFree(string);
 
       }
@@ -413,116 +417,23 @@ static void read_config(void)
   }
 }
 
-/*
- * Pop-up menu
- */
-static GtkItemFactoryEntry menu_items[] = {
-  { N_("/Info"),       NULL, show_info_win, 0, "<StockItem>",
-                                               GTK_STOCK_DIALOG_INFO },
-  { N_("/Choices..."), NULL, show_choices_win, 0, "<StockItem>",
-                                               GTK_STOCK_PREFERENCES },
-  { N_("/Quit"),       NULL, rox_main_quit, 0, "<StockItem>",
-                                               GTK_STOCK_QUIT},
-};
-
-/* Save user-defined menu accelerators */
-static void save_menus(void)
-{
-  char	*menurc;
-	
-  menurc = rox_choices_save("menus", PROJECT, "kerofin.demon.co.uk");
-  if (menurc) {
-    gtk_accel_map_save(menurc);
-    g_free(menurc);
-  }
-}
-
-/* Create the pop-up menu */
-static GtkWidget *menu_create_menu(GtkWidget *window, const gchar *name)
-{
-  GtkWidget *menu;
-  static GtkItemFactory *item_factory;
-  GtkAccelGroup	*accel_group;
-  gint 		n_items = sizeof(menu_items) / sizeof(*menu_items);
-  gchar *menurc;
-
-  accel_group = gtk_accel_group_new();
-
-  item_factory = gtk_item_factory_new(GTK_TYPE_MENU, name, 
-				      accel_group);
-
-  gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
-
-  /* Attach the new accelerator group to the window. */
-  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
-
-  /* Load any user-defined menu accelerators */
-  menu = gtk_item_factory_get_widget(item_factory, name);
-
-  menurc=rox_choices_load("menus", PROJECT, "kerofin.demon.co.uk");
-  if(menurc) {
-    gtk_accel_map_load(menurc);
-    g_free(menurc);
-  }
-
-  /* Save updated accelerators when we exit */
-  atexit(save_menus);
-
-  return menu;
-}
-
-static gboolean show_menu(GtkWidget *widget, DiffWindow *window)
-{
-  GdkEvent *event;
-  int button=0;
-  guint32 time=0;
-  static GtkWidget *popup_menu=NULL;
-  
-  if(GTK_IS_TEXT_VIEW(widget))
-    return FALSE;
-
-  event=gtk_get_current_event();
-  switch(event->type) {
-  case GDK_BUTTON_PRESS:
-  case GDK_BUTTON_RELEASE:
-    {
-      GdkEventButton *bev=(GdkEventButton *) event;
-
-      button=bev->button;
-      time=bev->time;
-    }
-    break;
-  case GDK_KEY_PRESS:
-    {
-      GdkEventKey *kev=(GdkEventKey *) event;
-      time=kev->time;
-    }
-    break;
-  }
-
-  if(!popup_menu) 
-    popup_menu=menu_create_menu(GTK_WIDGET(window->win), "<system>");
-    
-  gtk_menu_popup(GTK_MENU(popup_menu), NULL, NULL, NULL, NULL,
-		 button, time);
-  
-  return TRUE;
-}
-
 static void add_menu_entries(GtkTextView *view, GtkMenu *menu,
 			     DiffWindow *window)
 {
-  GtkWidget *popup_menu;
   GtkWidget *sep, *item;
+  gint n_items=sizeof(menu_items)/sizeof(*menu_items);
 
-  popup_menu=menu_create_menu(window->win, "<text>");
+  /* Can't re-use the menu, it gets destroyed with the menu we attached it
+  * to last time. */
+  window->menu=rox_menu_build(window->win, menu_items, n_items,
+				"<text>", "menus");
     
   sep=gtk_separator_menu_item_new();
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), sep);
   gtk_widget_show(sep);
 
   item=gtk_menu_item_new_with_label(_("Diff"));
-  gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), popup_menu);
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), window->menu);
   gtk_widget_show(item);
 
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
@@ -845,6 +756,9 @@ static void show_choices_win(void)
 
 /*
  * $Log: main.c,v $
+ * Revision 1.16  2006/03/07 19:23:34  stephen
+ * Added i18n support (with ROX-CLib 2.1.8)
+ *
  * Revision 1.15  2005/10/16 11:57:13  stephen
  * Update for ROX-CLib changes, many externally visible symbols
  * (functions and types) now have rox_ or ROX prefixes.

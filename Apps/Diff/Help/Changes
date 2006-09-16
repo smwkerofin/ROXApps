@@ -1,6 +1,10 @@
 Changes to Diff
 ===============
 
+28-Aug-2006
+~~~~~~~~~~~
+Use new menu API.  Remove some old options related stuff.
+
 24-Mar-2006
 ~~~~~~~~~~~
 Added es translation (Juan Carlos Jimenez Garcia).
