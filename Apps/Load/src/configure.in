@@ -28,6 +28,21 @@ AC_CHECK_HEADERS(locale.h libintl.h)
 AC_CHECK_HEADERS(apsymbols.h apbuild/apsymbols.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
+dnl Use -Wall, etc if possible
+dnl Note: GTK uses func(), so can't use -Wstrict-prototypes
+[
+if test "x$GCC" = "xyes"; then
+  CFLAGS="$CFLAGS -Wall -Wmissing-prototypes"
+]
+  AC_MSG_CHECKING(for GCC version 4)
+[ if $CC --version | grep "(GCC) 4" > /dev/null; then ]
+    AC_MSG_RESULT(yes)
+    [ CFLAGS="$CFLAGS -Wno-pointer-sign" ]
+  else
+    AC_MSG_RESULT(no)
+  fi
+fi
+
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(gethostname setlocale bindtextdomain gettext)
@@ -35,7 +50,7 @@ AC_CHECK_LIB(gnugetopt, getopt_long)
 AC_CHECK_FUNCS(getopt_long)
 
 dnl Check for ROX-CLib and version
-ROX_CLIB_0LAUNCH(2, 1, 8)
+ROX_CLIB_0LAUNCH(2, 1, 9)
 
 dnl Extract version info from AppInfo.xml
 ROX_SELF_VERSION

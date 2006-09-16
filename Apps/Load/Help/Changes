@@ -1,6 +1,11 @@
 Load
 ====
 
+16-Sep-2006
+~~~~~~~~~~~
+Use new menu API.
+Purge unused code and variables.
+
 24-Mar-2006
 ~~~~~~~~~~~
 Added es translation (Juan Carlos Jimenez Garcia).

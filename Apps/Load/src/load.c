@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: load.c,v 1.27 2005/10/16 11:59:50 stephen Exp $
+ * $Id: load.c,v 1.28 2006/03/07 19:23:51 stephen Exp $
  *
  * Log at end of file
  */
@@ -44,9 +44,8 @@
 #include <rox/rox_soap.h>
 #include <rox/rox_soap_server.h>
 #include <rox/options.h>
+#include <rox/menu.h>
 
-static GtkWidget *menu=NULL;
-static GtkWidget *infowin=NULL;
 static GdkColormap *cmap = NULL;
 static GdkColor colours[]={
   {0, 0xffff,0xffff,0xffff},
@@ -67,26 +66,6 @@ enum {
 #define COL_HIGH(i) (COL_HIGH0+(i))
 #define COL_NORMAL(i) (COL_NORMAL0+(i))
 #define NUM_COLOUR (sizeof(colours)/sizeof(colours[0]))
-
-typedef struct colour_info {
-  int colour;
-  gdouble rgb[4];
-  const char *use;
-  const char *vname;
-} ColourInfo;
-
-static ColourInfo colour_info[]={
-  {COL_NORMAL0, {0}, "Normal, 1 minute",   "NormalColour1"},
-  {COL_NORMAL1, {0}, "Normal, 5 minutes",  "NormalColour5"},
-  {COL_NORMAL2, {0}, "Normal, 15 minutes", "NormalColour15"},
-  {COL_HIGH0,   {0}, "High, 1 minute",     "HighColour1"},
-  {COL_HIGH1,   {0}, "High, 5 minutes",    "HighColour5"},
-  {COL_HIGH2,   {0}, "High, 15 minutes",   "HighColour15"},
-  {COL_FG,      {0}, "Foreground",         "ForegroundColour"},
-  {COL_BG,      {0}, "Background",         "BackgroundColour"},
-  
-  {-1, {0}, NULL}
-};
 
 #define BAR_WIDTH     16          /* Width of bar */
 #define BAR_GAP        4          /* Gap between bars */
@@ -135,6 +114,7 @@ static ROXOption opt_font;
 typedef struct load_window {
   GtkWidget *win;
   GtkWidget *canvas;
+  GtkWidget *menu;
   GdkPixmap *pixmap;
   GdkGC *gc;
   
@@ -158,11 +138,10 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 			    gpointer data);
 static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
 			    gpointer data);
-static void menu_create_menu(GtkWidget *window);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer win);
-static gboolean popup_menu(GtkWidget *window, gpointer udata);
 static void show_info_win(void);
+static void close_window(void);
 
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
@@ -173,8 +152,20 @@ static gboolean options_remote(void);
 static void show_config_win(void);
 
 static void setup_config(void);
-static gboolean read_config_xml(void);
 static void opts_changed(void);
+
+/* Pop-up menu */
+static GtkItemFactoryEntry menu_items[] = {
+  { N_("/Info"),	NULL, show_info_win, 0, "<StockItem>",
+                                                GTK_STOCK_DIALOG_INFO},
+  { N_("/Configure"),	NULL, show_config_win, 0,   "<StockItem>",
+                                                GTK_STOCK_PREFERENCES},
+  { N_("/Close"), 	NULL, close_window, 0,   "<StockItem>",
+                                                GTK_STOCK_CLOSE},
+  { "/sep", 	        NULL, NULL, 0, "<Separator>" },
+  { N_("/Quit"),	NULL, rox_main_quit, 0,   "<StockItem>",
+                                                GTK_STOCK_QUIT},
+};
 
 static ROXSOAPServerActions actions[]={
   {"Open", NULL, "Parent",rpc_Open, NULL},
@@ -250,10 +241,10 @@ int main(int argc, char *argv[])
 #ifdef HAVE_GETHOSTNAME
   if(gethostname(hostname, sizeof(hostname))<0) {
     hostname[0]=0;
-    dprintf(1, "couldn't get hostname: %s", strerror(errno));
+    rox_debug_printf(1, "couldn't get hostname: %s", strerror(errno));
     errno=0;
   } else {
-    dprintf(1, "Running on %s", hostname);
+    rox_debug_printf(1, "Running on %s", hostname);
   }
 #endif
 
@@ -266,7 +257,7 @@ int main(int argc, char *argv[])
   ncpu=get_num_cpu();
   if(ncpu>0)
     red_line=(double) ncpu;
-  dprintf(2, "ncpu=%d %f", ncpu, red_line);
+  rox_debug_printf(2, "ncpu=%d %f", ncpu, red_line);
 
   gdk_rgb_init();
   gtk_widget_push_visual(gdk_rgb_get_visual());
@@ -307,12 +298,12 @@ int main(int argc, char *argv[])
   if(do_exit)
     exit(0);
 
-  dprintf(1, "setup config");
+  rox_debug_printf(1, "setup config");
   setup_config();
 
   for(i=0; i<NUM_COLOUR; i++) {
     gdk_color_alloc(cmap, colours+i);
-    dprintf(3, "colour %d: %4x, %4x, %4x: %ld", i, colours[i].red,
+    rox_debug_printf(3, "colour %d: %4x, %4x, %4x: %ld", i, colours[i].red,
 	   colours[i].green, colours[i].blue, colours[i].pixel);
   }
 
@@ -323,12 +314,12 @@ int main(int argc, char *argv[])
   if(optind>=argc || !atol(argv[optind])) {
     xid=0;
   } else {
-    dprintf(2, "argv[%d]=%s", optind, argv[optind]);
+    rox_debug_printf(2, "argv[%d]=%s", optind, argv[optind]);
     xid=atol(argv[optind]);
   }
 
   if(replace_server || !rox_soap_ping(PROJECT)) {
-    dprintf(1, "Making SOAP server");
+    rox_debug_printf(1, "Making SOAP server");
     sserver=rox_soap_server_new(PROJECT, LOAD_NAMESPACE_URL);
     rox_soap_server_add_actions(sserver, actions);
     
@@ -338,7 +329,7 @@ int main(int argc, char *argv[])
 	return 0;
     }
     if(open_remote(xid)) {
-      dprintf(1, "success in open_remote(%lu), exiting", xid);
+      rox_debug_printf(1, "success in open_remote(%lu), exiting", xid);
       if(xid)
 	sleep(3);
       return 0;
@@ -418,6 +409,7 @@ static void remove_window(LoadWindow *win)
   g_source_remove(win->update);
   gdk_pixmap_unref(win->pixmap);
   gdk_gc_unref(win->gc);
+  gtk_widget_destroy(win->menu);
   g_free(win);
 
   rox_debug_printf(1, "rox_get_n_windows()=%d", rox_get_n_windows());
@@ -427,7 +419,7 @@ static void window_gone(GtkWidget *widget, gpointer data)
 {
   LoadWindow *lw=(LoadWindow *) data;
 
-  dprintf(1, "Window gone: %p %p", widget, lw);
+  rox_debug_printf(1, "Window gone: %p %p", widget, lw);
 
   remove_window(lw);
 }
@@ -437,7 +429,6 @@ static LoadWindow *make_window(guint32 xid)
   LoadWindow *lwin;
   GtkWidget *vbox;
   int w=MIN_WIDTH, h=MIN_HEIGHT;
-  int i;
   
   lwin=g_new0(LoadWindow, 1);
 
@@ -446,7 +437,7 @@ static LoadWindow *make_window(guint32 xid)
   w=opt_applet_size.int_value;
   h=w;
   if(!xid) {
-    dprintf(2, "make window");
+    rox_debug_printf(2, "make window");
     lwin->is_applet=FALSE;
     lwin->win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_widget_set_name(lwin->win, "load");
@@ -459,13 +450,13 @@ static LoadWindow *make_window(guint32 xid)
     gtk_widget_add_events(lwin->win, GDK_BUTTON_PRESS_MASK);
     gtk_window_set_wmclass(GTK_WINDOW(lwin->win), "Load", PROJECT);
     
-    dprintf(3, "set size to %d,%d", w, h);
+    rox_debug_printf(3, "set size to %d,%d", w, h);
     gtk_widget_set_size_request(lwin->win, w, h);
 
   } else {
     GtkWidget *plug;
 
-    dprintf(2, "make plug");
+    rox_debug_printf(2, "make plug");
     plug=gtk_plug_new(xid);
     gtk_signal_connect(GTK_OBJECT(plug), "destroy", 
 		       GTK_SIGNAL_FUNC(window_gone), 
@@ -479,11 +470,6 @@ static LoadWindow *make_window(guint32 xid)
     lwin->win=plug;
     lwin->is_applet=TRUE;
   }
-  if(!menu)
-    menu_create_menu(GTK_WIDGET(lwin->win));
-  
-  gtk_signal_connect(GTK_OBJECT(lwin->win), "popup-menu",
-		     GTK_SIGNAL_FUNC(popup_menu), lwin);
   
   vbox=gtk_vbox_new(FALSE, 1);
   gtk_container_add(GTK_CONTAINER(lwin->win), vbox);
@@ -505,11 +491,19 @@ static LoadWindow *make_window(guint32 xid)
 
   gtk_widget_realize(lwin->win);
 
+  lwin->menu=rox_menu_build(lwin->win,
+			    menu_items, sizeof(menu_items)/sizeof(*menu_items),
+			    "<system>", "menus");
+  if(lwin->is_applet)
+    rox_menu_attach_to_applet(lwin->menu, lwin->win, NULL, lwin);
+  else
+    rox_menu_attach(lwin->menu, lwin->win, TRUE, NULL, lwin);  
+
   gtk_widget_show(lwin->win);
 
   lwin->update=g_timeout_add(opt_update_rate.int_value*1000,
 			       (GtkFunction) window_update, lwin);
-  dprintf(3, "update tag is %u", lwin->update);
+  rox_debug_printf(3, "update tag is %u", lwin->update);
   
   windows=g_list_append(windows, lwin);
   current_window=lwin;
@@ -525,20 +519,20 @@ static LoadWindow *make_window(guint32 xid)
 */
 static History *get_history(int ind)
 {
-  dprintf(4, "request for history %d (%d, %d)", ind, ihistory, nhistory);
+  rox_debug_printf(4, "request for history %d (%d, %d)", ind, ihistory, nhistory);
   
   if(ind<0) {
     if(ind<-nhistory || ind <-ihistory)
       return NULL;
 
-    dprintf(4, "index %d", (ihistory+ind)%nhistory);
+    rox_debug_printf(4, "index %d", (ihistory+ind)%nhistory);
     return history+((ihistory+ind)%nhistory);
     
   } else {
     if(ind>=ihistory || ind<ihistory-nhistory)
       return NULL;
 
-    dprintf(4, "index %d", ind%nhistory);
+    rox_debug_printf(4, "index %d", ind%nhistory);
     return history+ind%nhistory;
   }
 
@@ -549,7 +543,7 @@ static void append_history(time_t when, const double loadavg[3])
 {
   int i, j;
 
-  dprintf(4, "append history for 0x%lx", when);
+  rox_debug_printf(4, "append history for 0x%lx", when);
 
   if(history && nhistory>0) {
     if(history[ihistory%nhistory].when==when)
@@ -580,7 +574,6 @@ static gboolean window_update(LoadWindow *lwin)
   int bw, mbh, bh, bm=BOTTOM_MARGIN, tm=TOP_MARGIN, l1=BOTTOM_MARGIN, l2=0;
   int theight;
   int bx, by, x, y, sbx;
-  int cpu, other;
   double ld;
   int i, j;
   char buf[32];
@@ -595,23 +588,23 @@ static gboolean window_update(LoadWindow *lwin)
     "1m", "5m", "15m"
   };
 
-  dprintf(4, "gc=%p canvas=%p pixmap=%p", lwin->gc, lwin->canvas,
+  rox_debug_printf(4, "gc=%p canvas=%p pixmap=%p", lwin->gc, lwin->canvas,
 	  lwin->pixmap);
 
   if(!lwin->gc || !lwin->canvas || !lwin->pixmap)
-    return;
+    return TRUE;
 
   h=lwin->canvas->allocation.height;
   w=lwin->canvas->allocation.width;
 
   layout=gtk_widget_create_pango_layout(lwin->canvas, "");
-  dprintf(3, "font is %s", opt_font.value? opt_font.value: "");
+  rox_debug_printf(3, "font is %s", opt_font.value? opt_font.value: "");
   pfd=pango_font_description_from_string(opt_font.value);
   pango_layout_set_font_description(layout, pfd);
   pango_font_description_free(pfd);
   
   style=gtk_widget_get_style(lwin->canvas);
-  dprintf(3, "style=%p bg_gc[GTK_STATE_NORMAL]=%p", style,
+  rox_debug_printf(3, "style=%p bg_gc[GTK_STATE_NORMAL]=%p", style,
 	  style->bg_gc[GTK_STATE_NORMAL]);
   if(style && style->bg_gc[GTK_STATE_NORMAL]) {
     gtk_style_apply_default_background(style, lwin->pixmap, TRUE,
@@ -634,7 +627,7 @@ static gboolean window_update(LoadWindow *lwin)
 
     pango_layout_set_text(layout, "0", -1);
     pango_layout_get_pixel_size(layout, &width, &theight);
-    dprintf(3, "%d,%d", width, theight);
+    rox_debug_printf(3, "%d,%d", width, theight);
 
     ndec=(bw/width)-2;
     if(ndec<1)
@@ -656,7 +649,7 @@ static gboolean window_update(LoadWindow *lwin)
   mbh=by-tm;
   if(mbh<48)
     mbh=by-2;
-  dprintf(4, "w=%d bw=%d", w, bw);
+  rox_debug_printf(4, "w=%d bw=%d", w, bw);
   sbx=bx;
 
   time(&now);
@@ -689,17 +682,17 @@ static gboolean window_update(LoadWindow *lwin)
     gdk_gc_set_foreground(lwin->gc, colours+COL_NORMAL(i));
     gdk_draw_rectangle(lwin->pixmap, lwin->gc, TRUE, bx, by-bh, bw, bh);
     
-    dprintf(4, "load=%f max_load=%d, mbh=%d, by=%d, bh=%d, by-bh=%d",
+    rox_debug_printf(4, "load=%f max_load=%d, mbh=%d, by=%d, bh=%d, by-bh=%d",
 	   ld, max_load, mbh, by, bh, by-bh);
-    dprintf(5, "(%d, %d) by (%d, %d)", bx, by-bh, bw, bh);
+    rox_debug_printf(5, "(%d, %d) by (%d, %d)", bx, by-bh, bw, bh);
     
     
     if(ld>red_line) {
       int bhred=mbh*(ld-red_line)/(double) max_load;
       int byred=mbh*red_line/(double) max_load;
       
-      dprintf(5, "bhred=%d by-bhred=%d", bhred, by-bhred);
-      dprintf(5, "(%d, %d) by (%d, %d)", bx, by-bh, bw, bhred);
+      rox_debug_printf(5, "bhred=%d by-bhred=%d", bhred, by-bhred);
+      rox_debug_printf(5, "(%d, %d) by (%d, %d)", bx, by-bh, bw, bhred);
       
       gdk_gc_set_foreground(lwin->gc, colours+COL_HIGH(i));
       /*gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, bw, bhred);*/
@@ -737,25 +730,25 @@ static gboolean window_update(LoadWindow *lwin)
     int gwidth=CHART_RES;
     int gorg=sbx-BAR_GAP;
 
-    dprintf(2, "draw history");
+    rox_debug_printf(2, "draw history");
     bx=sbx-BAR_GAP;
     for(i=-1; bx>BAR_GAP; i--) {
       hist=get_history(i);
-      dprintf(3, "get_history(%d)->%p", i, hist);
+      rox_debug_printf(3, "get_history(%d)->%p", i, hist);
       if(!hist)
 	break;
       prev=get_history(i-1);
       if(prev) {
-	dprintf(4, "tdiff %d, org=%d", (int)(now-prev->when), gorg);
+	rox_debug_printf(4, "tdiff %d, org=%d", (int)(now-prev->when), gorg);
 	bx=gorg-CHART_RES*(int)(now-prev->when);
 	gwidth=CHART_RES*(int)(hist->when-prev->when);
 
-	dprintf(4, " 0x%lx: 0x%lx, 0x%lx -> %d, %d", now, hist->when,
+	rox_debug_printf(4, " 0x%lx: 0x%lx, 0x%lx -> %d, %d", now, hist->when,
 		prev->when, bx, gwidth);
       } else {
 	bx=gorg-CHART_RES*(int)(now-hist->when-1)-CHART_RES;
 	gwidth=CHART_RES;
-	dprintf(3, "get_history(%d)==NULL", i-1);
+	rox_debug_printf(3, "get_history(%d)==NULL", i-1);
       }
       if(bx<BAR_GAP) {
 	gwidth-=(BAR_GAP-bx);
@@ -768,11 +761,10 @@ static gboolean window_update(LoadWindow *lwin)
 	ld=hist->load[j];
 	bh=mbh*ld/(double) max_load;
 	gdk_gc_set_foreground(lwin->gc, colours+COL_NORMAL(j));
-	dprintf(4, "(%d, %d) size (%d, %d)", bx, by-bh, gwidth, bh);
+	rox_debug_printf(4, "(%d, %d) size (%d, %d)", bx, by-bh, gwidth, bh);
 	gdk_draw_rectangle(lwin->pixmap, lwin->gc, TRUE, bx, by-bh,
 			   gwidth, bh);
 	if(ld>red_line) {
-	  int bhred=mbh*(ld-red_line)/max_load;
 	  int byred=mbh*red_line/max_load;
 	  gdk_gc_set_foreground(lwin->gc, colours+COL_HIGH(j));
 	  /*gdk_draw_rectangle(pixmap, gc, TRUE, bx, by-bh, gwidth, bhred);*/
@@ -842,17 +834,17 @@ static void resize_history(LoadWindow *lwin, int width)
   History *tmp;
   int i;
 
-  dprintf(3, "width=%d CHART_RES=%d", width, CHART_RES);
+  rox_debug_printf(3, "width=%d CHART_RES=%d", width, CHART_RES);
   nrec=(width-2-3*MAX_BAR_WIDTH-3*BAR_GAP-1)/CHART_RES;
   if(nrec<0)
     nrec=0;
   lwin->hsize=nrec;
 
-  dprintf(3, "nrec=%d, nhistory=%d, ihistory=%d", nrec, nhistory, ihistory);
+  rox_debug_printf(3, "nrec=%d, nhistory=%d, ihistory=%d", nrec, nhistory, ihistory);
   if(nrec<=nhistory)
     return;
 
-  dprintf(2, "expand history from %d to %d", nhistory, nrec);
+  rox_debug_printf(2, "expand history from %d to %d", nhistory, nrec);
 
   if(ihistory<nhistory) {
     tmp=g_realloc(history, nrec*sizeof(History));
@@ -865,7 +857,7 @@ static void resize_history(LoadWindow *lwin, int width)
     for(i=ihistory; i<nhistory; i++)
       history[i].when=(time_t) 0;
 
-    dprintf(3, "reset list");
+    rox_debug_printf(3, "reset list");
     
     return;
   }
@@ -874,7 +866,7 @@ static void resize_history(LoadWindow *lwin, int width)
     history=g_new(History, nrec);
     nhistory=nrec;
     ihistory=0;
-    dprintf(3, "made list");
+    rox_debug_printf(3, "made list");
     return;
   }
 
@@ -882,7 +874,7 @@ static void resize_history(LoadWindow *lwin, int width)
   i=nhistory-(ihistory%nhistory);
   if(i==nhistory)
     i=0;
-  dprintf(3, "split list: %d,%d %d,%d", (ihistory%nhistory), i,
+  rox_debug_printf(3, "split list: %d,%d %d,%d", (ihistory%nhistory), i,
 	  0, nhistory-i);
   g_memmove(tmp, history+(ihistory%nhistory), i*sizeof(History));
   g_memmove(tmp+i, history, (nhistory-i)*sizeof(History));
@@ -900,7 +892,7 @@ static gint expose_event(GtkWidget *widget, GdkEventExpose *event,
   LoadWindow *lwin=(LoadWindow *) data;
   
   if(!lwin->gc || !lwin->canvas || !lwin->pixmap)
-    return;
+    return TRUE;
   
   h=lwin->canvas->allocation.height;
   w=lwin->canvas->allocation.width;
@@ -922,8 +914,8 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 {
   LoadWindow *lwin=(LoadWindow *) data;
 
-  dprintf(3, "configure_event(%p, %p, %p)", widget, event, data);
-  dprintf(3, "pixmap=%p canvas=%p hsize=%d", lwin->pixmap, lwin->canvas,
+  rox_debug_printf(3, "configure_event(%p, %p, %p)", widget, event, data);
+  rox_debug_printf(3, "pixmap=%p canvas=%p hsize=%d", lwin->pixmap, lwin->canvas,
 	  lwin->hsize);
   
   if (lwin->pixmap)
@@ -934,152 +926,11 @@ static gint configure_event(GtkWidget *widget, GdkEventConfigure *event,
 			  widget->allocation.height,
 			  -1);
   resize_history(lwin, widget->allocation.width);
-  dprintf(3, "pixmap=%p canvas=%p hsize=%d", lwin->pixmap, lwin->canvas,
+  rox_debug_printf(3, "pixmap=%p canvas=%p hsize=%d", lwin->pixmap, lwin->canvas,
 	  lwin->hsize);
   window_update(lwin);
 
   return TRUE;
-}
-
-/* This is for the pre- rox_options config */
-static gboolean read_config_xml(void)
-{
-  guchar *fname;
-
-  fname=rox_choices_load("config.xml", PROJECT, "kerofin.demon.co.uk");
-
-  if(fname) {
-    xmlDocPtr doc;
-    xmlNodePtr node, root;
-    const xmlChar *string;
-
-    doc=xmlParseFile(fname);
-    if(!doc) {
-      g_free(fname);
-      return FALSE;
-    }
-
-    root=xmlDocGetRootElement(doc);
-    if(!root) {
-      g_free(fname);
-      xmlFreeDoc(doc);
-      return FALSE;
-    }
-
-    if(strcmp(root->name, PROJECT)!=0) {
-      g_free(fname);
-      xmlFreeDoc(doc);
-      return FALSE;
-    }
-
-    for(node=root->xmlChildrenNode; node; node=node->next) {
-      xmlChar *str;
-      
-      if(node->type!=XML_ELEMENT_NODE)
-	continue;
-
-      if(strcmp(node->name, "update")==0) {
- 	str=xmlGetProp(node, "value");
-	if(!str)
-	  continue;
-	opt_update_rate.int_value=atol(str)/1000;
-	free(str);
-
-      } else if(strcmp(node->name, "show")==0) {
-	str=xmlGetProp(node, "max");
-	if(str) {
-	  opt_show_max.int_value=atoi(str);
-	  free(str);
-	}
-	str=xmlGetProp(node, "vals");
-	if(str) {
-	  opt_show_vals.int_value=atoi(str);
-	  free(str);
-	}
-	str=xmlGetProp(node, "host");
-	if(str) {
-	  opt_show_host.int_value=atoi(str);
-	  free(str);
-	}
-	str=xmlGetProp(node, "multiple-charts");
-	if(str) {
-	  opt_multiple.int_value=atoi(str);
-	  free(str);
-	}
-
-      } else if(strcmp(node->name, "font")==0) {
-	str=xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
-	if(!str)
-	  continue;
-	/* Errr */
-	free(str);
-
-      } else if(strcmp(node->name, "applet")==0) {
- 	str=xmlGetProp(node, "initial-size");
-	if(!str)
-	  continue;
-	opt_applet_size.int_value=atoi(str);
-	free(str);
-
-      } else if(strcmp(node->name, "colours")==0) {
-	xmlNodePtr sub;
-
-	for(sub=node->xmlChildrenNode; sub; sub=sub->next) {
-	  if(sub->type!=XML_ELEMENT_NODE)
-	    continue;
-
-	  if(strcmp(sub->name, "colour")==0) {
-	    int i;
-	    GdkColor *col=NULL;
-	    
-	    str=xmlGetProp(sub, "name");
-	    if(!str)
-	      continue;
-	    for(i=0; colour_info[i].colour>=0; i++) {
-	      if(strcmp(str, colour_info[i].vname)==0) {
-		col=colours+colour_info[i].colour;
-		break;
-	      }
-	    }
-	    g_free(str);
-	    if(col) {
-	      unsigned long r=col->red, g=col->green, b=col->blue;
-
-	      str=xmlGetProp(sub, "red");
-	      if(str) {
-		r=strtoul(str, NULL, 16);
-		g_free(str);
-	      }
-	      str=xmlGetProp(sub, "green");
-	      if(str) {
-		g=strtoul(str, NULL, 16);
-		g_free(str);
-	      }
-	      str=xmlGetProp(sub, "blue");
-	      if(str) {
-		b=strtoul(str, NULL, 16);
-		g_free(str);
-	      }
-
-	      col->red=r;
-	      col->green=g;
-	      col->blue=b;
-
-	      dprintf(2, "colour %s=(0x%x, 0x%x, 0x%x)", colour_info[i].vname,
-		      col->red, col->green, col->blue);
-	    }
-	  }
-	}
-      }
-    }
-    
-    xmlFreeDoc(doc);
-    
-    g_free(fname);
-    return TRUE;
-  }
-
-  return FALSE;
 }
 
 static void opts_changed(void)
@@ -1144,64 +995,11 @@ static void close_window(void)
 {
   LoadWindow *lw=current_window;
 
-  dprintf(1, "close_window %p %p", lw, lw->win);
+  rox_debug_printf(1, "close_window %p %p", lw, lw->win);
 
   gtk_widget_hide(lw->win);
   gtk_widget_unref(lw->win);
   gtk_widget_destroy(lw->win);
-}
-
-/* Pop-up menu */
-static GtkItemFactoryEntry menu_items[] = {
-  { N_("/Info"),	NULL, show_info_win, 0, "<StockItem>",
-                                                GTK_STOCK_DIALOG_INFO},
-  { N_("/Configure"),	NULL, show_config_win, 0,   "<StockItem>",
-                                                GTK_STOCK_PREFERENCES},
-  { N_("/Close"), 	NULL, close_window, 0,   "<StockItem>",
-                                                GTK_STOCK_CLOSE},
-  { "/sep", 	        NULL, NULL, 0, "<Separator>" },
-  { N_("/Quit"),	NULL, rox_main_quit, 0,   "<StockItem>",
-                                                GTK_STOCK_QUIT},
-};
-
-static void save_menus(void)
-{
-  char	*menurc;
-	
-  menurc = rox_choices_save("menus", PROJECT, "kerofin.demon.co.uk");
-  if (menurc) {
-    gtk_accel_map_save(menurc);
-    g_free(menurc);
-  }
-}
-
-static void menu_create_menu(GtkWidget *window)
-{
-  GtkItemFactory	*item_factory;
-  GtkAccelGroup	*accel_group;
-  gint 		n_items = sizeof(menu_items) / sizeof(*menu_items);
-  gchar *menurc;
-
-  accel_group = gtk_accel_group_new();
-  /*gtk_accel_group_lock(accel_group);*/
-
-  item_factory = gtk_item_factory_new(GTK_TYPE_MENU, "<system>", 
-				      accel_group);
-
-  gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
-
-  /* Attach the new accelerator group to the window. */
-  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
-
-  menu = gtk_item_factory_get_widget(item_factory, "<system>");
-
-  menurc=rox_choices_load("menus", PROJECT, "kerofin.demon.co.uk");
-  if(menurc) {
-    gtk_accel_map_load(menurc);
-    g_free(menurc);
-  }
-
-  atexit(save_menus);
 }
 
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
@@ -1211,43 +1009,17 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 
   current_window=lwin;
 
-  dprintf(2, "Button press on %p %p", window, lwin);
+  rox_debug_printf(2, "Button press on %p %p", window, lwin);
   
-  if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
-    if(!menu)
-      menu_create_menu(GTK_WIDGET(win));
-
-    dprintf(3, "show menu for %s", lwin->is_applet? "applet": "window");
-    if(lwin->is_applet)
-      rox_applet_popup_menu(lwin->win, menu, bev);
-    else
-      gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-		     bev->button, bev->time);
-    return TRUE;
-  } else if(/*lwin->is_applet && */bev->type==GDK_BUTTON_PRESS && bev->button==1) {
-    make_window(0);
+  if(bev->type==GDK_BUTTON_PRESS) {
+    if(bev->button==1 && lwin->is_applet) {
+      make_window(0);
       
-    return TRUE;
+      return TRUE;
+    }
   }
 
   return FALSE;
-}
-
-static gboolean popup_menu(GtkWidget *window, gpointer udata)
-{
-  LoadWindow *lwin=(LoadWindow *) udata;
-
-  if(!menu) 
-    menu_create_menu(GTK_WIDGET(lwin->win));
-
-  if(lwin->is_applet)
-    rox_applet_popup_menu(lwin->win, menu, NULL);
-  else
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-		   0, gtk_get_current_event_time());
-
-  return TRUE;
-  
 }
 
 /* SOAP stuff now */
@@ -1286,7 +1058,7 @@ static void open_callback(ROXSOAP *serv, gboolean status,
 {
   gboolean *s=udata;
   
-  dprintf(3, "In open_callback(%p, %d, %p, %p)", serv, status, reply,
+  rox_debug_printf(3, "In open_callback(%p, %d, %p, %p)", serv, status, reply,
 	 udata);
   *s=status;
   gtk_main_quit();
@@ -1301,22 +1073,22 @@ static gboolean open_remote(guint32 xid)
   char buf[32];
 
   serv=rox_soap_connect(PROJECT);
-  dprintf(3, "server for %s is %p", PROJECT, serv);
+  rox_debug_printf(3, "server for %s is %p", PROJECT, serv);
   if(!serv)
     return FALSE;
 
   doc=rox_soap_build_xml("Open", LOAD_NAMESPACE_URL, &node);
   if(!doc) {
-    dprintf(3, "Failed to build XML doc");
+    rox_debug_printf(3, "Failed to build XML doc");
     rox_soap_close(serv);
     return FALSE;
   }
 
-  sprintf(buf, "%lu", xid);
+  sprintf(buf, "%lu", (unsigned long) xid);
   xmlNewChild(node, NULL, "Parent", buf);
 
   sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
-  dprintf(3, "sent %d", sent);
+  rox_debug_printf(3, "sent %d", sent);
 
   xmlFreeDoc(doc);
   if(sent)
@@ -1332,22 +1104,21 @@ static gboolean options_remote(void)
   xmlDocPtr doc;
   xmlNodePtr node;
   gboolean sent, ok;
-  char buf[32];
 
   serv=rox_soap_connect(PROJECT);
-  dprintf(3, "server for %s is %p", PROJECT, serv);
+  rox_debug_printf(3, "server for %s is %p", PROJECT, serv);
   if(!serv)
     return FALSE;
 
   doc=rox_soap_build_xml("Options", LOAD_NAMESPACE_URL, &node);
   if(!doc) {
-    dprintf(3, "Failed to build XML doc");
+    rox_debug_printf(3, "Failed to build XML doc");
     rox_soap_close(serv);
     return FALSE;
   }
 
   sent=rox_soap_send(serv, doc, FALSE, open_callback, &ok);
-  dprintf(3, "sent %d", sent);
+  rox_debug_printf(3, "sent %d", sent);
 
   xmlFreeDoc(doc);
   if(sent)
@@ -1370,6 +1141,9 @@ static void show_info_win(void)
 
 /*
  * $Log: load.c,v $
+ * Revision 1.28  2006/03/07 19:23:51  stephen
+ * Added i18n support (with ROX-CLib 2.1.8)
+ *
  * Revision 1.27  2005/10/16 11:59:50  stephen
  * Update for ROX-CLib changes, many externally visible symbols
  * (functions and types) now have rox_ or ROX prefixes.
