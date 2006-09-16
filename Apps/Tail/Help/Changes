@@ -1,6 +1,11 @@
 Tail
 ====
 
+16-Sep-2006
+~~~~~~~~~~~
+Use new menu API.
+Purge unused code and variables.
+
 07-Mar-2006 (2.1.4)
 ~~~~~~~~~~~
 Added i18n support.

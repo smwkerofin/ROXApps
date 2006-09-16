@@ -1,7 +1,7 @@
 /*
  * Tail - GTK version of tail -f
  *
- * $Id: tail.c,v 1.20 2004/11/21 13:24:39 stephen Exp $
+ * $Id: tail.c,v 1.21 2005/10/16 12:01:32 stephen Exp $
  */
 
 #include "config.h"
@@ -39,14 +39,13 @@
 #include <rox/rox_dnd.h>
 #include <rox/gtksavebox.h>
 #include <rox/mime.h>
+#include <rox/menu.h>
 
 #define MAX_SIZE (256*1024)  /* Maximum size to load at start */
 
 static GtkWidget *win;
 static GtkWidget *text;
 static GtkWidget *changed=NULL;
-static GtkWidget *errwin=NULL;
-static GtkWidget *errmess=NULL;
 static GtkWidget *menu;
 
 static int fd=-1;
@@ -55,7 +54,6 @@ static off_t size;
 static gchar *fname=NULL;
 static gchar *fixed_title=NULL;
 static guint update_tag=0;
-static time_t last_change;
 
 static gint check_file(gpointer unused);
 static void set_file(const char *);
@@ -66,12 +64,7 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 static void window_updated(time_t when);
 
 static void file_saveas_proc(void);
-/*
-static gint button_press(GtkWidget *window, GdkEventButton *bev,
-			 gpointer win);
-*/
 static void add_menu_entries(GtkTextView *view, GtkMenu *menu, gpointer);
-static gboolean show_menu(GtkWidget *widget, gpointer);
 
 static GtkItemFactoryEntry menu_items[] = {
   {N_("/_Info"), "<control>I", show_info_win, 0, "<StockItem>",
@@ -169,9 +162,7 @@ static void do_version(void)
 int main(int argc, char *argv[])
 {
   GtkWidget *vbox;
-  GtkWidget *hbox;
   GtkWidget *scr;
-  GtkWidget *mbar;
   GdkPixbuf *wicon;
   GError *err=NULL;
   gchar *rcfile, *wipath;
@@ -241,7 +232,9 @@ int main(int argc, char *argv[])
   gtk_window_set_title(GTK_WINDOW(win), fixed_title? fixed_title: "Tail");
   gtk_window_set_wmclass(GTK_WINDOW(win), "Tail", PROJECT);
   rox_dnd_register_uris(win, 0, got_uri_list, NULL);
-  g_signal_connect(win, "popup-menu", G_CALLBACK(show_menu), win);
+  menu=rox_menu_build(win, menu_items, sizeof(menu_items)/sizeof(*menu_items),
+			    MENU_NAME, MENU_FNAME);
+  rox_menu_attach(menu, win, FALSE, NULL, win);
 
   wipath=g_strconcat(app_dir, "/.DirIcon", NULL);
   wicon=gdk_pixbuf_new_from_file(wipath, &err);
@@ -320,9 +313,8 @@ static void append_text_from_file(int fd, gboolean scroll, gboolean initial)
   char buf[BUFSIZ];
   size_t m=sizeof(buf)-1;
   ssize_t nr;
-  gint pos;
   int ready;
-  GtkTextIter start, end;
+  GtkTextIter end;
 
   tbuf=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text));
   
@@ -337,7 +329,7 @@ static void append_text_from_file(int fd, gboolean scroll, gboolean initial)
 	npos++;
       } while(buf[0]!='\n');
 
-      sprintf(buf, "-=- %d bytes omitted -=-\n", npos);
+      sprintf(buf, "-=- %ld bytes omitted -=-\n", npos);
       gtk_text_buffer_get_end_iter(tbuf, &end);
       gtk_text_buffer_insert(tbuf, &end, buf, -1);
     }
@@ -546,8 +538,6 @@ static void file_saveas_proc(void)
 {
   GtkWidget *savebox=NULL;
   GdkPixbuf *pixbuf=NULL;
-  gchar *ipath;
-  GError *err=NULL;
     
   savebox=gtk_savebox_new(_("Save"));
 
@@ -574,85 +564,18 @@ static void file_saveas_proc(void)
   gtk_widget_show(savebox);
 }
 
-/* Button press in window */
-static gint button_press(GtkWidget *window, GdkEventButton *bev,
-			 gpointer win)
-{
-  if(bev->type==GDK_BUTTON_PRESS && bev->button==3) {
-    /* Pop up the menu */
-    if(!menu) 
-      menu=get_main_menu(GTK_WIDGET(win), MENU_NAME);
-    
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-				bev->button, bev->time);
-    return TRUE;
-  }
-
-  return FALSE;
-}
-
-static gboolean show_menu(GtkWidget *widget, gpointer data)
-{
-  GtkWidget *win=GTK_WIDGET(data);
-  GdkEvent *event;
-  int button=0;
-  guint32 time=0;
-  static GtkWidget *popup_menu=NULL;
-
-  dprintf(1, "show_menu(%p, %p), is text view=%d\n", widget, data,
-	  GTK_IS_TEXT_VIEW(widget));
-  
-  if(GTK_IS_TEXT_VIEW(widget))
-    return FALSE;
-
-  event=gtk_get_current_event();
-  switch(event->type) {
-  case GDK_BUTTON_PRESS:
-  case GDK_BUTTON_RELEASE:
-    {
-      GdkEventButton *bev=(GdkEventButton *) event;
-
-      button=bev->button;
-      time=bev->time;
-    }
-    break;
-  case GDK_KEY_PRESS:
-    {
-      GdkEventKey *kev=(GdkEventKey *) event;
-      time=kev->time;
-    }
-    break;
-  }
-
-  if(!popup_menu) 
-    popup_menu=get_main_menu(GTK_WIDGET(win), MENU_NAME);
-    
-  gtk_menu_popup(GTK_MENU(popup_menu), NULL, NULL, NULL, NULL,
-		 button, time);
-  
-  return TRUE;
-}
-
 static void add_menu_entries(GtkTextView *view, GtkMenu *menu,
 			     gpointer data)
 {
   GtkWidget *win=GTK_WIDGET(data);
   GtkWidget *popup_menu;
   GtkWidget *sep, *item;
-  GtkItemFactory *item_factory;
-  GtkAccelGroup *accel_group;
-  gint nmenu_items = sizeof (menu_items) / sizeof (menu_items[0]);
 
   dprintf(1, "add_menu_entries(%p, %p, %p)", view, menu, data);
 
-  accel_group = gtk_accel_group_new ();
-
-  item_factory = gtk_item_factory_new (MENU_TYPE, "<text>", accel_group);
-  gtk_item_factory_create_items (item_factory, nmenu_items, menu_items,
-				 NULL);
-  gtk_window_add_accel_group(GTK_WINDOW(win), accel_group);
-
-  popup_menu=gtk_item_factory_get_widget (item_factory, "<text>");
+  popup_menu=rox_menu_build(win, menu_items,
+			    sizeof(menu_items)/sizeof(*menu_items),
+			    MENU_NAME, MENU_FNAME);
       
   sep=gtk_separator_menu_item_new();
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), sep);
@@ -684,6 +607,11 @@ static gboolean got_uri_list(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: tail.c,v $
+ * Revision 1.21  2005/10/16 12:01:32  stephen
+ * Update for ROX-CLib changes, many externally visible symbols
+ * (functions and types) now have rox_ or ROX prefixes.
+ * Can get ROX-CLib via 0launch.
+ *
  * Revision 1.20  2004/11/21 13:24:39  stephen
  * Use new ROX-CLib features
  *
