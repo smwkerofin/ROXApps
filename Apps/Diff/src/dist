@@ -1,6 +1,6 @@
 #!/bin/sh
 
-wdir="`basename $0`"
+wdir="`dirname $0`"
 cd "$wdir"
 
 autoconf
