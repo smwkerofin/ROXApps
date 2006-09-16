@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.19 2005/05/27 10:21:50 stephen Exp $
+ * $Id: mem.c,v 1.20 2005/10/16 12:00:22 stephen Exp $
  */
 #include "config.h"
 
@@ -57,7 +57,6 @@ typedef enum applet_display {
 #define NUM_DISPLAY 4
 
 /* GTK+ objects */
-static GtkWidget *menu=NULL;
 typedef struct options {
   guint update_sec;          /* How often to update */
   guint applet_init_size;    /* Initial size of applet */
@@ -109,11 +108,15 @@ static gboolean update_values(MemWindow *);
 static void do_update(void);
 static gboolean read_choices(void);
 static void setup_options(void);
-static void menu_create_menu(GtkWidget *);
-static gint button_press(GtkWidget *window, GdkEventButton *bev,
-			 gpointer unused);
-static gboolean popup_menu(GtkWidget *window, gpointer udata);
 static void opts_changed(void);
+static gint button_press(GtkWidget *window, GdkEventButton *bev,
+			 gpointer udata);
+static gboolean filter_menu(GtkWidget *menu, GtkWidget *window,
+			    gpointer udata);
+static void show_info_win(void);
+static void show_config_win(void);
+static void do_update(void);
+static void close_window(void);
 
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
@@ -121,6 +124,24 @@ static gboolean open_remote(guint32 xid);
 static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata);
 static gboolean options_remote(void);
+
+/* Pop-up menu */
+static GtkItemFactoryEntry menu_items[] = {
+  { N_("/Info"),		NULL, show_info_win, 0,  "<StockItem>",
+                                GTK_STOCK_DIALOG_INFO},
+  { "/",                        NULL, NULL,         0, "<Separator>"},
+  { N_("/Configure..."),	NULL, show_config_win, 0, "<StockItem>",
+                                GTK_STOCK_PROPERTIES},
+  { N_("/Update Now"),	        NULL, do_update, 0,  "<StockItem>",
+                                GTK_STOCK_REFRESH},
+  { "/",                        NULL, NULL,         0, "<Separator>"},
+  { N_("/Close"), 	        NULL, close_window, 0,  "<StockItem>",
+                                GTK_STOCK_CLOSE},
+  { "/",                        NULL, NULL,         0, "<Separator>"},
+  { N_("/Quit"), 	        NULL, rox_main_quit, 0,  "<StockItem>",
+                                GTK_STOCK_QUIT},
+};
+#define N_MENU (sizeof(menu_items)/sizeof(*menu_items))
 
 static ROXSOAPServerActions actions[]={
   {"Open", NULL, "Parent", rpc_Open, NULL},
@@ -188,7 +209,7 @@ static void do_version(void)
 int main(int argc, char *argv[])
 {
   char tbuf[1024], *home;
-  guchar *fname;
+  gchar *fname;
   guint xid=0;
   gchar *app_dir;
 #ifdef HAVE_BINDTEXTDOMAIN
@@ -346,6 +367,7 @@ static MemWindow *make_window(guint32 xid)
   GtkAdjustment *adj;
   static GtkTooltips *ttips=NULL;
   char hname[1024];
+  static GtkWidget *menu=NULL;
 
   dprintf(1, "make_window(%lu)", xid);
   
@@ -517,7 +539,7 @@ static MemWindow *make_window(guint32 xid)
 			 TIP_PRIVATE);
 
     mwin->is_applet=FALSE;
-    
+
   } else {
     /* We are an applet, plug ourselves in */
     GtkWidget *plug;
@@ -647,10 +669,13 @@ static MemWindow *make_window(guint32 xid)
     mwin->win=plug;
     mwin->is_applet=TRUE;
   }
+    
   if(!menu)
-    menu_create_menu(mwin->win);
-  gtk_signal_connect(GTK_OBJECT(mwin->win), "popup-menu",
-		       GTK_SIGNAL_FUNC(popup_menu), mwin);
+    menu=rox_menu_build(mwin->win, menu_items, N_MENU, NULL, "menus");
+  if(mwin->is_applet)
+    rox_menu_attach_to_applet(menu, mwin->win, filter_menu, mwin);
+  else
+    rox_menu_attach(menu, mwin->win, TRUE, filter_menu, mwin);
 
   /* check now */
   update_values(mwin);
@@ -833,7 +858,7 @@ static gboolean read_choices(void)
       return FALSE;
     }
 
-    if(strcmp(root->name, PROJECT)!=0) {
+    if(strcmp((const char *) root->name, PROJECT)!=0) {
       g_free(fname);
       xmlFreeDoc(doc);
       return FALSE;
@@ -846,39 +871,39 @@ static gboolean read_choices(void)
 	continue;
 
       /* Process data here */
-      if(strcmp(node->name, "update")==0) {
- 	string=xmlGetProp(node, "rate");
+      if(strcmp((const char *) node->name, "update")==0) {
+ 	string=xmlGetProp(node, (xmlChar *) "rate");
 	if(!string)
 	  continue;
-	default_options.update_sec=atoi(string);
+	default_options.update_sec=atoi((const char *) string);
 	free(string);
 
-      } else if(strcmp(node->name, "Applet")==0) {
- 	string=xmlGetProp(node, "initial-size");
+      } else if(strcmp((const char *) node->name, "Applet")==0) {
+ 	string=xmlGetProp(node, (xmlChar *) "initial-size");
 	if(string) {
-	  default_options.applet_init_size=atoi(string);
+	  default_options.applet_init_size=atoi((const char *) string);
 	  free(string);
 	}
- 	string=xmlGetProp(node, "mem");
+ 	string=xmlGetProp(node, (xmlChar *) "mem");
 	if(string) {
-	  default_options.mem_disp=atoi(string);
+	  default_options.mem_disp=atoi((const char *) string);
 	  free(string);
 	}
- 	string=xmlGetProp(node, "swap");
+ 	string=xmlGetProp(node, (xmlChar *) "swap");
 	if(string) {
-	  default_options.swap_disp=atoi(string);
+	  default_options.swap_disp=atoi((const char *) string);
 	  free(string);
 	}
 	
-      } else if(strcmp(node->name, "Window")==0) {
- 	string=xmlGetProp(node, "show-host");
+      } else if(strcmp((const char *) node->name, "Window")==0) {
+ 	string=xmlGetProp(node, (xmlChar *) "show-host");
 	if(string) {
-	  default_options.show_host=atoi(string);
+	  default_options.show_host=atoi((const char *) string);
 	  free(string);
 	}
- 	string=xmlGetProp(node, "gauge-width");
+ 	string=xmlGetProp(node, (xmlChar *) "gauge-width");
 	if(string) {
-	  default_options.gauge_width=atoi(string);
+	  default_options.gauge_width=atoi((const char *) string);
 	  free(string);
 	}
       }
@@ -1055,63 +1080,6 @@ static void close_window(void)
   current_window=NULL;
 }
 
-/* Pop-up menu */
-static GtkItemFactoryEntry menu_items[] = {
-  { N_("/Info"),		NULL, show_info_win, 0,  "<StockItem>",
-                                GTK_STOCK_DIALOG_INFO},
-  { "/",                        NULL, NULL,         0, "<Separator>"},
-  { N_("/Configure..."),	NULL, show_config_win, 0, "<StockItem>",
-                                GTK_STOCK_PROPERTIES},
-  { N_("/Update Now"),	        NULL, do_update, 0,  "<StockItem>",
-                                GTK_STOCK_REFRESH},
-  { "/",                        NULL, NULL,         0, "<Separator>"},
-  { N_("/Close"), 	        NULL, close_window, 0,  "<StockItem>",
-                                GTK_STOCK_CLOSE},
-  { "/",                        NULL, NULL,         0, "<Separator>"},
-  { N_("/Quit"), 	        NULL, rox_main_quit, 0,  "<StockItem>",
-                                GTK_STOCK_QUIT},
-};
-
-static void save_menus(void)
-{
-  char	*menurc;
-	
-  menurc = rox_choices_save("menus", PROJECT, MY_DOMAIN);
-  if (menurc) {
-    gtk_accel_map_save(menurc);
-    g_free(menurc);
-  }
-}
-
-static void menu_create_menu(GtkWidget *window)
-{
-  GtkItemFactory	*item_factory;
-  GtkAccelGroup	*accel_group;
-  gint 		n_items = sizeof(menu_items) / sizeof(*menu_items);
-  gchar *menurc;
-
-  accel_group = gtk_accel_group_new();
-  /*gtk_accel_group_lock(accel_group);*/
-
-  item_factory = gtk_item_factory_new(GTK_TYPE_MENU, "<system>", 
-				      accel_group);
-
-  gtk_item_factory_create_items(item_factory, n_items, menu_items, NULL);
-
-	/* Attach the new accelerator group to the window. */
-  gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
-
-  menurc=rox_choices_load("menus", PROJECT, MY_DOMAIN);
-  if(menurc) {
-    gtk_accel_map_load(menurc);
-    g_free(menurc);
-  }
-
-  atexit(save_menus);
-
-  menu = gtk_item_factory_get_widget(item_factory, "<system>");
-}
-
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
 			 gpointer udata)
 {
@@ -1120,17 +1088,7 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
   current_window=mwin;
   
   if(bev->type==GDK_BUTTON_PRESS) {
-    if(bev->button==3) {
-      if(!menu)
-	menu_create_menu(window);
-
-      if(mwin->is_applet)
-	rox_applet_popup_menu(mwin->win, menu, bev);
-      else
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-		       bev->button, bev->time);
-      return TRUE;
-    } else if(bev->button==1 && mwin->is_applet) {
+    if(bev->button==1 && mwin->is_applet) {
       MemWindow *nwin=make_window(0);
 
       gtk_widget_show(nwin->win);
@@ -1141,28 +1099,22 @@ static gint button_press(GtkWidget *window, GdkEventButton *bev,
 
   return FALSE;
 }
-static gboolean popup_menu(GtkWidget *window, gpointer udata)
+
+static gboolean filter_menu(GtkWidget *menu, GtkWidget *window,
+			    gpointer udata)
 {
   MemWindow *mwin=(MemWindow *) udata;
 
-  if(!menu) 
-    menu_create_menu(GTK_WIDGET(mwin->win));
-
-  if(mwin->is_applet)
-    rox_applet_popup_menu(mwin->win, menu, NULL);
-  else
-    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL,
-		   0, gtk_get_current_event_time());
-
+  current_window=mwin;
+  
   return TRUE;
 }
-
 
 static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 			   GList *args, gpointer udata)
 {
   xmlNodePtr parent;
-  gchar *str;
+  xmlChar *str;
   guint32 xid=0;
 
   dprintf(3, "rpc_Open(%p, \"%s\", %p, %p)", server, action_name, args, udata);
@@ -1172,8 +1124,8 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
 
     str=xmlNodeGetContent(parent);
     if(str) {
-      xid=(guint32) atol(str);
-      g_free(str);
+      xid=(guint32) atol((const char *) str);
+      free(str);
     }
   }
 
@@ -1229,7 +1181,7 @@ static gboolean open_remote(guint32 xid)
   }
 
   sprintf(buf, "%lu", xid);
-  xmlNewChild(node, NULL, "Parent", buf);
+  xmlNewChild(node, NULL, (xmlChar *) "Parent", (xmlChar *) buf);
 
   sent=rox_soap_send(serv, doc, FALSE, soap_callback, &ok);
   dprintf(3, "sent %d", sent);
@@ -1276,6 +1228,11 @@ static gboolean options_remote(void)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.20  2005/10/16 12:00:22  stephen
+ * Update for ROX-CLib changes, many externally visible symbols
+ * (functions and types) now have rox_ or ROX prefixes.
+ * Can get ROX-CLib via 0launch.
+ *
  * Revision 1.19  2005/05/27 10:21:50  stephen
  * Fix for creating applets in remote mode, need to give the filer long enough
  * to notice the widget was created.
