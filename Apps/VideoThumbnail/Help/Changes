@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+30-Aug-2006
+~~~~~~~~~~~
+Fix command line handling.
+
 29-Apr-2006
 ~~~~~~~~~~~
 Added i18n support.

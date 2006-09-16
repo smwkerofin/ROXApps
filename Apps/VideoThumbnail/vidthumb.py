@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.18 2006/02/17 09:59:00 stephen Exp $
+# $Id: vidthumb.py,v 1.19 2006/05/30 09:24:18 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -290,7 +290,7 @@ def main(argv):
     """Process command line args.  Although the filer always passes three args,
     let the last two default to something sensible to allow use outside
     the filer."""
-    global rsize
+    global rsize, outname
     
     #print argv
     inname=argv[0]
@@ -303,9 +303,12 @@ def main(argv):
         rsize=int(argv[2])
     except:
         pass
-    
+
+    orig=inname
+    #if os.path.islink(inname):
+    #    inname=os.readlink(inname)
     if not os.path.isabs(inname):
-        inname=os.path.abspath(inname)
+        inname=os.path.join(os.path.dirname(orig), inname)
 
     # Out file name is based on MD5 hash of the URI
     if not outname:
@@ -320,6 +323,7 @@ def main(argv):
         outname=os.path.abspath(outname)
     if debug: print 'save to', outname
     #print inname, outname, rsize
+    
     thumbC = thumbnailers.pop(options.generator.value)
     if not thumbC.check_executable():
         origbin = thumbC._binary

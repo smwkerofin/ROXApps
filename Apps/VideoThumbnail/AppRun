@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.4 2005/08/13 13:12:20 stephen Exp $
+# $Id: AppRun,v 1.5 2006/05/30 09:24:18 stephen Exp $
 
 """Manage the video thumbnail program"""
 
@@ -14,7 +14,7 @@ import sys
 import vidthumb
 
 # Are we to generate a thumb?
-if len(sys.argv)>3:
+if len(sys.argv)>1:
     try:
         vidthumb.main(sys.argv[1:])
     except:
