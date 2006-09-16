@@ -26,7 +26,7 @@ program_name=rox.options.Option('program_name', 'xplanet')
 start_mode=rox.options.Option('start_mode', 0)
 
 backdrop_delay=rox.options.Option('backdrop_delay', 10)
-backdrop_delay=rox.options.Option('backdrop_body', 10)
+backdrop_body=rox.options.Option('backdrop_body', 10)
 
 window_body=rox.options.Option('window_body', 'earth')
 window_lat=rox.options.Option('window_lat', 0)
