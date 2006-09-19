@@ -1,0 +1,7 @@
+#!/bin/sh
+
+wdir="`dirname $0`"
+cd "$wdir"
+
+autoconf
+(cd po; ./update-po)
