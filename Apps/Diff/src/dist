@@ -3,5 +3,6 @@
 wdir="`dirname $0`"
 cd "$wdir"
 
+aclocal -I $HOME/lib/ROX-CLib/Help
 autoconf
 (cd po; ./update-po)
