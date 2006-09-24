@@ -6,3 +6,4 @@ cd "$wdir"
 autoconf
 rm -rf autom4te.cache
 (cd po; ./update-po)
+doxygen
