@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.26 2006/02/11 13:03:30 stephen Exp $
+# $Id: AppRun,v 1.27 2006/04/29 10:22:22 stephen Exp $
 
 import os, sys
 import time
@@ -41,6 +41,9 @@ delay=500
 
 unknown_type=rox.mime.lookup('text/plain')
 html_type=rox.mime.lookup('text/html')
+
+rox.mime.install_mime_info('Fetch',
+                           os.path.join(rox.app_dir, 'Fetch-mimeinfo.xml'))
 
 def get_filename(url):
     scheme, location, path, query, fragment=urlparse.urlsplit(url)
