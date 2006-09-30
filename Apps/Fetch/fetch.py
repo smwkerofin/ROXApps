@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.12 2006/04/29 10:22:22 stephen Exp $
+# $Id: fetch.py,v 1.13 2006/04/29 12:32:45 stephen Exp $
 
 import os, sys
 import time
@@ -68,7 +68,7 @@ class ROXURLopener(urllib.FancyURLopener):
             opass=password
             pd=PasswordWindow(host, realm, user, password)
             res=pd.run()
-            if res==rox.g.RESPONSE_OK:
+            if res==int(rox.g.RESPONSE_OK):
                 user, password=pd.get_login()
                 #print user, password
                 if pd.get_save() and (user!=ouser or password!=opass):

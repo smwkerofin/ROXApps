@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id: options.py,v 1.14 2006/03/01 23:40:38 stephen Exp $
+# $Id: options.py,v 1.15 2006/05/30 09:24:18 stephen Exp $
 
 import os
 
@@ -53,7 +53,7 @@ def install_button_handler(*args):
                                 'MIME-thumb', can_thumbnail,
                                 _("""Thumbnail handlers provide support for creating thumbnail images of types of file.  The filer can generate thumbnails for most types of image (JPEG, PNG, etc.) but relies on helper applications for the others."""))
 
-                if win.run()!=rox.g.RESPONSE_ACCEPT:
+                if win.run()!=int(rox.g.RESPONSE_ACCEPT):
                     win.destroy()
                     return
 
