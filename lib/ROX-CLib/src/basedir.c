@@ -1,5 +1,5 @@
 /*
- * $Id: basedir.c,v 1.4 2005/10/22 10:42:28 stephen Exp $
+ * $Id: basedir.c,v 1.5 2006/08/12 17:04:56 stephen Exp $
  *
  * XDG base directory functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief XDG base directory functions for ROX-CLib
  *
  * @author Stephen Watson
- * @version $Id: basedir.c,v 1.4 2005/10/22 10:42:28 stephen Exp $
+ * @version $Id: basedir.c,v 1.5 2006/08/12 17:04:56 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -447,12 +447,15 @@ void rox_basedir_free_paths(GList *paths)
   GList *p;
 
   for(p=paths; p; p=g_list_next(p))
-    g_free(p);
+    g_free(p->data);
   g_list_free(paths);
 }
 
 /*
  * $Log: basedir.c,v $
+ * Revision 1.5  2006/08/12 17:04:56  stephen
+ * Fix most compilation warnings.
+ *
  * Revision 1.4  2005/10/22 10:42:28  stephen
  * Renamed basedir functions to rox_basedir.
  * Disabled deprecation warning.
