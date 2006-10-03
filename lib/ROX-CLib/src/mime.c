@@ -1,5 +1,5 @@
 /*
- * $Id: mime.c,v 1.7 2005/12/07 11:44:09 stephen Exp $
+ * $Id: mime.c,v 1.8 2006/08/12 17:04:56 stephen Exp $
  *
  * Shared MIME databse functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief Shared MIME database functions for ROX-CLib
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id: mime.c,v 1.7 2005/12/07 11:44:09 stephen Exp $
+ * @version $Id: mime.c,v 1.8 2006/08/12 17:04:56 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -116,6 +116,26 @@ void rox_mime_init(void)
   inode_unknown=get_type("inode/unknown", TRUE);
 
   load_mime_types();
+}
+
+/**
+ * Parse a MIME type name and return the corresponding ROXMIMEType
+ * data.
+ *
+ * @param[in] name name of the type, as media/sub-type
+ * @param[in] can_create if @c TRUE and @a name is not a currently known
+ * type then create a new one and return it, otherwise return @c NULL
+ * @return the type, or @c NULL if @a is not known and @a can_create
+ * @a false, or if @a is malformed.
+ */
+ROXMIMEType *rox_mime_get_type(const char *name, gboolean can_create)
+{
+  if(!strchr(name, '/'))
+    return NULL;
+  if(name[0]=='/')
+    return NULL;
+  
+  return get_type(name, can_create);
 }
 
 /**
@@ -774,6 +794,9 @@ static ROXMIMEType *type_by_path(const char *path)
 
 /*
  * $Log: mime.c,v $
+ * Revision 1.8  2006/08/12 17:04:56  stephen
+ * Fix most compilation warnings.
+ *
  * Revision 1.7  2005/12/07 11:44:09  stephen
  * Can suppress export of MIMEType objects
  *

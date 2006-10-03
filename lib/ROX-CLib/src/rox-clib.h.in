@@ -40,6 +40,8 @@
 #undef HAVE_DGETTEXT
 #undef HAVE_BINDTEXTDOMAIN
 #undef HAVE_XML
+#undef HAVE_GETXATTR
+#undef HAVE_ATTROPEN
 #undef GTK2
 
 #ifndef _

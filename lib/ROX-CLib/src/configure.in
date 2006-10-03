@@ -119,6 +119,10 @@ AC_C_CONST
 dnl Checks for library functions.
 AC_CHECK_FUNCS(mkdir gethostname gethostbyname dgettext bindtextdomain)
 
+dnl Check for extended attribute support
+AC_CHECK_FUNCS(attropen getxattr)
+AC_CHECK_HEADERS(attr/xattr.h sys/xattr.h)
+
 dnl Extract version info from AppInfo.xml
 AC_MSG_CHECKING(version information)
 changequote(,)dnl

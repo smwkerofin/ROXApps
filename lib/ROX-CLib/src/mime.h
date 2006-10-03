@@ -1,5 +1,5 @@
 /*
- * $Id: mime.h,v 1.5 2005/10/15 10:47:41 stephen Exp $
+ * $Id: mime.h,v 1.6 2005/12/07 11:44:09 stephen Exp $
  *
  * Shared MIME database functions for ROX-CLib
  */
@@ -9,7 +9,7 @@
  * @brief Shared MIME database functions for ROX-CLib
  *
  * @author Thomas Leonard, Stephen Watson
- * @version $Id: mime.h,v 1.5 2005/10/15 10:47:41 stephen Exp $
+ * @version $Id: mime.h,v 1.6 2005/12/07 11:44:09 stephen Exp $
  */
 
 #ifndef _rox_mime_h
@@ -49,6 +49,7 @@ extern ROXMIMEType *inode_unknown;            /**< Unknown type, probably
 /* Initialize MIME system.   */
 extern void rox_mime_init(void);
 
+extern ROXMIMEType *rox_mime_get_type(const char *name, gboolean can_create);
 extern ROXMIMEType *rox_mime_lookup(const char *path);
 extern ROXMIMEType *rox_mime_lookup_by_name(const char *name);
 extern char *rox_mime_type_name(const ROXMIMEType *type);
@@ -78,6 +79,9 @@ extern int mime_get_by_content(void);
 
 /*
  * $Log: mime.h,v $
+ * Revision 1.6  2005/12/07 11:44:09  stephen
+ * Can suppress export of MIMEType objects
+ *
  * Revision 1.5  2005/10/15 10:47:41  stephen
  * Added rox_mime_get_icon()
  *

@@ -1,5 +1,5 @@
 /*
- * $Id: test.c,v 1.11 2005/10/12 11:19:06 stephen Exp $
+ * $Id: test.c,v 1.12 2005/10/22 10:42:28 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include <gtk/gtk.h>
 
@@ -20,6 +21,7 @@
 #include "basedir.h"
 #include "mime.h"
 #include "appinfo.h"
+#include "xattr.h"
 
 #define TEST_FILE "tmp/tmp/rm.me"
 
@@ -30,6 +32,7 @@ static void test_soap(const char *home);
 static void test_basedir(const char *home);
 static void test_mime(const char *home);
 static void test_appinfo(const char *home);
+static void test_xattr(const char *home);
 
 int main(int argc, char *argv[])
 {
@@ -43,6 +46,7 @@ int main(int argc, char *argv[])
   test_basedir(home);
   test_mime(home);
   test_appinfo(home);
+  test_xattr(home);
 
   /*rox_error("This is an error %d", 42);*/
   
@@ -286,3 +290,130 @@ static void clock_open_callback(ROXSOAP *clock, gboolean status,
 	 udata);
   gtk_main_quit();
 }
+
+static void test_xattr(const char *home)
+{
+  gchar *path;
+  gchar *value;
+  GList *names;
+  ROXMIMEType *type;
+
+  printf("Extended attributes\n");
+
+  rox_xattr_init();
+
+  if(!rox_xattr_supported(NULL)) {
+    printf("No xattr support\n");
+    return;
+  }
+  
+  path=g_build_filename(home, "tmp", "thing", NULL);
+
+  errno=0;
+  printf("supported(%s)=%d\n", path, rox_xattr_supported(path));
+  if(errno)
+    perror(path);
+
+  errno=0;
+  printf("have(%s)=%d\n", path, rox_xattr_have(path));
+  if(errno)
+    perror(path);
+
+  errno=0;
+  value=rox_xattr_get(path, ROX_XATTR_MIME_TYPE, NULL);
+  printf("get(%s, %s)=%s\n", path, ROX_XATTR_MIME_TYPE,
+	 value? value: "NULL");
+  if(value)
+    g_free(value);
+  if(errno)
+    perror(path);
+
+  errno=0;
+  names=rox_xattr_list(path);
+  if(names) {
+    GList *l;
+    printf("Attrs on %s:\n", path);
+    for(l=names; l; l=g_list_next(l))
+      printf("\t%s\n", ((char *) l->data));
+    rox_basedir_free_paths(names);
+  } else
+    printf("No attrs on %s\n", path);
+  if(errno)
+    perror(path);
+
+  printf("name_valid(%s)=%d\n", "test", rox_xattr_name_valid("test"));
+  printf("name_valid(%s)=%d\n", "user.test",
+	 rox_xattr_name_valid("user.test"));
+
+  printf("binary_value_supported=%d\n", rox_xattr_binary_value_supported());
+
+  errno=0;
+  printf("set(%s, %s, %s)=%d\n", path, "user.test", "this is a test",
+	 rox_xattr_set(path, "user.test", "this is a test", -1));
+  if(errno)
+    perror(path);
+
+  errno=0;
+  names=rox_xattr_list(path);
+  if(names) {
+    GList *l;
+    printf("Attrs on %s:\n", path);
+    for(l=names; l; l=g_list_next(l))
+      printf("\t%s\n", ((char *) l->data));
+    rox_basedir_free_paths(names);
+  } else
+    printf("No attrs on %s\n", path);
+  if(errno)
+    perror(path);
+
+  errno=0;
+  value=rox_xattr_get(path, "user.test", NULL);
+  printf("get(%s, %s)=%s\n", path, "user.test",
+	 value? value: "NULL");
+  if(value)
+    g_free(value);
+  if(errno)
+    perror(path);
+
+  errno=0;
+  printf("delete(%s, %s)=%d\n", path, "user.test",
+	 rox_xattr_delete(path, "user.test"));
+  if(errno)
+    perror(path);
+
+  errno=0;
+  names=rox_xattr_list(path);
+  if(names) {
+    GList *l;
+    printf("Attrs on %s:\n", path);
+    for(l=names; l; l=g_list_next(l))
+      printf("\t%s\n", ((char *) l->data));
+    rox_basedir_free_paths(names);
+  } else
+    printf("No attrs on %s\n", path);
+  if(errno)
+    perror(path);
+
+  errno=0;
+  type=rox_xattr_type_get(path);
+  printf("type_get(%s)=%s\n", path, type? rox_mime_type_comment(type): "NULL");
+  if(errno)
+    perror(path);
+
+  errno=0;
+  type=rox_xattr_type_get("/tmp");
+  printf("type_get(%s)=%s\n", "/tmp",
+	 type? rox_mime_type_comment(type): "NULL");
+  if(errno)
+    perror("rox_xattr_type_get");
+
+  errno=0;
+  type=rox_xattr_type_get("/wibble");
+  printf("type_get(%s)=%s\n", "/wibble",
+	 type? rox_mime_type_comment(type): "NULL");
+  if(errno)
+    perror("rox_xattr_type_get");
+
+  g_free(path);
+}
+

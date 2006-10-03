@@ -4,6 +4,10 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+03-Oct-2006
+~~~~~~~~~~~
+Added extended attribute support (Solaris support incomplete).
+
 01-Oct-2006
 ~~~~~~~~~~~
 Fix bug in rox_basedir_free_paths().
@@ -315,4 +319,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.41 2006/08/12 17:04:55 stephen Exp $
+$Id: Changes,v 1.42 2006/10/01 13:04:19 stephen Exp $
