@@ -1,5 +1,5 @@
 /*
- * $Id: rox.c,v 1.18 2006/06/04 11:42:50 stephen Exp $
+ * $Id: rox.c,v 1.19 2006/08/12 17:04:56 stephen Exp $
  *
  * rox.c - General stuff
  */
@@ -199,7 +199,7 @@ void rox_init_with_domain(const char *program, const char *domain,
   }
 #endif
 
-  choices_init();
+  rox_choices_init();
 
   if(app_dir) {
     gchar *options_file;
@@ -542,6 +542,9 @@ char *rox_clib_find(void)
 
 /*
  * $Log: rox.c,v $
+ * Revision 1.19  2006/08/12 17:04:56  stephen
+ * Fix most compilation warnings.
+ *
  * Revision 1.18  2006/06/04 11:42:50  stephen
  * Add menu API.
  *

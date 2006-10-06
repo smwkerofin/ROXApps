@@ -1,7 +1,7 @@
 /*
  * uri.c - utilities for uri handling and launching
  *
- * $Id: uri.c,v 1.2 2005/09/10 16:17:55 stephen Exp $
+ * $Id: uri.c,v 1.3 2005/12/07 09:53:37 stephen Exp $
  */
 
 /**
@@ -9,7 +9,7 @@
  * @brief Utilities for uri handling and launching.
  *
  * @author Stephen Watson
- * @version $Id: uri.c,v 1.2 2005/09/10 16:17:55 stephen Exp $
+ * @version $Id: uri.c,v 1.3 2005/12/07 09:53:37 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -144,7 +144,8 @@ gchar *rox_unescape_uri(const char *uri)
  */
 int rox_uri_launch(const char *uri)
 {
-  gchar *text_x_uri=choices_find_path_load("text_x-uri", "MIME-types");
+  gchar *text_x_uri=rox_choices_load("text_x-uri", "MIME-types",
+				     "rox.sourceforge.net");
 
   gchar *cmd, *app;
   int s;
@@ -193,6 +194,9 @@ int rox_uri_launch(const char *uri)
 
 /*
  * $Log: uri.c,v $
+ * Revision 1.3  2005/12/07 09:53:37  stephen
+ * Support firefox for launching uri
+ *
  * Revision 1.2  2005/09/10 16:17:55  stephen
  * Added doxygen comments
  *

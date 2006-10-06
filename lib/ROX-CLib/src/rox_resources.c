@@ -1,12 +1,12 @@
 /*
- * $Id: rox_resources.c,v 1.6 2005/12/07 11:45:23 stephen Exp $
+ * $Id: rox_resources.c,v 1.7 2006/08/12 17:04:56 stephen Exp $
  */
 /**
  * @file rox_resources.c
  * @brief Find internationalized resource files.
  *
  * @author Stephen Watson
- * @version $Id: rox_resources.c,v 1.6 2005/12/07 11:45:23 stephen Exp $
+ * @version $Id: rox_resources.c,v 1.7 2006/08/12 17:04:56 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -129,7 +129,7 @@ static gchar *do_tests(GPtrArray *dirs, const gchar *app_dir,
 }
   
 /**
- * Search CHOICESPATH, then APP_DIR for a directory called Resources
+ * Search choices directories, then APP_DIR for a directory called Resources
  * which contains the file leaf, whether in a sub-directory lang or
  * directly.
  *
@@ -157,11 +157,6 @@ gchar *rox_resources_find(const gchar *app_name,
     lang=g_getenv("LANG");
 
   dirs=choices_list_dirs(app_name);
-  if(!dirs) {
-    choices_init();
-    dirs=choices_list_dirs(app_name);
-  }
-
   app_dir=g_getenv("APP_DIR");
 
   dprintf(3, "app_dir=%s leaf=%s lang=%s", app_dir, leaf, lang? lang: "NULL");
@@ -218,6 +213,9 @@ gchar *rox_resources_find_with_domain(const gchar *app_name,
 
 /*
  * $Log: rox_resources.c,v $
+ * Revision 1.7  2006/08/12 17:04:56  stephen
+ * Fix most compilation warnings.
+ *
  * Revision 1.6  2005/12/07 11:45:23  stephen
  * Added a deprecation warning
  *

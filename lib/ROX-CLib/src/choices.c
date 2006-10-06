@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.10 2005/10/22 10:42:28 stephen Exp $
+ * $Id: choices.c,v 1.11 2006/08/12 17:04:56 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -36,13 +36,13 @@
  * - choices_find_path_load()
  * - choices_find_path_save()
  *
- * @version $Id: choices.c,v 1.10 2005/10/22 10:42:28 stephen Exp $
+ * @version $Id: choices.c,v 1.11 2006/08/12 17:04:56 stephen Exp $
  * @author Thomas Leonard, Stephen Watson.
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
  * Copyright (C) 2000, Thomas Leonard, <tal197@users.sourceforge.net>.
  *
- * @version $Id: choices.c,v 1.10 2005/10/22 10:42:28 stephen Exp $
+ * @version $Id: choices.c,v 1.11 2006/08/12 17:04:56 stephen Exp $
  * @author Thomas Leonard, Stephen Watson.
  */
 
@@ -85,6 +85,8 @@ static void init_choices(void);
  */
 void choices_init(void)
 {
+  ROX_CLIB_DEPRECATED("rox_choices_init");
+  
 	g_return_if_fail(dir_list == NULL);
 
 	init_choices();
@@ -106,6 +108,8 @@ GPtrArray *choices_list_dirs(const char *dir)
 {
 	GPtrArray	*list;
 	gchar		**cdir = dir_list;
+
+	ROX_CLIB_DEPRECATED("rox_choices_list_dirs");
 
 	g_return_val_if_fail(dir_list != NULL, NULL);
 
@@ -131,11 +135,13 @@ GPtrArray *choices_list_dirs(const char *dir)
  *
  * @param[in,out] list Return value from choices_list_dirs().
  * 
- * @deprecated use rox_choices_list_dirs() instead.
+ * @deprecated use rox_choices_free_list() instead.
  */
 void choices_free_list(GPtrArray *list)
 {
 	guint	i;
+
+	ROX_CLIB_DEPRECATED("rox_choices_free_list");
 
 	g_return_if_fail(list != NULL);
 
@@ -162,6 +168,8 @@ void choices_free_list(GPtrArray *list)
 gchar *choices_find_path_load(const char *leaf, const char *dir)
 {
 	gchar		**cdir = dir_list;
+
+	ROX_CLIB_DEPRECATED("rox_choices_load");
 
 	g_return_val_if_fail(dir_list != NULL, NULL);
 
@@ -202,6 +210,8 @@ gchar *choices_find_path_save(const char *leaf, const char *dir,
 {
 	gchar	*path, *retval;
 	
+	ROX_CLIB_DEPRECATED("rox_choices_save");
+
 	g_return_val_if_fail(dir_list != NULL, NULL);
 
 	if (saving_disabled)
@@ -227,13 +237,29 @@ gchar *choices_find_path_save(const char *leaf, const char *dir,
 	return retval;
 }
 
+/** Checks $CHOICESPATH to construct the directory list table for the old choices_system.
+ * This is called to support the old choices system and should not be used
+ * in new code.
+ *
+ * If the environment variable does not exist then the defaults are used.
+ *
+ * @deprecated This is called by rox_init_with_domain() and you should call
+ * that in preference to this.
+ */
+void rox_choices_init(void)
+{
+  g_return_if_fail(dir_list == NULL);
+  
+  init_choices();
+}
+
 /** Returns the pathname of a file to save to, or NULL if saving is
  * disabled. 
  *
  * g_free() the result.
  *
  * @param[in] leaf last part of file name (may include a relative directory part)
- * @param[in] dir directory to locate in $CHOICESPATH, normally the name of the program
+ * @param[in] dir directory to locate in $XDG_CONFIG_HOME or $XDG_CONFIG_DIRS, normally the name of the program
  * @param[in] domain domain of the programs author, or email address.  Used to
  * uniquly identify programs with similar names.
  * 
@@ -270,7 +296,11 @@ gchar *rox_choices_save(const char *leaf, const char *dir,
  *
  * <code>
  * rox_choices_load("menus", "ROX-Filer", "rox.sourceforge.net")
- *		 	    -> "/etc/xdg/rox.sourceforge.net/ROX-Filer/menus".
+ *		 	    -> "/etc/xdg/rox.sourceforge.net/ROX-Filer/menus"
+ * </code>
+ * or
+ * <code>
+ * "/home/user/.config/rox.sourceforge.net/ROX-Filer/menus".
  * </code>
  *
  * The return values may be NULL - use built-in defaults - otherwise
@@ -279,7 +309,7 @@ gchar *rox_choices_save(const char *leaf, const char *dir,
  * This uses rox_basedir_load_config_path(), falling back on choices_find_path_load() if that does not return a result.
  *
  * @param[in] leaf last part of file name (may include a relative directory part)
- * @param[in] dir directory to locate in $CHOICESPATH, normally the name of the program
+ * @param[in] dir directory to locate in $XDG_CONFIG_HOME, $XDG_CONFIG_DIRS or $CHOICESPATH, normally the name of the program
  * @param[in] domain domain of the programs author, or email address.  Used to
  * uniquely identify programs with similar names.
  * @return path to file (pass to g_free() when done) or NULL
@@ -422,6 +452,9 @@ static void init_choices(void)
 
 /*
  * $Log: choices.c,v $
+ * Revision 1.11  2006/08/12 17:04:56  stephen
+ * Fix most compilation warnings.
+ *
  * Revision 1.10  2005/10/22 10:42:28  stephen
  * Renamed basedir functions to rox_basedir.
  * Disabled deprecation warning.

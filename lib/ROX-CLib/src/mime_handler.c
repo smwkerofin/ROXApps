@@ -1,7 +1,7 @@
 /*
  * Install handlers for MIME types
  *
- * $Id: mime_handler.c,v 1.4 2005/10/12 11:00:22 stephen Exp $
+ * $Id: mime_handler.c,v 1.5 2006/08/12 17:04:56 stephen Exp $
  */
 
 /**
@@ -13,7 +13,7 @@
  * asked to confirm any changes to their set up.
  *
  * @author Stephen Watson
- * @version $Id: mime_handler.c,v 1.4 2005/10/12 11:00:22 stephen Exp $
+ * @version $Id: mime_handler.c,v 1.5 2006/08/12 17:04:56 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -47,6 +47,8 @@ static void uninstall_toggled(GtkCellRendererToggle *cell, gchar *path,
 #define PYTHON_CODE "import os;import findrox;findrox.version(1,9,13);" \
                     "import rox,rox.mime_handler;" \
                     "rox.mime_handler.install_from_appinfo(os.getenv('APP_DIR'))"
+
+#define ROX_DOMAIN "rox.sourceforge.net"
 
 static void install_from_appinfo_python(void)
 {
@@ -234,7 +236,7 @@ static void load_types(GtkWidget *win, GList *types)
       gchar *old, *leaf;
 
       leaf=g_strdup_printf("%s_%s", type->media, type->subtype);
-      old=choices_find_path_load(leaf, dir);
+      old=rox_choices_load(leaf, dir, ROX_DOMAIN);
       g_free(leaf);
 
       if(old) {
@@ -428,7 +430,7 @@ static void install_type_handler(GList *types, const gchar *dir,
   for(rover=atypes; rover; rover=g_list_next(rover)) {
     mtype=(ROXMIMEType *) rover->data;
     leaf=g_strdup_printf("%s_%s", mtype->media, mtype->subtype);
-    path=choices_find_path_save(leaf, dir, TRUE);
+    path=rox_choices_save(leaf, dir, ROX_DOMAIN);
     rox_debug_printf(3, "rover=%p leaf=%s path=%s", rover, leaf, path);
     if(path) {
       if(access(path, F_OK)==0)
@@ -449,7 +451,7 @@ static void install_type_handler(GList *types, const gchar *dir,
   for(rover=atypes; rover; rover=g_list_next(rover)) {
     mtype=(ROXMIMEType *) rover->data;
     leaf=g_strdup_printf("%s_%s", mtype->media, mtype->subtype);
-    path=choices_find_path_save(leaf, dir, TRUE);
+    path=rox_choices_save(leaf, dir, ROX_DOMAIN);
     rox_debug_printf(3, "u rover=%p leaf=%s path=%s", rover, leaf, path);
     if(path) {
       if(remove(path)!=0)
@@ -511,7 +513,7 @@ static void install_send_to_types(GList *types, const gchar *app_dir)
   for(rover=atypes; rover; rover=g_list_next(rover)) {
     mtype=(ROXMIMEType *) rover->data;
     dir=g_strdup_printf("SendTo/.%s_%s", mtype->media, mtype->subtype);
-    path=choices_find_path_save(aname, dir, TRUE);
+    path=rox_choices_save(aname, dir, ROX_DOMAIN);
     if(path) {
       if(access(path, F_OK)==0) 
 	if(remove(path)!=0) {
@@ -582,6 +584,9 @@ void rox_mime_install_from_appinfo(void)
 
 /*
  * $Log: mime_handler.c,v $
+ * Revision 1.5  2006/08/12 17:04:56  stephen
+ * Fix most compilation warnings.
+ *
  * Revision 1.4  2005/10/12 11:00:22  stephen
  * Externally visible symbols have rox_ or ROX prefixes.
  * All still exist under the old names but in general will produce a warning message.

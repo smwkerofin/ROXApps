@@ -1,5 +1,5 @@
 /*
- * $Id: choices.h,v 1.5 2005/08/14 16:07:00 stephen Exp $
+ * $Id: choices.h,v 1.6 2005/10/12 10:56:12 stephen Exp $
  *
  * Borrowed from ROX-Filer
  *
@@ -23,7 +23,7 @@
  * - choices_find_path_load()
  * - choices_find_path_save()
  *
- * @version $Id$
+ * @version $Id: choices.h,v 1.6 2005/10/12 10:56:12 stephen Exp $
  * @author Thomas Leonard, Stephen Watson.
  */
 
@@ -45,6 +45,7 @@ extern gchar	   	*choices_find_path_save(const char *leaf,
  * identifying the software, i.e. I use kerofin.demon.co.uk.  If you don't
  * have a domain name, use an email address, e.g. me@my-isp.org
  */
+extern void rox_choices_init(void);
 extern gchar *rox_choices_load(const char *leaf, const char *dir,
 			       const char *domain);
 extern gchar *rox_choices_save(const char *leaf, const char *dir,
