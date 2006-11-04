@@ -9,6 +9,7 @@ More options controlling applet appearance, allowing it to adapt to smaller
 panels and to left or right panels.
 Reinstated the excluded file system types option, just as a manually maintained
 file for the moment.
+Mark more strings as translatable.
 
 11-June-2006
 ~~~~~~~~~~~

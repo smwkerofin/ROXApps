@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.36 2006/08/28 18:30:32 stephen Exp $
+ * $Id: freefs.c,v 1.37 2006/11/04 13:13:48 stephen Exp $
  */
 #include "config.h"
 
@@ -61,7 +61,7 @@
 #include <rox/rox_soap.h>
 #include <rox/rox_soap_server.h>
 
-#define TIP_PRIVATE "For more information see the help file"
+#define TIP_PRIVATE N_("For more information see the help file")
 
 #define GTKRC_STRING "style \"bold-text\" {\n"			 \
   "  font_name = \"Bold\"\n"					 \
@@ -184,43 +184,44 @@ static ROXSOAPServerActions actions[]={
 
 static void usage(const char *argv0)
 {
-  printf("Usage: %s [X-options] [gtk-options] [-ovhnr] [-a XID] [-m XID] [dir]\n",
+  printf(_("Usage: %s [X-options] [gtk-options] [-ovhnr] [-a XID] [-m XID] [dir]\n"),
 	 argv0);
-  printf("where:\n\n");
-  printf("  X-options\tstandard Xlib options\n");
-  printf("  gtk-options\tstandard GTK+ options\n");
-  printf("  -h\tprint this help message\n");
-  printf("  -v\tdisplay version information\n");
-  printf("  -o\topen options window\n");
-  printf("  -a XID\tX id of window to use in applet mode\n");
-  printf("  -m XID\tX id of window to use in minimal applet mode\n");
-  printf("  -n\tdon't attempt to contact existing server\n");
-  printf("  -r\treplace existing server\n");
-  printf("  -R\tread SOAP message on standard input and send to server\n");
-  printf("  dir\tdirectory on file sustem to monitor\n");
+  printf(_("where:\n\n"));
+  printf(_("  X-options\tstandard Xlib options\n"));
+  printf(_("  gtk-options\tstandard GTK+ options\n"));
+  printf(_("  -h\tprint this help message\n"));
+  printf(_("  -v\tdisplay version information\n"));
+  printf(_("  -o\topen options window\n"));
+  printf(_("  -a XID\tX id of window to use in applet mode\n"));
+  printf(_("  -m XID\tX id of window to use in minimal applet mode\n"));
+  printf(_("  -n\tdon't attempt to contact existing server\n"));
+  printf(_("  -r\treplace existing server\n"));
+  printf(_("  -R\tread SOAP message on standard input and send to server\n"));
+  printf(_("  dir\tdirectory on file sustem to monitor\n"));
 }
 
 static void do_version(void)
 {
-  printf("%s %s\n", PROJECT, VERSION);
-  printf("%s\n", PURPOSE);
-  printf("%s\n", WEBSITE);
-  printf("Copyright 2002 %s\n", AUTHOR);
-  printf("Distributed under the terms of the GNU General Public License.\n");
-  printf("(See the file COPYING in the Help directory).\n");
-  printf("%s last compiled %s\n", __FILE__, __DATE__);
-  printf("ROX-CLib version %s for GTK+ %s (built with %d.%d.%d)\n",
+  printf(_("%s %s\n"), PROJECT, VERSION);
+  printf(_("%s\n"), PURPOSE);
+  printf(_("%s\n"), WEBSITE);
+  printf(_("Copyright 2002 %s\n"), AUTHOR);
+  printf(_("Distributed under the terms of the GNU General Public License.\n"));
+  printf(_("(See the file COPYING in the Help directory).\n"));
+  printf(_("%s last compiled %s\n"), __FILE__, __DATE__);
+  printf(_("ROX-CLib version %s for GTK+ %s (built with %d.%d.%d)\n"),
 	 rox_clib_version_string(), rox_clib_gtk_version_string(),
 	 ROX_CLIB_VERSION/10000, (ROX_CLIB_VERSION%10000)/100,
 	 ROX_CLIB_VERSION%100);
 
-  printf("\nCompile time options:\n");
-  printf("  GTK+... version 2 (%d.%d.%d)\n", gtk_major_version,
+  printf(_("\nCompile time options:\n"));
+  printf(_("  GTK+... version 2 (%d.%d.%d)\n"), gtk_major_version,
 	 gtk_minor_version,
 	 gtk_micro_version);
-  printf("  Debug output... %s\n", DEBUG? "yes": "no");
-  printf("  Support drag & drop to applet... %s\n", APPLET_DND? "yes": "no");
-  printf("  Using XML... libxml version %d)\n", LIBXML_VERSION);
+  printf(_("  Debug output... %s\n"), DEBUG? _("yes"): _("no"));
+  printf(_("  Support drag & drop to applet... %s\n"),
+	 APPLET_DND? _("yes"): _("no"));
+  printf(_("  Using XML... libxml version %d)\n"), LIBXML_VERSION);
   
 }
 
@@ -281,7 +282,7 @@ int main(int argc, char *argv[])
       break;
     }
   if(nerr) {
-    fprintf(stderr, "%s: invalid options\n", argv[0]);
+    fprintf(stderr, _("%s: invalid options\n"), argv[0]);
     usage(argv[0]);
     exit(10);
   }
@@ -316,7 +317,7 @@ int main(int argc, char *argv[])
       if(options_remote()) {
 	return 0;
       } else {
-	rox_error("Could not connect to server, exiting");
+	rox_error(_("Could not connect to server, exiting"));
 	exit(22);
       }
     }
@@ -326,7 +327,7 @@ int main(int argc, char *argv[])
 	sleep(3);
       return 0;
     } else {
-      rox_error("Could not connect to server, running standalone");
+      rox_error(_("Could not connect to server, running standalone"));
     }
   }
 
@@ -414,9 +415,9 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
     rox_dnd_register_uris(fwin->win, 0, handle_uris, fwin);
 
     gtk_tooltips_set_tip(ttips, fwin->win,
-			 "FreeFS shows the space usage on a single "
-			 "file system",
-			 TIP_PRIVATE);
+			 _("FreeFS shows the space usage on a single "
+			   "file system"),
+			 _(TIP_PRIVATE));
   
     vbox=gtk_vbox_new(FALSE, 1);
     gtk_container_add(GTK_CONTAINER(fwin->win), vbox);
@@ -437,8 +438,8 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
     gtk_box_pack_start(GTK_BOX(hbox), fwin->fs_name, TRUE, FALSE, 2);
     gtk_widget_show(fwin->fs_name);
     gtk_tooltips_set_tip(ttips, fwin->fs_name,
-			 "This is the name of the directory\n"
-			 "the file system is mounted on", TIP_PRIVATE);
+			 _("This is the name of the directory\n"
+			   "the file system is mounted on"), _(TIP_PRIVATE));
   
     label=gtk_label_new(_("Total:"));
     gtk_widget_set_name(label, "simple label");
@@ -450,8 +451,8 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
     gtk_box_pack_start(GTK_BOX(hbox), fwin->fs_total, FALSE, FALSE, 2);
     gtk_widget_show(fwin->fs_total);
     gtk_tooltips_set_tip(ttips, fwin->fs_total,
-			 "This is the total size of the file system",
-			 TIP_PRIVATE);
+			 _("This is the total size of the file system"),
+			 _(TIP_PRIVATE));
   
     hbox=gtk_hbox_new(FALSE, 1);
     gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 2);
@@ -462,8 +463,8 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
     gtk_box_pack_start(GTK_BOX(hbox), fwin->fs_used, TRUE, FALSE, 2);
     gtk_widget_show(fwin->fs_used);
     gtk_tooltips_set_tip(ttips, fwin->fs_used,
-			 "This is the space used on the file system",
-			 TIP_PRIVATE);
+			 _("This is the space used on the file system"),
+			 _(TIP_PRIVATE));
     rox_debug_printf(3, "fs_used: %s window",
 	    GTK_WIDGET_NO_WINDOW(fwin->fs_used)? "no": "has a");
   
@@ -475,8 +476,8 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
     gtk_widget_show(fwin->fs_per);
     gtk_box_pack_start(GTK_BOX(hbox), fwin->fs_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, fwin->fs_per,
-			 "This shows the relative usage of the file system",
-			 TIP_PRIVATE);
+			 _("This shows the relative usage of the file system"),
+			 _(TIP_PRIVATE));
     rox_debug_printf(3, "fs_per: %s window",
 	    GTK_WIDGET_NO_WINDOW(fwin->fs_per)? "no": "has a");
   
@@ -485,8 +486,8 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
     gtk_box_pack_start(GTK_BOX(hbox), fwin->fs_free, TRUE, FALSE, 2);
     gtk_widget_show(fwin->fs_free);
     gtk_tooltips_set_tip(ttips, fwin->fs_free,
-			 "This is the space available on the file system",
-			 TIP_PRIVATE);
+			 _("This is the space available on the file system"),
+			 _(TIP_PRIVATE));
 
     fwin->is_applet=FALSE;
   } else {
@@ -510,9 +511,9 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
 		       G_CALLBACK(button_press), fwin);
     gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
     gtk_tooltips_set_tip(ttips, plug,
-			 "FreeFS shows the space usage on a single "
-			 "file system",
-			 TIP_PRIVATE);
+			 _("FreeFS shows the space usage on a single "
+			   "file system"),
+			 _(TIP_PRIVATE));
 
 #if APPLET_DND
     rox_debug_printf(3, "make drop target for plug");
@@ -537,8 +538,8 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
     if(opt_applet_show_dir.int_value && !fwin->minimal)
       gtk_widget_show(fwin->fs_name);
     gtk_tooltips_set_tip(ttips, fwin->fs_name,
-			 "This shows the dir where the FS is mounted",
-			 TIP_PRIVATE);
+			 _("This shows the dir where the FS is mounted"),
+			 _(TIP_PRIVATE));
 
     fwin->fs_per=gtk_progress_bar_new();
     gtk_widget_set_name(fwin->fs_per, "gauge");
@@ -557,7 +558,7 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
     gtk_widget_show(fwin->fs_per);
     gtk_box_pack_end(GTK_BOX(vbox), fwin->fs_per, FALSE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, fwin->fs_per,
-			 "This shows the relative usage of the file system",
+			 _("This shows the relative usage of the file system"),
 			 TIP_PRIVATE);
 
     rox_debug_printf(5, "show plug");
@@ -1182,7 +1183,7 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   if(dir && dir[0])
     make_window(xid, dir, minimal, idstr);
   else {
-    rox_error("Invalid remote call, Path not given");
+    rox_error(_("Invalid remote call, Path not given"));
   }
   g_free(dir);
   if(idstr)
@@ -1405,6 +1406,11 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.37  2006/11/04 13:13:48  stephen
+ * Use gtk_rc_parse_string() to set up gauge colours, choice_install no longer needed.
+ * More options controlling applet appearance, allowing it to adapt to smaller panels and to left or right panels.
+ * Reinstated the excluded file system types option, just as a manually maintained file for the moment.
+ *
  * Revision 1.36  2006/08/28 18:30:32  stephen
  * Use new menu API
  *
