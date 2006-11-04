@@ -1,6 +1,13 @@
 Mem
 ===
 
+04-Nov-2006
+~~~~~~~~~~~
+Use gtk_rc_parse_string() to set up gauge colours, choice_install no longer
+needed.
+More strings translatable.
+Removed support for loading old options file (superceded at 1.3.1).
+
 03-Jun-2006
 ~~~~~~~~~~~
 Using new menu API from ROX-CLib.

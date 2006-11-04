@@ -5,7 +5,7 @@
  *
  * GPL applies, see ../Help/COPYING.
  *
- * $Id: mem.c,v 1.20 2005/10/16 12:00:22 stephen Exp $
+ * $Id: mem.c,v 1.21 2006/09/16 12:16:26 stephen Exp $
  */
 #include "config.h"
 
@@ -49,7 +49,21 @@
 
 #include "mem_stats.h"
 
-#define TIP_PRIVATE "For more information see the help file"
+#define TIP_PRIVATE N_("For more information see the help file")
+
+#define GTKRC_STRING "style \"bold-text\" {\n"				\
+  "  font_name = \"Bold\"\n"						\
+  "}\n"									\
+  "widget \"mem free.*.simple label\" style : application \"bold-text\"\n" \
+  "style \"red-green bar\"=\"bold-text\" {\n"				\
+  "  bg[PRELIGHT]={1.0,0.0,0.0}\n"					\
+  "  fg[PRELIGHT]={1.0,1.0,1.0}\n"					\
+  "  text[PRELIGHT]={1.0,1.0,1.0}\n"					\
+  "  bg[NORMAL]={0.0,1.0,0.0}\n"					\
+  "  fg[NORMAL]={0.0,0.0,0.0}\n"					\
+  "  text[NORMAL]={0.0,0.0,0.0}\n"					\
+  "}\n"									\
+  "widget \"mem free.*.gauge\" style : application \"red-green bar\"\n" 
 
 typedef enum applet_display {
   AD_TOTAL, AD_USED, AD_FREE, AD_PER
@@ -106,7 +120,6 @@ static ROXSOAPServer *server=NULL;
 static MemWindow *make_window(guint32 socket);
 static gboolean update_values(MemWindow *);
 static void do_update(void);
-static gboolean read_choices(void);
 static void setup_options(void);
 static void opts_changed(void);
 static gint button_press(GtkWidget *window, GdkEventButton *bev,
@@ -152,56 +165,56 @@ static ROXSOAPServerActions actions[]={
 
 static void usage(const char *argv0)
 {
-  printf("Usage: %s [X-options] [gtk-options] [-vhnro] [-a XID]\n", argv0);
+  printf(_("Usage: %s [X-options] [gtk-options] [-vhnro] [-a XID]\n"), argv0);
 
-  printf("where:\n\n");
-  printf("  X-options\tstandard Xlib options\n");
-  printf("  gtk-options\tstandard GTK+ options\n");
-  printf("  -h\tprint this help message\n");
-  printf("  -n\tdon't attempt to contact existing server\n");
-  printf("  -r\treplace existing server\n");
-  printf("  -o\topen options window\n");
-  printf("  -v\tdisplay version information\n");
-  printf("  -a XID\tX window to create applet in\n");
+  printf(_("where:\n\n"));
+  printf(_("  X-options\tstandard Xlib options\n"));
+  printf(_("  gtk-options\tstandard GTK+ options\n"));
+  printf(_("  -h\tprint this help message\n"));
+  printf(_("  -n\tdon't attempt to contact existing server\n"));
+  printf(_("  -r\treplace existing server\n"));
+  printf(_("  -o\topen options window\n"));
+  printf(_("  -v\tdisplay version information\n"));
+  printf(_("  -a XID\tX window to create applet in\n"));
 }
 
 static void do_version(void)
 {
-  printf("%s %s\n", PROJECT, VERSION);
-  printf("%s\n", PURPOSE);
-  printf("%s\n", WEBSITE);
-  printf("Copyright 2002 %s\n", AUTHOR);
-  printf("Distributed under the terms of the GNU General Public License.\n");
-  printf("(See the file COPYING in the Help directory).\n");
-  printf("%s last compiled %s\n", __FILE__, __DATE__);
-  printf("ROX-CLib version %s (built with %d.%d.%d)\n",
+  printf(_("%s %s\n"), PROJECT, VERSION);
+  printf(_("%s\n"), PURPOSE);
+  printf(_("%s\n"), WEBSITE);
+  printf(_("Copyright 2002 %s\n"), AUTHOR);
+  printf(_("Distributed under the terms of the GNU General Public License.\n"));
+  printf(_("(See the file COPYING in the Help directory).\n"));
+  printf(_("%s last compiled %s\n"), __FILE__, __DATE__);
+  printf(_("ROX-CLib version %s (built with %d.%d.%d)\n"),
 	 rox_clib_version_string(),
 	 ROX_CLIB_VERSION/10000, (ROX_CLIB_VERSION%10000)/100,
 	 ROX_CLIB_VERSION%100);
 
-  printf("\nCompile time options:\n");
-  printf("  Debug output... %s\n", DEBUG? "yes": "no");
+  printf(_("\nCompile time options:\n"));
+  printf(_("  Debug output... %s\n"), DEBUG? _("yes"): _("no"));
 #ifdef HAVE_LIBGTOP
 #ifdef LIBGTOP_VERSION_CODE
-  printf("  libgtop version %d\n", LIBGTOP_VERSION_CODE);
+  printf(_("  libgtop version %d\n"), LIBGTOP_VERSION_CODE);
 #else
-  printf("  libgtop version 1.0.x\n");
+  printf(_("  libgtop version 1.0.x\n"));
 #endif
 #else
-  printf("  libgtop not available\n");    
+  printf(_("  libgtop not available\n"));    
 #endif
-  printf("  Have kstat... %s\n",
+  printf(_("  Have kstat... %s\n"),
 #ifdef HAVE_KSTAT_OPEN
-	   "yes"
+	 _("yes")
 #else
-	   "no"
+	 _("no")
 #endif
 	 );
-  printf("  Have swapctl... %s\n",
+  printf(_("  Have swapctl... %s\n"),
 #ifdef HAVE_SWAPCTL
-	   "yes"
+	 _("yes")
 #else
-	   "no"
+	 _("no")
 #endif
 	 );
 }
@@ -211,23 +224,11 @@ int main(int argc, char *argv[])
   char tbuf[1024], *home;
   gchar *fname;
   guint xid=0;
-  gchar *app_dir;
-#ifdef HAVE_BINDTEXTDOMAIN
-  gchar *localedir;
-#endif
   int c, do_exit, nerr;
   const char *options="vha:nro";
   gboolean new_run=FALSE;
   gboolean replace_server=FALSE;
   gboolean show_options=FALSE;
-
-  app_dir=g_getenv("APP_DIR");
-#ifdef HAVE_BINDTEXTDOMAIN
-  localedir=g_strconcat(app_dir, "/Messages", NULL);
-  bindtextdomain(PROGRAM, localedir);
-  textdomain(PROGRAM);
-  g_free(localedir);
-#endif
 
   rox_init_with_domain(PROJECT, MY_DOMAIN, &argc, &argv);
   
@@ -267,7 +268,7 @@ int main(int argc, char *argv[])
       break;
     }
   if(nerr) {
-    fprintf(stderr, "%s: invalid options\n", argv[0]);
+    fprintf(stderr, _("%s: invalid options\n"), argv[0]);
     usage(argv[0]);
     exit(10);
   }
@@ -276,15 +277,8 @@ int main(int argc, char *argv[])
 
   setup_options();
 
-  /* Pick the gtkrc file up from CHOICESPATH */
-  fname=rox_choices_load("gtkrc", PROJECT, MY_DOMAIN);
-  if(fname) {
-    gtk_rc_parse(fname);
-    g_free(fname);
-  }
-
   if(replace_server || !rox_soap_ping(PROJECT)) {
-    dprintf(1, "Making SOAP server");
+    rox_debug_printf(1, "Making SOAP server");
     server=rox_soap_server_new(PROJECT, MEM_NAMESPACE_URL);
     rox_soap_server_add_actions(server, actions);
   } else if(!new_run) {
@@ -293,16 +287,19 @@ int main(int argc, char *argv[])
 	if(!xid)
 	  return 0;
       } else {
-	rox_error("Failed to ask server to open options window");
+	rox_error(_("Failed to ask server to open options window"));
       } 
     }
     if(open_remote(xid)) {
-      dprintf(1, "success in open_remote(%lu), exiting", xid);
+      rox_debug_printf(1, "success in open_remote(%lu), exiting", xid);
       if(xid)
 	sleep(3);
       return 0;
     }
   }
+  
+  gtk_rc_parse_string(GTKRC_STRING);
+
   if(show_options)
     options_show();
 
@@ -320,8 +317,6 @@ int main(int argc, char *argv[])
 
 static void setup_options(void)
 {
-  read_choices();  /* Read old format config */
-
   rox_option_add_int(&o_update_rate, "update_rate",
 		 1000*default_options.update_sec);
   rox_option_add_int(&o_applet_size, "applet_size",
@@ -353,7 +348,7 @@ static void window_gone(GtkWidget *widget, gpointer data)
 {
   MemWindow *mw=(MemWindow *) data;
 
-  dprintf(1, "Window gone: %p %p", widget, mw);
+  rox_debug_printf(1, "Window gone: %p %p", widget, mw);
 
   remove_window(mw);
 }
@@ -369,7 +364,7 @@ static MemWindow *make_window(guint32 xid)
   char hname[1024];
   static GtkWidget *menu=NULL;
 
-  dprintf(1, "make_window(%lu)", xid);
+  rox_debug_printf(1, "make_window(%lu)", xid);
   
   if(!ttips)
     ttips=gtk_tooltips_new();
@@ -381,7 +376,7 @@ static MemWindow *make_window(guint32 xid)
     /* Construct our window and bits */
     mwin->win=gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_widget_set_name(mwin->win, "mem free");
-    gtk_window_set_title(GTK_WINDOW(mwin->win), "System memory");
+    gtk_window_set_title(GTK_WINDOW(mwin->win), _("System memory"));
     gtk_signal_connect(GTK_OBJECT(mwin->win), "destroy", 
 		       GTK_SIGNAL_FUNC(window_gone), 
 		       mwin);
@@ -391,8 +386,8 @@ static MemWindow *make_window(guint32 xid)
     gtk_widget_add_events(mwin->win, GDK_BUTTON_PRESS_MASK);
 
     gtk_tooltips_set_tip(ttips, mwin->win,
-			 "Mem shows the memory and swap usage on a host",
-			 TIP_PRIVATE);
+			 _("Mem shows the memory and swap usage on a host"),
+			 _(TIP_PRIVATE));
   
     vbox=gtk_vbox_new(FALSE, 1);
     gtk_container_add(GTK_CONTAINER(mwin->win), vbox);
@@ -439,8 +434,8 @@ static MemWindow *make_window(guint32 xid)
     gtk_box_pack_start(GTK_BOX(hbox), mwin->mem_total, FALSE, FALSE, 2);
     gtk_widget_show(mwin->mem_total);
     gtk_tooltips_set_tip(ttips, mwin->mem_total,
-			 "This is the total size of memory",
-			 TIP_PRIVATE);
+			 _("This is the total size of memory"),
+			 _(TIP_PRIVATE));
   
     hbox=gtk_hbox_new(FALSE, 1);
     gtk_box_pack_start(GTK_BOX(vbox2), hbox, FALSE, FALSE, 2);
@@ -451,8 +446,8 @@ static MemWindow *make_window(guint32 xid)
     gtk_box_pack_start(GTK_BOX(hbox), mwin->mem_used, TRUE, FALSE, 2);
     gtk_widget_show(mwin->mem_used);
     gtk_tooltips_set_tip(ttips, mwin->mem_used,
-			 "This is the memory used on the host",
-			 TIP_PRIVATE);
+			 _("This is the memory used on the host"),
+			 _(TIP_PRIVATE));
   
     adj = (GtkAdjustment *) gtk_adjustment_new (0, 1, 100, 0, 0, 0);
   
@@ -466,16 +461,16 @@ static MemWindow *make_window(guint32 xid)
     gtk_widget_show(mwin->mem_per);
     gtk_box_pack_start(GTK_BOX(hbox), mwin->mem_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, mwin->mem_per,
-			 "This shows the relative usage of memory",
-			 TIP_PRIVATE);
+			 _("This shows the relative usage of memory"),
+			 _(TIP_PRIVATE));
   
     mwin->mem_free=gtk_label_new("XXxxx ybytes");
     gtk_widget_set_name(mwin->mem_free, "text display");
     gtk_box_pack_start(GTK_BOX(hbox), mwin->mem_free, TRUE, FALSE, 2);
     gtk_widget_show(mwin->mem_free);
     gtk_tooltips_set_tip(ttips, mwin->mem_free,
-			 "This is the memory available on the host",
-			 TIP_PRIVATE);
+			 _("This is the memory available on the host"),
+			 _(TIP_PRIVATE));
 
     frame=gtk_frame_new(_("Swap"));
     gtk_box_pack_start(GTK_BOX(vbox), frame, FALSE, FALSE, 2);
@@ -500,8 +495,8 @@ static MemWindow *make_window(guint32 xid)
     gtk_box_pack_start(GTK_BOX(hbox), mwin->swap_total, FALSE, FALSE, 2);
     gtk_widget_show(mwin->swap_total);
     gtk_tooltips_set_tip(ttips, mwin->swap_total,
-			 "This is the total size of swap space",
-			 TIP_PRIVATE);
+			 _("This is the total size of swap space"),
+			 _(TIP_PRIVATE));
   
     hbox=gtk_hbox_new(FALSE, 1);
     gtk_box_pack_start(GTK_BOX(vbox2), hbox, FALSE, FALSE, 2);
@@ -512,8 +507,8 @@ static MemWindow *make_window(guint32 xid)
     gtk_box_pack_start(GTK_BOX(hbox), mwin->swap_used, TRUE, FALSE, 2);
     gtk_widget_show(mwin->swap_used);
     gtk_tooltips_set_tip(ttips, mwin->swap_used,
-			 "This is the swap space used on the host",
-			 TIP_PRIVATE);
+			 _("This is the swap space used on the host"),
+			 _(TIP_PRIVATE));
   
     adj = (GtkAdjustment *) gtk_adjustment_new (0, 1, 100, 0, 0, 0);
   
@@ -527,16 +522,16 @@ static MemWindow *make_window(guint32 xid)
     gtk_widget_show(mwin->swap_per);
     gtk_box_pack_start(GTK_BOX(hbox), mwin->swap_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, mwin->swap_per,
-			 "This shows the relative usage of swap space",
-			 TIP_PRIVATE);
+			 _("This shows the relative usage of swap space"),
+			 _(TIP_PRIVATE));
   
     mwin->swap_free=gtk_label_new("XXxxx ybytes");
     gtk_widget_set_name(mwin->swap_free, "text display");
     gtk_box_pack_start(GTK_BOX(hbox), mwin->swap_free, TRUE, FALSE, 2);
     gtk_widget_show(mwin->swap_free);
     gtk_tooltips_set_tip(ttips, mwin->swap_free,
-			 "This is the swap space available on the host",
-			 TIP_PRIVATE);
+			 _("This is the swap space available on the host"),
+			 _(TIP_PRIVATE));
 
     mwin->is_applet=FALSE;
 
@@ -551,16 +546,17 @@ static MemWindow *make_window(guint32 xid)
 		       mwin);
     gtk_widget_set_size_request(plug, o_applet_size.int_value,
 			 o_applet_size.int_value);
-    dprintf(4, "set_usize %d\n", o_applet_size.int_value);
+    gtk_widget_set_name(plug, "mem free");
+    rox_debug_printf(4, "set_usize %d\n", o_applet_size.int_value);
     
     gtk_signal_connect(GTK_OBJECT(plug), "button_press_event",
 		       GTK_SIGNAL_FUNC(button_press), mwin);
     gtk_widget_add_events(plug, GDK_BUTTON_PRESS_MASK);
     gtk_tooltips_set_tip(ttips, plug,
-			 "Mem shows the memory and swap usage",
-			 TIP_PRIVATE);
+			 _("Mem shows the memory and swap usage"),
+			 _(TIP_PRIVATE));
 
-    dprintf(4, "vbox new");
+    rox_debug_printf(4, "vbox new");
     vbox=gtk_vbox_new(FALSE, 1);
     gtk_container_add(GTK_CONTAINER(plug), vbox);
     gtk_widget_show(vbox);
@@ -569,22 +565,22 @@ static MemWindow *make_window(guint32 xid)
     gtk_widget_set_name(mwin->mem_total, "text display");
     gtk_box_pack_start(GTK_BOX(vbox), mwin->mem_total, FALSE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, mwin->mem_total,
-			 "This is the total size of memory",
-			 TIP_PRIVATE);
+			 _("This is the total size of memory"),
+			 _(TIP_PRIVATE));
   
     mwin->mem_used=gtk_label_new("XXxxx ybytes");
     gtk_widget_set_name(mwin->mem_used, "text display");
     gtk_box_pack_start(GTK_BOX(vbox), mwin->mem_used, TRUE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, mwin->mem_used,
-			 "This is the memory used on the host",
-			 TIP_PRIVATE);
+			 _("This is the memory used on the host"),
+			 _(TIP_PRIVATE));
   
     mwin->mem_free=gtk_label_new("XXxxx ybytes");
     gtk_widget_set_name(mwin->mem_free, "text display");
     gtk_box_pack_start(GTK_BOX(vbox), mwin->mem_free, TRUE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, mwin->mem_free,
-			 "This is the memory available on the host",
-			 TIP_PRIVATE);
+			 _("This is the memory available on the host"),
+			 _(TIP_PRIVATE));
 
     mwin->mem_per=gtk_progress_bar_new();
     gtk_widget_set_name(mwin->mem_per, "gauge");
@@ -595,8 +591,8 @@ static MemWindow *make_window(guint32 xid)
     gtk_progress_set_show_text(GTK_PROGRESS(mwin->mem_per), TRUE);
     gtk_box_pack_start(GTK_BOX(vbox), mwin->mem_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, mwin->mem_per,
-			 "This shows the relative usage of memory",
-			 TIP_PRIVATE);
+			 _("This shows the relative usage of memory"),
+			 _(TIP_PRIVATE));
 
     switch(o_mem_disp.int_value) {
     case AD_TOTAL:
@@ -617,22 +613,22 @@ static MemWindow *make_window(guint32 xid)
     gtk_widget_set_name(mwin->swap_total, "text display");
     gtk_box_pack_start(GTK_BOX(vbox), mwin->swap_total, FALSE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, mwin->swap_total,
-			 "This is the total size of swap space",
-			 TIP_PRIVATE);
+			 _("This is the total size of swap space"),
+			 _(TIP_PRIVATE));
   
     mwin->swap_used=gtk_label_new("XXxxx ybytes");
     gtk_widget_set_name(mwin->swap_used, "text display");
     gtk_box_pack_start(GTK_BOX(vbox), mwin->swap_used, TRUE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, mwin->swap_used,
-			 "This is the swap space used on the host",
-			 TIP_PRIVATE);
+			 _("This is the swap space used on the host"),
+			 _(TIP_PRIVATE));
   
     mwin->swap_free=gtk_label_new("XXxxx ybytes");
     gtk_widget_set_name(mwin->swap_free, "text display");
     gtk_box_pack_start(GTK_BOX(vbox), mwin->swap_free, TRUE, FALSE, 2);
     gtk_tooltips_set_tip(ttips, mwin->swap_free,
-			 "This is the swap space available on the host",
-			 TIP_PRIVATE);
+			 _("This is the swap space available on the host"),
+			 _(TIP_PRIVATE));
 
     mwin->swap_per=gtk_progress_bar_new();
     gtk_widget_set_name(mwin->swap_per, "gauge");
@@ -644,8 +640,8 @@ static MemWindow *make_window(guint32 xid)
     gtk_widget_show(mwin->swap_per);
     gtk_box_pack_start(GTK_BOX(vbox), mwin->swap_per, TRUE, TRUE, 2);
     gtk_tooltips_set_tip(ttips, mwin->swap_per,
-			 "This shows the relative usage of swap space",
-			 TIP_PRIVATE);
+			 _("This shows the relative usage of swap space"),
+			 _(TIP_PRIVATE));
     
     switch(o_swap_disp.int_value) {
     case AD_TOTAL:
@@ -662,9 +658,9 @@ static MemWindow *make_window(guint32 xid)
       break;
     }
 
-    dprintf(5, "show plug");
+    rox_debug_printf(5, "show plug");
     gtk_widget_show(plug);
-    dprintf(5, "made applet");
+    rox_debug_printf(5, "made applet");
 
     mwin->win=plug;
     mwin->is_applet=TRUE;
@@ -680,14 +676,14 @@ static MemWindow *make_window(guint32 xid)
   /* check now */
   update_values(mwin);
 
-  dprintf(3, "show %p (%ld)", mwin->win, xid);
+  rox_debug_printf(3, "show %p (%ld)", mwin->win, xid);
   if(!xid)
     gtk_widget_show(mwin->win);
-  dprintf(2, "timeout %ds, %p, %p", o_update_rate.int_value,
+  rox_debug_printf(2, "timeout %ds, %p, %p", o_update_rate.int_value,
 	  (GtkFunction) update_values, mwin);
   mwin->update_tag=gtk_timeout_add(o_update_rate.int_value,
 			 (GtkFunction) update_values, mwin);
-  dprintf(2, "update_sec=%d, update_tag=%u", o_update_rate.int_value,
+  rox_debug_printf(2, "update_sec=%d, update_tag=%u", o_update_rate.int_value,
 	  mwin->update_tag);
 
   windows=g_list_append(windows, mwin);
@@ -720,7 +716,7 @@ static gboolean update_values(MemWindow *mwin)
   int ok=FALSE;
   MemValue total, used, avail;
   
-  dprintf(4, "update_sec=%d, update_tag=%u", o_update_rate.int_value,
+  rox_debug_printf(4, "update_sec=%d, update_tag=%u", o_update_rate.int_value,
 	  mwin->update_tag);
   
   ok=mem_stats_get_mem(&total, &avail);
@@ -734,7 +730,7 @@ static gboolean update_values(MemWindow *mwin)
     if(fused>100.f)
       fused=100.f;
 
-    dprintf(4, "%2.0f %%", fused);
+    rox_debug_printf(4, "%2.0f %%", fused);
 
     if(!mwin->is_applet) {
       gtk_label_set_text(GTK_LABEL(mwin->mem_total), fmt_size(total));
@@ -743,28 +739,28 @@ static gboolean update_values(MemWindow *mwin)
     } else {
       char tmp[64];
 
-      strcpy(tmp, "Mt ");
+      strcpy(tmp, _("Mt "));
       strcat(tmp, fmt_size(total));
       gtk_label_set_text(GTK_LABEL(mwin->mem_total), tmp);
 
-      strcpy(tmp, "Mu ");
+      strcpy(tmp, _("Mu "));
       strcat(tmp, fmt_size(used));
       gtk_label_set_text(GTK_LABEL(mwin->mem_used), tmp);
 
-      strcpy(tmp, "Mf ");
+      strcpy(tmp, _("Mf "));
       strcat(tmp, fmt_size(avail));
       gtk_label_set_text(GTK_LABEL(mwin->mem_free), tmp);
 
     }
       
-    dprintf(5, "set progress");
+    rox_debug_printf(5, "set progress");
     gtk_progress_set_value(GTK_PROGRESS(mwin->mem_per), fused);
     gtk_widget_set_sensitive(GTK_WIDGET(mwin->mem_per), TRUE);
 
   } else {
-    gtk_label_set_text(GTK_LABEL(mwin->mem_total), "Mem?");
-    gtk_label_set_text(GTK_LABEL(mwin->mem_used), "Mem?");
-    gtk_label_set_text(GTK_LABEL(mwin->mem_free), "Mem?");
+    gtk_label_set_text(GTK_LABEL(mwin->mem_total), _("Mem?"));
+    gtk_label_set_text(GTK_LABEL(mwin->mem_used), _("Mem?"));
+    gtk_label_set_text(GTK_LABEL(mwin->mem_free), _("Mem?"));
     gtk_widget_set_sensitive(GTK_WIDGET(mwin->mem_per), FALSE);
   }
 
@@ -775,15 +771,17 @@ static gboolean update_values(MemWindow *mwin)
 
     used=total-avail;
       
-    dprintf(2, "swap: %lld %lld %lld", total, used, avail);
-    dprintf(2, "swap: %lldK %lldK %lldK", total>>10, used>>10, avail>>10);
-    dprintf(2, "swap: %lldM %lldM %lldM", total>>20, used>>20, avail>>20);
+    rox_debug_printf(2, "swap: %lld %lld %lld", total, used, avail);
+    rox_debug_printf(2, "swap: %lldK %lldK %lldK", total>>10, used>>10,
+		     avail>>10);
+    rox_debug_printf(2, "swap: %lldM %lldM %lldM", total>>20, used>>20,
+		     avail>>20);
       
     fused=(100.f*used)/((gfloat) total);
     if(fused>100.f)
       fused=100.f;
 
-    dprintf(4, "%2.0f %%\n", fused);
+    rox_debug_printf(4, "%2.0f %%\n", fused);
 
     if(!mwin->is_applet) {
       gtk_label_set_text(GTK_LABEL(mwin->swap_total), fmt_size(total));
@@ -792,28 +790,28 @@ static gboolean update_values(MemWindow *mwin)
     } else {
       char tmp[64];
 
-      strcpy(tmp, "St ");
+      strcpy(tmp, _("St "));
       strcat(tmp, fmt_size(total));
       gtk_label_set_text(GTK_LABEL(mwin->swap_total), tmp);
 
-      strcpy(tmp, "Su ");
+      strcpy(tmp, _("Su "));
       strcat(tmp, fmt_size(used));
       gtk_label_set_text(GTK_LABEL(mwin->swap_used), tmp);
 
-      strcpy(tmp, "Sf ");
+      strcpy(tmp, _("Sf "));
       strcat(tmp, fmt_size(avail));
       gtk_label_set_text(GTK_LABEL(mwin->swap_free), tmp);
 
     }
       
-    dprintf(5, "set progress");
+    rox_debug_printf(5, "set progress");
     gtk_progress_set_value(GTK_PROGRESS(mwin->swap_per), fused);
     gtk_widget_set_sensitive(GTK_WIDGET(mwin->swap_per), TRUE);
     
   } else {
-    gtk_label_set_text(GTK_LABEL(mwin->swap_total), "Swap?");
-    gtk_label_set_text(GTK_LABEL(mwin->swap_used), "Swap?");
-    gtk_label_set_text(GTK_LABEL(mwin->swap_free), "Swap?");
+    gtk_label_set_text(GTK_LABEL(mwin->swap_total), _("Swap?"));
+    gtk_label_set_text(GTK_LABEL(mwin->swap_used), _("Swap?"));
+    gtk_label_set_text(GTK_LABEL(mwin->swap_free), _("Swap?"));
 
     gtk_widget_set_sensitive(GTK_WIDGET(mwin->swap_per), FALSE);
   }
@@ -824,97 +822,6 @@ static gboolean update_values(MemWindow *mwin)
 static void do_update(void)
 {
   update_values(current_window);
-}
-
-#define UPDATE_RATE "UpdateRate"
-#define INIT_SIZE   "AppletInitSize"
-#define SWAP_NUM    "ShowSwapNumbers"
-#define SHOW_HOST   "ShowHostName"
-#define GAUGE_WIDTH "GaugeWidth"
-#define MEM_DISP    "MemoryAppletDisplay"
-#define SWAP_DISP   "SwapAppletDisplay"
-
-static gboolean read_choices(void)
-{
-  gchar *fname;
-
-  fname=rox_choices_load("Config.xml", PROJECT, MY_DOMAIN);
-
-  if(fname) {
-    xmlDocPtr doc;
-    xmlNodePtr node, root;
-    xmlChar *string;
-    
-    doc=xmlParseFile(fname);
-    if(!doc) {
-      g_free(fname);
-      return FALSE;
-    }
-
-    root=xmlDocGetRootElement(doc);
-    if(!root) {
-      g_free(fname);
-      xmlFreeDoc(doc);
-      return FALSE;
-    }
-
-    if(strcmp((const char *) root->name, PROJECT)!=0) {
-      g_free(fname);
-      xmlFreeDoc(doc);
-      return FALSE;
-    }
-
-    for(node=root->xmlChildrenNode; node; node=node->next) {
-      xmlChar *string;
-      
-      if(node->type!=XML_ELEMENT_NODE)
-	continue;
-
-      /* Process data here */
-      if(strcmp((const char *) node->name, "update")==0) {
- 	string=xmlGetProp(node, (xmlChar *) "rate");
-	if(!string)
-	  continue;
-	default_options.update_sec=atoi((const char *) string);
-	free(string);
-
-      } else if(strcmp((const char *) node->name, "Applet")==0) {
- 	string=xmlGetProp(node, (xmlChar *) "initial-size");
-	if(string) {
-	  default_options.applet_init_size=atoi((const char *) string);
-	  free(string);
-	}
- 	string=xmlGetProp(node, (xmlChar *) "mem");
-	if(string) {
-	  default_options.mem_disp=atoi((const char *) string);
-	  free(string);
-	}
- 	string=xmlGetProp(node, (xmlChar *) "swap");
-	if(string) {
-	  default_options.swap_disp=atoi((const char *) string);
-	  free(string);
-	}
-	
-      } else if(strcmp((const char *) node->name, "Window")==0) {
- 	string=xmlGetProp(node, (xmlChar *) "show-host");
-	if(string) {
-	  default_options.show_host=atoi((const char *) string);
-	  free(string);
-	}
- 	string=xmlGetProp(node, (xmlChar *) "gauge-width");
-	if(string) {
-	  default_options.gauge_width=atoi((const char *) string);
-	  free(string);
-	}
-      }
-    }
-    
-    xmlFreeDoc(doc);
-    g_free(fname);
-    return TRUE;
-  }
-
-  return FALSE;
 }
 
 static void show_info_win(void)
@@ -1071,7 +978,7 @@ static void close_window(void)
   if(!mwin)
     return;
   
-  dprintf(1, "close_window %p %p", mwin, mwin->win);
+  rox_debug_printf(1, "close_window %p %p", mwin, mwin->win);
 
   gtk_widget_hide(mwin->win);
   gtk_widget_unref(mwin->win);
@@ -1117,7 +1024,7 @@ static xmlNodePtr rpc_Open(ROXSOAPServer *server, const char *action_name,
   xmlChar *str;
   guint32 xid=0;
 
-  dprintf(3, "rpc_Open(%p, \"%s\", %p, %p)", server, action_name, args, udata);
+  rox_debug_printf(3, "rpc_Open(%p, \"%s\", %p, %p)", server, action_name, args, udata);
 
   parent=args->data;
   if(parent) {
@@ -1141,7 +1048,7 @@ static xmlNodePtr rpc_Options(ROXSOAPServer *server, const char *action_name,
   gchar *str;
   guint32 xid=0;
 
-  dprintf(3, "rpc_Options(%p, \"%s\", %p, %p)", server, action_name,
+  rox_debug_printf(3, "rpc_Options(%p, \"%s\", %p, %p)", server, action_name,
 	  args, udata);
 
   options_show();
@@ -1154,7 +1061,7 @@ static void soap_callback(ROXSOAP *serv, gboolean status,
 {
   gboolean *s=udata;
   
-  dprintf(3, "In soap_callback(%p, %d, %p, %p)", serv, status, reply,
+  rox_debug_printf(3, "In soap_callback(%p, %d, %p, %p)", serv, status, reply,
 	 udata);
   *s=status;
   gtk_main_quit();
@@ -1169,13 +1076,13 @@ static gboolean open_remote(guint32 xid)
   char buf[32];
 
   serv=rox_soap_connect(PROJECT);
-  dprintf(3, "server for %s is %p", PROJECT, serv);
+  rox_debug_printf(3, "server for %s is %p", PROJECT, serv);
   if(!serv)
     return FALSE;
 
   doc=rox_soap_build_xml("Open", MEM_NAMESPACE_URL, &node);
   if(!doc) {
-    dprintf(3, "Failed to build XML doc");
+    rox_debug_printf(3, "Failed to build XML doc");
     rox_soap_close(serv);
     return FALSE;
   }
@@ -1184,7 +1091,7 @@ static gboolean open_remote(guint32 xid)
   xmlNewChild(node, NULL, (xmlChar *) "Parent", (xmlChar *) buf);
 
   sent=rox_soap_send(serv, doc, FALSE, soap_callback, &ok);
-  dprintf(3, "sent %d", sent);
+  rox_debug_printf(3, "sent %d", sent);
   /*xmlDocDump(stdout, doc);*/
 
   xmlFreeDoc(doc);
@@ -1203,19 +1110,19 @@ static gboolean options_remote(void)
   gboolean sent, ok;
 
   serv=rox_soap_connect(PROJECT);
-  dprintf(3, "server for %s is %p", PROJECT, serv);
+  rox_debug_printf(3, "server for %s is %p", PROJECT, serv);
   if(!serv)
     return FALSE;
 
   doc=rox_soap_build_xml("Options", MEM_NAMESPACE_URL, &node);
   if(!doc) {
-    dprintf(3, "Failed to build XML doc");
+    rox_debug_printf(3, "Failed to build XML doc");
     rox_soap_close(serv);
     return FALSE;
   }
 
   sent=rox_soap_send(serv, doc, FALSE, soap_callback, &ok);
-  dprintf(3, "sent %d", sent);
+  rox_debug_printf(3, "sent %d", sent);
 
   xmlFreeDoc(doc);
   if(sent)
@@ -1228,6 +1135,9 @@ static gboolean options_remote(void)
 
 /*
  * $Log: mem.c,v $
+ * Revision 1.21  2006/09/16 12:16:26  stephen
+ * Use new menu API
+ *
  * Revision 1.20  2005/10/16 12:00:22  stephen
  * Update for ROX-CLib changes, many externally visible symbols
  * (functions and types) now have rox_ or ROX prefixes.
