@@ -1,6 +1,15 @@
 Changes to FreeFS
 =================
 
+04-Nov-2006
+~~~~~~~~~~~
+Use gtk_rc_parse_string() to set up gauge colours, choice_install no longer
+needed.
+More options controlling applet appearance, allowing it to adapt to smaller
+panels and to left or right panels.
+Reinstated the excluded file system types option, just as a manually maintained
+file for the moment.
+
 11-June-2006
 ~~~~~~~~~~~
 Use new menu API.

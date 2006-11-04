@@ -9,5 +9,9 @@
 	      width='2'>Initial size</numentry>
     <toggle name='show_dir' label='Show directory'>If this is on the
 file system root name is shown</toggle>
+    <toggle name='minimal' label='Minimalist display'>If this is on then
+the applet display is as small as possible</toggle>
+    <toggle name='vertical' label='Vertical Orientation'>If this is on then
+the percentage gauge is vertical instead of horizontal</toggle>
   </section>
 </options>
