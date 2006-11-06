@@ -6,7 +6,7 @@
  * API.  Both getxattr() and attropen() are supported, as is a fallback
  * no-op implementation.
  *
- * @version $Id$
+ * @version $Id: xattr.c,v 1.1 2006/10/03 20:45:58 stephen Exp $
  * @author Stephen Watson, Thomas Leonard
  */
 
@@ -205,6 +205,8 @@ gboolean rox_xattr_binary_value_supported(void)
 
 #elif defined(HAVE_ATTROPEN)
 
+#include <dirent.h>
+
 /* Solaris 9 implementation */
 
 void rox_xattr_init(void)
@@ -258,6 +260,9 @@ gchar *rox_xattr_get(const char *path, const char *attr, int *len)
 
     if(len)
       *len=nb;
+  } else if(errno==ENOENT) {
+    if(access(path, F_OK)==0)
+      errno=0;
   }
 
   return buf;
@@ -285,7 +290,69 @@ int rox_xattr_set(const char *path, const char *attr,
       return 0;
   }
   
-  return 1; /* Set type failed */
+  return 1; /* Set attr failed */
+}
+
+GList *rox_xattr_list(const char *path)
+{
+  GList *names=NULL;
+  int fd;
+  
+  if(!rox_xattr_have(path))
+    return FALSE;
+  
+  fd=attropen(path, ".", O_RDONLY);
+  
+  if(fd>=0) {
+    DIR *dir=fdopendir(fd);
+    struct dirent ent;
+
+    while(readdir_r(dir, &ent)) {
+      if(strcmp(ent.d_name, ".")==0 || strcmp(ent.d_name, "..")==0)
+	continue;
+
+      names=g_list_append(names, g_strdup(ent.d_name));
+    }
+
+    closedir(dir);
+  }
+  
+  return names;
+}
+
+int rox_xattr_delete(const char *path, const char *attr)
+{
+  int fd, state;
+  
+  if(!rox_xattr_have(path)) {
+    errno=0;
+    return 1;
+  }
+  
+  fd=attropen(path, ".", O_RDONLY);
+
+  state=0;
+  if(fd>=0) {
+    state=unlinkat(fd, attr, 0);
+    close(fd);
+  } else {
+    state=1;
+    
+  }
+  
+  return state;
+}
+
+gboolean rox_xattr_name_valid(const char *attr)
+{
+  if(strchr(attr, '/'))
+    return FALSE;
+  return TRUE;
+}
+
+gboolean rox_xattr_binary_value_supported(void)
+{
+  return TRUE;
 }
 
 #else
