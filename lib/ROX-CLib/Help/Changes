@@ -4,6 +4,11 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+06-Nov-2006
+~~~~~~~~~~~
+Added missing functions from the Solaris extended attribute support.
+Fix use of deprecated function in rox_choices_load().
+
 06-Oct-2006
 ~~~~~~~~~~~
 Marked the old choices_*() functions as deprecated and changed those functions
@@ -324,4 +329,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.43 2006/10/03 20:45:58 stephen Exp $
+$Id: Changes,v 1.44 2006/10/06 16:29:45 stephen Exp $

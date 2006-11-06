@@ -1,5 +1,5 @@
 /*
- * $Id: choices.c,v 1.11 2006/08/12 17:04:56 stephen Exp $
+ * $Id: choices.c,v 1.12 2006/10/06 16:29:38 stephen Exp $
  *
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
@@ -36,13 +36,13 @@
  * - choices_find_path_load()
  * - choices_find_path_save()
  *
- * @version $Id: choices.c,v 1.11 2006/08/12 17:04:56 stephen Exp $
+ * @version $Id: choices.c,v 1.12 2006/10/06 16:29:38 stephen Exp $
  * @author Thomas Leonard, Stephen Watson.
  * Borrowed from:
  * ROX-Filer, filer for the ROX desktop project
  * Copyright (C) 2000, Thomas Leonard, <tal197@users.sourceforge.net>.
  *
- * @version $Id: choices.c,v 1.11 2006/08/12 17:04:56 stephen Exp $
+ * @version $Id: choices.c,v 1.12 2006/10/06 16:29:38 stephen Exp $
  * @author Thomas Leonard, Stephen Watson.
  */
 
@@ -68,6 +68,7 @@ static gchar **dir_list = NULL;
 /* Static prototypes */
 static gboolean exists(char *path);
 static void init_choices(void);
+static gchar *_choices_find_path_load(const char *leaf, const char *dir);
 
 /****************************************************************
  *			EXTERNAL INTERFACE			*
@@ -167,27 +168,9 @@ void choices_free_list(GPtrArray *list)
  */
 gchar *choices_find_path_load(const char *leaf, const char *dir)
 {
-	gchar		**cdir = dir_list;
-
 	ROX_CLIB_DEPRECATED("rox_choices_load");
 
-	g_return_val_if_fail(dir_list != NULL, NULL);
-
-	while (*cdir)
-	{
-		gchar	*path;
-
-		path = g_strconcat(*cdir, "/", dir, "/", leaf, NULL);
-
-		if (exists(path))
-			return path;
-
-		g_free(path);
-
-		cdir++;
-	}
-
-	return NULL;
+	return _choices_find_path_load(leaf, dir);
 }
 
 /** Returns the pathname of a file to save to, or NULL if saving is
@@ -330,7 +313,7 @@ gchar *rox_choices_load(const char *leaf, const char *dir,
   }
 
   if(!path)
-    path=choices_find_path_load(leaf, dir);
+    path=_choices_find_path_load(leaf, dir);
 
   return path;
 }
@@ -450,8 +433,34 @@ static void init_choices(void)
 
 }
 
+static gchar *_choices_find_path_load(const char *leaf, const char *dir)
+{
+	gchar		**cdir = dir_list;
+
+	g_return_val_if_fail(dir_list != NULL, NULL);
+
+	while (*cdir)
+	{
+		gchar	*path;
+
+		path = g_strconcat(*cdir, "/", dir, "/", leaf, NULL);
+
+		if (exists(path))
+			return path;
+
+		g_free(path);
+
+		cdir++;
+	}
+
+	return NULL;
+}
+
 /*
  * $Log: choices.c,v $
+ * Revision 1.12  2006/10/06 16:29:38  stephen
+ * Marked the old choices_*() functions as deprecated and changed those functions still using them.
+ *
  * Revision 1.11  2006/08/12 17:04:56  stephen
  * Fix most compilation warnings.
  *
