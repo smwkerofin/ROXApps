@@ -4,6 +4,10 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+18-Nov-2006
+~~~~~~~~~~~
+Added 0compile support.
+
 06-Nov-2006
 ~~~~~~~~~~~
 Added missing functions from the Solaris extended attribute support.
@@ -329,4 +333,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.44 2006/10/06 16:29:45 stephen Exp $
+$Id: Changes,v 1.45 2006/11/06 20:22:42 stephen Exp $
