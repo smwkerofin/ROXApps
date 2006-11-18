@@ -1,0 +1,7 @@
+#!/bin/sh
+SRCDIR= "$1"
+DESTDIR= "$1"
+
+cp -r "$SRCDIR" "$DESTDIR"
+cd "$DESTDIR"
+./AppRun --compile && cd src && make zero-install
