@@ -94,11 +94,11 @@ zero-install-shared: ${LIBFILE.la}
 ${EXEC}: ${PLATFORM_DIR}/bin ${OBJECTS} ${LIBFILE.a} ${INCLUDEDIR}
 	${CC} -o ${EXEC} ${OBJECTS} ${LDFLAGS}
 
-${PLATFORM_DIR}/bin/test: ${PLATFORM_DIR}/bin test.o ${LIBFILE.a} ${INCLUDEDIR}
-	${CC} $(CFLAGS) -o ${PLATFORM_DIR}/bin/test test.o ${LIBFILE.a} ${LDFLAGS}
+${PLATFORM_DIR}/bin/test: ${PLATFORM_DIR}/bin test.o ${LIBFILE.la} ${INCLUDEDIR}
+	${CC} $(CFLAGS) -o ${PLATFORM_DIR}/bin/test test.o ${LDFLAGS} -L${LIBDIR} -l${LIBNAME}
 
 ${PLATFORM_DIR}/bin/rox_pinboard: ${PLATFORM_DIR}/bin rox_pinboard.o ${LIBFILE.a} ${INCLUDEDIR}
-	${CC} $(CFLAGS) -o $@ rox_pinboard.o ${LIBFILE.a} ${LDFLAGS}
+	${CC} $(CFLAGS) -o $@ rox_pinboard.o ${LDFLAGS} -L${LIBDIR} -l${LIBNAME}
 
 ${PLATFORM_DIR}/bin/rox_run: rox_run.sh
 	cat rox_run.sh > $@
