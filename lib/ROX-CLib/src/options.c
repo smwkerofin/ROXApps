@@ -1,5 +1,5 @@
 /*
- * $Id: options.c,v 1.10 2005/12/12 18:57:43 stephen Exp $
+ * $Id: options.c,v 1.11 2006/08/12 10:45:49 stephen Exp $
  *
  * Options system for ROX-CLib.
  *
@@ -716,7 +716,7 @@ static void may_add_tip(GtkWidget *widget, xmlNode *element)
 	tip = g_strstrip(g_strdup(data));
 	g_free(data);
 	if (*tip)
-		OPTION_TIP(widget, _(tip));
+		OPTION_TIP(widget, gettext(tip));
 	g_free(tip);
 }
 
@@ -786,7 +786,7 @@ static GtkWidget *build_radio(xmlNode *radio, GtkWidget *prev)
 	button = gtk_radio_button_new_with_label(
 			prev_button ? gtk_radio_button_get_group(prev_button)
 				    : NULL,
-			_(label));
+			gettext(label));
 	g_free(label);
 
 	may_add_tip(button, radio);
@@ -805,7 +805,7 @@ static void build_menu_item(xmlNode *node, GtkWidget *option_menu)
 	g_return_if_fail(strcmp((const char *) node->name, "item") == 0);
 
 	label = xmlGetProp(node, "label");
-	item = gtk_menu_item_new_with_label(_(label));
+	item = gtk_menu_item_new_with_label(gettext(label));
 	g_free(label);
 
 	menu = gtk_option_menu_get_menu(GTK_OPTION_MENU(option_menu));
@@ -837,7 +837,7 @@ static void build_widget(xmlNode *widget, GtkWidget *box)
 
 		if (label)
 			gtk_box_pack_start(GTK_BOX(nbox),
-				gtk_label_new(_(label)), FALSE, TRUE, 4);
+				gtk_label_new(gettext(label)), FALSE, TRUE, 4);
 		gtk_box_pack_start(GTK_BOX(box), nbox, FALSE, TRUE, 0);
 
 		for (hw = widget->xmlChildrenNode; hw; hw = hw->next)
@@ -905,7 +905,7 @@ static void build_section(xmlNode *section, GtkWidget *notebook,
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), page, NULL);
 
 	gtk_tree_store_append(tree_store, &iter, parent);
-	gtk_tree_store_set(tree_store, &iter, 0, _(title), 1, page, -1);
+	gtk_tree_store_set(tree_store, &iter, 0, gettext(title), 1, page, -1);
 	g_free(title);
 		
 	widget = section->xmlChildrenNode;
@@ -1492,7 +1492,7 @@ static GList *build_label(ROXOption *option, xmlNode *node, gchar *label)
 	g_return_val_if_fail(label == NULL, NULL);
 
 	text = DATA(node);
-	widget = gtk_label_new(_(text));
+	widget = gtk_label_new(gettext(text));
 	g_free(text);
 
 	help = get_int(node, "help");
@@ -1546,7 +1546,7 @@ static GList *build_frame(ROXOption *option, xmlNode *node, gchar *label)
 	g_return_val_if_fail(option == NULL, NULL);
 	g_return_val_if_fail(label != NULL, NULL);
 
-	frame = gtk_frame_new(_(label));
+	frame = gtk_frame_new(gettext(label));
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_NONE);
 
 	/* Make the title bold */
@@ -1580,7 +1580,7 @@ static GList *build_toggle(ROXOption *option, xmlNode *node, gchar *label)
 
 	g_return_val_if_fail(option != NULL, NULL);
 
-	toggle = gtk_check_button_new_with_label(_(label));
+	toggle = gtk_check_button_new_with_label(gettext(label));
 
 	may_add_tip(toggle, node);
 
@@ -1617,7 +1617,7 @@ static GList *build_slider(ROXOption *option, xmlNode *node, gchar *label)
 
 	if (label)
 	{
-		label_wid = gtk_label_new(_(label));
+		label_wid = gtk_label_new(gettext(label));
 		gtk_misc_set_alignment(GTK_MISC(label_wid), 0, 0.5);
 		gtk_box_pack_start(GTK_BOX(hbox), label_wid, FALSE, TRUE, 0);
 		add_to_size_group(node, label_wid);
@@ -1626,7 +1626,7 @@ static GList *build_slider(ROXOption *option, xmlNode *node, gchar *label)
 	end = xmlGetProp(node, "end");
 	if (end)
 	{
-		gtk_box_pack_end(GTK_BOX(hbox), gtk_label_new(_(end)),
+		gtk_box_pack_end(GTK_BOX(hbox), gtk_label_new(gettext(end)),
 				 FALSE, TRUE, 0);
 		g_free(end);
 	}
@@ -1672,7 +1672,7 @@ static GList *build_entry(ROXOption *option, xmlNode *node, gchar *label)
 
 	if (label)
 	{
-		label_wid = gtk_label_new(_(label));
+		label_wid = gtk_label_new(gettext(label));
 		gtk_misc_set_alignment(GTK_MISC(label_wid), 1.0, 0.5);
 		gtk_box_pack_start(GTK_BOX(hbox), label_wid, FALSE, TRUE, 0);
 	}
@@ -1713,7 +1713,7 @@ static GList *build_numentry(ROXOption *option, xmlNode *node, gchar *label)
 
 	if (label)
 	{
-		label_wid = gtk_label_new(_(label));
+		label_wid = gtk_label_new(gettext(label));
 		gtk_misc_set_alignment(GTK_MISC(label_wid), 1.0, 0.5);
 		gtk_box_pack_start(GTK_BOX(hbox), label_wid, FALSE, TRUE, 0);
 		add_to_size_group(node, label_wid);
@@ -1726,7 +1726,7 @@ static GList *build_numentry(ROXOption *option, xmlNode *node, gchar *label)
 
 	if (unit)
 	{
-		gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(_(unit)),
+		gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(gettext(unit)),
 				FALSE, TRUE, 0);
 		g_free(unit);
 	}
@@ -1808,7 +1808,7 @@ static GList *build_colour(ROXOption *option, xmlNode *node, gchar *label)
 
 	if (label)
 	{
-		label_wid = gtk_label_new(_(label));
+		label_wid = gtk_label_new(gettext(label));
 		gtk_misc_set_alignment(GTK_MISC(label_wid), 1.0, 0.5);
 		gtk_box_pack_start(GTK_BOX(hbox), label_wid, TRUE, TRUE, 0);
 	}
@@ -1839,7 +1839,7 @@ static GList *build_menu(ROXOption *option, xmlNode *node, gchar *label)
 
 	hbox = gtk_hbox_new(FALSE, 4);
 
-	label_wid = gtk_label_new(_(label));
+	label_wid = gtk_label_new(gettext(label));
 	gtk_misc_set_alignment(GTK_MISC(label_wid), 1.0, 0.5);
 	gtk_box_pack_start(GTK_BOX(hbox), label_wid, TRUE, TRUE, 0);
 
@@ -1885,14 +1885,15 @@ static GList *build_font(ROXOption *option, xmlNode *node, gchar *label)
 		/* Add a check button to enable the font chooser. If off,
 		 * the option's value is "".
 		 */
-		active = gtk_check_button_new_with_label(_(label));
+		active = gtk_check_button_new_with_label(gettext(label));
 		gtk_box_pack_start(GTK_BOX(hbox), active, FALSE, TRUE, 0);
 		g_signal_connect(active, "toggled",
 				 G_CALLBACK(toggle_active_font), option);
 	}
 	else
-		gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(_(label)),
-				FALSE, TRUE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox),
+				   gtk_label_new(gettext(label)),
+				   FALSE, TRUE, 0);
 
 	button = gtk_button_new_with_label("");
 	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, TRUE, 0);
@@ -1990,6 +1991,9 @@ GtkWidget *button_new_mixed(const char *stock, const char *message)
 
 /*
  * $Log: options.c,v $
+ * Revision 1.11  2006/08/12 10:45:49  stephen
+ * Fix use of deprecated function in options.c.
+ *
  * Revision 1.10  2005/12/12 18:57:43  stephen
  * Implemented translating library's strings
  *
