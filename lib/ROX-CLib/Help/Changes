@@ -4,6 +4,10 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+21-Nov-2006
+~~~~~~~~~~~
+AppRun uses src/dist to generate the configure script now.
+
 20-Nov-2006
 ~~~~~~~~~~~
 Fixed translation of Options window (reported by Guido Schimmels).
@@ -337,4 +341,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.46 2006/11/18 16:43:24 stephen Exp $
+$Id: Changes,v 1.47 2006/11/20 23:49:06 stephen Exp $
