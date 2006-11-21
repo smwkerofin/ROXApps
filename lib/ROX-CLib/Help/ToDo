@@ -1,16 +1,12 @@
 ROX-CLib ToDo list
 ==================
 
-For 2.0.0:
-
-* Make available via Zero Install                     DONE
-
 For 2.1.0:
 
 * Add these modules from ROX-Lib2
    - basedirs
    - mime
-   - mime_handler
+   - mime_handler                                     DONE
 
 * Change include dir so that
     #include <infowin.h>
@@ -21,9 +17,15 @@ For 2.1.0:
 * Possible change
     #include <rox/rox_dnd.h>
   to
-    #include <rox/dnd.h>
+    #include <rox/dnd.h>                              Defer to 2.3
 
 * Add more option widgets from ROX-Lib2
 
+* System tray interface needs work
+
+* Add 
+   - xxmlrpc
+   - URI handler interface
+
 -- 
-$Id: ToDo,v 1.1 2004/01/17 11:56:29 stephen Exp $
+$Id: ToDo,v 1.2 2004/03/10 22:45:17 stephen Exp $
