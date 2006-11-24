@@ -8,13 +8,93 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ROX-CLib 2.1.8\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-12-11 11:47+0000\n"
+"POT-Creation-Date: 2006-11-24 16:11+0000\n"
 "PO-Revision-Date:2005-12-11 11:42+0000\n"
 "Last-Translator: Stephen Watson <stephen@kerofin.demon.co.uk>\n"
 "Language-Team: English <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=ISO-8859-1\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+#: pkg.c:46
+msgid "Flags to pass to C compiler"
+msgstr ""
+
+#: pkg.c:47
+msgid "Flags to pass to linker"
+msgstr ""
+
+#: pkg.c:48
+msgid "Directories to search for shared libs"
+msgstr ""
+
+#: pkg.c:50
+msgid "echo environment settings to use for run-time linking (sh syntax)"
+msgstr ""
+
+#: pkg.c:52
+msgid "Execute pkg-config with the trailing arguments"
+msgstr ""
+
+#: pkg.c:54
+msgid "Print help message"
+msgstr ""
+
+#: pkg.c:55
+msgid "Print short version information"
+msgstr ""
+
+#: pkg.c:72
+#, c-format
+msgid "%s: APP_DIR not set!  Are you running AppRun?\n"
+msgstr ""
+
+#: pkg.c:77
+#, c-format
+msgid "%s: PLATFORM not set!  Are you running AppRun?\n"
+msgstr ""
+
+#: pkg.c:96
+#, c-format
+msgid "%s: option %s not recognised\n"
+msgstr ""
+
+#: pkg.c:112
+#, c-format
+msgid "%s: option -%c not recognised\n"
+msgstr ""
+
+#: pkg.c:160
+#, c-format
+msgid "%s %s by %s\n"
+msgstr ""
+
+#: pkg.c:161
+#, c-format
+msgid "Usage: %s/AppRun [OPTIONS]\n"
+msgstr ""
+
+#: pkg.c:162
+#, c-format
+msgid "Options are:\n"
+msgstr ""
+
+#: pkg.c:166
+msgid "Build the library"
+msgstr ""
+
+#: pkg.c:168
+msgid "Build the library, first executing an xterm window to show the output"
+msgstr ""
+
+#: pkg.c:170
+msgid "Print the location of ROX-CLib"
+msgstr ""
+
+#: pkg.c:208
+#, c-format
+msgid "%s: failed to execute pkg-config: %s"
+msgstr ""
 
 #: error.c:58
 #, c-format
@@ -51,20 +131,20 @@ msgid ""
 "uri_list_to_gslist: Incorrect or missing line break in text/uri-list data"
 msgstr ""
 
-#: rox_dnd.c:317
+#: rox_dnd.c:313
 msgid "No URIs in the text/uri-list (nothing to do!)"
 msgstr ""
 
-#: rox_dnd.c:397
+#: rox_dnd.c:393
 msgid "Drag & drop error: sender can't provide data"
 msgstr ""
 
-#: rox_dnd.c:417
+#: rox_dnd.c:413
 #, c-format
 msgid "XDS protocol error, '%c' should be S, F or E"
 msgstr ""
 
-#: rox_dnd.c:458
+#: rox_dnd.c:454
 msgid "drag_data_received: unknown target"
 msgstr ""
 
@@ -100,21 +180,21 @@ msgid ""
 "(or enter a full pathname)"
 msgstr ""
 
-#: rox_soap.c:124
+#: rox_soap.c:125
 #, c-format
 msgid "assertion '%s' failed)"
 msgstr ""
 
-#: rox_soap.c:133
+#: rox_soap.c:134
 #, c-format
 msgid "assertion '%s' failed"
 msgstr ""
 
-#: rox_soap.c:389
+#: rox_soap.c:390
 msgid "XML document creation failed"
 msgstr ""
 
-#: rox_soap.c:557
+#: rox_soap.c:558
 msgid "SOAP timed out"
 msgstr ""
 
@@ -142,73 +222,73 @@ msgstr ""
 msgid "failed to fork! %s"
 msgstr ""
 
-#: rox_soap.c:851 rox_filer_action.c:614
+#: rox_soap.c:851 rox_filer_action.c:616
 msgid "No error"
 msgstr ""
 
-#: rox_filer_action.c:170
+#: rox_filer_action.c:172
 #, c-format
 msgid "Illegal panel side: %d"
 msgstr ""
 
-#: rox_filer_action.c:487
+#: rox_filer_action.c:489
 #, c-format
 msgid "Unknown namespace %s for %s"
 msgstr ""
 
-#: rox_filer_action.c:506
+#: rox_filer_action.c:508
 #, c-format
 msgid "No valid %s result node found"
 msgstr ""
 
-#: rox_filer_action.c:513
+#: rox_filer_action.c:515
 msgid "No Body element found in SOAP reply"
 msgstr ""
 
-#: rox_filer_action.c:516
+#: rox_filer_action.c:518
 #, c-format
 msgid "Root element has wrong namespace (%s)"
 msgstr ""
 
-#: rox_filer_action.c:523
+#: rox_filer_action.c:525
 #, c-format
 msgid "No reply from filer: %s"
 msgstr ""
 
-#: rox.c:381
+#: rox.c:398
 #, c-format
 msgid "%s is deprecated, use %s instead"
 msgstr ""
 
-#: rox_soap_server.c:241
+#: rox_soap_server.c:242
 #, c-format
 msgid "Attempt to invoke unknown SOAP method '%s'"
 msgstr ""
 
-#: rox_soap_server.c:260
+#: rox_soap_server.c:261
 #, c-format
 msgid "Missing required argument '%s' in call to method '%s'"
 msgstr ""
 
-#: rox_soap_server.c:321
+#: rox_soap_server.c:322
 #, c-format
 msgid "Unknown namespace %s (expected %s)"
 msgstr ""
 
-#: rox_soap_server.c:343
+#: rox_soap_server.c:344
 msgid "Bad SOAP message received!"
 msgstr ""
 
-#: rox_soap_server.c:409
+#: rox_soap_server.c:410
 #, c-format
 msgid "SOAP server is confused (obtaining atom for %lx)"
 msgstr ""
 
-#: rox_soap_server.c:417
+#: rox_soap_server.c:418
 msgid "SOAP server is confused (obtaining property)"
 msgstr ""
 
-#: options.c:674 options.c:1404
+#: options.c:674 options.c:1406
 msgid "(use default)"
 msgstr ""
 
@@ -226,131 +306,131 @@ msgstr ""
 msgid "Unknown option type '%s'\n"
 msgstr ""
 
-#: options.c:949
+#: options.c:951
 #, c-format
 msgid "Internal error: %s unreadable"
 msgstr ""
 
-#: options.c:1061
+#: options.c:1063
 msgid "Options"
 msgstr ""
 
-#: options.c:1106
+#: options.c:1108
 msgid "_Revert"
 msgstr ""
 
-#: options.c:1112
+#: options.c:1114
 msgid "Restore all choices to how they were when the Options box was opened."
 msgstr ""
 
-#: options.c:1127
+#: options.c:1129
 #, c-format
 msgid ""
 "Choices will be saved as:\n"
 "%s"
 msgstr ""
 
-#: options.c:1135
+#: options.c:1137
 msgid "(saving disabled)"
 msgstr ""
 
-#: options.c:1165
+#: options.c:1167
 #, c-format
 msgid "Can't find radio button with value %s\n"
 msgstr ""
 
-#: options.c:1310
+#: options.c:1312
 #, c-format
 msgid "Error saving %s: %s"
 msgstr ""
 
-#: options.c:1951
+#: options.c:1954
 msgid "Duplicate option found!"
 msgstr ""
 
-#: mime.c:661
+#: mime.c:683
 #, c-format
 msgid "Error loading MIME database %s: %s"
 msgstr ""
 
-#: mime.c:681
+#: mime.c:703
 #, c-format
 msgid "MIME glob file %s in bad format"
 msgstr ""
 
-#: mime.c:713
+#: mime.c:735
 msgid ""
 "No MIME types found.  You may need to install the Shared MIME type database "
 "(version 0.9 or later.  It may be found at http://www.freedesktop.org/"
 "software/shared-mime-info"
 msgstr ""
 
-#: mime_handler.c:98
+#: mime_handler.c:100
 #, c-format
 msgid "Install %s"
 msgstr ""
 
-#: mime_handler.c:131
+#: mime_handler.c:133
 msgid "Type"
 msgstr ""
 
-#: mime_handler.c:137
+#: mime_handler.c:139
 msgid "Name"
 msgstr ""
 
-#: mime_handler.c:144
+#: mime_handler.c:146
 msgid "Current"
 msgstr ""
 
-#: mime_handler.c:156
+#: mime_handler.c:158
 msgid "Install?"
 msgstr ""
 
-#: mime_handler.c:164
+#: mime_handler.c:166
 msgid "Uninstall?"
 msgstr ""
 
-#: mime_handler.c:435 mime_handler.c:517
+#: mime_handler.c:438 mime_handler.c:520
 #, c-format
 msgid "Failed to replace %s"
 msgstr ""
 
-#: mime_handler.c:440 mime_handler.c:522
+#: mime_handler.c:443 mime_handler.c:525
 #, c-format
 msgid "Failed to install %s as %s"
 msgstr ""
 
-#: mime_handler.c:455
+#: mime_handler.c:458
 #, c-format
 msgid "Failed to remove %s"
 msgstr ""
 
-#: mime_handler.c:468
+#: mime_handler.c:471
 msgid "run action"
 msgstr ""
 
-#: mime_handler.c:470
+#: mime_handler.c:473
 msgid ""
 "Run actions can be changed by selecting a file of the appropriate type in "
 "the Filer and selecting the menu option 'Set Run Action...'"
 msgstr ""
 
-#: mime_handler.c:478
+#: mime_handler.c:481
 msgid "thumbnail handler"
 msgstr ""
 
-#: mime_handler.c:480
+#: mime_handler.c:483
 msgid ""
 "Thumbnail handlers provide support for creating thumbnail images of types of "
 "file.  The filer can generate thumbnails for most types of image (JPEG, PNG, "
 "etc.) but relies on helper applications for the others."
 msgstr ""
 
-#: mime_handler.c:495
+#: mime_handler.c:498
 msgid "type handler"
 msgstr ""
 
-#: mime_handler.c:496
+#: mime_handler.c:499
 msgid ""
 "The application can handle files of these types.  Click on OK to add it to "
 "the SendTo menu for the type of file, and also the customized File menu."

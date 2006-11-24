@@ -15,7 +15,7 @@ Other compiled languages, such as C++, can use this library.
   </description>
   <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/ROX-CLib.png'/>
 <group>
-    <implementation version="2.1.9" released='Snapshot' stability='testing' id=".."/>
+    <implementation version="2.1.9" released="2006-11-24" stability='testing' id=".."/>
   </group>
   <feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib'/>
 <feed src="http://kerofin.demon.co.uk/~stephen/ROX-CLib-src" arch="*-src"/>
