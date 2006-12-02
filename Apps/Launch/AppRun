@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.6 2005/05/07 11:27:28 stephen Exp $
+# $Id: AppRun,v 1.7 2006/04/29 10:43:30 stephen Exp $
 
 import os, sys
 import urlparse
@@ -8,56 +8,58 @@ import urlparse
 import findrox; findrox.version(2, 0, 2)
 import rox
 import rox.options
-import rox.OptionsBox
-import rox.filer
+import rox.basedir
+import rox.loading
+import rox.mime
+# Get the uri handler from ROX-Lib, if available.
+try:
+	from rox import uri_handler
+except ImportError:
+	# Use our own copy
+	import uri_handler
 
 __builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
-from xml.dom import Node, minidom
+def migrate():
+	options=rox.options.OptionGroup('Launch', 'Options.xml')
 
-def data(node):
-	"""Return all the text directly inside this DOM Node."""
-	return ''.join([text.nodeValue for text in node.childNodes
-			if text.nodeType == Node.TEXT_NODE])
-
-options=rox.options.OptionGroup('Launch', 'Options.xml')
-rox.app_options=options
-#print options.pending
-
-BROWSER=os.getenv('BROWSER')
-if BROWSER:
-	if '%s' in BROWSER:
-		web_cmd=BROWSER
+	BROWSER=os.getenv('BROWSER')
+	if BROWSER:
+		if '%s' in BROWSER:
+			web_cmd=BROWSER
+		else:
+			web_cmd=BROWSER+' %s'
 	else:
-		web_cmd=BROWSER+' %s'
-else:
-	web_cmd='mozilla -remote "openURL(%s,new-window)"'
+		web_cmd='mozilla -remote "openURL(%s,new-window)"'
 
-http_cmd=rox.options.Option('http', web_cmd, options)
+	handlers={'http': web_cmd}
 
-schemes=rox.options.ListOption('schemes', ('http=%s' % web_cmd,), options)
+	http_cmd=rox.options.Option('http', web_cmd, options)
+	
+	schemes=rox.options.ListOption('schemes', ('http=%s' % web_cmd,),
+				       options)
 
-#print 'pre notify',schemes, schemes.default_value, type(schemes.default_value)
-options.notify()
-#print 'post notify',schemes, schemes.default_value
+	options.notify()
 
-def install_button_handler(*args):
-    import rox.mime_handler
-    try:
-        rox.mime_handler.install_from_appinfo()
-    except:
-        rox.report_exception()
+	if http_cmd.value!=web_cmd:
+		handlers['http']=http_cmd.value
 
-def build_install_button(box, node, label):
-    #print box, node, label
-    button = rox.g.Button(label)
-    box.may_add_tip(button, node)
-    button.connect('clicked', install_button_handler)
-    return [button]
-rox.OptionsBox.widget_registry['install-button'] = build_install_button
+	for s in schemes.list_value:
+		scheme, action=s.split('=', 1)
+		handlers[scheme]=action
 
-
-
+	for scheme, action in handlers.iteritems():
+		caction=uri_handler.get(scheme)
+		if not caction:
+			cmd=action.replace('%s', '$@')
+			path=rox.basedir.save_config_path('rox.sourceforge.net', 'URI')
+		
+			f=file(os.path.join(path, scheme), 'w')
+			f.write('#!/bin/sh\n')
+			f.write('exec %s\n' % cmd)
+			f.close()
+			os.chmod(f.name, 0700)
+		
 def uri_from_file(fl):
     for line in fl.readlines():
         l=line.strip()
@@ -67,41 +69,172 @@ def uri_from_file(fl):
             return l[4:].strip()
         return l
 
-def launch_uri(uri):
-    scheme, location, path, query, fragment=urlparse.urlsplit(uri, 'file')
-    #print scheme, location, path, query, fragment
+class DropTarget(rox.loading.XDSLoader, rox.g.Frame):
+	def __init__(self, parent):
+		self.controller=parent
+		rox.g.Frame.__init__(self, _('Drop program here'))
+		rox.loading.XDSLoader.__init__(self, None)
 
-    if scheme=='file':
-        rox.filer.spawn_rox((path,))
-        return
+		self.set_size_request(100, 100)
+		self.set_shadow_type(rox.g.SHADOW_IN)
+		self.set_border_width(4)
 
-    cscheme=scheme.lower()
-    if cscheme=='https':
-        cscheme='http'
+		vbox=rox.g.VBox(False, 8)
+		self.add(vbox)
+		self.img=rox.g.Image()
+		vbox.pack_start(self.img, True, True)
+		self.msg=rox.g.Label()
+		align=rox.g.Alignment(0.5, 0.5, 1.0, 0.0)
+		vbox.pack_start(align, False, False)
+		align.add(self.msg)
 
-    cmd=''
-    if schemes.list_value!=None:
-        for v in schemes.list_value:
-            var, val=v.split('=', 1)
-            if var==cscheme:
-                cmd=val
-                break
-            
-    if not cmd:
-        cmd=http_cmd.value
-    if not cmd:
-        cmd=web_cmd
+	def set_action(self, path):
+		if rox.isappdir(path):
+			try:
+				p=os.path.join(path, '.DirIcon')
+				self.img.set_from_file(p)
+			except:
+				self.img.set_from_stock(rox.g.STOCK_DIALOG_QUESTION,
+							rox.g.ICON_SIZE_DIALOG)	
+		else:
+			try:
+				mtype=rox.mime.get_type(path)
+				icon=mtype.get_icon(rox.mime.ICON_SIZE_LARGE)
+				self.img.set_from_pixbuf(icon)
+			except:
+				self.img.set_from_stock(rox.g.STOCK_DIALOG_QUESTION,
+							rox.g.ICON_SIZE_DIALOG)
+				
+		if os.path.islink(path):
+			p=os.readlink(path)
+			self.msg.set_text(os.path.basename(p))
+		elif rox.isappdir(path):
+			self.msg.set_text(os.path.basename(path))
+		else:
+			self.msg.set_text('')
 
-    scmd=cmd % uri
-    #print cmd
-    #print uri
-    #print scmd
-    os.spawnv(os.P_NOWAIT, '/bin/sh', ('sh', '-c', scmd))
+	def clear_action(self):
+		self.img.set_from_stock(rox.g.STOCK_DIALOG_QUESTION,
+					rox.g.ICON_SIZE_DIALOG)
+		self.msg.set_text('')
 
+	def xds_load_from_file(self, path):
+		self.controller.set_current_action(path)
+
+class SetWindow(rox.Dialog):
+	def __init__(self):
+		rox.Dialog.__init__(self, title=_('Define URI handlers'),
+				    buttons=(rox.g.STOCK_CLOSE,
+					     rox.g.RESPONSE_ACCEPT))
+
+		hbox=rox.g.HBox(False, 2)
+		self.vbox.pack_start(hbox, False, False)
+
+		hbox.pack_start(rox.g.Label(_('Scheme')), False, False)
+
+		self.scheme=rox.g.combo_box_entry_new_text()
+		self.scheme.connect('changed', self.select_scheme)
+		hbox.pack_start(self.scheme, True, True)
+
+		self.drop_target=DropTarget(self)
+		self.vbox.pack_start(self.drop_target, True, True)
+
+		self.cmd=rox.g.Entry()
+		self.cmd.set_text(' "$@"')
+		self.vbox.pack_start(self.cmd, False, False)
+
+		hbox=rox.g.HBox(False, 2)
+		self.vbox.pack_start(hbox, False, False)
+
+		but=rox.g.Button(stock=rox.g.STOCK_APPLY)
+		but.connect('clicked', self.set_handler)
+		hbox.pack_end(but, False, False)
+
+		self.load_schemes()
+
+		self.vbox.show_all()
+
+	def load_schemes(self):
+		self.schemes=[]
+		for path in rox.basedir.load_config_paths('rox.sourceforge.net', 'URI'):
+			for s in os.listdir(path):
+				if s not in self.schemes:
+					self.schemes.append(s)
+		self.schemes.sort()
+
+		for scheme in self.schemes:
+			self.scheme.append_text(scheme)
+			
+		self.scheme.set_active(0)
+
+	def select_scheme(self, *unused):
+		scheme=self.scheme.get_active_text()
+		action=uri_handler.get(scheme)
+		if not action:
+			self.cmd.set_text('')
+			self.drop_target.clear_action()
+			return
+		if os.path.basename(action)=='AppRun' and rox.isappdir(os.path.dirname(action)):
+			action=os.path.dirname(action)
+		#print os.path.islink(action)
+		self.cmd.set_text(action)
+		self.drop_target.set_action(action)
+
+	def set_handler(self, *unused):
+		scheme=self.scheme.get_active_text()
+		action=self.cmd.get_text()
+		#print scheme, action
+
+		tdir=rox.basedir.save_config_path('rox.sourceforge.net', 'URI')
+		if not self.check_overwrite(tdir, scheme):
+			return
+		
+		if rox.isappdir(action):
+			self.set_appdir(tdir, scheme, action)
+		elif os.access(action, os.X_OK):
+			self.set_program(tdir, scheme, action)
+		else:
+			self.set_command(tdir, scheme, action)
+
+	def check_overwrite(self, tdir, scheme):
+		current=os.path.join(tdir, scheme)
+		if os.access(current, os.F_OK) and not os.path.islink(current):
+			msg=_("Action for %s: already set, really change?") % scheme
+			if not rox.confirm(msg, rox.g.STOCK_APPLY,
+					   _('Change')):
+				return False
+			try:
+				os.remove(current)
+			except:
+				rox.report_exception()
+				return False
+		return True
+
+	def set_appdir(self, tdir, scheme, app):
+		path=os.path.join(tdir, scheme)
+		os.symlink(app, path)
+
+	def set_program(self, tdir, scheme, prog):
+		path=os.path.join(tdir, scheme)
+		os.symlink(prog, path)
+
+	def set_command(self, tdir, scheme, cmd):
+		path=os.path.join(tdir, scheme)
+		f=file(path, 'w')
+		f.write('#!/bin/sh\n')
+		f.write('exec %s\n' % cmd)
+		f.close()
+		os.chmod(f.name, 0700)
+
+	def set_current_action(self, path):
+		self.cmd.set_text(path)
+		self.drop_target.set_action(path)
+		
 def run_options():
-    rox.edit_options()
-    rox.mainloop()
-    #print schemes
+    #rox.edit_options()
+    #rox.mainloop()
+    win=SetWindow()
+    win.run()
 
 def run_file(fl):
     uri=uri_from_file(fl)
@@ -109,18 +242,20 @@ def run_file(fl):
     if not uri:
         rox.alert(_('No URI found in %s') % fl.name)
         return
-    launch_uri(uri)
+    uri_handler.launch(uri)
 
 if __name__=='__main__':
-    if len(sys.argv)>1:
-        if sys.argv[1][0]=='/':
-            run_file(file(sys.argv[1], 'r'))
-        elif sys.argv[1]=='-o':
-            run_options()
-        elif sys.argv[1]=='-':
-            run_file(sys.stdin)
-        else:
-            launch_uri(sys.argv[1])
-    else:
-        run_options()
+	migrate()
+	
+	if len(sys.argv)>1:
+		if sys.argv[1][0]=='/':
+			run_file(file(sys.argv[1], 'r'))
+		elif sys.argv[1]=='-o':
+			run_options()
+		elif sys.argv[1]=='-':
+			run_file(sys.stdin)
+		else:
+			uri_handler.launch(sys.argv[1])
+	else:
+		run_options()
         
