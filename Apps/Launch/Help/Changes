@@ -1,6 +1,11 @@
 Launch
 ======
 
+05-Dec-2006
+~~~~~~~~~~~
+Better handling of errors when setting a handler fails.  Don't run the 
+migration more than once.
+
 02-Dec-2006
 ~~~~~~~~~~~
 Almost total rewrite.  Handlers for each scheme defined in 
