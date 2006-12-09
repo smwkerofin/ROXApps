@@ -1,6 +1,0 @@
-<?xml version='1.0'?>
-<options>
-  <section title="Appearance">
-    <numentry name="min_size" min="4" max="128" label="Minimum Size">Minimum size of the notification area, in pixels.</numentry>
-  </section>
-</options>
