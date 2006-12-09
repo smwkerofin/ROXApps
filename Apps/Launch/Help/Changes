@@ -1,7 +1,7 @@
 Launch
 ======
 
-05-Dec-2006
+05-Dec-2006 (0.3.0)
 ~~~~~~~~~~~
 Better handling of errors when setting a handler fails.  Don't run the 
 migration more than once.

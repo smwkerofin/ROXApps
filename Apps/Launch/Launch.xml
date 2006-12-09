@@ -1,0 +1,22 @@
+<?xml version="1.0" ?>
+<interface xmlns="http://zero-install.sourceforge.net/2004/injector/interface"
+           uri="http://www.kerofin.demon.co.uk/2005/interfaces/Launch"
+	   main="Launch/AppRun">
+  <name>Launch</name>
+  <summary>launch URIs</summary>
+  <description>
+Launch is called with a URI or URL and then starts a suitable
+application to handle it.  file: URLs are passed to ROX-Filer, http:
+to the default web browser.  The user can define handlers for all URI schemes.
+
+  </description>
+  <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/Launch.png'/>
+<group>
+    <requires interface="http://rox.sourceforge.net/2005/interfaces/ROX-Lib">
+      <environment insert="ROX-Lib2/python" name="PYTHONPATH"/>
+    </requires>
+    <implementation id="." released="Snapshot" 
+		stability="testing" version="0.3.0"/>
+  </group>
+  <feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/Launch'/>
+</interface>
