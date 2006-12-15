@@ -1,6 +1,13 @@
 Launch
 ======
 
+15-Dec-2006
+~~~~~~~~~~~
+Better UI: instant action so Apply button gone, feedback on when handler 
+set (Thomas Leonard).
+Make sure that there is at least a http handler (Thomas Leonard).
+When generating commands, ensure that $@ is present (Lennon Cook).
+
 05-Dec-2006 (0.3.0)
 ~~~~~~~~~~~
 Better handling of errors when setting a handler fails.  Don't run the 

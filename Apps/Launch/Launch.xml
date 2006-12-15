@@ -16,7 +16,7 @@ to the default web browser.  The user can define handlers for all URI schemes.
       <environment insert="ROX-Lib2/python" name="PYTHONPATH"/>
     </requires>
     <implementation id="." released="Snapshot" 
-		stability="testing" version="0.3.0"/>
+		stability="testing" version="0.3.1"/>
   </group>
   <feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/Launch'/>
 </interface>

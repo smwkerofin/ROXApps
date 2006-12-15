@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.8 2006/12/02 17:33:19 stephen Exp $
+# $Id: AppRun,v 1.9 2006/12/05 19:09:03 stephen Exp $
 
 import os, sys
 import urlparse
@@ -21,17 +21,19 @@ except ImportError:
 
 __builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
+BROWSER=os.getenv('BROWSER')
+if BROWSER:
+	if '%s' in BROWSER:
+		web_cmd=BROWSER.replace('%s', '"%@"')
+	else:
+		web_cmd=BROWSER+' "$@"'
+else:
+	web_cmd='firefox "$@""'
+
+flag_line='# Set by Launch.  Delete this line if you edit this file\n'
+
 def migrate():
 	options=rox.options.OptionGroup('Launch', 'Options.xml')
-
-	BROWSER=os.getenv('BROWSER')
-	if BROWSER:
-		if '%s' in BROWSER:
-			web_cmd=BROWSER
-		else:
-			web_cmd=BROWSER+' %s'
-	else:
-		web_cmd='mozilla -remote "openURL(%s,new-window)"'
 
 	handlers={'http': web_cmd}
 
@@ -52,11 +54,12 @@ def migrate():
 	for scheme, action in handlers.iteritems():
 		caction=uri_handler.get(scheme)
 		if not caction:
-			cmd=action.replace('%s', '$@')
+			cmd=action.replace('%s', '"$@"')
 			path=rox.basedir.save_config_path('rox.sourceforge.net', 'URI')
 		
 			f=file(os.path.join(path, scheme), 'w')
 			f.write('#!/bin/sh\n')
+			f.write(flag_line)
 			f.write('exec %s\n' % cmd)
 			f.close()
 			os.chmod(f.name, 0700)
@@ -65,6 +68,21 @@ def migrate():
 	if fname:
 		f=file(fname, 'w')
 		f.close()
+
+def initialize():
+	path=rox.basedir.save_config_path('rox.sourceforge.net', 'URI')
+	f=file(os.path.join(path, "http"), 'w')
+	f.write('#!/bin/sh\n')
+	f.write(flag_line)
+	f.write('exec %s\n' % web_cmd)
+	f.close()
+	os.chmod(f.name, 0700)
+	f=file(os.path.join(path, "file"), 'w')
+	f.write('#!/bin/sh\n')
+	f.write(flag_line)
+	f.write('exec rox -U "$@"\n')
+	f.close()
+	os.chmod(f.name, 0700)
 		
 def uri_from_file(fl):
     for line in fl.readlines():
@@ -133,28 +151,43 @@ class SetWindow(rox.Dialog):
 				    buttons=(rox.g.STOCK_CLOSE,
 					     rox.g.RESPONSE_ACCEPT))
 
+		self.ttips=rox.g.Tooltips()
+
+		ebox=rox.g.EventBox()
 		hbox=rox.g.HBox(False, 2)
-		self.vbox.pack_start(hbox, False, False)
+		ebox.add(hbox)
+		self.vbox.pack_start(ebox, False, False)
 
 		hbox.pack_start(rox.g.Label(_('Scheme')), False, False)
 
 		self.scheme=rox.g.combo_box_entry_new_text()
 		self.scheme.connect('changed', self.select_scheme)
 		hbox.pack_start(self.scheme, True, True)
+		self.ttips.set_tip(ebox, _('Enter or select a scheme here.  The scheme is the part before : in a URI.'))
 
 		self.drop_target=DropTarget(self)
-		self.vbox.pack_start(self.drop_target, True, True)
+		ebox=rox.g.EventBox()
+		ebox.add(self.drop_target)
+		self.vbox.pack_start(ebox, True, True)
+		self.ttips.set_tip(ebox, _('Drag and drop a program or application here to set it as the handler for a URI scheme.'))
 
 		self.cmd=rox.g.Entry()
 		self.cmd.set_text(' "$@"')
+		self.cmd.connect('activate', self.set_handler)
+		self.cmd.set_activates_default(False)
 		self.vbox.pack_start(self.cmd, False, False)
+		self.ttips.set_tip(self.cmd,
+				   _('Enter a command here.  The characters "$@" will be replaced with the URI when called.'))
 
-		hbox=rox.g.HBox(False, 2)
-		self.vbox.pack_start(hbox, False, False)
+		self.msg=rox.g.Label()
+		self.vbox.pack_start(self.msg, False, False)
 
-		but=rox.g.Button(stock=rox.g.STOCK_APPLY)
-		but.connect('clicked', self.set_handler)
-		hbox.pack_end(but, False, False)
+		#hbox=rox.g.HBox(False, 2)
+		#self.vbox.pack_start(hbox, False, False)
+
+		#but=rox.g.Button(stock=rox.g.STOCK_APPLY)
+		#but.connect('clicked', self.set_handler)
+		#hbox.pack_end(but, False, False)
 
 		self.load_schemes()
 
@@ -175,16 +208,36 @@ class SetWindow(rox.Dialog):
 
 	def select_scheme(self, *unused):
 		scheme=self.scheme.get_active_text()
+		if not scheme:
+			self.cmd.set_text('')
+			self.drop_target.clear_action()
+			self.msg.set_text('')
+			return
 		action=uri_handler.get(scheme)
+		#print action
 		if not action:
 			self.cmd.set_text('')
 			self.drop_target.clear_action()
+			self.msg.set_text(_('No action for %s') % scheme)
 			return
+		#print action
 		if os.path.basename(action)=='AppRun' and rox.isappdir(os.path.dirname(action)):
 			action=os.path.dirname(action)
-		#print os.path.islink(action)
 		self.cmd.set_text(action)
+		if not os.path.islink(action):
+			#print action
+			ours=False
+			nl=0
+			for line in file(action, 'r'):
+				nl++
+				if line==flag_line:
+					ours=True
+				elif line[:5]=='exec ' and ours:
+					self.cmd.set_text(line[5:].strip())
+				elif nl>3:
+					break
 		self.drop_target.set_action(action)
+		self.msg.set_text('')
 
 	def set_handler(self, *unused):
 		scheme=self.scheme.get_active_text()
@@ -201,6 +254,17 @@ class SetWindow(rox.Dialog):
 			self.set_program(tdir, scheme, action)
 		else:
 			self.set_command(tdir, scheme, action)
+
+		model=self.scheme.get_model()
+		if model:
+			found=False
+			for row in iter(model):
+				#print row, row[0]
+				if row[0]==scheme:
+					found=True
+					break
+			if not found:
+				self.scheme.append_text(scheme)
 
 	def check_overwrite(self, tdir, scheme):
 		current=os.path.join(tdir, scheme)
@@ -226,23 +290,31 @@ class SetWindow(rox.Dialog):
 	def set_appdir(self, tdir, scheme, app):
 		path=os.path.join(tdir, scheme)
 		os.symlink(app, path)
+		self.msg.set_text(_('Set application for %s') % scheme)
 
 	def set_program(self, tdir, scheme, prog):
 		path=os.path.join(tdir, scheme)
 		os.symlink(prog, path)
+		self.msg.set_text(_('Set program for %s') % scheme)
 
 	def set_command(self, tdir, scheme, cmd):
+		if '$@' not in cmd:
+			cmd+=' "$@"'
+			self.cmd.set_text(cmd)
 		path=os.path.join(tdir, scheme)
 		f=file(path, 'w')
 		f.write('#!/bin/sh\n')
+		f.write(flag_line)
 		f.write('exec %s\n' % cmd)
 		f.close()
 		os.chmod(f.name, 0700)
+		self.msg.set_text(_('Set command for %s') % scheme)
 
 	def set_current_action(self, path):
 		self.cmd.set_text(path)
 		self.drop_target.set_action(path)
-		
+		self.set_handler()
+
 def run_options():
     #rox.edit_options()
     #rox.mainloop()
@@ -261,6 +333,8 @@ if __name__=='__main__':
 	if (rox.choices.load('Launch', 'Options.xml')
 	    and not rox.choices.load('Launch', '.migrated')):
 		migrate()
+	elif not rox.basedir.load_first_config('rox.sourceforge.net', 'URI'):
+		initialize()
 	
 	if len(sys.argv)>1:
 		if sys.argv[1][0]=='/':
