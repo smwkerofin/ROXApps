@@ -4,6 +4,7 @@ Launch
 16-Dec-2006
 ~~~~~~~~~~~
 Bugfixes.
+Split out the setting of handlers to config.py.
 
 15-Dec-2006
 ~~~~~~~~~~~
