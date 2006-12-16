@@ -1,12 +1,16 @@
-# $Id: fetch.py,v 1.13 2006/04/29 12:32:45 stephen Exp $
+# $Id: fetch.py,v 1.14 2006/09/30 13:12:35 stephen Exp $
 
 import os, sys
 import time
 import fcntl, termios, struct
 
 import findrox; findrox.version(2, 0, 2)
-import rox, rox.choices, rox.options
+import rox, rox.choices, rox.options, rox.basedir
 import gobject
+try:
+    from rox import xattr
+except:
+    xattr=None
 
 import urllib, urlparse
 
@@ -103,7 +107,7 @@ class Fetcher:
         self.to_parent('m', msg)
         
     def open_server(self):
-        self.message(_('Connecting'))
+        self.message(_('Connecting to server'))
         self.start_time=time.time()
         self.con=self.opener.open(self.url)
         self.message(_('Connected'))
@@ -191,6 +195,12 @@ class Fetcher:
         #self.message(_('Done'))
         self.close()
         rox.toplevel_unref()
+
+        if xattr:
+            try:
+                xattr.set(self.target, 'user.xdg.origin.url', self.url)
+            except Exception, ex:
+                print ex
         
 class PasswordWindow(rox.Dialog):
     def __init__(self, host, realm, user=None, password=None):
@@ -258,7 +268,10 @@ def _data(node):
 			if text.nodeType == xml.dom.Node.TEXT_NODE])
 
 def get_passwords():
-    fname=rox.choices.load('Fetch', 'passwords.xml')
+    fname=rox.basedir.load_first_config('kerofin.demon.co.uk', 'Fetch',
+                                        'passwords.xml')
+    if not fname:
+        fname=rox.choices.load('Fetch', 'passwords.xml')
     if not fname:
         return {}
 
@@ -279,7 +292,8 @@ def get_passwords():
     return pwds
 
 def save_passwords(pwds):
-    fname=rox.choices.save('Fetch', 'passwords.xml')
+    path=rox.basedir.save_config_path('kerofin.demon.co.uk', 'Fetch')
+    fname=os.path.join(path, 'passwords.xml')
 
     doc=xml.dom.minidom.Document()
     root=doc.createElement('Passwords')

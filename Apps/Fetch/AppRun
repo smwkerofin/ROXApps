@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.27 2006/04/29 10:22:22 stephen Exp $
+# $Id: AppRun,v 1.28 2006/09/30 13:11:42 stephen Exp $
 
 import os, sys
 import time
 
 import findrox; findrox.version(2, 0, 2)
-import rox, rox.choices, rox.options, rox.processes, rox.mime
+import rox, rox.options, rox.processes, rox.mime
 import gobject
+try:
+    from rox import xattr
+except:
+    xattr=None
 
 import urlparse, urllib
 
@@ -96,6 +100,8 @@ class FetchWindow(rox.Dialog):
         rox.Dialog.__init__(self)
         self.set_title(self.url)
         self.add_button(rox.g.STOCK_CANCEL, rox.g.RESPONSE_CANCEL)
+        self.start_button=self.add_button(rox.g.STOCK_OPEN,
+                                         rox.g.RESPONSE_ACCEPT)
         self.connect('response', self.do_response)
 
         vbox=self.vbox
@@ -111,6 +117,7 @@ class FetchWindow(rox.Dialog):
         l=rox.g.Label(self.url)
         l.set_line_wrap(True)
         l.set_alignment(0., 0.5)
+        l.set_selectable(True)
         table.attach(l, 2, 3, line, line+1, xpadding=2)
 
         line+=1
@@ -209,12 +216,16 @@ class FetchWindow(rox.Dialog):
         table.attach(self.prog, 0, 3, line, line+1)
 
         self.connect('delete_event', self.delete_event)
-        gobject.timeout_add(delay, self.idle_update)
+        gobject.timeout_add(delay*5, self.idle_update)
 
         self.show_all()
         self.start()
 
-    def do_response(self, *unused):
+    def do_response(self, win, resp):
+        #print resp, rox.g.RESPONSE_ACCEPT, int(rox.g.RESPONSE_ACCEPT)
+        if resp==int(rox.g.RESPONSE_ACCEPT):
+            self.real_start()
+            return
         #print self.dl_man
         self.do_cancel(_('Cancelled'))
         if self.proc:
@@ -450,12 +461,20 @@ class FetchWindow(rox.Dialog):
                 rox.report_exception()
             return False
 
-        n=self.dl_man.getQueueSize()
-        self.message(_('Waiting, %d in queue') % n)
+        try:
+            n=self.dl_man.getQueueSize()
+            self.message(_('Waiting, %d in queue') % n)
+        except:
+            self.real_start()
+            return False
 
         return True
 
     def real_start(self):
+        if self.proc:
+            return
+        self.start_button.set_sensitive(False)
+        
         r, w=os.pipe()
         self.con=os.fdopen(r, 'r', 1)
         self.proc=rox.processes.PipeThroughCommand(
@@ -506,9 +525,11 @@ class FetchWindow(rox.Dialog):
             self.dl_man=None
         try:
             os.rename(self.target, self.real_target)
+            fname=self.real_target
         except OSError:
             rox.info(_('Rename failed, data left in temporary file %s') %
                      self.target)
+            fname=self.target
         try:
             self.con.close()
         except:
@@ -524,8 +545,19 @@ class FetchWindow(rox.Dialog):
             else:
                 mess=_('Done.  Warning: type mismatch')
                 t*=3
+                if xattr and xattr.supported(fname):
+                    if rox.confirm('Force %s to be type %s?' % (fname,
+                                                                self.stype),
+                                   rox.g.STOCK_APPLY, 'Set type'):
+                        try:
+                            xattr.set(fname, xattr.USER_MIME_TYPE,
+                                      str(self.stype))
+                        except:
+                            rox.report_exception()
+                        
         self.message(mess)
-        gobject.timeout_add(t, self.close)
+        if t:
+            gobject.timeout_add(t, self.close)
         
 def main():
     if len(sys.argv)==1 or (len(sys.argv)==2 and sys.argv[1]=='-o'):
