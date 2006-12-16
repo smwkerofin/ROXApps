@@ -5,6 +5,7 @@ Launch
 ~~~~~~~~~~~
 Bugfixes.
 Split out the setting of handlers to config.py.
+Added a Help button.
 
 15-Dec-2006
 ~~~~~~~~~~~

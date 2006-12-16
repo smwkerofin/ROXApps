@@ -3,7 +3,7 @@
 echo Extracting messages from source files...
 echo
 
-(cd ../; pygettext AppRun uri_handler.py config.py)
+(cd ../; pygettext AppRun uri_handler.py config.py helper.py)
 
 echo
 echo Updating all .po files...

@@ -1,4 +1,4 @@
-# $Id$
+# $Id: config.py,v 1.1 2006/12/16 15:46:13 stephen Exp $
 
 import os, sys
 import urlparse
@@ -15,6 +15,7 @@ try:
 except ImportError:
 	# Use our own copy
 	import uri_handler
+import helper
 
 BROWSER=os.getenv('BROWSER')
 if BROWSER:
@@ -128,8 +129,9 @@ class DropTarget(rox.loading.XDSLoader, rox.g.Frame):
 class SetWindow(rox.Dialog):
 	def __init__(self):
 		rox.Dialog.__init__(self, title=_('Define URI handlers'),
-				    buttons=(rox.g.STOCK_CLOSE,
-					     rox.g.RESPONSE_ACCEPT))
+				    buttons=(
+			rox.g.STOCK_HELP, rox.g.RESPONSE_HELP,
+			rox.g.STOCK_CLOSE, rox.g.RESPONSE_ACCEPT))
 
 		self.ttips=rox.g.Tooltips()
 
@@ -162,16 +164,17 @@ class SetWindow(rox.Dialog):
 		self.msg=rox.g.Label()
 		self.vbox.pack_start(self.msg, False, False)
 
-		#hbox=rox.g.HBox(False, 2)
-		#self.vbox.pack_start(hbox, False, False)
-
-		#but=rox.g.Button(stock=rox.g.STOCK_APPLY)
-		#but.connect('clicked', self.set_handler)
-		#hbox.pack_end(but, False, False)
-
 		self.load_schemes()
 
 		self.vbox.show_all()
+		self.connect('response', self.get_response)
+
+	def get_response(self, window, response):
+		if response==int(rox.g.RESPONSE_HELP):
+			helper.show_help(parent=self)
+		else:
+			self.hide()
+			self.destroy()
 
 	def load_schemes(self):
 		self.schemes=[]
@@ -299,7 +302,8 @@ class SetWindow(rox.Dialog):
 
 def main():
     win=SetWindow()
-    win.run()
+    win.show()
+    rox.mainloop()
 
 if (rox.choices.load('Launch', 'Options.xml') and
     not rox.choices.load('Launch', '.migrated')):

@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Launch 0.1.5\n"
-"POT-Creation-Date: 2006-12-16 15:45+GMT\n"
+"POT-Creation-Date: 2006-12-16 16:28+GMT\n"
 "PO-Revision-Date: 2006-04-29 11:40+BSTLast-Translator: Stephen Watson "
 "<stephen@kerofin.demon.co.uk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,55 +18,59 @@ msgstr ""
 msgid "No URI found in %s"
 msgstr ""
 
-#: config.py:79
+#: config.py:80
 msgid "Drop program here"
 msgstr ""
 
-#: config.py:130
+#: config.py:131
 msgid "Define URI handlers"
 msgstr ""
 
-#: config.py:141
+#: config.py:143
 msgid "Scheme"
 msgstr ""
 
-#: config.py:146
+#: config.py:148
 msgid ""
 "Enter or select a scheme here.  The scheme is the part before : in a URI."
 msgstr ""
 
-#: config.py:152
+#: config.py:154
 msgid ""
 "Drag and drop a program or application here to set it as the handler for a "
 "URI scheme."
 msgstr ""
 
-#: config.py:160
+#: config.py:162
 msgid ""
 "Enter a command here.  The characters \"$@\" will be replaced with the URI "
 "when called."
 msgstr ""
 
-#: config.py:203
+#: config.py:206
 msgid "No action for %s"
 msgstr ""
 
-#: config.py:254
+#: config.py:257
 msgid "Action for %s: already set, really change?"
 msgstr ""
 
-#: config.py:256
+#: config.py:259
 msgid "Change"
 msgstr ""
 
-#: config.py:275
+#: config.py:278
 msgid "Set application for %s"
 msgstr ""
 
-#: config.py:280
+#: config.py:283
 msgid "Set program for %s"
 msgstr ""
 
-#: config.py:293
+#: config.py:296
 msgid "Set command for %s"
+msgstr ""
+
+#: helper.py:13
+msgid "Help for %s"
 msgstr ""
