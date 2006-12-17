@@ -1,4 +1,4 @@
-# $Id: config.py,v 1.1 2006/12/16 15:46:13 stephen Exp $
+# $Id: config.py,v 1.2 2006/12/16 16:37:31 stephen Exp $
 
 import os, sys
 import urlparse
@@ -228,6 +228,10 @@ class SetWindow(rox.Dialog):
 		scheme=self.scheme.get_active_text()
 		action=self.cmd.get_text()
 		#print scheme, action
+
+		if scheme=='file':
+			self.msg.set_text(_('Refusing to set handler for "file:" scheme'))
+			return
 
 		tdir=rox.basedir.save_config_path('rox.sourceforge.net', 'URI')
 		if not self.check_overwrite(tdir, scheme):

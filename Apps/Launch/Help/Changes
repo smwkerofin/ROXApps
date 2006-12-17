@@ -1,6 +1,10 @@
 Launch
 ======
 
+17-Dec-2006
+~~~~~~~~~~~
+Don't set a handler for file:.
+
 16-Dec-2006
 ~~~~~~~~~~~
 Bugfixes.
