@@ -10,47 +10,269 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mem 2.1.5\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2006-03-07 19:02+0000\n"
+"POT-Creation-Date: 2006-11-04 15:09+0000\n"
 "PO-Revision-Date: 2006-03-23 23:52+0100\n"
 "Last-Translator: Juan Carlos Jimenez Garcia <jigarNOSPAM@alumni.uv.es>\n"
 "Language-Team: Spanish/Spain <es@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=iso-8859-1\n"
-"Content-Transfer-Encoding: 8bit"
+"Content-Transfer-Encoding: 8bit\n"
 
-#: mem.c:382
-msgid "<b>Host:</b>"
-msgstr "<b>Máquina:</b>"
+#: mem.c:52
+msgid "For more information see the help file"
+msgstr ""
 
-#: mem.c:397
-msgid "Memory"
-msgstr "Memoria"
-
-#: mem.c:409 mem.c:470
-msgid "<b>Total:</b>"
-msgstr "<b>Total:</b>"
-
-#: mem.c:458
-msgid "Swap"
-msgstr "Intercambio"
-
-#: mem.c:1060
+#: mem.c:143
 msgid "/Info"
 msgstr "/Acerca de"
 
-#: mem.c:1063
+#: mem.c:146
 msgid "/Configure..."
 msgstr "/Configurar..."
 
-#: mem.c:1065
+#: mem.c:148
 msgid "/Update Now"
 msgstr "/Actualizar ahora"
 
-#: mem.c:1068
+#: mem.c:151
 msgid "/Close"
 msgstr "/Cerrar"
 
-#: mem.c:1071
+#: mem.c:154
 msgid "/Quit"
 msgstr "/Salir"
 
+#: mem.c:168
+#, c-format
+msgid "Usage: %s [X-options] [gtk-options] [-vhnro] [-a XID]\n"
+msgstr ""
+
+#: mem.c:170
+#, c-format
+msgid ""
+"where:\n"
+"\n"
+msgstr ""
+
+#: mem.c:171
+#, c-format
+msgid "  X-options\tstandard Xlib options\n"
+msgstr ""
+
+#: mem.c:172
+#, c-format
+msgid "  gtk-options\tstandard GTK+ options\n"
+msgstr ""
+
+#: mem.c:173
+#, c-format
+msgid "  -h\tprint this help message\n"
+msgstr ""
+
+#: mem.c:174
+#, c-format
+msgid "  -n\tdon't attempt to contact existing server\n"
+msgstr ""
+
+#: mem.c:175
+#, c-format
+msgid "  -r\treplace existing server\n"
+msgstr ""
+
+#: mem.c:176
+#, c-format
+msgid "  -o\topen options window\n"
+msgstr ""
+
+#: mem.c:177
+#, c-format
+msgid "  -v\tdisplay version information\n"
+msgstr ""
+
+#: mem.c:178
+#, c-format
+msgid "  -a XID\tX window to create applet in\n"
+msgstr ""
+
+#: mem.c:183
+#, c-format
+msgid "%s %s\n"
+msgstr ""
+
+#: mem.c:184 mem.c:185
+#, c-format
+msgid "%s\n"
+msgstr ""
+
+#: mem.c:186
+#, c-format
+msgid "Copyright 2002 %s\n"
+msgstr ""
+
+#: mem.c:187
+#, c-format
+msgid "Distributed under the terms of the GNU General Public License.\n"
+msgstr ""
+
+#: mem.c:188
+#, c-format
+msgid "(See the file COPYING in the Help directory).\n"
+msgstr ""
+
+#: mem.c:189
+#, c-format
+msgid "%s last compiled %s\n"
+msgstr ""
+
+#: mem.c:190
+#, c-format
+msgid "ROX-CLib version %s (built with %d.%d.%d)\n"
+msgstr ""
+
+#: mem.c:195
+#, c-format
+msgid ""
+"\n"
+"Compile time options:\n"
+msgstr ""
+
+#: mem.c:196
+#, c-format
+msgid "  Debug output... %s\n"
+msgstr ""
+
+#: mem.c:196 mem.c:208 mem.c:215
+msgid "yes"
+msgstr ""
+
+#: mem.c:196 mem.c:210 mem.c:217
+msgid "no"
+msgstr ""
+
+#: mem.c:199
+#, c-format
+msgid "  libgtop version %d\n"
+msgstr ""
+
+#: mem.c:201
+#, c-format
+msgid "  libgtop version 1.0.x\n"
+msgstr ""
+
+#: mem.c:204
+#, c-format
+msgid "  libgtop not available\n"
+msgstr ""
+
+#: mem.c:206
+#, c-format
+msgid "  Have kstat... %s\n"
+msgstr ""
+
+#: mem.c:213
+#, c-format
+msgid "  Have swapctl... %s\n"
+msgstr ""
+
+#: mem.c:271
+#, c-format
+msgid "%s: invalid options\n"
+msgstr ""
+
+#: mem.c:290
+msgid "Failed to ask server to open options window"
+msgstr ""
+
+#: mem.c:379
+msgid "System memory"
+msgstr ""
+
+#: mem.c:389
+msgid "Mem shows the memory and swap usage on a host"
+msgstr ""
+
+#: mem.c:399
+msgid "<b>Host:</b>"
+msgstr "<b>Máquina:</b>"
+
+#: mem.c:414
+msgid "Memory"
+msgstr "Memoria"
+
+#: mem.c:426 mem.c:487
+msgid "<b>Total:</b>"
+msgstr "<b>Total:</b>"
+
+#: mem.c:437 mem.c:568
+msgid "This is the total size of memory"
+msgstr ""
+
+#: mem.c:449 mem.c:575
+msgid "This is the memory used on the host"
+msgstr ""
+
+#: mem.c:464 mem.c:594
+msgid "This shows the relative usage of memory"
+msgstr ""
+
+#: mem.c:472 mem.c:582
+msgid "This is the memory available on the host"
+msgstr ""
+
+#: mem.c:475
+msgid "Swap"
+msgstr "Intercambio"
+
+#: mem.c:498 mem.c:616
+msgid "This is the total size of swap space"
+msgstr ""
+
+#: mem.c:510 mem.c:623
+msgid "This is the swap space used on the host"
+msgstr ""
+
+#: mem.c:525 mem.c:643
+msgid "This shows the relative usage of swap space"
+msgstr ""
+
+#: mem.c:533 mem.c:630
+msgid "This is the swap space available on the host"
+msgstr ""
+
+#: mem.c:556
+msgid "Mem shows the memory and swap usage"
+msgstr ""
+
+#: mem.c:742
+msgid "Mt "
+msgstr ""
+
+#: mem.c:746
+msgid "Mu "
+msgstr ""
+
+#: mem.c:750
+msgid "Mf "
+msgstr ""
+
+#: mem.c:761 mem.c:762 mem.c:763
+#, fuzzy
+msgid "Mem?"
+msgstr "Memoria"
+
+#: mem.c:793
+msgid "St "
+msgstr ""
+
+#: mem.c:797
+msgid "Su "
+msgstr ""
+
+#: mem.c:801
+msgid "Sf "
+msgstr ""
+
+#: mem.c:812 mem.c:813 mem.c:814
+#, fuzzy
+msgid "Swap?"
+msgstr "Intercambio"

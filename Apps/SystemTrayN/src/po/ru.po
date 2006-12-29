@@ -2,23 +2,25 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ROX-SysTray 0.1\n"
-"POT-Creation-Date: 2003-07-14 16:23-0400\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2006-12-29 13:47+0000\n"
 "PO-Revision-Date: 2003-07-13 05:03+0400\n"
 "Last-Translator: Alexey Lubimov <avl@altlinux.ru>\n"
 "Language-Team: Russian <ru@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Report-Msgid-Bugs-To: (null)\n"
 
 #: main.c:47
-msgid "Try `SystemTray/AppRun --help' for more information.\n"
+#, fuzzy
+msgid "Try `SystemTrayN/AppRun --help' for more information.\n"
 msgstr ""
 "Попробуйте·выполнить·`SystemTray/AppRun --help' для·получения·доп. "
 "·информации.\n"
 
 #: main.c:50
-msgid "Try `SystemTray/AppRun -h' for more information.\n"
+#, fuzzy
+msgid "Try `SystemTrayN/AppRun -h' for more information.\n"
 msgstr ""
 " Попробуйте·выполнить·`SystemTray/AppRun -h' для·получения·доп.·информации.\n"
 
@@ -59,6 +61,7 @@ msgid "Copyright 2003 %s\n"
 msgstr "Copyright 2003 %s\n"
 
 #: main.c:74
+#, c-format
 msgid ""
 "Distributed under the terms of the GNU General Public License.\n"
 "(See the file COPYING in the Help directory).\n"
@@ -66,15 +69,7 @@ msgstr ""
 "Расопостраняется·в·соответствии·с·условиями·GNU General Public License.\n"
 " (См.·файл·COPYING в·директории·Help).\n"
 
-#: main.c:134
-msgid "Info"
-msgstr "Информация"
-
-#: main.c:139
-msgid "Quit"
-msgstr "Выход"
-
-#: tray.c:114
+#: tray.c:136
 msgid "Another system tray is already running."
 msgstr "Другой·апплет-лоток·уже·работает."
 
@@ -95,3 +90,21 @@ msgid ""
 msgstr ""
 "\n"
 "---\n"
+
+#: Options_strings:1
+msgid "Appearance"
+msgstr ""
+
+#: Options_strings:2
+msgid "Minimum Size"
+msgstr ""
+
+#: Options_strings:3
+msgid "Minimum size of the notification area, in pixels."
+msgstr ""
+
+#~ msgid "Info"
+#~ msgstr "Информация"
+
+#~ msgid "Quit"
+#~ msgstr "Выход"

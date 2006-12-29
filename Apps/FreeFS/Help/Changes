@@ -1,6 +1,10 @@
 Changes to FreeFS
 =================
 
+29-Dec-2006
+~~~~~~~~~~~
+Translate strings in Options.xml, using the method in ROX-Filer.
+
 04-Nov-2006
 ~~~~~~~~~~~
 Use gtk_rc_parse_string() to set up gauge colours, choice_install no longer

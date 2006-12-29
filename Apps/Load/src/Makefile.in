@@ -32,7 +32,8 @@ ${PLATFORM_DIR}:
 	mkdir "${PLATFORM_DIR}"
 
 messages.pot: $(SRCS)
-	xgettext --keyword=_ --keyword=N_ --output=messages.pot $(SRCS)
+	python po/extopts.py ../Options.xml Options_strings
+	xgettext --keyword=_ --keyword=N_ --output=messages.pot $(SRCS) Options_strings
 
 clean:
 	rm -f *.o Makefile.bak

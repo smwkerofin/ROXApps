@@ -52,4 +52,5 @@ configure: configure.in
 	autoconf
 
 messages.pot: ${SRCS} 
-	xgettext --keyword=_ --keyword=N_ --output=$@ ${SRCS}
+	python po/extopts.py ../Options.xml Options_strings
+	xgettext --keyword=_ --keyword=N_ --output=$@ ${SRCS} Options_strings

@@ -2,6 +2,10 @@
 			A notification area applet for ROX-Filer
 			by Andy Hanton and Stephen Watson
 
+29-Dec-2006
+~~~~~~~~~~~
+Translate strings in Options.xml, using the method in ROX-Filer.
+
 28-Aug-2006
 ~~~~~~~~~~~
 Partially reverted to old way to set minimum size, due to what I think is
