@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Clock 2.1.7\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-12-30 16:34+0000\n"
+"POT-Creation-Date: 2006-12-16 13:09+0000\n"
 "PO-Revision-Date: 2005-12-30 16:34+0000\n"
 "Last-Translator: Stephen Watson <stephen@kerofin.demon.co.uk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -32,49 +32,49 @@ msgstr ""
 msgid "12 hour, no seconds"
 msgstr ""
 
-#: clock.c:68
+#: clock.c:68 Options_strings:16
 msgid "Date"
 msgstr ""
 
-#: clock.c:69
+#: clock.c:69 Options_strings:17
 msgid "Full"
 msgstr ""
 
-#: clock.c:70
+#: clock.c:70 Options_strings:18
 msgid "User defined"
 msgstr ""
 
-#: clock.c:411
+#: clock.c:192
+msgid "/Info"
+msgstr ""
+
+#: clock.c:194
+msgid "/Configure..."
+msgstr ""
+
+#: clock.c:196
+msgid "/Alarms..."
+msgstr ""
+
+#: clock.c:197
+msgid "/Close"
+msgstr ""
+
+#: clock.c:199
+msgid "/sep"
+msgstr ""
+
+#: clock.c:200
+msgid "/Quit"
+msgstr ""
+
+#: clock.c:419
 #, c-format
 msgid "%s: failed to plug into socket %ld, not a XID?\n"
 msgstr ""
 
-#: clock.c:441
+#: clock.c:447
 msgid "Clock"
-msgstr ""
-
-#: clock.c:1063
-msgid "/Info"
-msgstr ""
-
-#: clock.c:1065
-msgid "/Configure..."
-msgstr ""
-
-#: clock.c:1067
-msgid "/Alarms..."
-msgstr ""
-
-#: clock.c:1068
-msgid "/Close"
-msgstr ""
-
-#: clock.c:1070
-msgid "/sep"
-msgstr ""
-
-#: clock.c:1071
-msgid "/Quit"
 msgstr ""
 
 #: alarm.c:50
@@ -109,58 +109,149 @@ msgstr ""
 msgid "Weekdays (except Friday)"
 msgstr ""
 
-#: alarm.c:566
+#: alarm.c:568
 msgid "Alarm"
 msgstr ""
 
-#: alarm.c:786
+#: alarm.c:790
 msgid "Time"
 msgstr ""
 
-#: alarm.c:786
+#: alarm.c:790
 msgid "Repeat"
 msgstr ""
 
-#: alarm.c:786 alarm.c:874
+#: alarm.c:790 alarm.c:878
 msgid "Message"
 msgstr ""
 
-#: alarm.c:792
+#: alarm.c:796
 msgid "Alarms"
 msgstr ""
 
-#: alarm.c:821
+#: alarm.c:825
 msgid "Date (dd/mm/yyyy)"
 msgstr ""
 
-#: alarm.c:830 alarm.c:839
+#: alarm.c:834 alarm.c:843
 msgid "/"
 msgstr ""
 
-#: alarm.c:852
+#: alarm.c:856
 msgid "Time (HH:MM)"
 msgstr ""
 
-#: alarm.c:861
+#: alarm.c:865
 msgid ":"
 msgstr ""
 
-#: alarm.c:886
+#: alarm.c:890
 msgid "Repeat alarm"
 msgstr ""
 
-#: alarm.c:915
+#: alarm.c:919
 msgid "Options"
 msgstr ""
 
-#: alarm.c:919
+#: alarm.c:923
 msgid "Follow timezone"
 msgstr ""
 
-#: alarm.c:927
+#: alarm.c:931
 msgid "Set alarm"
 msgstr ""
 
-#: alarm.c:933
+#: alarm.c:937
 msgid "Delete alarm"
+msgstr ""
+
+#: Options_strings:1
+msgid "Monitoring"
+msgstr ""
+
+#: Options_strings:2
+msgid "Update rate"
+msgstr ""
+
+#: Options_strings:3
+msgid "How often to update the time (ms)"
+msgstr ""
+
+#: Options_strings:4 Options_strings:23
+msgid "Display"
+msgstr ""
+
+#: Options_strings:5
+msgid "Window/Applet size"
+msgstr ""
+
+#: Options_strings:6
+msgid "Initial size"
+msgstr ""
+
+#: Options_strings:7
+msgid "Show second hand"
+msgstr ""
+
+#: Options_strings:8
+msgid ""
+"If this is on the\n"
+"second hand is shown"
+msgstr ""
+
+#: Options_strings:9
+msgid "Show text"
+msgstr ""
+
+#: Options_strings:10
+msgid ""
+"If this is on the\n"
+"time is shown in text form"
+msgstr ""
+
+#: Options_strings:11
+msgid "No clock face"
+msgstr ""
+
+#: Options_strings:12
+msgid ""
+"If this is on the\n"
+"clock face is not shown"
+msgstr ""
+
+#: Options_strings:13
+msgid "Text format"
+msgstr ""
+
+#: Options_strings:14
+msgid "24 Hour"
+msgstr ""
+
+#: Options_strings:15
+msgid "12 Hour"
+msgstr ""
+
+#: Options_strings:19
+msgid "User defined format"
+msgstr ""
+
+#: Options_strings:20
+msgid ""
+"User defined\n"
+"format for textual display (strftime)"
+msgstr ""
+
+#: Options_strings:21
+msgid "Show hours"
+msgstr ""
+
+#: Options_strings:22
+msgid ""
+"If this is on the\n"
+"hours are shown on the clock \n"
+"face, if the window is big enough"
+msgstr ""
+
+#: Options_strings:24
+msgid "The font used for display"
 msgstr ""

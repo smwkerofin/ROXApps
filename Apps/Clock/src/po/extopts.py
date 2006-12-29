@@ -1,13 +1,11 @@
 """Grab the tips from Options.xml
-$Id$
+$Id: extopts.py,v 1.1 2006/12/16 13:00:25 stephen Exp $
 Originally ROX-Filer/src/po/tips.py by Thomas Leonard.
 """
 
 from xml.sax import *
 from xml.sax.handler import ContentHandler
-import string, os
-
-print "Extracting translatable bits from Options.xml..."
+import os, sys
 
 class Handler(ContentHandler):
 	data = ""
@@ -22,21 +20,27 @@ class Handler(ContentHandler):
 		self.data = self.data + data
 	
 	def endElement(self, tag):
-		data = string.strip(self.data)
+		data = self.data.strip()
 		if data:
 			self.trans(data)
 		self.data = ""
 	
 	def trans(self, data):
-		data = string.join(string.split(data, '\n'), '\\n')
+		data = '\\n'.join(data.split('\n'))
 		if data:
 			out.write('_("%s")\n' % data.replace('"', '\\"'))
 
-try:
-	os.chdir("po")
-except OSError:
-	pass
+ifname='../Options.xml'
+ofname='Options_strings'
+
+if len(sys.argv)>2:
+	ifname=sys.argv[1]
+	ofname=sys.argv[2]
+elif len(sys.argv)==2:
+	ifname=sys.argv[1]
 	
-out = open('../tips', 'wb')
-parse('../../Options.xml', Handler())
+print "Extracting translatable bits from %s..." % os.path.basename(ifname)
+
+out = open(ofname, 'wb')
+parse(ifname, Handler())
 out.close()
