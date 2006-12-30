@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id: options.py,v 1.15 2006/05/30 09:24:18 stephen Exp $
+# $Id: options.py,v 1.16 2006/09/30 13:13:59 stephen Exp $
 
 import os
 
@@ -18,6 +18,7 @@ tsize=rox.options.Option('tsize', 128)
 sprocket=rox.options.Option('sprocket', 1)
 ssize=rox.options.Option('ssize', 8)
 time_label=rox.options.Option('time', 0)
+right_align=rox.options.Option('ralign', 0)
 report=rox.options.Option('report', 0)
 take_first=rox.options.Option('take_first', False)
 generator=rox.options.Option('generator', 'mplayer')

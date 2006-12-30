@@ -3,6 +3,16 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+07-Dec-2006
+~~~~~~~~~~~
+Use -vf-clr option for MPlayer to clear video filters (Christian W. 
+Zuckschwerdt).
+
+07-Oct-2006
+~~~~~~~~~~~
+Option to place the time label at right hand side, to avoid being obscured
+by symlink/xattr emblems.
+
 30-Aug-2006
 ~~~~~~~~~~~
 Fix command line handling.

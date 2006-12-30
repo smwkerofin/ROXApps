@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.19 2006/05/30 09:24:18 stephen Exp $
+# $Id: vidthumb.py,v 1.20 2006/09/16 12:05:50 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -140,6 +140,7 @@ class VidThumbMPlayer(VidThumbNail):
         VidThumbNail.__init__(self, debug)
 
         self.add_time=options.time_label.int_value
+        self.right_align=options.right_align.int_value
 
     def post_process_image(self, img, w, h):
         """Add the optional film strip effect"""
@@ -174,11 +175,15 @@ class VidThumbMPlayer(VidThumbNail):
             if debug: print tstr
             dummy=gtk.Window()
             layout=dummy.create_pango_layout(tstr)
-            
+
+            xpos=10
+            if self.right_align:
+                lw, lh=layout.get_pixel_size()
+                xpos=w-xpos-lw
             gc.set_foreground(cmap.alloc_color('black'))
-            pixmap.draw_layout(gc, 11, 5, layout)
+            pixmap.draw_layout(gc, xpos+1, 5, layout)
             gc.set_foreground(cmap.alloc_color('white'))
-            pixmap.draw_layout(gc, 10, 4, layout)
+            pixmap.draw_layout(gc, xpos, 4, layout)
             if debug: print layout
                                
         return img.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
@@ -191,7 +196,7 @@ class VidThumbMPlayer(VidThumbNail):
             """Get the length in seconds of the source. """
             # -frames 0 might be needed on debian systems
             unused, inf, junk=os.popen3(
-                'mplayer -frames 0 -vo null -ao null -identify "%s"' % fname,
+                'mplayer -frames 0 -vo null -vf-clr -ao null -identify "%s"' % fname,
                 'r')
 
             for l in inf.readlines():
@@ -206,7 +211,7 @@ class VidThumbMPlayer(VidThumbNail):
             from pos seconds into the video"""
 
             # Ask for 3 frames.  Seems to work better
-            cmd='mplayer -really-quiet -vo png -ss %f -frames 3 -nosound -noloop "%s"' % (pos, fname)
+            cmd='mplayer -really-quiet -vo png -vf-clr -ss %f -frames 3 -nosound -noloop "%s"' % (pos, fname)
             cmd+=' > /dev/null 2>&1'
 
             # If we have 2 frames ignore the first and return the second, else
