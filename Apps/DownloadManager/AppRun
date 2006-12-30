@@ -112,11 +112,20 @@ class DMWindow(rox.Window):
             icon=rox.g.Image()
             icon.set_from_file(os.path.join(rox.app_dir, '.DirIcon'))
             vbox.pack_start(icon, False, False, 2)
+            self.icon=icon
+
+            self.gauge_area=rox.g.VBox()
+            vbox.pack_start(self.gauge_area, False, False, 2)
+            pbuf=icon.get_pixbuf()
+            self.gauge_area.set_size_request(pbuf.get_width(),
+                                             pbuf.get_height())
+            self.gauges=[]
             
             self.alabel=rox.g.Label('0:0')
             vbox.pack_start(self.alabel, False, False, 2)
 
             self.applet.show_all()
+            self.gauge_area.hide()
 
             rox.Menu.set_save_name('DownloadManager')
             self.applet_menu=rox.Menu.Menu('applet', [
@@ -211,6 +220,31 @@ class DMWindow(rox.Window):
 
         if self.applet:
             self.alabel.set_label('%d:%d' % (nactive,nwait))
+            if nactive>0:
+                if len(self.gauges)<nactive:
+                    for i in range(nactive-len(self.gauges)):
+                        gauge=rox.g.ProgressBar()
+                        gauge.set_size_request(-1, 6)
+                        self.gauge_area.pack_start(gauge, False, False, 2)
+                        self.gauges.append(gauge)
+
+                i=0
+                for act in self.dserve.active:
+                    client=self.dserve.clients[act]
+                    if client.total>0:
+                        frac=float(client.size)/client.total
+                    else:
+                        frac=0
+                    self.gauges[i].set_fraction(frac)
+                    self.gauges[i].show()
+                    i+=1
+                for j in range(i, len(self.gauges)):
+                    self.gauges[j].hide()
+                self.icon.hide()
+                self.gauge_area.show()
+            else:
+                self.icon.show()
+                self.gauge_area.hide()
             
         if nactive>=options.show_nactive.int_value or nwait>=options.show_nwaiting.int_value:
             self.dserve.auto_show=True

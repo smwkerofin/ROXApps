@@ -1,6 +1,10 @@
 DownloadManager
 ===============
 
+21-Oct-2006
+~~~~~~~~~~~
+Panel icon shows progress bars when downloads in progress.
+
 18-Apr-2006
 ~~~~~~~~~~~
 Added i18n support.
@@ -73,4 +77,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.17 2006/02/17 10:02:13 stephen Exp $
+$Id: Changes,v 1.18 2006/05/30 09:24:05 stephen Exp $
