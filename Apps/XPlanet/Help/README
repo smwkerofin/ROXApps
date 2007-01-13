@@ -4,25 +4,37 @@ XPlanet
 A wrapper for the xplanet program.
 
 Normal use
-----------
+~~~~~~~~~~
 
-Running XPlanet simply runs the xplanet program with default options
-and shows the result in a window.  In future it may be possible to
-change the defaults, but not yet.
+Running XPlanet will show the options window by default, but the action 
+to perform can be chosen.
 
-Pinboard backdrop
------------------
+App Menu
+~~~~~~~~
+
+Right clicking on the icon in ROX-Filer will give two options, "Options" and
+"Set as backdrop App".
+
+Set as backdrop App or Manage backdrop image
+-------------------
 
 This is the more useful mode.
 
 Right click on XPlanet's icon and select "Set as backdrop App".  This
 will set XPlanet as ROX-Filers backdrop application and draw the
-current planet as the pinboard image, updating every few minutes.
+current planet as the pinboard image, updating every few minutes.  There
+are two relevant options:
+  Body         Chooses solar system body to show (normally Earth, see
+               man xplanet for more details on the other bodies).
+ 
+  Minutes between update      How often the backdrop image updates.
 
 Options
 -------
 
-Right click on XPlanet's icon and select "Options".
+Right click on XPlanet's icon and select "Options".  You can choose the 
+executable to run, the default run action, and options for backdop and 
+windowed mode.
 
 -- 
 stephen@kerofin.demon.co.uk

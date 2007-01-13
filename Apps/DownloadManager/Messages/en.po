@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: DownloadManager 0.1.3\n"
-"POT-Creation-Date: 2006-04-18 11:45+BST\n"
+"POT-Creation-Date: 2007-01-13 12:52+GMT\n"
 "PO-Revision-Date: 2006-04-18 11:43+BST\n"
 "Last-Translator: Stephen Watson <stephen@kerofin.demon.co.uk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -50,34 +50,34 @@ msgstr ""
 msgid "Age"
 msgstr ""
 
-#: AppRun:123
+#: AppRun:132
 msgid "/Info"
 msgstr ""
 
-#: AppRun:126
+#: AppRun:135
 msgid "/Options"
 msgstr ""
 
-#: AppRun:129
+#: AppRun:138
 msgid "/Show window"
 msgstr ""
 
-#: AppRun:130
+#: AppRun:139
 msgid "/Hide window"
 msgstr ""
 
-#: AppRun:132
+#: AppRun:141
 msgid "/Close applet"
 msgstr ""
 
-#: AppRun:135
+#: AppRun:144
 msgid "/Quit"
 msgstr ""
 
-#: AppRun:192
+#: AppRun:201
 msgid "active"
 msgstr ""
 
-#: AppRun:208
+#: AppRun:217
 msgid "waiting"
 msgstr ""

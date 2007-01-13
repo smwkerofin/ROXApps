@@ -16,7 +16,7 @@ announcing when others may attempt to start.
     <requires interface="http://rox.sourceforge.net/2005/interfaces/ROX-Lib">
       <environment insert="ROX-Lib2/python" name="PYTHONPATH"/>
     </requires>
-    <implementation id=".." stability="testing" version="0.1.2"/>
+    <implementation id=".." stability="testing" version="0.1.3"/>
   </group>
   <feed-for interface="http://www.kerofin.demon.co.uk/2005/interfaces/DownloadManager"/>
 </interface>

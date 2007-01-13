@@ -15,7 +15,7 @@ mode is as a backdrop application.
       <environment insert="ROX-Lib2/python" name="PYTHONPATH"/>
     </requires>
     <implementation id=".."
-		stability="testing" version="0.0.1"/>
+		stability="testing" version="0.0.2"/>
   </group>
   <feed-for interface="http://www.kerofin.demon.co.uk/2006/interfaces/XPlanet"/>
 </interface>
