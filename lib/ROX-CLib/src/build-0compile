@@ -1,8 +1,0 @@
-#!/bin/sh
-
-SRCDIR="$1"
-DESTDIR="$2"
-
-cp -r "$SRCDIR/ROX-CLib" "$DESTDIR/ROX-CLib"
-cd "$DESTDIR/ROX-CLib"
-./AppRun --compile && cd src && make zero-install
