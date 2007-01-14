@@ -3,7 +3,7 @@
 echo Extracting messages from source files...
 echo
 
-(cd ../; pygettext AppRun *.py)
+(cd ../; python extopts.py; pygettext AppRun *.py Options_strings)
 
 echo
 echo Updating all .po files...

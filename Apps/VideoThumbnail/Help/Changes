@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+14-Jan-2007
+~~~~~~~~~~~
+Added support for translating strings in Options.xml.
+
 07-Dec-2006
 ~~~~~~~~~~~
 Use -vf-clr option for MPlayer to clear video filters (Christian W. 
