@@ -3,7 +3,7 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
-14-Jan-2007
+14-Jan-2007 (0.1.13)
 ~~~~~~~~~~~
 Added support for translating strings in Options.xml.
 
@@ -34,7 +34,7 @@ Yet more bugs in installing handlers under Zero Install.
 Another bug in installing handlers under Zero Install (reported by 
 José Silva).
 
-28-Feb-2006 (0.1.8)
+S_ISDIR(info.st_mode)28-Feb-2006 (0.1.8)
 ~~~~~~~~~~~
 Fix typo when installing handlers under Zero Install (reported by Henning 
 Jacobsen). 
