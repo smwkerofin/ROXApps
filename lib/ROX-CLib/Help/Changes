@@ -4,6 +4,10 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+29-Jan-2007
+~~~~~~~~~~~
+Updated URI handling to use new shared configuration.
+
 21-Nov-2006 (2.1.9)
 ~~~~~~~~~~~
 AppRun uses src/dist to generate the configure script now.
@@ -341,4 +345,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.48 2006/11/21 19:16:58 stephen Exp $
+$Id: Changes,v 1.49 2006/11/24 16:12:03 stephen Exp $

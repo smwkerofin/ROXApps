@@ -1,5 +1,5 @@
 /*
- * $Id: test.c,v 1.12 2005/10/22 10:42:28 stephen Exp $
+ * $Id: test.c,v 1.13 2006/10/03 20:45:58 stephen Exp $
  */
 
 #include "rox-clib.h"
@@ -22,6 +22,7 @@
 #include "mime.h"
 #include "appinfo.h"
 #include "xattr.h"
+#include "uri.h"
 
 #define TEST_FILE "tmp/tmp/rm.me"
 
@@ -33,20 +34,51 @@ static void test_basedir(const char *home);
 static void test_mime(const char *home);
 static void test_appinfo(const char *home);
 static void test_xattr(const char *home);
+static void test_uri(const char *home);
+
+struct tests {
+  char *name;
+  void (*func)(const char *);
+};
+
+static struct tests tests[]={
+  {"soap", test_soap},
+  {"basedir", test_basedir},
+  {"mime", test_mime},
+  {"appinfo", test_appinfo},
+  {"xattr", test_xattr},
+  {"uri", test_uri},
+
+  {NULL, NULL}
+};
+
+#define TESTS "soap,basedir,mime,appinfo,xattr,uri"
 
 int main(int argc, char *argv[])
 {
   char *home=g_getenv("HOME");
+  char *to_run=g_strdup(TESTS);
+  char *running;
   
   rox_init("test", &argc, &argv);
   
   printf("ROX-CLib version %s\n\n", rox_clib_version_string());
 
-  /*test_soap(home);*/
-  test_basedir(home);
-  test_mime(home);
-  test_appinfo(home);
-  test_xattr(home);
+  if(argv[1] && strcmp(argv[1], "all")!=0)
+    to_run=argv[1];
+
+  for(running=strtok(to_run, ","); running; running=strtok(NULL, ",")) {
+    int i;
+
+    for(i=0; tests[i].name; i++)
+      if(strcmp(tests[i].name, running)==0) {
+	printf("Run test %s\n", running);
+	tests[i].func(home);
+	break;
+      }
+    if(!tests[i].name)
+      printf("Test \"%s\" not known\n", running);
+  }
 
   /*rox_error("This is an error %d", 42);*/
   
@@ -66,6 +98,10 @@ static void test_soap(const char *home)
 
   printf("Version()=");
   ver=rox_filer_version();
+  if(!ver) {
+    printf("not responding, tests cancelled\n");
+    return;
+  }
   printf("%s\n", ver);
   printf("error=%s\n", rox_filer_get_last_error());
   printf("Waiting..\n");
@@ -417,3 +453,64 @@ static void test_xattr(const char *home)
   g_free(path);
 }
 
+static void test_uri(const char *home)
+{
+  static const char *opath="/tmp/this does not exist!";
+  gchar *uri1, *path2, *path3;
+  static const char *schemes[]={"file", "http", "https", "mailto",
+				"unknown", NULL};
+  int i;
+  static const char *uris[]={"http://rox.sf.net/", "unknown:dummy", NULL};
+
+  printf("Name to use for drag and drop: %s\n", rox_hostname());
+
+  printf("\nStart with path: %s\n", opath);
+  path2=rox_escape_uri_path(opath);
+  printf("rox_escape_uri_path: %s\n", path2);
+  uri1=rox_encode_path_as_uri(opath);
+  printf("rox_encode_path_as_uri: %s\n", uri1);
+  path3=rox_unescape_uri(path2);
+  printf("rox_unescape_uri: %s\n", path3);
+  g_free(path2);
+  g_free(uri1);
+  g_free(path3);
+
+  printf("\nScheme handlers:\n");
+  for(i=0; schemes[i]; i++) {
+    gchar *handler=rox_uri_get_handler(schemes[i]);
+
+    printf("\t%s = %s\n", schemes[i], handler? handler: "(not defined)");
+    if(handler)
+      g_free(handler);
+  }
+
+  printf("\nLaunching:\n");
+  for(i=0; uris[i]; i++) {
+    int res;
+    GError *err;
+
+    printf("\t%s (non-blocking)", uris[i]);
+    err=NULL;
+    res=rox_uri_launch_handler(uris[i], FALSE, &err);
+    if(res>=0) 
+      printf(" success, PID %d\n", res);
+    else if(res==-1)
+      printf(" failed, no handler\n");
+    else
+      printf(" failed: %s\n", err->message);
+    if(err)
+      g_error_free(err);
+
+    printf("\t%s (blocking)", uris[i]);
+    err=NULL;
+    res=rox_uri_launch_handler(uris[i], TRUE, &err);
+    if(res>=0) 
+      printf(" success, exit code %d\n", res);
+    else if(res==-1)
+      printf(" failed, no handler\n");
+    else
+      printf(" failed: %s\n", err->message);
+    if(err)
+      g_error_free(err);
+  }
+}

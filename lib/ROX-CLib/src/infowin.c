@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Id: infowin.c,v 1.14 2005/10/12 10:59:27 stephen Exp $
+ * $Id: infowin.c,v 1.15 2006/08/12 17:04:56 stephen Exp $
  */
 #include "rox-clib.h"
 
@@ -77,7 +77,7 @@ static void goto_website(GtkWidget *widget, gpointer data)
   if(!iw->web_site)
     return;
 
-  rox_uri_launch(iw->web_site);
+  rox_uri_launch_handler(iw->web_site, FALSE, NULL);
 }
 
 static GtkWidget *get_app_icon(void)
@@ -631,6 +631,9 @@ void info_win_add_browser_command(ROXInfoWin *iw, const gchar *cmd)
 
 /*
  * $Log: infowin.c,v $
+ * Revision 1.15  2006/08/12 17:04:56  stephen
+ * Fix most compilation warnings.
+ *
  * Revision 1.14  2005/10/12 10:59:27  stephen
  * Externally visible symbols have rox_ or ROX prefixes.
  * All still exist under the old names but in general will produce a warning message.
