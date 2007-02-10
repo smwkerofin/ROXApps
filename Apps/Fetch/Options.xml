@@ -13,6 +13,7 @@ you run it directly you will only be able to set up the program's options.
 <numentry name="block_size" label="Block size" min='256' max='204800'>Number of bytes to read in one operation.  Larger is quicker, but there are fewer updates to the window when fetching a large file.</numentry>
 <toggle name="use_dl_manager" label="Use DownloadManager">Coordinate downloads with the DownloadManager</toggle>
 <toggle name="update_title" label="Update window title">Update the window title with the percentage of the file downloaded.  Disable this if it slows down your window manager unacceptably.</toggle>
+<toggle name="set_type" label="Set MIME type (extended attributes)">If the web server that the file is downloaded from gives a different MIME type from that which ROX guesses based on the file name, offer to change the type.  Requires extended attribute support and a recent ROX-Filer.</toggle>
 
 </section>
 <section title="Passwords">

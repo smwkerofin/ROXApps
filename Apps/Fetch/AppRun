@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.28 2006/09/30 13:11:42 stephen Exp $
+# $Id: AppRun,v 1.29 2006/12/16 12:54:16 stephen Exp $
 
 import os, sys
 import time
@@ -23,12 +23,7 @@ real_install='%s/AppRun "$1"' % rox.app_dir
 
 rox.setup_app_options('Fetch', site='kerofin.demon.co.uk')
 
-allow_pw_change=rox.options.Option('allow_pw_change', True)
-wait_for=rox.options.Option('wait_for', 3)
-use_dl_manager=rox.options.Option('use_dl_manager', False)
-block_size=rox.options.Option('block_size', 8192)
-update_title=rox.options.Option('update_title', True)
-install_path=rox.options.Option('install_path', real_install)
+from options import *
 
 def revert_install_path():
     if install_path.has_changed and install_path.value!=real_install:
@@ -44,6 +39,8 @@ tsuf='.fetching'
 delay=500
 
 unknown_type=rox.mime.lookup('text/plain')
+unknown_binary_type=rox.mime.lookup('application/octet-stream')
+unknown_types=(unknown_type, unknown_binary_type)
 html_type=rox.mime.lookup('text/html')
 
 rox.mime.install_mime_info('Fetch',
@@ -149,6 +146,12 @@ class FetchWindow(rox.Dialog):
         table.attach(l, 0, 1, line, line+1, xpadding=2)
         self.ltype_icon=rox.g.Image()
         ltype=rox.mime.get_type_by_name(self.real_target)
+        self.ltype=ltype
+        table.attach(self.ltype_icon, 1, 2, line, line+1, xpadding=2)
+        l=rox.g.Label(str(ltype))
+        l.set_alignment(0., 0.5)
+        table.attach(l, 2, 3, line, line+1, xpadding=2)
+        self.ltype_l=l
         if ltype:
             icon=ltype.get_icon(rox.mime.ICON_SIZE_SMALL)
             if icon:
@@ -156,12 +159,7 @@ class FetchWindow(rox.Dialog):
             icon=ltype.get_icon(rox.mime.ICON_SIZE_LARGE)
             if icon:
                 self.set_icon(icon)
-        self.ltype=ltype
-        table.attach(self.ltype_icon, 1, 2, line, line+1, xpadding=2)
-        l=rox.g.Label(str(ltype))
-        l.set_alignment(0., 0.5)
-        table.attach(l, 2, 3, line, line+1, xpadding=2)
-        self.ltype_l=l
+            self.ltype_l.set_text('%s (%s)' % (ltype.get_comment(), ltype))
 
         line+=1
         l=rox.g.Label(_('<b>Download to</b>'))
@@ -347,6 +345,7 @@ class FetchWindow(rox.Dialog):
             stype=unknown_type
         self.stype=stype
         if stype:
+            self.type_l.set_text('%s (%s)' % (stype.get_comment(), stype))
             icon=stype.get_icon(rox.mime.ICON_SIZE_SMALL)
             if icon:
                 self.stype_icon.set_from_pixbuf(icon)
@@ -537,7 +536,7 @@ class FetchWindow(rox.Dialog):
         t=wait_for.int_value*1000
         mess=_('Done')
         if self.ltype!=self.stype:
-            if self.stype==unknown_type:
+            if self.stype in unknown_types:
                 mess=_('Done (server did not know type)')
             elif self.stype==html_type:
                 mess=_('Server may have sent error')
@@ -545,10 +544,10 @@ class FetchWindow(rox.Dialog):
             else:
                 mess=_('Done.  Warning: type mismatch')
                 t*=3
-                if xattr and xattr.supported(fname):
-                    if rox.confirm('Force %s to be type %s?' % (fname,
-                                                                self.stype),
-                                   rox.g.STOCK_APPLY, 'Set type'):
+                if xattr and xattr.supported(fname) and set_type.int_value:
+                    msg=_('Force %s to be type %s (%s)?') % (fname,
+                                         self.stype.get_comment(), self.stype)
+                    if rox.confirm(msg, rox.g.STOCK_APPLY, 'Set type'):
                         try:
                             xattr.set(fname, xattr.USER_MIME_TYPE,
                                       str(self.stype))

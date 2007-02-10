@@ -1,6 +1,12 @@
 Fetch
 =====
 
+20-Jan-2006
+~~~~~~~~~~~
+Recognize application/octet-stream as a type servers return for an unknown 
+type.  Better description of types.  Setting type when server disagrees now 
+an option.  Moved option handling into options.py.
+
 15-Dec-2006 (0.3.2)
 ~~~~~~~~~~~
 Use rox.basedir instead of rox.choices.
@@ -149,4 +155,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.35 2006/12/16 12:54:16 stephen Exp $
+$Id: Changes,v 1.36 2007/01/13 12:51:08 stephen Exp $

@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.14 2006/09/30 13:12:35 stephen Exp $
+# $Id: fetch.py,v 1.15 2006/12/16 12:54:16 stephen Exp $
 
 import os, sys
 import time
@@ -18,19 +18,11 @@ import xml.dom, xml.dom.minidom
 
 __builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
-rox.setup_app_options('Fetch', site='kerofin.demon.co.uk')
-
-allow_pw_change=rox.options.Option('allow_pw_change', True)
-wait_for=rox.options.Option('wait_for', 3)
-use_dl_manager=rox.options.Option('use_dl_manager', False)
-block_size=rox.options.Option('block_size', 8192)
-update_title=rox.options.Option('update_title', True)
-install_path=rox.options.Option('install_path',
-                                '%s/AppRun "$1"' % rox.app_dir)
-
-rox.app_options.notify()
-
 stimeo=5*60
+
+rox.setup_app_options('Fetch', site='kerofin.demon.co.uk')
+from options import *
+rox.app_options.notify()
 
 # This won't work in Python 2.2
 import socket
