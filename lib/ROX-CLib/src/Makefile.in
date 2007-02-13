@@ -70,20 +70,14 @@ all: ${EXEC} ${PLATFORM_DIR}/bin/rox_run ${PLATFORM_DIR}/bin/install_on_path
 all: ${PLATFORM_DIR}/bin/test ${PLATFORM_DIR}/bin/rox_pinboard
 all: ${PLATFORM_DIR}/bin/libdir ${PLATFORM_DIR}/bin/appdir
 all: ${PLATFORM_DIR}/lib/ROX-CLib.pc
-ifeq (${SHARED}, yes)
 all: ${LIBFILE.la}
-endif
 
-zero-install: all
+zero-install: all zero-install-shared
 	rm *.o *.lo
 	rm -rf .libs
 	strip ${PLATFORM_DIR}/bin/test
 	strip ${PLATFORM_DIR}/bin/rox_pinboard
 	strip --strip-debug ${LIBFILE.a}
-
-ifeq (${SHARED}, yes)
-zero-install: zero-install-shared
-endif
 
 zero-install-shared: ${LIBFILE.la}
 	strip --strip-debug ${LIBDIR}/lib${LIBNAME}.so
