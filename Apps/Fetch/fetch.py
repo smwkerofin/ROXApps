@@ -1,4 +1,4 @@
-# $Id: fetch.py,v 1.15 2006/12/16 12:54:16 stephen Exp $
+# $Id: fetch.py,v 1.16 2007/02/10 10:59:30 stephen Exp $
 
 import os, sys
 import time
@@ -154,9 +154,10 @@ class Fetcher:
             rsz=nready
 
         # override
-        rsz=self.bsize
+        #rsz=self.bsize
 
         if rsz>0:
+            #self.message('reading %d bytes' % rsz)
             data=self.con.read(rsz)
             #self.message('%d bytes read' % len(data))
             self.count+=len(data)
