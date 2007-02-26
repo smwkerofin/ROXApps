@@ -1,0 +1,7 @@
+<?xml version='1.0'?>
+<options>
+<section>
+<entry name="fuse_device" label="FUSE device path">This is used to check that FUSE is available.</entry>
+<entry name="mount_point" label="User mount point">Where the local network is mounted</entry>
+</section>
+</options>

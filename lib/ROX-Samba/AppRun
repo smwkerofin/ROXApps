@@ -1,0 +1,177 @@
+#!/usr/bin/env python
+
+import os, sys
+
+import findrox; findrox.version(2, 0, 3)
+import rox, rox.options, rox.filer
+
+import urlparse
+
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
+
+rox.setup_app_options('ROX-SMB', site='kerofin.demon.co.uk')
+
+fuse_device=rox.options.Option('fuse_device', '/dev/fuse')
+mount_point=rox.options.Option('mount_point', '~/smb')
+
+rox.app_options.notify()
+
+valid_schemes=('smb', 'cifs')
+
+def check_files():
+    if fuse_device.value and not os.access(fuse_device.value, os.F_OK):
+        rox.alert(_('Device "%s" not found, fuse not running') %
+                  fuse_device.value)
+        return False
+
+    if not in_path('fusesmb'):
+        rox.alert(_('fusesmb command not found, cannot continue'))
+        return False
+
+    if not in_path('smbclient'):
+        rox.alert(_('smbclient command not found, cannot continue'))
+        return False
+
+    mnt=os.path.expanduser(mount_point.value)
+    if os.access(mnt, os.F_OK):
+        if not os.path.isdir(mnt):
+            rox.alert(_('"%s" is not a directory, cannot use as a mount point')%
+                      mount_point.value)
+            return False
+
+    else:
+        try:
+            os.makedirs(mnt)
+        except OSError:
+            rox.alert(_('Failed to create "%s" as a mount point') %
+                      mount_point.value)
+            return False
+
+    return True
+
+def in_path(cmd):
+    for d in os.getenv('PATH').split(':'):
+        f=os.path.join(d, cmd)
+        if os.access(f, os.X_OK):
+            return f
+
+def ensure_mounted(mnt=None):
+    if not mnt:
+        mnt=os.path.expanduser(mount_point.value)
+    if not os.path.ismount(mnt):
+        try:
+            ret=os.spawnlp(os.P_WAIT, 'fusesmb', 'fusesmb', mnt)
+        except:
+            rox.report_exception()
+            return False
+
+        return ret==0
+
+    return True
+
+def unmount(mnt=None):
+    if not mnt:
+        mnt=os.path.expanduser(mount_point.value)
+    cin, cout, cerr=os.popen3('fusermount -u %s' % mnt)
+    errmsg=''.join(cerr.readlines())
+
+    if errmsg:
+        rox.alert(_('Unmounting "%s":\n%s') % (mount_point.value,
+                                                      errmsg))
+        return False
+
+    return True
+    
+def parse_uri(uri):
+    parts=urlparse.urlsplit(uri)
+    #print parts
+
+    if parts[0] not in valid_schemes:
+        return None, None
+
+    if parts[2].startswith('//'):
+        if '/' in parts[2][2:]:
+            netloc, path=parts[2][2:].split('/', 1)
+
+        else:
+            netloc=parts[2][2:]
+            path=''
+
+    else:
+        netloc=parts[1]
+        path=parts[2]
+
+    return netloc.upper(), path
+
+def open_uri(uri):
+    netloc, path=parse_uri(uri)
+    #print netloc, path
+    if netloc is None:
+        return
+
+    mnt=os.path.expanduser(mount_point.value)
+    if not ensure_mounted(mnt):
+        return
+
+    if not netloc:
+        rox.filer.open_dir(mnt)
+        return
+
+    if os.path.isdir(os.path.join(mnt, netloc)):
+        if path and path!='/':
+            opath=os.path.join(mnt, netloc, path)
+        else:
+            opath=os.path.join(mnt, netloc)
+
+        rox.filer.open_dir(opath)
+
+    else:
+        domain=lookup_domain(netloc)
+        
+        if path and path!='/':
+            opath=os.path.join(mnt, domaim, netloc, path)
+        else:
+            opath=os.path.join(mnt, domain, netloc)
+
+        rox.filer.open_dir(opath)
+
+def lookup_domain(host):
+    cin, cout, cerr=os.popen3('smbclient -NL %s' % host)
+    for l in cerr:
+        #print l
+        if l.startswith('Domain=['):
+            words=l.split()
+            #print words
+            s=words[0].find('[')
+            e=words[0].find(']')
+
+            return words[0][s+1:e]
+            
+    return 'TUX-NET'  # Possibly the Linux default...
+
+def options_updated():
+    pass
+
+rox.app_options.add_notify(options_updated)
+
+def show_options():
+    rox.edit_options()
+    rox.mainloop()
+
+if __name__=='__main__':
+
+    if len(sys.argv)>1:
+        if sys.argv[1]=='--options':
+            show_options()
+
+        elif sys.argv[1]=='--unmount':
+            unmount()
+
+        else:
+            check_files()
+            for a in sys.argv[1:]:
+                open_uri(a)
+
+    else:
+        check_files()
+        open_uri('smb://')
