@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<AppInfo>
+  <Summary>Browse SAMBA network</Summary>
+  <About>
+    <Purpose>Browse SAMBA network</Purpose>
+    <Version>0.0.1 (26 February 2007)</Version>
+    <Authors>Stephen Watson</Authors>
+    <License>GNU General Public License</License>
+    <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
+  </About>
+  <AppMenu>
+    <Item option="--options">
+      <Label>Options</Label>
+    </Item>
+    <Item option="--unmount">
+      <Label>Unmount network</Label>
+    </Item>
+  </AppMenu>
+</AppInfo>
