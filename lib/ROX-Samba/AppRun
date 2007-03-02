@@ -9,7 +9,7 @@ import urlparse
 
 __builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
-rox.setup_app_options('ROX-SMB', site='kerofin.demon.co.uk')
+rox.setup_app_options('ROX-Samba', site='kerofin.demon.co.uk')
 
 fuse_device=rox.options.Option('fuse_device', '/dev/fuse')
 mount_point=rox.options.Option('mount_point', '~/smb')
