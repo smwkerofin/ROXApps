@@ -1,0 +1,10 @@
+Changes to ROX-Samba
+====================
+
+03-Mar-2007
+~~~~~~~~~~~
+Big expansion of options.  Can generate the fusesmb.conf file.
+
+02-Mar-2007
+~~~~~~~~~~~
+First pre-release.
