@@ -1,7 +1,15 @@
 <?xml version='1.0'?>
 <options>
-<section>
-<entry name="fuse_device" label="FUSE device path">This is used to check that FUSE is available.</entry>
+<section title="Basic">
 <entry name="mount_point" label="User mount point">Where the local network is mounted</entry>
+<entry name="domain" label="Default workgroup/domain">Domain or workgroup name of the local network</entry>
+<edit-button label="Edit fusesmb configuration">Click here to edit the fusesmb.conf file.</edit-button>
+</section>
+<section title="Advanced">
+<entry name="fuse_device" label="FUSE device path">This is used to
+check that FUSE is available.</entry>
+<entry name="fusesmb_cmd" label="fusesmb command">Command to use for 'fusesmb'.  This can either be an absolute path or a command that behaves exactly as 'fusesmb'</entry>
+<entry name="fusermount_cmd" label="fusermount command">Command to use for 'fusermount'.  This can either be an absolute path or a command that behaves exactly as 'fusermount'</entry>
+<entry name="smbclient_cmd" label="smbclient command">Command to use for 'smbclient'.  This can either be an absolute path or a command that behaves exactly as 'smbclient'</entry>
 </section>
 </options>

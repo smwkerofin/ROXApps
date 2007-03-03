@@ -9,58 +9,67 @@ import urlparse
 
 __builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
-rox.setup_app_options('ROX-Samba', site='kerofin.demon.co.uk')
-
-fuse_device=rox.options.Option('fuse_device', '/dev/fuse')
-mount_point=rox.options.Option('mount_point', '~/smb')
-
-rox.app_options.notify()
+import options
 
 valid_schemes=('smb', 'cifs')
 
 def check_files():
-    if fuse_device.value and not os.access(fuse_device.value, os.F_OK):
-        rox.alert(_('Device "%s" not found, fuse not running') %
-                  fuse_device.value)
+    dev=options.getFuseDevice()
+    if dev and not os.access(dev, os.F_OK):
+        rox.alert(_('Device "%s" not found, fuse not running') % dev)
         return False
 
-    if not in_path('fusesmb'):
+    cmd=options.getFusesmbCommand()
+    if not os.path.isabs(cmd) and not in_path(cmd):
         rox.alert(_('fusesmb command not found, cannot continue'))
         return False
-
-    if not in_path('smbclient'):
-        rox.alert(_('smbclient command not found, cannot continue'))
+    elif os.path.isabs(cmd) and not os.access(cmd, os.X_OK):
+        rox.alert(_('fusesmb command "%s" not executable, cannot continue') %
+                  cmd)
         return False
 
-    mnt=os.path.expanduser(mount_point.value)
+    cmd=options.getSmbclientCommand()
+    if not os.path.isabs(cmd) and not in_path(cmd):
+        rox.alert(_('smbclient command not found, cannot continue'))
+        return False
+    elif os.path.isabs(cmd) and not os.access(cmd, os.X_OK):
+        rox.alert(_('smbclient command "%s" not executable, cannot continue') %
+                  cmd)
+        return False
+
+    mnt=options.getMountPoint()
     if os.access(mnt, os.F_OK):
         if not os.path.isdir(mnt):
             rox.alert(_('"%s" is not a directory, cannot use as a mount point')%
-                      mount_point.value)
+                      mnt)
             return False
 
     else:
         try:
             os.makedirs(mnt)
-        except OSError:
-            rox.alert(_('Failed to create "%s" as a mount point') %
-                      mount_point.value)
+        except OSError, ex:
+            rox.alert(_('Failed to create "%s" as a mount point: %s') % (mnt,
+                                                                         ex))
             return False
 
     return True
 
 def in_path(cmd):
+    #print cmd
     for d in os.getenv('PATH').split(':'):
         f=os.path.join(d, cmd)
+        #print f
         if os.access(f, os.X_OK):
             return f
+    #print 'not found'
 
 def ensure_mounted(mnt=None):
     if not mnt:
-        mnt=os.path.expanduser(mount_point.value)
+        mnt=options.getMountPoint()
     if not os.path.ismount(mnt):
         try:
-            ret=os.spawnlp(os.P_WAIT, 'fusesmb', 'fusesmb', mnt)
+            cmd=options.getFusesmbCommand()
+            ret=os.spawnlp(os.P_WAIT, cmd, 'fusesmb', mnt)
         except:
             rox.report_exception()
             return False
@@ -71,13 +80,13 @@ def ensure_mounted(mnt=None):
 
 def unmount(mnt=None):
     if not mnt:
-        mnt=os.path.expanduser(mount_point.value)
-    cin, cout, cerr=os.popen3('fusermount -u %s' % mnt)
+        mnt=options.getMountPoint()
+    cin, cout, cerr=os.popen3('%s -u %s' % (options.getFusermountComamnd(),
+                                            mnt))
     errmsg=''.join(cerr.readlines())
 
     if errmsg:
-        rox.alert(_('Unmounting "%s":\n%s') % (mount_point.value,
-                                                      errmsg))
+        rox.alert(_('Unmounting "%s":\n%s') % (mnt, errmsg))
         return False
 
     return True
@@ -109,7 +118,7 @@ def open_uri(uri):
     if netloc is None:
         return
 
-    mnt=os.path.expanduser(mount_point.value)
+    mnt=options.getMountPoint()
     if not ensure_mounted(mnt):
         return
 
@@ -147,22 +156,18 @@ def lookup_domain(host):
 
             return words[0][s+1:e]
             
-    return 'TUX-NET'  # Possibly the Linux default...
+    return options.getDomain()
 
 def options_updated():
     pass
 
-rox.app_options.add_notify(options_updated)
-
-def show_options():
-    rox.edit_options()
-    rox.mainloop()
+options.addNotify(options_updated)
 
 if __name__=='__main__':
 
     if len(sys.argv)>1:
         if sys.argv[1]=='--options':
-            show_options()
+            options.show()
 
         elif sys.argv[1]=='--unmount':
             unmount()
