@@ -81,7 +81,7 @@ def ensure_mounted(mnt=None):
 def unmount(mnt=None):
     if not mnt:
         mnt=options.getMountPoint()
-    cin, cout, cerr=os.popen3('%s -u %s' % (options.getFusermountComamnd(),
+    cin, cout, cerr=os.popen3('%s -u %s' % (options.getFusermountCommand(),
                                             mnt))
     errmsg=''.join(cerr.readlines())
 

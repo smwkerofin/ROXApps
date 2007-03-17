@@ -1,6 +1,10 @@
 Changes to ROX-Samba
 ====================
 
+17-Mar-2007
+~~~~~~~~~~~
+Fix typo in unmount code.
+
 03-Mar-2007
 ~~~~~~~~~~~
 Big expansion of options.  Can generate the fusesmb.conf file.
