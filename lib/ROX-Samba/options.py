@@ -42,7 +42,8 @@ def build_edit_button(box, node, label):
     button = rox.g.Button(label)
     box.may_add_tip(button, node)
     def edit_button_handler(*args):
-        ConfigEdit().show()
+        t=rox.templates.load(root='main_window')
+        t.getWindow('main_window', ConfigEdit).show()
     button.connect('clicked', edit_button_handler)
     return [button]
 rox.OptionsBox.widget_registry['edit-button'] = build_edit_button
@@ -52,18 +53,17 @@ import ConfigParser
 
 dpath='~/.smb/fusesmb.conf'
 
-class ConfigEdit(rox.Window):
-    def __init__(self, path=dpath):
-        rox.Window.__init__(self)
+class ConfigEdit(rox.templates.ProxyWindow):
+    def __init__(self, window, widgets, path=dpath):
+        rox.templates.ProxyWindow.__init__(self, window, widgets)
+
+        self.widgets=widgets
 
         self.path=path
         
         self.set_title(_('Editing %s') % self.path)
 
-        self.widgets=rox.templates.load(None, 'main_vbox', self)
-
         vbox=self.widgets['main_vbox']
-        self.add(vbox)
 
         self.ignore_server_view=self.widgets['ignore_server_view']
         self.ignore_remove_server=self.widgets['ignore_remove_server']
