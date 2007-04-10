@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.20 2006/09/16 12:05:50 stephen Exp $
+# $Id: vidthumb.py,v 1.21 2006/12/30 11:59:03 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -84,7 +84,7 @@ class VidThumbNail(thumb.Thumbnailler):
         gc.set_foreground(gc.background)
 
         if debug: print gc, gc.foreground
-        pixmap.draw_rectangle(gc, rox.g.TRUE, 0, 0, w, h)
+        pixmap.draw_rectangle(gc, True, 0, 0, w, h)
         
         gc.set_foreground(cmap.alloc_color('red'))
         dummy=rox.g.Window()

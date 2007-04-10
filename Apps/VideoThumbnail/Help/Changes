@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+10-Apr-2007
+~~~~~~~~~~~
+Removed cause of deprecation warning.
+
 14-Jan-2007 (0.1.13)
 ~~~~~~~~~~~
 Added support for translating strings in Options.xml.
