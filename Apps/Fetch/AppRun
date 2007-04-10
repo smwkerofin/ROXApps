@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.29 2006/12/16 12:54:16 stephen Exp $
+# $Id: AppRun,v 1.30 2007/02/10 10:59:30 stephen Exp $
 
 import os, sys
 import time
 
 import findrox; findrox.version(2, 0, 2)
-import rox, rox.options, rox.processes, rox.mime
+import rox, rox.options, rox.processes, rox.mime, rox.filer
 import gobject
 try:
     from rox import xattr
@@ -69,6 +69,10 @@ def get_filename(url):
         
     return fname
 
+RESPONSE_SHOW=1
+RESPONSE_OPEN=2
+RESPONSE_SET_TYPE=3
+
 class FetchWindow(rox.Dialog):
     def __init__(self, url, target=None):
         self.url=url
@@ -97,7 +101,7 @@ class FetchWindow(rox.Dialog):
         rox.Dialog.__init__(self)
         self.set_title(self.url)
         self.add_button(rox.g.STOCK_CANCEL, rox.g.RESPONSE_CANCEL)
-        self.start_button=self.add_button(rox.g.STOCK_OPEN,
+        self.start_button=self.add_button(_('Start'),
                                          rox.g.RESPONSE_ACCEPT)
         self.connect('response', self.do_response)
 
@@ -224,23 +228,43 @@ class FetchWindow(rox.Dialog):
         if resp==int(rox.g.RESPONSE_ACCEPT):
             self.real_start()
             return
-        #print self.dl_man
-        self.do_cancel(_('Cancelled'))
-        if self.proc:
-            self.kill_proc=True
-            #print >> sys.stderr, self, unused
-            self.proc.kill()
-        msg=_('Fetch of %s cancelled') % self.url
-        if self.count:
-            msg+=_(', %d bytes ') % self.count
-            if self.size:
-                msg+='(%d%%) ' % int(100.*self.count/self.size)
-            msg+=_('in %s') % self.target
-        msg+=_('.')
-        #print >> sys.stderr, 'Report cancel status'
-        rox.info(msg)
-        #print >> sys.stderr, 'Exit now'
-        sys.exit(0)
+
+        elif resp==int(rox.g.RESPONSE_CANCEL):
+            self.do_cancel(_('Cancelled'))
+            if self.proc:
+                self.kill_proc=True
+                self.proc.kill()
+            msg=_('Fetch of %s cancelled') % self.url
+            if self.count:
+                msg+=_(', %d bytes ') % self.count
+                if self.size:
+                    msg+='(%d%%) ' % int(100.*self.count/self.size)
+                msg+=_('in %s') % self.target
+            msg+=_('.')
+
+            rox.info(msg)
+
+            sys.exit(0)
+
+        elif resp==int(rox.g.RESPONSE_CLOSE):
+            self.close()
+
+        elif resp==RESPONSE_SET_TYPE:
+            msg=_('Force %s to be type %s (%s)?') % (self.real_target,
+                                                     self.stype.get_comment(),
+                                                     self.stype)
+            if rox.confirm(msg, rox.g.STOCK_APPLY, 'Set type'):
+                try:
+                    xattr.set(self.real_target, xattr.USER_MIME_TYPE,
+                              str(self.stype))
+                except:
+                    rox.report_exception()
+                        
+        elif resp==RESPONSE_SHOW:
+            rox.filer.show_file(self.real_target)
+
+        elif resp==RESPONSE_OPEN:
+            rox.filer.spawn_rox((self.real_target,))
 
     def idle_update(self, *unused):
         #print 'in idle_update', self.last_time
@@ -535,6 +559,7 @@ class FetchWindow(rox.Dialog):
             pass
         t=wait_for.int_value*1000
         mess=_('Done')
+        wrong_type=False
         if self.ltype!=self.stype:
             if self.stype in unknown_types:
                 mess=_('Done (server did not know type)')
@@ -544,19 +569,20 @@ class FetchWindow(rox.Dialog):
             else:
                 mess=_('Done.  Warning: type mismatch')
                 t*=3
-                if xattr and xattr.supported(fname) and set_type.int_value:
-                    msg=_('Force %s to be type %s (%s)?') % (fname,
-                                         self.stype.get_comment(), self.stype)
-                    if rox.confirm(msg, rox.g.STOCK_APPLY, 'Set type'):
-                        try:
-                            xattr.set(fname, xattr.USER_MIME_TYPE,
-                                      str(self.stype))
-                        except:
-                            rox.report_exception()
-                        
+                wrong_type=True
+                
         self.message(mess)
         if t:
             gobject.timeout_add(t, self.close)
+
+        for b in self.action_area.get_children():
+            b.hide()
+
+        if wrong_type and xattr and xattr.supported(fname) and set_type.int_value:
+            self.add_button(_('Set type'), RESPONSE_SET_TYPE)
+        self.add_buttons(rox.g.STOCK_FIND, RESPONSE_SHOW,
+                         rox.g.STOCK_OPEN, RESPONSE_OPEN,
+                         rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE)
         
 def main():
     if len(sys.argv)==1 or (len(sys.argv)==2 and sys.argv[1]=='-o'):

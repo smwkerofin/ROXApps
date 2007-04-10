@@ -1,11 +1,15 @@
 Fetch
 =====
 
-17-Feb-2006
+10-Apr-2007
+~~~~~~~~~~~
+Added extra buttons, which change.
+
+17-Feb-2007
 ~~~~~~~~~~~
 Re-enable the use of bytes_ready() to avoid blocking.
 
-20-Jan-2006
+20-Jan-2007
 ~~~~~~~~~~~
 Recognize application/octet-stream as a type servers return for an unknown 
 type.  Better description of types.  Setting type when server disagrees now 
@@ -159,4 +163,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.37 2007/02/10 10:59:30 stephen Exp $
+$Id: Changes,v 1.38 2007/02/18 11:42:21 stephen Exp $
