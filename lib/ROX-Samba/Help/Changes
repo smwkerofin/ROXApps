@@ -1,6 +1,10 @@
 Changes to ROX-Samba
 ====================
 
+10-Apr-2007
+~~~~~~~~~~~
+Options code changed to track changes in rox.templates.
+
 24-Mar-2007
 ~~~~~~~~~~~
 Options code changed to track changes in rox.templates.

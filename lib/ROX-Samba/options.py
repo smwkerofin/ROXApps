@@ -43,7 +43,7 @@ def build_edit_button(box, node, label):
     box.may_add_tip(button, node)
     def edit_button_handler(*args):
         t=rox.templates.load(root='main_window')
-        t.getWindow('main_window', ConfigEdit).show()
+        t.get_window('main_window', ConfigEdit).show()
     button.connect('clicked', edit_button_handler)
     return [button]
 rox.OptionsBox.widget_registry['edit-button'] = build_edit_button
