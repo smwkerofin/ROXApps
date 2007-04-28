@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.37 2006/11/04 13:13:48 stephen Exp $
+ * $Id: freefs.c,v 1.38 2006/11/04 15:07:42 stephen Exp $
  */
 #include "config.h"
 
@@ -731,7 +731,7 @@ static void get_mount_points(void)
   fclose(f);
 #endif
 
-  g_list_sort(mount_points, compare_mount_info);
+  mount_points=g_list_sort(mount_points, compare_mount_info);
 }
 
 static const char *find_mount_point(const char *fname)
@@ -1406,6 +1406,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.38  2006/11/04 15:07:42  stephen
+ * Mark more strings as translatable.
+ *
  * Revision 1.37  2006/11/04 13:13:48  stephen
  * Use gtk_rc_parse_string() to set up gauge colours, choice_install no longer needed.
  * More options controlling applet appearance, allowing it to adapt to smaller panels and to left or right panels.

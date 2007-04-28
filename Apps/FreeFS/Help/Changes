@@ -1,6 +1,10 @@
 Changes to FreeFS
 =================
 
+14-Apr-2007
+~~~~~~~~~~~
+Fix bug sorting the mount points.
+
 29-Dec-2006
 ~~~~~~~~~~~
 Translate strings in Options.xml, using the method in ROX-Filer.
