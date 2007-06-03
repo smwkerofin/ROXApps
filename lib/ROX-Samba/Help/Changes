@@ -1,6 +1,10 @@
 Changes to ROX-Samba
 ====================
 
+03-Jun-2007
+~~~~~~~~~~~
+If we don't have the fusesmb.conf file run the config editor first.
+
 10-Apr-2007
 ~~~~~~~~~~~
 Options code changed to track changes in rox.templates.

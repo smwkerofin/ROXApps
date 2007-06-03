@@ -2,6 +2,8 @@ import os, sys
 
 import rox, rox.options, rox.OptionsBox
 
+dpath='~/.smb/fusesmb.conf'
+
 rox.setup_app_options('ROX-Samba', site='kerofin.demon.co.uk')
 
 fuse_device=rox.options.Option('fuse_device', '/dev/fuse')
@@ -38,20 +40,24 @@ def show():
 def addNotify(fn):
     rox.app_options.add_notify(fn)
 
+def edit_fusesmb_config():
+    t=rox.templates.load(root='main_window')
+    t.get_window('main_window', ConfigEdit).show()
+
+def get_fusesmb_config_filename():
+    return os.path.expanduser(dpath)
+    
 def build_edit_button(box, node, label):
     button = rox.g.Button(label)
     box.may_add_tip(button, node)
     def edit_button_handler(*args):
-        t=rox.templates.load(root='main_window')
-        t.get_window('main_window', ConfigEdit).show()
+        edit_fusesmb_config()
     button.connect('clicked', edit_button_handler)
     return [button]
 rox.OptionsBox.widget_registry['edit-button'] = build_edit_button
 
 import rox.templates
 import ConfigParser
-
-dpath='~/.smb/fusesmb.conf'
 
 class ConfigEdit(rox.templates.ProxyWindow):
     def __init__(self, window, widgets, path=dpath):

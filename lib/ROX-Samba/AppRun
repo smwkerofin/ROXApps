@@ -161,10 +161,20 @@ def lookup_domain(host):
 def options_updated():
     pass
 
+def fusesmb_setup():
+    fname=options.get_fusesmb_config_filename()
+    return os.access(fname, os.F_OK)
+
+def check_fusesmb_config():
+    if not fusesmb_setup():
+        if rox.confirm(_('You do not appear to have set up fusesmb.  You will probably need to set up at least a user name and password.  Edit the configuration?'), rox.g.STOCK_EDIT):
+            #print 'edit'
+            options.edit_fusesmb_config()
+            rox.mainloop()
+
 options.addNotify(options_updated)
 
-if __name__=='__main__':
-
+def main():
     if len(sys.argv)>1:
         if sys.argv[1]=='--options':
             options.show()
@@ -173,10 +183,18 @@ if __name__=='__main__':
             unmount()
 
         else:
-            check_files()
+            if not check_files():
+                return
+            check_fusesmb_config()
             for a in sys.argv[1:]:
                 open_uri(a)
 
     else:
-        check_files()
+        if not check_files():
+            return
+        check_fusesmb_config()
         open_uri('smb://')
+        
+if __name__=='__main__':
+    main()
+
