@@ -11,8 +11,7 @@ Requirements
 
 Samba and FUSE should be included in any recent Linux distribution, but
 fusesmb may need to be installed from source.  To edit the fusesmb.conf file 
-you will need a very recent version of ROX-Lib, the 03-March-2007 snapshot
-or later.
+you will need a ROX-Lib 2.0.4 or later.
 
 Installation
 ~~~~~~~~~~~~

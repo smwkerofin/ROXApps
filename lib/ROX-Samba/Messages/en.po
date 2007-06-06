@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ROX-Samba 0.0.0\n"
-"POT-Creation-Date: 2007-03-03 16:33+GMT\n"
+"POT-Creation-Date: 2007-06-05 19:16+BST\n"
 "PO-Revision-Date: 2007-03-03 16:29+GMT\n"
 "Last-Translator: Stephen Watson <stephen@kerofin.demon.co.uk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -46,6 +46,12 @@ msgstr ""
 msgid ""
 "Unmounting \"%s\":\n"
 "%s"
+msgstr ""
+
+#: AppRun:170
+msgid ""
+"You do not appear to have set up fusesmb.  You will probably need to set up "
+"at least a user name and password.  Edit the configuration?"
 msgstr ""
 
 #: Options_strings:1
@@ -120,10 +126,10 @@ msgid ""
 "command that behaves exactly as 'smbclient'"
 msgstr ""
 
-#: options.py:61
+#: options.py:70
 msgid "Editing %s"
 msgstr ""
 
-#: options.py:102
+#: options.py:108
 msgid "Name"
 msgstr ""

@@ -2,7 +2,7 @@
 
 import os, sys
 
-import findrox; findrox.version(2, 0, 3)
+import findrox; findrox.version(2, 0, 4)
 import rox, rox.options, rox.filer
 
 import urlparse
