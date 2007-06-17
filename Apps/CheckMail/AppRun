@@ -2,18 +2,25 @@
 
 import os
 import sys
+import socket
 
 import findrox; findrox.version(2, 0, 3)
 
 import rox
 import rox.tasks
+import gobject
 
 host='kerofin@post.demon.co.uk'
+port=79
 
 ID=0
 FROM=1
 TO=2
 SIZE=3
+
+mail_icon=rox.g.gdk.pixbuf_new_from_file(os.path.join(rox.app_dir,
+                                                      'images',
+                                                      'mail.png'))
 
 class Window(rox.Window):
     def __init__(self):
@@ -46,24 +53,35 @@ class Window(rox.Window):
         vbox.show_all()
 
         self.scan=None
-        rox.g.timeout_add(60*1000, self.start_update)
+        try:
+            self.status_icon=rox.g.status_icon_new_from_pixbuf(mail_icon)
+            self.status_icon.set_visible(False)
+        except AttributeError:
+            self.status_icon=None
+        
+        gobject.timeout_add(60*1000, self.start_update)
         self.start_update()
 
     def start_update(self):
         if self.scan:
             return True
 
-        self.scan=os.popen('finger -l %s' % host)
+        #self.scan=os.popen('finger -l %s' % host)
+        self.scan=finger(host)
         rox.tasks.Task(self.update())
         return True
 
     def update(self):
         self.store.clear()
         header_end=False
+        nmail=0
         
         while True:
             yield rox.tasks.InputBlocker(self.scan.fileno())
-            line=self.scan.readline()
+            if isinstance(self.scan, socket.socket):
+                line=get_line(self.scan)
+            else:
+                line=self.scan.readline()
             if not line:
                 break
             toks=line.strip().split()
@@ -76,8 +94,39 @@ class Window(rox.Window):
                 it=self.store.append()
                 self.store.set(it, ID, int(toks[0]), FROM, toks[1],
                                TO, toks[2], SIZE, int(toks[3]))
+                nmail+=1
+                
 
         self.scan=None
+        if self.status_icon:
+            if nmail==0:
+                self.status_icon.set_visible(False)
+
+            elif nmail>0:
+                self.status_icon.set_tooltip('%d mail items waiting' % nmail)
+                self.status_icon.set_visible(True)
+
+def finger(target, port=port):
+    user, host=target.split('@')
+    s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #addr=socket.gethostbyname(host)
+    #print addr
+    s.connect((host, port))
+    s.send('/W %s\r\n' % user)
+    return s
+
+def get_line(sock):
+    ans=''
+    while True:
+        c=sock.recv(1)
+        if not c:
+            if ans:
+                return ans
+            return None
+        ans+=c
+        if c=='\n':
+            break
+    return ans
 
 win=Window()
 win.show()
