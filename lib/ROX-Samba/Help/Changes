@@ -1,6 +1,10 @@
 Changes to ROX-Samba
 ====================
 
+19-Jun-2007
+~~~~~~~~~~~
+Fix bug opening URI's with a path (reported by Markus Kiefer).
+
 03-Jun-2007 (0.0.1)
 ~~~~~~~~~~~
 If we don't have the fusesmb.conf file run the config editor first.
