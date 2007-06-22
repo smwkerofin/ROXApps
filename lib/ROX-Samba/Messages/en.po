@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: ROX-Samba 0.0.0\n"
-"POT-Creation-Date: 2007-06-05 19:16+BST\n"
+"POT-Creation-Date: 2007-06-22 16:35+BST\n"
 "PO-Revision-Date: 2007-03-03 16:29+GMT\n"
 "Last-Translator: Stephen Watson <stephen@kerofin.demon.co.uk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"

@@ -1,7 +1,7 @@
 Changes to ROX-Samba
 ====================
 
-19-Jun-2007
+19-Jun-2007 (0.0.2)
 ~~~~~~~~~~~
 Fix bug opening URI's with a path (reported by Markus Kiefer).
 
