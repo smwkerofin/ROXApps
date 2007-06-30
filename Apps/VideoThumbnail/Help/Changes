@@ -3,6 +3,14 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+23-Jun-2007
+~~~~~~~~~~~
+Can handle application/x-flash-video.
+
+27-May-2007
+~~~~~~~~~~~
+Thumbnail helper now in ROX-Lib 2.0.4.
+
 10-Apr-2007
 ~~~~~~~~~~~
 Removed cause of deprecation warning.

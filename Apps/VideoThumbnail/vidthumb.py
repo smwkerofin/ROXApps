@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.21 2006/12/30 11:59:03 stephen Exp $
+# $Id: vidthumb.py,v 1.22 2007/04/10 15:17:40 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -18,7 +18,7 @@ being processed.
 
 import os, sys
 import md5
-import rox, rox.mime
+import rox, rox.mime, rox.thumbnail
 import pango
 
 import thumb
@@ -59,11 +59,11 @@ def execute_return_err(cmd):
         
 debug=os.environ.get('VIDTHUMB_DEBUG', 0)
 
-class VidThumbNail(thumb.Thumbnailler):
+class VidThumbNail(rox.thumbnail.Thumbnailer):
     """Generate thumbnail for video files understood by totem"""
     def __init__(self, debug=False):
-        """Initialize Video thumbnailler"""
-        thumb.Thumbnailler.__init__(self, 'VideoThumbnail', 'vidthumb',
+        """Initialize Video thumbnailer"""
+        rox.thumbnail.Thumbnailer.__init__(self, 'VideoThumbnail', 'vidthumb',
                                     True, debug)
 
     def failed_image(self, rsize, tstr):
@@ -192,6 +192,7 @@ class VidThumbMPlayer(VidThumbNail):
     def get_image(self, inname, rsize):
         """Generate the raw image from the file.  We run mplayer (twice)
         to do the hard work."""
+        #print self.work_dir
         def get_length(fname):
             """Get the length in seconds of the source. """
             # -frames 0 might be needed on debian systems

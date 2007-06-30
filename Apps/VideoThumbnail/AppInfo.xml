@@ -18,5 +18,6 @@
     <MimeType type="application/ogg"/>
     <MimeType type="video/x-ogm"/>
     <MimeType type="application/x-matroska"/>
+    <MimeType type="application/x-flash-video"/>
   </CanThumbnail>
 </AppInfo>
