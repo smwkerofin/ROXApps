@@ -1,4 +1,4 @@
-# $Id: config.py,v 1.2 2006/12/16 16:37:31 stephen Exp $
+# $Id: config.py,v 1.3 2006/12/17 12:33:49 stephen Exp $
 
 import os, sys
 import urlparse
@@ -257,6 +257,7 @@ class SetWindow(rox.Dialog):
 
 	def check_overwrite(self, tdir, scheme):
 		current=os.path.join(tdir, scheme)
+
 		if os.access(current, os.F_OK) and not os.path.islink(current):
 			msg=_("Action for %s: already set, really change?") % scheme
 			if not rox.confirm(msg, rox.g.STOCK_APPLY,
@@ -268,12 +269,23 @@ class SetWindow(rox.Dialog):
 				rox.report_exception()
 				rox.filer.open_dir(tdir)
 				return False
+			
 		elif os.access(current, os.F_OK):
+			# Link to valid object, remove it
 			try:
 				os.remove(current)
 			except:
 				rox.report_exception()
 				return False
+			
+		elif os.path.islink(current):
+			# Broken link, remove it
+			try:
+				os.remove(current)
+			except:
+				rox.report_exception()
+				return False
+			
 		return True
 
 	def set_appdir(self, tdir, scheme, app):

@@ -1,6 +1,10 @@
 Launch
 ======
 
+05-Jun-2007
+~~~~~~~~~~~
+Fix problem trying to change a broken symlink (reported by Dennis Tomas).
+
 17-Dec-2006 (0.3.1)
 ~~~~~~~~~~~
 Don't set a handler for file:.
