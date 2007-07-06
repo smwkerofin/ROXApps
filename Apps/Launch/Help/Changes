@@ -1,7 +1,7 @@
 Launch
 ======
 
-05-Jun-2007
+05-Jun-2007 (0.3.2)
 ~~~~~~~~~~~
 Fix problem trying to change a broken symlink (reported by Dennis Tomas).
 

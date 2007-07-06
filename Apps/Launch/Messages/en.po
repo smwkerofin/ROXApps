@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Launch 0.1.5\n"
-"POT-Creation-Date: 2006-12-16 16:28+GMT\n"
+"POT-Creation-Date: 2007-07-06 13:35+BST\n"
 "PO-Revision-Date: 2006-04-29 11:40+BSTLast-Translator: Stephen Watson "
 "<stephen@kerofin.demon.co.uk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -51,23 +51,27 @@ msgstr ""
 msgid "No action for %s"
 msgstr ""
 
-#: config.py:257
+#: config.py:233
+msgid "Refusing to set handler for \"file:\" scheme"
+msgstr ""
+
+#: config.py:262
 msgid "Action for %s: already set, really change?"
 msgstr ""
 
-#: config.py:259
+#: config.py:264
 msgid "Change"
 msgstr ""
 
-#: config.py:278
+#: config.py:294
 msgid "Set application for %s"
 msgstr ""
 
-#: config.py:283
+#: config.py:299
 msgid "Set program for %s"
 msgstr ""
 
-#: config.py:296
+#: config.py:312
 msgid "Set command for %s"
 msgstr ""
 
