@@ -1,8 +1,0 @@
-<?xml version="1.0" ?>
-<mime-info
-  xmlns="http://www.freedesktop.org/standards/shared-mime-info">
-  <mime-type type="application/x-incomplete">
-    <comment>File which is being downloaded</comment>
-    <glob pattern="*.fetching"/>
-  </mime-type>
-</mime-info>
