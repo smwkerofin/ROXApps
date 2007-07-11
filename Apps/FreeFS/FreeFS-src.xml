@@ -1,7 +1,5 @@
 <?xml version="1.0" ?>
-<interface xmlns="http://zero-install.sourceforge.net/2004/injector/interface"
-           uri="http://www.kerofin.demon.co.uk/2005/interfaces/FreeFS"
-	   main="FreeFS/AppRun">
+<interface xmlns="http://zero-install.sourceforge.net/2004/injector/interface">
   <name>FreeFS</name>
   <summary>Display usage of a file system.</summary>
   <description>
@@ -16,14 +14,13 @@ view the program info, change the configuration or quit the program.
  
 
   </description>
+  <homepage>http://www.kerofin.demon.co.uk/rox/freefs.html</homepage>
   <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/FreeFS.png'/>
-<group>
+  <group main='src/build'>
     <requires interface="http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib">
-      <environment insert="." name="LIBDIRPATH"/>
+      <environment insert="AppRun" name="ROX_CLIB"/>
     </requires>
-    <implementation stability="testing" version="2.1.7"
-platform="Linux-ix86" id=".." released="Snapshot"/>
+    <implementation version="2.1.7" released="snapshot" stability='testing' id="."/>
   </group>
-  <feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/FreeFS'/>
-  <feed src="http://www.kerofin.demon.co.uk/2007/interfaces/FreeFS-src" arch="*-src"/>
-<</interface>
+</interface>
+

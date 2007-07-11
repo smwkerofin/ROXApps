@@ -1,6 +1,10 @@
 Changes to FreeFS
 =================
 
+28-Apr-2007
+~~~~~~~~~~~
+Prepare for use of 0compile.
+
 14-Apr-2007
 ~~~~~~~~~~~
 Fix bug sorting the mount points.
