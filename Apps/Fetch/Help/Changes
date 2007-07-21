@@ -1,6 +1,10 @@
 Fetch
 =====
 
+18-Feb-2007
+~~~~~~~~~~~
+Support version 2 of the DownloadManager protocol.
+
 10-Apr-2007
 ~~~~~~~~~~~
 Added extra buttons, which change.
@@ -163,4 +167,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.38 2007/02/18 11:42:21 stephen Exp $
+$Id: Changes,v 1.39 2007/04/10 15:16:22 stephen Exp $

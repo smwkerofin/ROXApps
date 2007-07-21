@@ -4,6 +4,7 @@ import dbus
 # DBus setup
 service_name='uk.co.demon.kerofin.DownloadManager'
 interface_name=service_name+'.Control'
+new_interface_name=service_name+'.Control2'
 object_path='/DownloadManager'
 
 try:
@@ -38,10 +39,16 @@ class Manager:
         if new_dbus:
             self.object=self.bus.get_object(service, object)
             self.iface=dbus.Interface(self.object, interface_name)
+            self.iface2=None
+            
         else:
             tservice=self.bus.get_service(service)
             self.object=tservice.get_object(object, interface_name)
             self.iface=self.object
+            try:
+                self.iface2=tservice.get_object(object, new_interface_name)
+            except:
+                self.iface2=None
 
         try:
             if new_dbus:
@@ -53,6 +60,11 @@ class Manager:
             
         if not running:
             raise DMNotRunning
+
+        if self.iface2:
+            self.client_id=self.iface2.RequestID('dclient')
+        else:
+            self.client_id=None
 
     def getQueueSize(self):
         """Return number of clients in the queue waiting to start.  If
@@ -76,7 +88,10 @@ class Manager:
         check=True
         while check:
             try:
-                ok=self.iface.CanIStart(host, fname)
+                if self.iface2:
+                    ok=self.iface2.CanIStartByID(self.client_id, host, fname)
+                else:
+                    ok=self.iface.CanIStart(host, fname)
             except:
                 raise DMNoAnswer
 
@@ -98,14 +113,20 @@ class Manager:
         size - number of bytes downloaded so far
         total - total number of bytes to download (optional)"""
         try:
-            self.iface.Update(size, total)
+            if self.iface2:
+                self.iface2.UpdateByUI(self.client_id, size, total)
+            else:
+                self.iface.Update(size, total)
         except:
             pass
 
     def done(self):
         """Download has finished sucessfully"""
         try:
-            self.iface.Done()
+            if self.iface2:
+                self.iface2.DoneByID(self.client_id)
+            else:
+                self.iface.Done()
         except:
             pass
 
@@ -113,7 +134,10 @@ class Manager:
         """Download was cancelled, either by user intervention or some error.
         why - string describing the reason the download was cancelled"""
         try:
-            self.iface.Cancel(why)
+            if self.iface2:
+                self.iface2.CancelByID(id, why)
+            else:
+                self.iface.Cancel(why)
         except:
             #self.report_exception('Cancel (%s)' % why)
             pass
