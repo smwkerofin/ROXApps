@@ -1,0 +1,9 @@
+#!/bin/sh
+
+srcdir="$1"
+destdir="$2"
+app="SystemTrayN"
+
+cp -r "$srcdir/$app" "$destdir/$app"
+cd "$destdir/$app"
+./AppRun --compile && cd src && make zero-install
