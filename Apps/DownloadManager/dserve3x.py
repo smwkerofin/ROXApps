@@ -10,6 +10,7 @@ import gobject
 # DBus setup
 service_name='uk.co.demon.kerofin.DownloadManager'
 interface_name=service_name+'.Control'
+new_interface_name=service_name+'.Control2'
 object_path='/DownloadManager'
 
 # Our options
@@ -111,11 +112,11 @@ class DownloadManager(dbus.service.Object):
         #print 'been pinged'
         return True
 
-    @dbus.service.method(interface_name)
-    def CanIStart(self, server, fname):
-        #print 'CanIStart', server, fname
-        #print dir(self.current)
-        id=self.current.get_sender()
+    @dbus.service.method(new_interface_name)
+    def RequestID(self, agent):
+        return str(self.current.get_sender())
+
+    def can_start(self, id, server, fname):
         if id in self.clients:
             client=self.clients[id]
             client.update()
@@ -142,6 +143,17 @@ class DownloadManager(dbus.service.Object):
         return False
 
     @dbus.service.method(interface_name)
+    def CanIStart(self, server, fname):
+        #print 'CanIStart', server, fname
+        #print dir(self.current)
+        id=self.current.get_sender()
+        return self.can_start(id, server, fname)
+
+    @dbus.service.method(new_interface_name)
+    def CanIStartByID(self, id, server, fname):
+        return self.can_start(id, server, fname)    
+
+    @dbus.service.method(interface_name)
     def QueueSize(self):
         ntot=len(self.clients)
         nact=len(self.active)
@@ -154,9 +166,22 @@ class DownloadManager(dbus.service.Object):
         #print 'Update', id, client
         client.update(size, total)
 
+    @dbus.service.method(new_interface_name)
+    def UpdateByID(self, id, size, total):
+        client=self.clients[id]
+        #print 'Update', id, client
+        client.update(size, total)
+
     @dbus.service.method(interface_name)
     def Done(self):
         id=self.current.get_sender()
+        client=self.clients[id]
+        #print 'Done', id, client
+        ##print client, 'has finished'
+        self.lose_client(id)
+
+    @dbus.service.method(new_interface_name)
+    def DoneByID(self, id):
         client=self.clients[id]
         #print 'Done', id, client
         ##print client, 'has finished'
@@ -166,6 +191,13 @@ class DownloadManager(dbus.service.Object):
     def Cancel(self, reason):
         #print 'in cancel', self, method, reason
         id=self.current.get_sender()
+        #client=self.clients[id]
+        #print client, 'has been cancelled', reason
+        self.lose_client(id=id)
+
+    @dbus.service.method(new_interface_name)
+    def CancelByID(self, reason):
+        #print 'in cancel', self, method, reason
         #client=self.clients[id]
         #print client, 'has been cancelled', reason
         self.lose_client(id=id)
