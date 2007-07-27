@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.30 2007/02/10 10:59:30 stephen Exp $
+# $Id: AppRun,v 1.31 2007/04/10 15:16:16 stephen Exp $
 
 import os, sys
 import time
 
-import findrox; findrox.version(2, 0, 2)
+import findrox; findrox.version(2, 0, 4)
 import rox, rox.options, rox.processes, rox.mime, rox.filer
 import gobject
 try:
@@ -24,6 +24,7 @@ real_install='%s/AppRun "$1"' % rox.app_dir
 rox.setup_app_options('Fetch', site='kerofin.demon.co.uk')
 
 from options import *
+import passwords
 
 def revert_install_path():
     if install_path.has_changed and install_path.value!=real_install:

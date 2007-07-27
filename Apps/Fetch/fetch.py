@@ -1,10 +1,10 @@
-# $Id: fetch.py,v 1.16 2007/02/10 10:59:30 stephen Exp $
+# $Id: fetch.py,v 1.17 2007/02/18 11:42:21 stephen Exp $
 
 import os, sys
 import time
 import fcntl, termios, struct
 
-import findrox; findrox.version(2, 0, 2)
+import findrox; findrox.version(2, 0, 4)
 import rox, rox.choices, rox.options, rox.basedir
 import gobject
 try:
@@ -14,14 +14,14 @@ except:
 
 import urllib, urlparse
 
-import xml.dom, xml.dom.minidom
-
 __builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
 stimeo=5*60
 
 rox.setup_app_options('Fetch', site='kerofin.demon.co.uk')
 from options import *
+import passwords
+
 rox.app_options.notify()
 
 # This won't work in Python 2.2
@@ -51,7 +51,7 @@ class ROXURLopener(urllib.FancyURLopener):
         #print host
         #print realm
         try:
-            pwds=get_passwords()
+            pwds=passwords.get_passwords()
             if pwds.has_key((host, realm)):
                 user, password=pwds[host, realm]
             else:
@@ -68,7 +68,7 @@ class ROXURLopener(urllib.FancyURLopener):
                 user, password=pd.get_login()
                 #print user, password
                 if pd.get_save() and (user!=ouser or password!=opass):
-                    add_password(pwds, host, realm, user, password)
+                    passwords.add_password(pwds, host, realm, user, password)
                 return user, password
         except:
             rox.report_exception()
@@ -254,70 +254,6 @@ class PasswordWindow(rox.Dialog):
 
     def get_save(self):
         return self.can_save.get_active()
-
-def _data(node):
-	"""Return all the text directly inside this DOM Node."""
-	return ''.join([text.nodeValue for text in node.childNodes
-			if text.nodeType == xml.dom.Node.TEXT_NODE])
-
-def get_passwords():
-    fname=rox.basedir.load_first_config('kerofin.demon.co.uk', 'Fetch',
-                                        'passwords.xml')
-    if not fname:
-        fname=rox.choices.load('Fetch', 'passwords.xml')
-    if not fname:
-        return {}
-
-    pwds={}
-    doc=xml.dom.minidom.parse(fname)
-    #print doc.getElementsByTagName('Entry')
-    for entry in doc.getElementsByTagName('Entry'):
-        host=entry.getAttribute('host')
-        realm=entry.getAttribute('realm')
-
-        node=entry.getElementsByTagName('User')[0]
-        user=_data(node)
-        node=entry.getElementsByTagName('Password')[0]
-        password=_data(node)
-
-        pwds[host, realm]=(user, password)
-
-    return pwds
-
-def save_passwords(pwds):
-    path=rox.basedir.save_config_path('kerofin.demon.co.uk', 'Fetch')
-    fname=os.path.join(path, 'passwords.xml')
-
-    doc=xml.dom.minidom.Document()
-    root=doc.createElement('Passwords')
-    doc.appendChild(root)
-
-    for key, value in pwds.iteritems():
-        host, realm=key
-        user, password=value
-
-        node=doc.createElement('Entry')
-        node.setAttribute('host', host)
-        node.setAttribute('realm', realm)
-        
-        snode=doc.createElement('User')
-        snode.appendChild(doc.createTextNode(user))
-        node.appendChild(snode)
-        snode=doc.createElement('Password')
-        snode.appendChild(doc.createTextNode(password))
-        node.appendChild(snode)
-        
-        root.appendChild(node)
-
-    f=file(fname+'.tmp', 'w')
-    doc.writexml(f)
-    f.close()
-    os.chmod(fname+'.tmp', 0600)
-    os.rename(fname+'.tmp', fname)
-        
-def add_password(pwds, host, realm, user, password):
-    pwds[host, realm]=(user, password)
-    save_passwords(pwds)
 
 def main():
     try:

@@ -18,6 +18,7 @@ you run it directly you will only be able to set up the program's options.
 </section>
 <section title="Passwords">
 <toggle name="allow_pw_change" label="Prompt for password even when known">Should Fetch prompt for a username and password even when previously saved?</toggle>
+<edit-button label="Edit stored passwords"/>
 
 </section>
 </options>
