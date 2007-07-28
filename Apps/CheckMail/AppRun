@@ -67,8 +67,11 @@ class Window(rox.Window):
             return True
 
         #self.scan=os.popen('finger -l %s' % host)
-        self.scan=finger(host)
-        rox.tasks.Task(self.update())
+        try:
+            self.scan=finger(host)
+            rox.tasks.Task(self.update())
+        except:
+            pass
         return True
 
     def update(self):
