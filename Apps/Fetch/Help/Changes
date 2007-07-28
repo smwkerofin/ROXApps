@@ -1,6 +1,10 @@
 Fetch
 =====
 
+27-Jul-2007
+~~~~~~~~~~~
+More readable formatting of byte sizes.
+
 21-Jul-2007
 ~~~~~~~~~~~
 Adding a password editing window.
@@ -171,4 +175,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.40 2007/07/21 11:33:14 stephen Exp $
+$Id: Changes,v 1.41 2007/07/27 16:32:44 stephen Exp $

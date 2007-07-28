@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.31 2007/04/10 15:16:16 stephen Exp $
+# $Id: AppRun,v 1.32 2007/07/27 16:32:44 stephen Exp $
 
 import os, sys
 import time
@@ -70,6 +70,22 @@ def get_filename(url):
         
     return fname
 
+def format_size(nb):
+    istr=str(nb)
+    if len(istr)>3:
+        p=len(istr)
+        while p>3:
+            istr=istr[:p-3]+','+istr[p-3:]
+            p-=3
+    if nb>4<<20:
+        tstr='%s bytes (%d MB)' % (istr, nb>>20)
+    elif nb>4<<10:
+        tstr='%s bytes (%d MB)' % (istr, nb>>10)
+    else:
+        tstr=istr+' bytes'
+
+    return tstr
+        
 RESPONSE_SHOW=1
 RESPONSE_OPEN=2
 RESPONSE_SET_TYPE=3
@@ -519,23 +535,12 @@ class FetchWindow(rox.Dialog):
         
     def report(self, nb, tsize):
         #print 'report', self, nb, tsize
-        if nb>4<<20:
-            tstr='%d bytes (%d MB)' % (nb, nb>>20)
-        elif nb>4<<10:
-            tstr='%d bytes (%d KB)' % (nb, nb>>10)
-        else:
-            tstr='%d bytes' % nb
-            
+        tstr=format_size(nb)
         self.fetched_l.set_text(tstr)
 
         if tsize>0:
             self.percent_done(nb, tsize)
-            if tsize>4<<20:
-                tstr='%d bytes (%d MB)' % (tsize, tsize>>20)
-            elif tsize>4<<10:
-                tstr='%d bytes (%d KB)' % (tsize, tsize>>10)
-            else:
-                tstr='%d bytes' % tsize
+            tstr=format_size(tsize)
             self.size_l.set_text(tstr)
         else:
             self.active()
