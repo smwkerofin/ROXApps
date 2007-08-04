@@ -18,7 +18,7 @@ This is based on the SystemTray applet, but updated.
       <environment insert="." name="LIBDIRPATH"/>
     </requires>
     <implementation id=".." release="Snapshot"
-		stability="testing" version="0.3.1" arch="Linux-i486"/>
+		stability="testing" version="0.3.2" arch="Linux-i486"/>
   </group>
   <feed-for interface='http://www.kerofin.demon.co.uk/2006/interfaces/SystemTrayN'/>
   <feed
