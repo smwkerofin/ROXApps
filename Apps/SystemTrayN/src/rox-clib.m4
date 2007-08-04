@@ -1,13 +1,13 @@
 dnl autoconf checks for ROX-CLib (and ROX in general)
 
-AC_DEFUN(ROX_FIND_ROX_RUN, [
+AC_DEFUN([ROX_FIND_ROX_RUN], [
 if test -z "$ROX_RUN"; then
   AC_CHECK_PROG(ROX_RUN, rox_run, rox_run, "$APP_DIR/rox_run")
 fi
 AC_SUBST(ROX_RUN)
 ])
 
-AC_DEFUN(ROX_FIND_LIBDIR, [
+AC_DEFUN([ROX_FIND_LIBDIR], [
 if test -z "$LIBDIR"; then
   AC_CHECK_PROG(LIBDIR, libdir, libdir, "$APP_DIR/libdir")
 fi
@@ -16,7 +16,7 @@ AC_SUBST(LIBDIR)
 
 dnl Check for app
 dnl ROX_APP_DIR(app, [var])
-AC_DEFUN(ROX_APP_DIR, [
+AC_DEFUN([ROX_APP_DIR], [
 AC_REQUIRE([ROX_FIND_ROX_RUN])
 AC_MSG_CHECKING($1)
 if "$ROX_RUN" $1 -h > /dev/null 2>&1 ; then
@@ -36,7 +36,7 @@ fi
 
 dnl Check for app and version
 dnl ROX_APP_DIR_VERSION(app, arg, major, minor, rel, ver_var)
-AC_DEFUN(ROX_APP_DIR_VERSION, [
+AC_DEFUN([ROX_APP_DIR_VERSION], [
 ROX_APP_DIR($1)
 AC_MSG_CHECKING(version of $1 >= $3.$4.$5)
 
@@ -57,7 +57,7 @@ fi
 
 dnl Check for library packaged as AppDir
 dnl ROX_LIB_DIR(app, [present, path])
-AC_DEFUN(ROX_LIB_DIR, [
+AC_DEFUN([ROX_LIB_DIR], [
 AC_REQUIRE([ROX_FIND_LIBDIR])
 AC_MSG_CHECKING($1)
 if "$LIBDIR" $1 > /dev/null 2>&1 ; then
@@ -81,7 +81,7 @@ fi
 
 dnl Check for lib and version
 dnl ROX_LIB_DIR_VERSION(app, vers, var, 0site)
-AC_DEFUN(ROX_LIB_DIR_VERSION, [
+AC_DEFUN([ROX_LIB_DIR_VERSION], [
 AC_REQUIRE([ROX_FIND_LIBDIR])
 AC_MSG_CHECKING(version of $1 >= $2)
 
@@ -117,12 +117,12 @@ fi
 ])
 
 dnl ROX-CLib specific
-AC_DEFUN(ROX_CLIB_OLD, [
+AC_DEFUN([ROX_CLIB_OLD], [
 ROX_APP_DIR_VERSION(ROX-CLib, -v, $1, $2, $3, ROX_CLIB_VERSION)
 ])
 
 dnl ROX-CLib specific
-AC_DEFUN(ROX_CLIB, [
+AC_DEFUN([ROX_CLIB], [
 ROX_LIB_DIR_VERSION(ROX-CLib, $1.$2.$3, ROX_CLIB_PATH, www.kerofin.demon.co.uk)
 if test -z "$ROX_CLIB_PATH" ; then
   AC_MSG_ERROR(Cannot find ROX-CLib)
@@ -135,8 +135,8 @@ ac_version=`expr $[1] \* 10000 + $[2] \* 100 + $[3]`
 AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ac_version)
 ])
 
-dnl ROX-CLib, first via 0launch 
-AC_DEFUN(ROX_CLIB_0LAUNCH, [
+dnl ROX-CLib, via 0launch or local install
+AC_DEFUN([ROX_CLIB_0LAUNCH], [
 ac_url=http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib
 AC_MSG_CHECKING(for ROX-CLib via 0launch)
 if 0launch -c $ac_url 2>/dev/null ; then
@@ -158,7 +158,7 @@ AC_DEFINE_UNQUOTED(ROX_CLIB_VERSION, $ac_version)
 ])
 
 dnl Extract version number from $APP_DIR/AppInfo.xml
-AC_DEFUN(ROX_SELF_VERSION, [
+AC_DEFUN([ROX_SELF_VERSION], [
 AC_MSG_CHECKING(version information)
 if test "$APP_DIR" = "" ; then
   ac_app_info=../AppInfo.xml
