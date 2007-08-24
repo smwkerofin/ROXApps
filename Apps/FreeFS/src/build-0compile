@@ -6,4 +6,5 @@ app="FreeFS"
 
 cp -r "$srcdir/$app" "$destdir/$app"
 cd "$destdir/$app"
+chmod -R u+w .
 ./AppRun --compile && cd src && make zero-install

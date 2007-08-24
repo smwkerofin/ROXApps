@@ -16,7 +16,9 @@ view the program info, change the configuration or quit the program.
  
 
   </description>
-  <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/FreeFS.png'/>
+  <icon type='image/png' href='http://www.kerofin.demon.co.uk/ricons/FreeFS.png'/>
+  <homepage>http://www.kerofin.demon.co.uk/rox/freefs.html</homepage>
+
 <group>
     <requires interface="http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib">
       <environment insert="." name="LIBDIRPATH"/>
@@ -26,4 +28,4 @@ platform="Linux-ix86" id=".." released="Snapshot"/>
   </group>
   <feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/FreeFS'/>
   <feed src="http://www.kerofin.demon.co.uk/2007/interfaces/FreeFS-src" arch="*-src"/>
-<</interface>
+</interface>

@@ -15,7 +15,7 @@ view the program info, change the configuration or quit the program.
 
   </description>
   <homepage>http://www.kerofin.demon.co.uk/rox/freefs.html</homepage>
-  <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/FreeFS.png'/>
+  <icon type='image/png' href='http://www.kerofin.demon.co.uk/ricons/FreeFS.png'/>
   <group main='src/build'>
     <requires interface="http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib">
       <environment insert="AppRun" name="ROX_CLIB"/>
