@@ -26,6 +26,8 @@ class Entry(object):
 
         op, msg1=fline.strip().split(None, 1)
         #print op, msg1
+        #print op
+        #print msg1
 
         sline=finger.readline()
         if not sline:
@@ -33,8 +35,16 @@ class Entry(object):
         if not sline.strip():
             return
 
-        date=sline[:16]
-        msg2=sline[16:].strip()
+        #print sline
+        #date=sline[:16].strip()
+        try:
+            tm, month, day, msg2=sline.strip().split(None, 3)
+        except ValueError:
+            tm, month, day=sline.strip().split()
+            msg2=''
+        date=tm+' '+month+' '+day
+        #print `date`
+        #msg2=sline[16:].strip()
 
         message=[msg1, msg2]
 
@@ -57,7 +67,11 @@ class Entry(object):
                 message.append(line[16:].strip())
 
         now=time.localtime(time.time())
-        t=time.strptime(date+' %d' % now.tm_year, '%H:%M %b %d %Y')
+        #print date, now.tm_year
+        try:
+            t=time.strptime(date+' %d' % now.tm_year, '%H:%M %b %d %Y')
+        except ValueError:
+            t=now
         #print t
 
         return Entry(op, time.mktime(t), message)
