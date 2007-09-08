@@ -44,6 +44,7 @@ case $1 in
 	    (cd "$APP_DIR/src"; autoconf)
 	fi
 	rm -f "$APP_DIR/src/config.cache"
+	shift
 	cd "$APP_DIR/src" && ./configure --with-platform="$PLATFORM" "$@" \
 			&& $MAKE clean && $MAKE  \
 			&& echo Done >&2 && exit 0
