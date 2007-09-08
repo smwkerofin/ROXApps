@@ -8,7 +8,11 @@ import findrox; findrox.version(2, 0, 3)
 
 import rox
 import rox.tasks
+import rox.Menu
 import gobject
+
+import finger
+import status_icon
 
 host='kerofin@post.demon.co.uk'
 port=79
@@ -21,10 +25,92 @@ SIZE=3
 mail_icon=rox.g.gdk.pixbuf_new_from_file(os.path.join(rox.app_dir,
                                                       'images',
                                                       'mail.png'))
+rox.Menu.set_save_name('CheckMail', site='kerofin.demon.co.uk')
 
-class Window(rox.Window):
+class MailQueue:
     def __init__(self):
+        self.scan=None
+        self.queue=[]
+        self.clients=[]
+        
+        gobject.timeout_add(60*1000, self.start_update)
+        self.start_update()
+
+    def start_update(self):
+        if self.scan:
+            return True
+
+        try:
+            self.scan=finger.Finger(host, long_output=True)
+            rox.tasks.Task(self.update())
+        except:
+            pass
+        return True
+
+    def update(self):
+        queue=[]
+        header_end=False
+        nmail=0
+        
+        while True:
+            yield rox.tasks.InputBlocker(self.scan.fileno())
+            try:
+                line=self.scan.readline()
+            except:
+                line=None
+            if not line:
+                break
+            toks=line.strip().split()
+            if len(toks)<4:
+                continue
+            if toks[0]=='---':
+                header_end=True
+
+            elif header_end:
+                queue.append((int(toks[0]), toks[1], toks[2],
+                                      int(toks[3])))
+                nmail+=1
+                
+
+        self.scan=None
+
+        self.queue=queue
+        for client in self.clients:
+            client.update_queue(self, self.queue)
+
+    def add_client(self, client):
+        if client not in self.clients:
+            self.clients.append(client)
+
+    def remove_client(self, client):
+        if client in self.clients:
+            self.clients.remove(client)
+
+    def get_update(self, client):
+        client.update_queue(self, self.queue)
+
+class MailQueueClient:
+    def __init__(self, mailq):
+        mailq.add_client(self)
+        self.mailq=mailq
+
+    def update_queue(self, mailq, entries):
+        pass
+
+    def __del__(self):
+        self.mailq.remove_client(self)
+
+    def unhook(self):
+        self.mailq.remove_client(self)
+
+    def get_update(self):
+        self.mailq.get_update(self)
+
+class Window(rox.Window, MailQueueClient):
+    def __init__(self, mailq):
         rox.Window.__init__(self)
+        MailQueueClient.__init__(self, mailq)
+        
         self.set_title(host)
 
         vbox=rox.g.VBox()
@@ -52,86 +138,37 @@ class Window(rox.Window):
 
         vbox.show_all()
 
-        self.scan=None
-        try:
-            self.status_icon=rox.g.status_icon_new_from_pixbuf(mail_icon)
-            self.status_icon.set_visible(False)
-        except AttributeError:
-            self.status_icon=None
-        
-        gobject.timeout_add(60*1000, self.start_update)
-        self.start_update()
+        self.get_update()
 
-    def start_update(self):
-        if self.scan:
-            return True
-
-        #self.scan=os.popen('finger -l %s' % host)
-        try:
-            self.scan=finger(host)
-            rox.tasks.Task(self.update())
-        except:
-            pass
-        return True
-
-    def update(self):
+    def update_queue(self, mailq, entries):
         self.store.clear()
-        header_end=False
-        nmail=0
-        
-        while True:
-            yield rox.tasks.InputBlocker(self.scan.fileno())
-            if isinstance(self.scan, socket.socket):
-                line=get_line(self.scan)
-            else:
-                line=self.scan.readline()
-            if not line:
-                break
-            toks=line.strip().split()
-            if len(toks)<4:
-                continue
-            if toks[0]=='---':
-                header_end=True
+        for ent in entries:
+            it=self.store.append()
+            self.store.set(it, ID, ent[0], FROM, ent[1],
+                               TO, ent[2], SIZE, ent[3])
 
-            elif header_end:
-                it=self.store.append()
-                self.store.set(it, ID, int(toks[0]), FROM, toks[1],
-                               TO, toks[2], SIZE, int(toks[3]))
-                nmail+=1
-                
+class StatusIcon(status_icon.StatusIcon, MailQueueClient):
+    def __init__(self, mailq):
+        MailQueueClient.__init__(self, mailq)
+        status_icon.StatusIcon.__init__(self, mail_icon,
+                                        rox.Menu.Menu('main', [
+            rox.Menu.Action('Quit', 'do_quit', stock=rox.g.STOCK_QUIT)]))
 
-        self.scan=None
-        if self.status_icon:
-            if nmail==0:
-                self.status_icon.set_visible(False)
+        self.get_update()
 
-            elif nmail>0:
-                self.status_icon.set_tooltip('%d mail items waiting' % nmail)
-                self.status_icon.set_visible(True)
+    def update_queue(self, mailq, entries):
+        count=len(entries)
+        if count>0:
+            self.set_tooltip('%d mail entries waiting' % count)
+        self.set_visible(len(entries)>0)
 
-def finger(target, port=port):
-    user, host=target.split('@')
-    s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #addr=socket.gethostbyname(host)
-    #print addr
-    s.connect((host, port))
-    s.send('/W %s\r\n' % user)
-    return s
+    def do_quit(self, *args):
+        rox.toplevel_unref()
+        self.set_visible(False)
 
-def get_line(sock):
-    ans=''
-    while True:
-        c=sock.recv(1)
-        if not c:
-            if ans:
-                return ans
-            return None
-        ans+=c
-        if c=='\n':
-            break
-    return ans
+    def on_activate(self, icon):
+        Window(self.mailq).show()
 
-win=Window()
-win.show()
+icon=StatusIcon(MailQueue())
 
 rox.mainloop()
