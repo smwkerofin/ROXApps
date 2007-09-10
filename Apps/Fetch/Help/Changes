@@ -1,6 +1,14 @@
 Fetch
 =====
 
+11-Aug-2007
+~~~~~~~~~~~
+Fix small bug in formatting.
+
+04-Aug-2007
+~~~~~~~~~~~
+Added apply button.
+
 27-Jul-2007
 ~~~~~~~~~~~
 More readable formatting of byte sizes.
@@ -175,4 +183,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.41 2007/07/27 16:32:44 stephen Exp $
+$Id: Changes,v 1.42 2007/07/28 15:45:57 stephen Exp $
