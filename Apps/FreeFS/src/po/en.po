@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FreeFS 2.1.5\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2006-11-04 15:09+0000\n"
+"POT-Creation-Date: 2007-09-10 16:23+0100\n"
 "PO-Revision-Date: 2006-03-07 19:14+0000\n"
 "Last-Translator: Stephen Watson <stephen@kerofin.demon.co.uk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -250,4 +250,58 @@ msgstr ""
 
 #: freefs.c:1186
 msgid "Invalid remote call, Path not given"
+msgstr ""
+
+#: Options_strings:1
+msgid "Monitoring"
+msgstr ""
+
+#: Options_strings:2
+msgid "Update rate"
+msgstr ""
+
+#: Options_strings:3
+msgid "How often to check the file system"
+msgstr ""
+
+#: Options_strings:4
+msgid "Applet"
+msgstr ""
+
+#: Options_strings:5
+msgid "Applet size"
+msgstr ""
+
+#: Options_strings:6
+msgid "Initial size"
+msgstr ""
+
+#: Options_strings:7
+msgid "Show directory"
+msgstr ""
+
+#: Options_strings:8
+msgid ""
+"If this is on the\n"
+"file system root name is shown"
+msgstr ""
+
+#: Options_strings:9
+msgid "Minimalist display"
+msgstr ""
+
+#: Options_strings:10
+msgid ""
+"If this is on then\n"
+"the applet display is as small as possible"
+msgstr ""
+
+#: Options_strings:11
+msgid "Vertical Orientation"
+msgstr ""
+
+#: Options_strings:12
+msgid ""
+"If this is on then\n"
+"the percentage gauge is vertical instead of horizontal"
 msgstr ""
