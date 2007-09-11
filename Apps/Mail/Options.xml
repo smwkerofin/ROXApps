@@ -1,9 +1,0 @@
-<?xml version='1.0'?>
-<options>
-<section title='Main'>
-<toggle name='CheckOutgoingQ' label='Check outgoing mail queue'>
-If set then also monitor the outgoing mail queue.</toggle>
-<toggle name='BeepForNew' label='Beep when mail arrives'>
-If set then make a noise when new mail arrives.</toggle>
-</section>
-</options>
