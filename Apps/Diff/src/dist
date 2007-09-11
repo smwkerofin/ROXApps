@@ -1,9 +1,0 @@
-#!/bin/sh
-
-wdir="`dirname $0`"
-cd "$wdir"
-
-aclocal -I $HOME/lib/ROX-CLib/Help
-autoconf
-rm -rf autom4te.cache
-(cd po; ./update-po)
