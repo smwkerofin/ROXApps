@@ -1,4 +1,4 @@
-# $Id: DesktopFile.py,v 1.6 2005/10/16 12:03:29 stephen Exp $
+# $Id: DesktopFile.py,v 1.7 2006/04/18 10:38:23 stephen Exp $
 
 """Scan .desktop files and generate rox wrappers for programs"""
 
@@ -47,6 +47,10 @@ class DesktopEntry:
                 for size in ('48x48', '64x64', '32x32', '22x22', '16x16'):
                     self.ipath.append(os.path.join(prefix, kde_pixmap_dir,
                                                    col, size, 'apps'))
+        for prefix in ('/usr/share/icons', '/usr/local/share/icons'):
+            for size in ('48x48', '64x64', '32x32', '22x22', '16x16'):
+                self.ipath.append(os.path.join(prefix, 'icons', 'hicolor',
+                                               size, 'apps'))
         self.ipath.append('/usr/local/share/pixmaps')
         self.ipath.append('/usr/share/pixmaps')
 
@@ -77,11 +81,11 @@ class DesktopEntry:
         for dir in self.ipath:
             path=os.path.join(dir, base)
             #print path, os.access(path, os.R_OK)
-            if os.access(path, os.R_OK)==1:
+            if os.access(path, os.R_OK) and not os.path.isdir(path):
                 return path
             path=os.path.join(dir, base+'.png')
             #print path, os.access(path, os.R_OK)
-            if os.access(path, os.R_OK)==1:
+            if os.access(path, os.R_OK):
                 return path
         return None
 

@@ -1,6 +1,10 @@
 Desktop2App
 ===========
 
+20-Sep-2007
+~~~~~~~~~~~
+Better icon lookup.
+
 18-Apr-2006
 ~~~~~~~~~~~
 Added i18n support.
@@ -29,4 +33,4 @@ More places to look for icons.  Use more recent ROX-Lib.
 ~~~~~~~~~~~
 
 -- 
-$Id: Changes,v 1.7 2005/10/16 12:03:29 stephen Exp $
+$Id: Changes,v 1.8 2006/04/18 10:38:37 stephen Exp $
