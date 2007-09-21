@@ -5,6 +5,8 @@ SHELL = @SHELL@
 srcdir = @srcdir@
 PLATFORM = @with_platform@
 PLATFORM_DIR = ../${PLATFORM}
+LIBS=@LIBS@
+
 .SUFFIXES:
 .SUFFIXES: .c .o
 

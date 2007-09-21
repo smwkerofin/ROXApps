@@ -68,6 +68,7 @@ AC_CHECK_HEADERS(apsymbols.h apbuild/apsymbols.h)
 dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
+AC_CHECK_LIB(intl, gettext)
 AC_CHECK_FUNCS(realpath bindtextdomain gettext statvfs statfs setmntent)
 
 dnl Which file contains the mount entries?

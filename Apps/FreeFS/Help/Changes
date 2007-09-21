@@ -1,6 +1,10 @@
 Changes to FreeFS
 =================
 
+21-Sep-2007
+~~~~~~~~~~~
+May need to link against libintl.
+
 28-Apr-2007 (2.1.7)
 ~~~~~~~~~~~
 Prepare for use of 0compile.
