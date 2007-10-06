@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+
+import os, sys
+
+import findrox; findrox.version(2, 0, 2)
+import rox, rox.applet, rox.Menu
+import gobject
+
+import stats
+
+class Applet(rox.applet.Applet):
+    def __init__(self, xid=0):
+        rox.applet.Applet.__init__(self, xid)
+
+        ebox=rox.g.EventBox()
+        self.add(ebox)
+
+        vbox=rox.g.VBox(False, 2)
+        align=rox.g.Alignment(0.5, 0.5, 0.0, 0.0)
+        ebox.add(align)
+        align.add(vbox)
+
+        self.sicon=rox.g.Image()
+        self.sicon.set_from_stock(rox.g.STOCK_NO, rox.g.ICON_SIZE_MENU)
+        align=rox.g.Alignment(0.5, 0.5, 1.0, 0.0)
+        align.add(self.sicon)
+        vbox.pack_start(align, False, False)
+
+        self.tx=rox.g.Label('?')
+        align=rox.g.Alignment(1.0, 0.5, 0.0, 0.0)
+        align.add(self.tx)
+        vbox.pack_start(align, False, False)
+        
+        self.rx=rox.g.Label('?')
+        align=rox.g.Alignment(1.0, 0.5, 0.0, 0.0)
+        align.add(self.rx)
+        vbox.pack_start(align, False, False)
+
+        ebox.connect('button_press_event', self.click)
+        ebox.add_events(rox.g.gdk.BUTTON_PRESS_MASK)
+
+        self.show_all()
+
+        rox.Menu.set_save_name('ADSLStats', site='kerofin.demon.co.uk')
+        self.menu=rox.Menu.Menu('main', [
+            rox.Menu.Action('Quit', 'do_quit', stock=rox.g.STOCK_QUIT)
+            ])
+
+        self.parser=None
+
+        gobject.timeout_add(30*1000, self.new_update)
+        self.new_update()
+
+    def click(self, widget, event, data=None):
+        if event.button==3:
+            self.menu.popup(self, event, self.position_menu)
+            return True
+        return False
+
+    def do_quit(self, *unused):
+        rox.toplevel_unref()
+
+    def set_stats(self, ok, tx, rx):
+        if ok:
+            icon=rox.g.STOCK_YES
+        else:
+            icon=rox.g.STOCK_NO
+        self.sicon.set_from_stock(icon, rox.g.ICON_SIZE_MENU)
+        self.tx.set_text(str(tx))
+        self.rx.set_text(str(rx))
+
+    def new_update(self, *unused):
+        try:
+            self.parser=stats.open()
+            gobject.timeout_add(100, self.current)
+        except:
+            self.parser=None
+            self.set_stats(False, 'X', 'X')
+        return True
+
+    def current(self, *unused):
+        #print >> sys.stderr, 'current', self.parser
+        if not self.parser:
+            return False
+
+        if not self.parser.update():
+            self.parser=None
+            return False
+        
+        try:
+            tx, rx=self.parser.getConSpeed()
+            #print >> sys.stderr, tx, rx
+            self.set_stats(True, tx, rx)
+            self.parser=None
+        except:
+            pass
+
+        #print >> sys.stderr, 'again'
+        return True
+
+if len(sys.argv)>1:
+    app=Applet(sys.argv[1])
+else:
+    app=Applet()
+
+rox.mainloop()
