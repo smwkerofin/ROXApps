@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+#
+# $Id$
+
+import os, sys
+import urlparse
+
+import findrox; findrox.version(1,9,13)
+import rox
+import rox.options
+import rox.OptionsBox
+import rox.filer
+
+rox.setup_app_options('Launch')
+
+moz_cmd='mozilla -remote "openURL(%s,new-window)"'
+
+http_cmd=rox.options.Option('http', moz_cmd)
+ftp_cmd=rox.options.Option('ftp', '')
+
+rox.app_options.notify()
+
+def install_button_handler(*args):
+    import rox.mime_handler
+    try:
+        rox.mime_handler.install_from_appinfo()
+    except:
+        rox.report_exception()
+
+def build_install_button(box, node, label):
+    #print box, node, label
+    button = rox.g.Button(label)
+    box.may_add_tip(button, node)
+    button.connect('clicked', install_button_handler)
+    return [button]
+rox.OptionsBox.widget_registry['install-button'] = build_install_button
+
+def uri_from_file(fname):
+    for line in file(fname, 'r').readlines():
+        l=line.strip()
+        if not l or l[0]=='#':
+            continue
+        if l[:4]=='URL=':
+            return l[4:].strip()
+        return l
+
+def launch_uri(uri):
+    scheme, location, path, query, fragment=urlparse.urlsplit(uri, 'file')
+
+    if scheme=='file':
+        rox.filer.spawn_rox((path,))
+        return
+
+    cmd=''
+    if scheme=='ftp':
+        cmd=ftp_cmd.value
+    elif scheme=='http' or scheme=='https':
+        cmd=http_cmd.value
+
+    if not cmd:
+        cmd=http_cmd.value
+    if not cmd:
+        cmd=moz_cmd
+
+    scmd=cmd % uri
+    #print cmd
+    #print uri
+    #print scmd
+    os.spawnv(os.P_NOWAIT, '/bin/sh', ('sh', '-c', scmd))
+
+def run_options():
+    rox.edit_options()
+    rox.mainloop()
+
+def run_file(fname):
+    uri=uri_from_file(fname)
+    if not uri:
+        rox.alert('No URI found in %s' % fname)
+        return
+    launch_uri(uri)
+
+if __name__=='__main__':
+    if len(sys.argv)>1:
+        if sys.argv[1][0]=='/':
+            run_file(sys.argv[1])
+        elif sys.argv[1]=='-o':
+            run_options()
+        else:
+            launch_uri(sys.argv[1])
+    else:
+        rox.alert('Launch should be passed either a URL or a URI file')
+        

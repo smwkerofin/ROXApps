@@ -1,0 +1,259 @@
+#! /usr/bin/env python
+
+import dbus
+import sys, time
+
+import findrox; findrox.version(1, 9, 16)
+import rox, rox.options
+
+# DBus setup
+service_name='uk.co.demon.kerofin.DownloadManager'
+interface_name=service_name
+object_path='/DownloadManager'
+
+# Out options, no way yet to show them
+rox.setup_app_options('DownloadManager')
+
+allow_nclient=rox.options.Option('allow_nclient', 1)
+client_expires=rox.options.Option('client_expires', 60)
+show_nactive=rox.options.Option('show_nactive', 2)
+show_nwaiting=rox.options.Option('show_nwaiting', 1)
+
+rox.app_options.notify()
+
+class Client:
+    """Tracks a download client"""
+    def __init__(self, id, server, fname):
+        """Store data"""
+        self.id=id
+        self.server=server
+        self.fname=fname
+        
+        self.last=time.time()
+        self.start=self.last
+        self.running=False
+
+        self.size=0
+        self.total=0
+
+    def expired(self):
+        """Has the client failed to update recently and therefore has expired?"""
+        #print time.time(), self.last, expires
+        return time.time()-self.last>client_expires.int_value
+
+    def run(self):
+        """Client has moved from pending to downloading"""
+        self.running=True
+
+    def update(self, size=None, total=None):
+        """Client has downloaded another chunk"""
+        self.last=time.time()
+        if size is not None:
+            self.size=size
+        if total is not None:
+            self.total=total
+
+    def __str__(self):
+        return '<Client id="%s" host="%s" file="%s" last=%f running=%s>' % (self.id, self.server, self.fname, self.last, self.running)
+
+ID=0
+SERVER=1
+FNAME=2
+STATE=3
+SIZE=4
+TOTAL=5
+PER=6
+AGE=7
+
+class MyObject(dbus.Object, rox.Window):
+    def __init__(self, service):
+        dbus.Object.__init__(self, object_path, service, [self.Ping,
+                                                          self.CanIStart,
+                                                          self.QueueSize,
+                                                          self.Update,
+                                                          self.Done,
+                                                          self.Cancel])
+
+        rox.Window.__init__(self)
+
+        self.clients={}
+        self.active=[]
+
+        self.set_title('Download Manager')
+        self.set_default_size(400, 100)
+
+        vbox=rox.g.VBox()
+        self.add(vbox)
+        
+        swin = rox.g.ScrolledWindow()
+        swin.set_border_width(4)
+        swin.set_policy(rox.g.POLICY_NEVER, rox.g.POLICY_ALWAYS)
+        swin.set_shadow_type(rox.g.SHADOW_IN)
+        vbox.pack_start(swin, True, True, 0)
+
+        self.model = rox.g.ListStore(str, str, str, str, str, str, str, str)
+        view = rox.g.TreeView(self.model)
+        self.view = view
+        swin.add(view)
+
+        cell = rox.g.CellRendererText()
+        column = rox.g.TreeViewColumn('Client', cell, text = ID)
+        view.append_column(column)
+        
+        cell = rox.g.CellRendererText()
+        column = rox.g.TreeViewColumn('Server', cell, text = SERVER)
+        view.append_column(column)
+        
+        cell = rox.g.CellRendererText()
+        column = rox.g.TreeViewColumn('File', cell, text = FNAME)
+        view.append_column(column)
+        
+        cell = rox.g.CellRendererText()
+        column = rox.g.TreeViewColumn('State', cell, text = STATE)
+        view.append_column(column)
+        
+        cell = rox.g.CellRendererText()
+        column = rox.g.TreeViewColumn('Fetched', cell, text = SIZE)
+        view.append_column(column)
+        
+        cell = rox.g.CellRendererText()
+        column = rox.g.TreeViewColumn('Total', cell, text = TOTAL)
+        view.append_column(column)
+        
+        cell = rox.g.CellRendererText()
+        column = rox.g.TreeViewColumn('Progress', cell, text = PER)
+        view.append_column(column)
+
+        cell = rox.g.CellRendererText()
+        column = rox.g.TreeViewColumn('Age', cell, text = AGE)
+        view.append_column(column)
+
+        vbox.show_all()
+
+        rox.g.timeout_add(2000, self.update)
+
+    def update(self, *unused):
+        self.model.clear()
+
+        nactive=0
+        for act in self.active:
+            client=self.clients[act]
+            iter=self.model.append()
+            self.model.set(iter, ID, act, SERVER, client.server,
+                           FNAME, client.fname,
+                           STATE, 'active', SIZE, str(client.size),
+                           AGE, str(int(time.time()-client.last)))
+            if client.total>0:
+                self.model.set(iter, TOTAL, str(client.total),
+                               PER, '%3d%%' % (100*client.size/client.total))
+
+            nactive+=1
+
+        keys=self.clients.keys()
+        keys.sort()
+        nwait=0
+        for id in keys:
+            if id not in self.active:
+                client=self.clients[id]
+                iter=self.model.append()
+                self.model.set(iter, ID, id, SERVER, client.server,
+                               FNAME, client.fname, STATE, 'waiting',
+                               AGE, str(int(time.time()-client.last)))
+                nwait+=1
+
+        if nactive>=show_nactive.int_value or nwait>=show_nwaiting.int_value:
+            self.show()
+        else:
+            self.hide()
+                
+        return True
+        
+    def Ping(self, method):
+        return 1
+
+    def CanIStart(self, method, server, fname):
+        id=method.get_sender()
+        if id in self.clients:
+            client=self.clients[id]
+            client.update()
+        else:
+            client=Client(id, server, fname)
+            self.clients[id]=client
+        #print 'Start request from', id
+        #print 'active', self.active
+
+        if len(self.active)>=allow_nclient.int_value:
+            try:
+                self.check_expired()
+            except:
+                print sys.exc_info()[:2]
+
+        if len(self.active)<allow_nclient.int_value:
+            #print 'starting', id
+            self.active.append(id)
+            client.run()
+            return True
+
+        #print 'Rejected, %d in queue' % (len(self.clients)-len(self.active))
+        return False
+
+    def QueueSize(self, method):
+        ntot=len(self.clients)
+        nact=len(self.active)
+        return ntot-nact
+        
+    def Update(self, method, size, total):
+        id=method.get_sender()
+        client=self.clients[id]
+        client.update(size, total)
+
+    def Done(self, method):
+        id=method.get_sender()
+        client=self.clients[id]
+        #print client, 'has finished'
+        self.lose_client(id=id)
+
+    def Cancel(self, method, reason):
+        id=method.get_sender()
+        client=self.clients[id]
+        #print client, 'has been cancelled', reason
+        self.lose_client(id=id)
+
+    def lose_client(self, id=None, client=None):
+        if not id and not client:
+            return
+        
+        if not id:
+            id=client.id
+            
+        if id in self.active:
+            self.active.remove(id)
+        del self.clients[id]
+
+    def check_expired(self):
+        # print 'in check_expired', self.clients
+        for c in self.clients:
+            #print 'id', c
+            client=self.clients[c]
+            #print client
+            if client.expired():
+                #print client, 'has expired'
+                self.lose_client(c)
+
+    def __str__(self, *args):
+        return 'MyObject-%s' % id(self)
+
+bus=dbus.SessionBus()
+#print bus
+server=dbus.Service(service_name, bus)
+#print server
+object=MyObject(server)
+#print object
+#print dir(object)
+
+object.emit_signal(interface_name, 'Running')
+
+#print 'start main loop'
+rox.mainloop()
+#print 'end main loop'
+

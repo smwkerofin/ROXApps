@@ -1,0 +1,14 @@
+DownloadManager
+===============
+
+15-Jan-2005
+~~~~~~~~~~~
+Preparing for first release.  Added doc strings to dclient.py.
+
+07-Jan-2005
+~~~~~~~~~~~
+Now a proper app.
+
+15-Nov-2004
+~~~~~~~~~~~
+First version, command line program.

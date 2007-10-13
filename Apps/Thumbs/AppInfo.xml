@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<AppInfo>
+  <Summary>Purge thumbnail files</Summary>
+  <About>
+    <Purpose>Purge thumbnail files</Purpose>
+    <Version>0.1.0 (6th May 2003)</Version>
+    <Authors>Stephen Watson</Authors>
+    <License>GNU General Public License</License>
+    <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
+  </About>
+</AppInfo>
