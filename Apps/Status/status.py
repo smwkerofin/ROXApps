@@ -21,10 +21,13 @@ class Entry(object):
         if fline is None:
             return
 
-        if not fline.strip():
+        fline=fline.strip()
+        if not fline:
+            return
+        if fline[0]=='=' and fline[-1]=='=':
             return
 
-        op, msg1=fline.strip().split(None, 1)
+        op, msg1=fline.split(None, 1)
         #print op, msg1
         #print op
         #print msg1
@@ -35,13 +38,16 @@ class Entry(object):
         if not sline.strip():
             return
 
-        #print sline
+        #print `sline`
         #date=sline[:16].strip()
         try:
             tm, month, day, msg2=sline.strip().split(None, 3)
         except ValueError:
             tm, month, day=sline.strip().split()
             msg2=''
+        if '.' in tm:
+            tm=tm.replace('.', ':')
+        #print tm, month, day, msg2
         date=tm+' '+month+' '+day
         #print `date`
         #msg2=sline[16:].strip()
@@ -67,7 +73,7 @@ class Entry(object):
                 message.append(line[16:].strip())
 
         now=time.localtime(time.time())
-        #print date, now.tm_year
+        #print `date`, now.tm_year
         try:
             t=time.strptime(date+' %d' % now.tm_year, '%H:%M %b %d %Y')
         except ValueError:
