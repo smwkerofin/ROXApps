@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.33 2007/07/28 15:45:56 stephen Exp $
+# $Id: AppRun,v 1.34 2007/09/10 15:28:28 stephen Exp $
 
 import os, sys
 import time
+import locale
+locale.setlocale(locale.LC_ALL, '')
 
 import findrox; findrox.version(2, 0, 4)
 import rox, rox.options, rox.processes, rox.mime, rox.filer
@@ -71,12 +73,7 @@ def get_filename(url):
     return fname
 
 def format_size(nb):
-    istr=str(nb)
-    if len(istr)>3:
-        p=len(istr)
-        while p>3:
-            istr=istr[:p-3]+','+istr[p-3:]
-            p-=3
+    istr=locale.format('%d', nb, True)
     if nb>4<<20:
         tstr='%s bytes (%d MB)' % (istr, nb>>20)
     elif nb>4<<10:
@@ -356,7 +353,10 @@ class FetchWindow(rox.Dialog):
 
     def do_cancel(self, why):
         if self.dl_man:
-            self.dl_man.cancel(why)
+            try:
+                self.dl_man.cancel(why)
+            except dclient.DMException:
+                pass
             self.dl_man=None
         self.unwait()
 
@@ -458,6 +458,7 @@ class FetchWindow(rox.Dialog):
                 self.dl_man=dclient.connect()
             except:
                 self.message(_("Could not connect to DownloadManager"))
+                self.dl_man=None
 
         if self.dl_man:
             self.acquire()
@@ -472,8 +473,11 @@ class FetchWindow(rox.Dialog):
                 
         
     def acquire(self):
-        self.dl_man.register(self.on_slot_available)
-        self.wtag=gobject.timeout_add(delay, self.waiting)
+        try:
+            self.dl_man.register(self.on_slot_available)
+            self.wtag=gobject.timeout_add(delay, self.waiting)
+        except dclient.DMException:
+            self.wtag=0
 
     def waiting(self):
         if self.proc:
@@ -546,11 +550,17 @@ class FetchWindow(rox.Dialog):
             self.active()
 
         if self.dl_man:
-            self.dl_man.update(nb, tsize)
+            try:
+                self.dl_man.update(nb, tsize)
+            except dclient.DMException:
+                pass
 
     def finished(self):
         if self.dl_man:
-            self.dl_man.done()
+            try:
+                self.dl_man.done()
+            except dclient.DMException:
+                pass
             self.dl_man=None
         try:
             os.rename(self.target, self.real_target)

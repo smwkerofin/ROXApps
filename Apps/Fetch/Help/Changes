@@ -1,6 +1,14 @@
 Fetch
 =====
 
+24-Nov-2007
+~~~~~~~~~~~
+Catch more exceptions.
+
+09-Oct-2007
+~~~~~~~~~~~
+Better way of formatting byte sizes.
+
 11-Aug-2007
 ~~~~~~~~~~~
 Fix small bug in formatting.
@@ -183,4 +191,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.42 2007/07/28 15:45:57 stephen Exp $
+$Id: Changes,v 1.43 2007/09/10 15:28:28 stephen Exp $
