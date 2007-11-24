@@ -2,6 +2,7 @@
 <options>
   <section title="Install">
     <install-button label="Install type handlers">Click here to install the handlers for the supported MIME-types</install-button>
+    <manage-type-button label="Manage MIME type">Click here to handling of a specific MIME type</manage-type-button>
   </section>
   <section title="General options">
     <frame label='Back end'>

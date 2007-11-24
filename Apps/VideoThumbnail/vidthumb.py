@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.22 2007/04/10 15:17:40 stephen Exp $
+# $Id: vidthumb.py,v 1.23 2007/06/30 09:44:23 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -280,6 +280,11 @@ class VidThumbMPlayer(VidThumbNail):
             frfname=write_frame(inname, 0)
             if debug: print inname, pos, frfname
         if frfname is None:
+            # Yuck
+            try:
+                raise _('Bad or missing frame file')
+            except:
+                self.report_exception()
             return self.failed_image(rsize, _('Bad or missing frame file'))
 
         # Now we load the raw image in
@@ -289,9 +294,35 @@ class VidThumbMPlayer(VidThumbNail):
 thumbnailers = {"mplayer": VidThumbMPlayer,
                 "totem" : VidThumbTotem }
 
-# Process command line args.  Although the filer always passes three args,
-# let the last two default to something sensible to allow use outside
-# the filer.
+def get_generator(debug=None):
+    """Return the current generator of thumbnails"""
+    copy=dict(thumbnailers)
+    thumbC = copy.pop(options.generator.value)
+    if not thumbC.check_executable():
+        origbin = thumbC._binary
+        for (name, cls) in copy.iteritems():
+            if cls.check_executable():
+                thumbC = cls
+                msg = _("""VideoThumbnail could not find the program "%s", but another thumbnail generator is available.
+                
+Should "%s" be used from now on?""")
+                if rox.confirm(msg % (origbin, thumbC._binary), rox.g.STOCK_YES):
+                    options.generator.value = name
+                    rox.app_options.save()
+                    pass
+                break
+        else:
+            msg = _("""VideoThumbnail could not find any usable thumbnail generator.
+            
+You need to install either MPlayer (http://www.mplayerhq.hu)
+or Totem (http://www.gnome.org/projects/totem/).""")
+            rox.croak(msg)
+
+    if debug is None:
+        debug=options.report.int_value
+    #print debug
+    return thumbC(debug)
+
 def main(argv):
     """Process command line args.  Although the filer always passes three args,
     let the last two default to something sensible to allow use outside
@@ -329,29 +360,8 @@ def main(argv):
         outname=os.path.abspath(outname)
     if debug: print 'save to', outname
     #print inname, outname, rsize
-    
-    thumbC = thumbnailers.pop(options.generator.value)
-    if not thumbC.check_executable():
-        origbin = thumbC._binary
-        for (name, cls) in thumbnailers.iteritems():
-            if cls.check_executable():
-                thumbC = cls
-                msg = _("""VideoThumbnail could not find the program "%s", but another thumbnail generator is available.
-                
-Should "%s" be used from now on?""")
-                if rox.confirm(msg % (origbin, thumbC._binary), rox.g.STOCK_YES):
-                    options.generator.value = name
-                    rox.app_options.save()
-                    pass
-                break
-        else:
-            msg = _("""VideoThumbnail could not find any usable thumbnail generator.
-            
-You need to install either MPlayer (http://www.mplayerhq.hu)
-or Totem (http://www.gnome.org/projects/totem/).""")
-            rox.croak(msg)
-            
-    thumb = thumbC(options.report.int_value)
+
+    thumb=get_generator()
     thumb.run(inname, outname, rsize)
 
         
