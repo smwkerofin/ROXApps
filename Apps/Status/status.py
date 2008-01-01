@@ -73,9 +73,12 @@ class Entry(object):
                 message.append(line[16:].strip())
 
         now=time.localtime(time.time())
-        #print `date`, now.tm_year
+        year=now.tm_year
+        if month in ('Dec', 'Nov') and now.tm_mon==1:
+            year-=1
+        #print `date`, year
         try:
-            t=time.strptime(date+' %d' % now.tm_year, '%H:%M %b %d %Y')
+            t=time.strptime(date+' %d' % year, '%H:%M %b %d %Y')
         except ValueError:
             t=now
         #print t
