@@ -44,7 +44,11 @@ class StatusIcon(rox.g.StatusIcon):
         gobject.timeout_add(10*60*1000, self.do_update)
 
     def do_update(self):
-        stat=status.Status()
+        try:
+            stat=status.Status()
+        except:
+            rox.report_exception()
+            return True
         self.current_entries=stat.get_entries(self.last_display)
 
         if len(self.current_entries)>0:
