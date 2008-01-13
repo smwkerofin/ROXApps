@@ -4,7 +4,7 @@ import os
 import sys
 import socket
 
-import findrox; findrox.version(2, 0, 3)
+import findrox; findrox.version(2, 0, 5)
 
 import rox
 import rox.tasks
@@ -12,7 +12,7 @@ import rox.Menu
 import gobject
 
 import finger
-import status_icon
+# import status_icon
 
 host='kerofin@post.demon.co.uk'
 port=79
@@ -21,11 +21,43 @@ ID=0
 FROM=1
 TO=2
 SIZE=3
+DATA=4
 
 mail_icon=rox.g.gdk.pixbuf_new_from_file(os.path.join(rox.app_dir,
                                                       'images',
                                                       'mail.png'))
 rox.Menu.set_save_name('CheckMail', site='kerofin.demon.co.uk')
+
+class MailEntry:
+    def __init__(self, idno, from_addr, to_addr, size):
+        self.idno=int(idno)
+        self.from_addr=from_addr
+        self.to_addr=to_addr
+        self.size=int(size)
+
+    def __str__(self):
+        return '%3d: From: %s, To: %s (%d bytes)' % (self.idno,
+                                                     self.from_addr,
+                                                     self.to_addr,
+                                                     self.size)
+
+    def insert(self, store, it):
+        store.set(it, ID, self.idno, FROM, self.from_addr,
+                  TO, self.to_addr, SIZE, self.size, DATA, self)
+
+    def maybe_insert(self, store, it):
+        other=store[it][DATA]
+        if other==self:
+            return
+        self.insert(store, it)
+
+    def __eq__(self, other):
+        return (self.size==other.size and self.idno==other.idno and
+                self.from_addr==other.from_addr and
+                self.to_addr==other.to_addr)
+
+    def __ne__(self, other):
+        return not self==other
 
 class MailQueue:
     def __init__(self):
@@ -67,8 +99,7 @@ class MailQueue:
                 header_end=True
 
             elif header_end:
-                queue.append((int(toks[0]), toks[1], toks[2],
-                                      int(toks[3])))
+                queue.append(MailEntry(*toks[:4]))
                 nmail+=1
                 
 
@@ -121,7 +152,7 @@ class Window(rox.Window, MailQueueClient):
         scrw.set_policy(rox.g.POLICY_NEVER, rox.g.POLICY_AUTOMATIC)
         vbox.pack_start(scrw, True, True, 2)
         
-        self.store=rox.g.ListStore(int, str, str, int)
+        self.store=rox.g.ListStore(int, str, str, int, object)
         self.view=rox.g.TreeView(self.store)
 
         cell=rox.g.CellRendererText()
@@ -141,19 +172,33 @@ class Window(rox.Window, MailQueueClient):
         self.get_update()
 
     def update_queue(self, mailq, entries):
-        self.store.clear()
-        for ent in entries:
+        #print 'start', len(self.store)
+        for i in range(len(self.store)):
+            if i>=len(entries):
+                self.store.clear()
+                print i
+                break
+            if entries[i]!=self.store[i][DATA]:
+                self.store.clear()
+                print entries[i]
+                break
+        #print 'middle', len(self.store)
+        n=len(self.store)
+        for ent in entries[n:]:
             it=self.store.append()
-            self.store.set(it, ID, ent[0], FROM, ent[1],
-                               TO, ent[2], SIZE, ent[3])
+            #print ent
+            ent.insert(self.store, it)
+        #print 'end', len(self.store)
 
-class StatusIcon(status_icon.StatusIcon, MailQueueClient):
+class StatusIcon(rox.StatusIcon, MailQueueClient):
     def __init__(self, mailq):
         MailQueueClient.__init__(self, mailq)
-        status_icon.StatusIcon.__init__(self, mail_icon,
-                                        rox.Menu.Menu('main', [
-            rox.Menu.Action('Quit', 'do_quit', stock=rox.g.STOCK_QUIT)]))
+        rox.StatusIcon.__init__(self, True, 
+                                rox.Menu.Menu('main', [
+            rox.Menu.Action('Quit', 'do_quit', stock=rox.g.STOCK_QUIT)]),
+                                False, icon_pixbuf=mail_icon)
 
+        self.connect('activate', self.on_activate)
         self.get_update()
 
     def update_queue(self, mailq, entries):
