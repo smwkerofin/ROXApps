@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.38 2006/11/04 15:07:42 stephen Exp $
+ * $Id: freefs.c,v 1.39 2007/04/28 10:06:51 stephen Exp $
  */
 #include "config.h"
 
@@ -77,11 +77,12 @@
   "}\n"								 \
   "widget \"fs free.*.gauge\" style : application \"red-green bar\"\n"
 
-#define MIN_BAR_SIZE 6
+#define MIN_BAR_SIZE 10
 
 static ROXOption opt_update_sec;
 static ROXOption opt_applet_size;
 static ROXOption opt_applet_show_dir;
+static ROXOption opt_applet_show_free;
 static ROXOption opt_applet_minimal;
 static ROXOption opt_applet_vertical;
 
@@ -373,16 +374,18 @@ static void window_gone(GtkWidget *widget, gpointer data)
   remove_window(fw);
 }
 
+static GtkTooltips *ttips=NULL;
+
 static FreeWindow *make_window(guint32 xid, const char *dir,
 			       gboolean mini, const gchar *id)
 {
   FreeWindow *fwin;
   GtkWidget *vbox, *hbox;
   GtkWidget *label;
-  GtkWidget *align;
+  GtkWidget *align_free;
+  GtkWidget *align_dir;
   GtkAdjustment *adj;
   GtkWidget *pixmapwid;
-  static GtkTooltips *ttips=NULL;
   char tbuf[1024], *home;
   gchar *fname;
 
@@ -525,16 +528,32 @@ static FreeWindow *make_window(guint32 xid, const char *dir,
     gtk_container_add(GTK_CONTAINER(plug), vbox);
     gtk_widget_show(vbox);
 
-    rox_debug_printf(4, "alignment new");
-    align=gtk_alignment_new(1, 0.5, 1, 0);
-    gtk_box_pack_end(GTK_BOX(vbox), align, TRUE, TRUE, 2);
-    gtk_widget_show(align);
+    rox_debug_printf(4, "alignment free new");
+    align_free=gtk_alignment_new(1, 0.5, 1, 0);
+    gtk_box_pack_end(GTK_BOX(vbox), align_free, TRUE, TRUE, 2);
+    gtk_widget_show(align_free);
 
-    rox_debug_printf(4, "label new");
+    rox_debug_printf(4, "label free new");
+    fwin->fs_free=gtk_label_new("XXxxx ybytes");
+    gtk_label_set_justify(GTK_LABEL(fwin->fs_free), GTK_JUSTIFY_RIGHT);
+    gtk_widget_set_name(fwin->fs_free, "text display");
+    gtk_container_add(GTK_CONTAINER(align_free), fwin->fs_free);
+    if(opt_applet_show_free.int_value && !fwin->minimal)
+      gtk_widget_show(fwin->fs_free);
+    gtk_tooltips_set_tip(ttips, fwin->fs_free,
+			 _("This is the space available on the file system"),
+			 _(TIP_PRIVATE));
+
+    rox_debug_printf(5, "alignment dir new");
+    align_dir=gtk_alignment_new(1, 0.5, 1, 0);
+    gtk_box_pack_end(GTK_BOX(vbox), align_dir, TRUE, TRUE, 2);
+    gtk_widget_show(align_dir);
+
+    rox_debug_printf(6, "label dir new");
     fwin->fs_name=gtk_label_new("");
     gtk_label_set_justify(GTK_LABEL(fwin->fs_name), GTK_JUSTIFY_RIGHT);
     gtk_widget_set_name(fwin->fs_name, "text display");
-    gtk_container_add(GTK_CONTAINER(align), fwin->fs_name);
+    gtk_container_add(GTK_CONTAINER(align_dir), fwin->fs_name);
     if(opt_applet_show_dir.int_value && !fwin->minimal)
       gtk_widget_show(fwin->fs_name);
     gtk_tooltips_set_tip(ttips, fwin->fs_name,
@@ -873,15 +892,30 @@ static gboolean update_fs_values(FreeWindow *fwin)
 	gtk_label_set_text(GTK_LABEL(fwin->fs_used), fmt_size(used));
 	gtk_label_set_text(GTK_LABEL(fwin->fs_free), fmt_size(avail));
 
-      } else if(fwin->fs_name) {
+      } else {
+	gchar *tip, *ttotal, *tavail;
 	const char *mpt;
 	
-	rox_debug_printf(5, "set text");
 	mpt=find_mount_point(fwin->df_dir);
-	if(strcmp(mpt, "/")==0)
-	  gtk_label_set_text(GTK_LABEL(fwin->fs_name), "/");
-	else
-	  gtk_label_set_text(GTK_LABEL(fwin->fs_name), g_basename(mpt));
+	
+	if(fwin->fs_name) {
+	  rox_debug_printf(5, "set text");
+	  if(strcmp(mpt, "/")==0)
+	    gtk_label_set_text(GTK_LABEL(fwin->fs_name), "/");
+	  else
+	    gtk_label_set_text(GTK_LABEL(fwin->fs_name), g_basename(mpt));	
+        }
+	if(fwin->fs_free) {
+	  gtk_label_set_text(GTK_LABEL(fwin->fs_free), fmt_size(avail));
+        }
+
+	ttotal=g_strdup(fmt_size(total));
+	tavail=g_strdup(fmt_size(avail));
+	tip=g_strdup_printf(_("%s: %s total, %s free (%d%%)"), mpt,
+			    ttotal, tavail, (int) fused);
+	gtk_tooltips_set_tip(ttips, fwin->win, tip, _(TIP_PRIVATE));
+	g_free(tip);
+	
       }
       rox_debug_printf(5, "set progress %f", fused);
       sprintf(tbuf, "%d%%", (int)(fused));
@@ -934,6 +968,13 @@ static void opts_changed(void)
 	  gtk_widget_hide(fw->fs_name);
       }
 
+      if(opt_applet_show_free.has_changed) {
+	if(opt_applet_show_free.int_value)
+	  gtk_widget_show(fw->fs_free);
+	else
+	  gtk_widget_hide(fw->fs_free);
+      }
+
       if(opt_applet_size.has_changed || opt_applet_minimal.has_changed
 	 || opt_applet_vertical.has_changed) {
 	gtk_progress_bar_set_orientation(GTK_PROGRESS_BAR(fw->fs_per),
@@ -977,10 +1018,12 @@ static void init_options(void)
   guint update_sec=5;           /* How often to update */
   guint applet_init_size=32;    /* Initial size of applet */
   gboolean applet_show_dir=TRUE;/* Print name of directory on applet version */
+  gboolean applet_show_free=FALSE;/* Print name of directory on applet version */
 
   rox_option_add_int(&opt_update_sec, "update_rate", update_sec);
   rox_option_add_int(&opt_applet_size, "applet_size", applet_init_size);
   rox_option_add_int(&opt_applet_show_dir, "show_dir", applet_show_dir);
+  rox_option_add_int(&opt_applet_show_free, "show_free", applet_show_free);
   rox_option_add_int(&opt_applet_minimal, "minimal", FALSE);
   rox_option_add_int(&opt_applet_vertical, "vertical", FALSE);
 
@@ -1406,6 +1449,9 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.39  2007/04/28 10:06:51  stephen
+ * Fix bug sorting the mount points.
+ *
  * Revision 1.38  2006/11/04 15:07:42  stephen
  * Mark more strings as translatable.
  *

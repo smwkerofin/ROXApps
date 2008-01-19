@@ -1,6 +1,11 @@
 Changes to FreeFS
 =================
 
+19-Jan-2008
+~~~~~~~~~~~
+Option for applet to show available size (Janek Kozicki).
+Tooltip for applet now shows a summary.
+
 21-Sep-2007
 ~~~~~~~~~~~
 May need to link against libintl.
