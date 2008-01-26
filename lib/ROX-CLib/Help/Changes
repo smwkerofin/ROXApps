@@ -4,6 +4,10 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+16-Oct-2007
+~~~~~~~~~~~
+Check for libintl needed on Solaris.
+
 04-Aug-2007 (2.1.10)
 ~~~~~~~~~~~
 Updated 0compile build script to ensure working appdir is writable.
@@ -357,4 +361,4 @@ paths: some debug output if it can't decide if a uri refers to a local file
 -- 
 Stephen Watson <stephen@kerofin.demon.co.uk>
 
-$Id: Changes,v 1.52 2007/05/21 16:58:38 stephen Exp $
+$Id: Changes,v 1.53 2007/10/13 15:41:08 stephen Exp $
