@@ -148,6 +148,8 @@ class Manager:
         When this is called, you can then call acquire to try and claim
         this slot."""
         self.iface.connect_to_signal('slot_available', fn)
+        print 'call', fn, 'for', 'slot_available', 'on', self.iface
+        # Doesn't appear to work...
 
     def showOptions(self):
         """Show the download manager's options window."""

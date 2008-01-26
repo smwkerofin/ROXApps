@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.34 2007/09/10 15:28:28 stephen Exp $
+# $Id: AppRun,v 1.35 2007/11/24 17:23:57 stephen Exp $
 
 import os, sys
 import time
@@ -8,7 +8,7 @@ import locale
 locale.setlocale(locale.LC_ALL, '')
 
 import findrox; findrox.version(2, 0, 4)
-import rox, rox.options, rox.processes, rox.mime, rox.filer
+import rox, rox.options, rox.processes, rox.mime, rox.filer, rox.tasks
 import gobject
 try:
     from rox import xattr
@@ -87,6 +87,12 @@ RESPONSE_SHOW=1
 RESPONSE_OPEN=2
 RESPONSE_SET_TYPE=3
 
+# State of fetch
+WAITING=1 # Waiting to start
+FETCHING=2
+POST_FETCH=3
+COMPLETED=4
+
 class FetchWindow(rox.Dialog):
     def __init__(self, url, target=None):
         self.url=url
@@ -109,6 +115,7 @@ class FetchWindow(rox.Dialog):
         self.wtag=0
         self.proc=None
         self.kill_proc=False
+        self.cstate=WAITING
 
         self.percent=-1
         
@@ -232,7 +239,7 @@ class FetchWindow(rox.Dialog):
         table.attach(self.prog, 0, 3, line, line+1)
 
         self.connect('delete_event', self.delete_event)
-        gobject.timeout_add(delay*5, self.idle_update)
+        rox.tasks.Task(self.idle_update(delay*5))
 
         self.show_all()
         self.start()
@@ -247,7 +254,10 @@ class FetchWindow(rox.Dialog):
             self.do_cancel(_('Cancelled'))
             if self.proc:
                 self.kill_proc=True
-                self.proc.kill()
+                try:
+                    self.proc.kill()
+                except AssertionError:
+                    pass
             msg=_('Fetch of %s cancelled') % self.url
             if self.count:
                 msg+=_(', %d bytes ') % self.count
@@ -257,10 +267,12 @@ class FetchWindow(rox.Dialog):
             msg+=_('.')
 
             rox.info(msg)
+            self.cstate=COMPLETED
 
             sys.exit(0)
 
         elif resp==int(rox.g.RESPONSE_CLOSE):
+            self.cstate=COMPLETED
             self.close()
 
         elif resp==RESPONSE_SET_TYPE:
@@ -280,23 +292,23 @@ class FetchWindow(rox.Dialog):
         elif resp==RESPONSE_OPEN:
             rox.filer.spawn_rox((self.real_target,))
 
-    def idle_update(self, *unused):
-        #print 'in idle_update', self.last_time
-        if self.last_time:
-            now=time.time()
-            if now-self.last_time>60:
-                self.message(_('Stalled? Last update %ds ago') %
-                             int(now-self.last_time))
-            #print now, now-self.last_time
-
-        #print 'leaving'
-        return True
-
+    def idle_update(self, ms):
+        sec=float(ms)/1000.
+        while self.cstate!=COMPLETED:
+            #print 'idle for', sec
+            yield rox.tasks.TimeoutBlocker(sec)
+            #print self.cstate
+            if self.cstate==WAITING:
+                self.waiting()
+            if self.last_time:
+                now=time.time()
+                if now-self.last_time>60:
+                    self.message(_('Stalled? Last update %ds ago') %
+                                 int(now-self.last_time))
+            
     def delete_event(self, *unused):
         #print 'delete_event', self, unused
-        #print rox._toplevel_windows
         self.close()
-        #print rox._toplevel_windows
         
     def message(self, text):
         self.msg1.set_text(text)
@@ -374,6 +386,7 @@ class FetchWindow(rox.Dialog):
         self.hide()
         self.destroy()
         self.prog=None
+        self.cstate=COMPLETED
         #rox.toplevel_unref()
 
     def set_server_type(self, stype_name):
@@ -397,27 +410,9 @@ class FetchWindow(rox.Dialog):
 
             if stype!=self.ltype and stype==html_type:
                 self.bad_fetch=1
-        
 
-    def read_some(self, source, condition, *unused):
-        #print source, condition, unused
-        #print self.con
-
-        self.last_time=time.time()
-        self.message(_('Downloading'))
-
-        data=''
-        while True:
-            try:
-                c=self.con.read(1)
-            except ValueError:
-                break
-            data+=c
-            #print 'Read',data
-            if c=='\n':
-                break
-        #print data,
-        #self.count+=len(data)
+    def process_message(self, data):
+        #print data
         if data:
             #print data
             try:
@@ -447,11 +442,34 @@ class FetchWindow(rox.Dialog):
                 return False
             
             return True
-
+        
         self.finished()
         return False
         
+    def message_reader(self):
+        while True:
+            #print 'message_reader, wait on', self.con
+            yield rox.tasks.InputBlocker(self.con)
+            self.last_time=time.time()
+            self.message(_('Downloading'))
+
+            #print 'start reading'
+            data=''
+            while True:
+                try:
+                    c=self.con.read(1)
+                except ValueError:
+                    break
+                data+=c
+                #print 'Read',data
+                if c=='\n':
+                    break
+
+            if not self.process_message(data):
+                break
+
     def start(self):
+        self.cstate=WAITING
         if use_dl_manager.int_value:
             try:
                 self.message(_("Connecting to DownloadManager"))
@@ -465,19 +483,19 @@ class FetchWindow(rox.Dialog):
         else:
             self.real_start()
 
-    def on_slot_available(self, interface, signal_name, service, path, message):
-        #print interface, signal_name, service, path, message
+    def on_slot_available(self, *args):
+        print args
         if self.dl_man:
             if not self.waiting():
                 self.unwait()
                 
         
     def acquire(self):
+        print 'in acquire', self
         try:
             self.dl_man.register(self.on_slot_available)
-            self.wtag=gobject.timeout_add(delay, self.waiting)
         except dclient.DMException:
-            self.wtag=0
+            rox.report_exception()
 
     def waiting(self):
         if self.proc:
@@ -486,6 +504,7 @@ class FetchWindow(rox.Dialog):
             self.real_start()
             return False
 
+        #print 'waiting'
         try:
             go=self.dl_man.acquire(self.host,
                                    os.path.basename(self.real_target),
@@ -515,27 +534,27 @@ class FetchWindow(rox.Dialog):
         return True
 
     def real_start(self):
+        #print 'real_start'
         if self.proc:
             return
+        self.cstate=FETCHING
         self.start_button.set_sensitive(False)
         
         r, w=os.pipe()
         self.con=os.fdopen(r, 'r', 1)
-        self.proc=rox.processes.PipeThroughCommand(
-            ('python', rox.app_dir+'/fetch.py', self.url, self.target),
-            None, os.fdopen(w, 'w', 1))
-
-        gobject.io_add_watch(self.con.fileno(), gobject.IO_IN,
-                        self.read_some)
-
+        self.proc=FetchChild(self, self.url, self.target, os.fdopen(w, 'w', 1))
+        #print self.proc
+        
+        rox.tasks.Task(self.message_reader())
         try:
-            self.proc.wait()
-        except rox.processes.ChildKilled:
-            pass
-            
-        #print 'done waiting'
-        self.proc=None
-        #self.finished()
+            self.proc.start()
+        except rox.processes.ChildError:
+            rox.report_exception()
+            self.cstate(POST_FETCH)
+            self.finished(False)
+
+    def child_died(self, status):
+        print 'child_died', status
         
     def report(self, nb, tsize):
         #print 'report', self, nb, tsize
@@ -555,28 +574,33 @@ class FetchWindow(rox.Dialog):
             except dclient.DMException:
                 pass
 
-    def finished(self):
+    def finished(self, ok=True):
         if self.dl_man:
             try:
                 self.dl_man.done()
             except dclient.DMException:
                 pass
             self.dl_man=None
-        try:
-            os.rename(self.target, self.real_target)
-            fname=self.real_target
-        except OSError:
-            rox.info(_('Rename failed, data left in temporary file %s') %
-                     self.target)
-            fname=self.target
+        if ok:
+            try:
+                os.rename(self.target, self.real_target)
+                fname=self.real_target
+            except OSError:
+                rox.info(_('Rename failed, data left in temporary file %s') %
+                         self.target)
+                fname=self.target
         try:
             self.con.close()
         except:
             pass
+        self.cstate=POST_FETCH
         t=wait_for.int_value*1000
         mess=_('Done')
         wrong_type=False
-        if self.ltype!=self.stype:
+        if not ok:
+            mess=_('Failed')
+            t*=5
+        elif self.ltype!=self.stype:
             if self.stype in unknown_types:
                 mess=_('Done (server did not know type)')
             elif self.stype==html_type:
@@ -596,9 +620,24 @@ class FetchWindow(rox.Dialog):
 
         if wrong_type and xattr and xattr.supported(fname) and set_type.int_value:
             self.add_button(_('Set type'), RESPONSE_SET_TYPE)
-        self.add_buttons(rox.g.STOCK_FIND, RESPONSE_SHOW,
-                         rox.g.STOCK_OPEN, RESPONSE_OPEN,
-                         rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE)
+        elif ok:
+            self.add_buttons(rox.g.STOCK_FIND, RESPONSE_SHOW,
+                             rox.g.STOCK_OPEN, RESPONSE_OPEN,
+                             rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE)
+        else:
+            self.add_button(rox.g.STOCK_CLOSE, rox.g.RESPONSE_CLOSE)
+
+class FetchChild(rox.processes.PipeThroughCommand):
+    def __init__(self, parent, url, target, pipe):
+        self.parent=parent
+
+        rox.processes.PipeThroughCommand.__init__(self,
+            ('python', rox.app_dir+'/fetch.py', url, target),
+                                                  None, pipe)
+
+    def child_died(self, status):
+        rox.processes.PipeThroughCommand.child_died(self, status)
+        self.parent.child_died(status)
         
 def main():
     if len(sys.argv)==1 or (len(sys.argv)==2 and sys.argv[1]=='-o'):
