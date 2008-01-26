@@ -27,11 +27,6 @@ Thank you.
 AC_PROG_CC
 AC_ISC_POSIX
 
-if test -z "$ROX_RUN"; then
-    AC_CHECK_PROG(ROX_RUN, rox_run, rox_run, "$APP_DIR/rox_run")
-fi
-AC_SUBST(ROX_RUN)
-
 # Checks for libraries.
 PKG_CHECK_MODULES(NOTIFICATION, \
 		  gtk+-2.0)

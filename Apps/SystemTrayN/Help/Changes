@@ -2,6 +2,14 @@
 			A notification area applet for ROX-Filer
 			by Andy Hanton and Stephen Watson
 
+31-Dec-2007 (0.3.3)
+~~~~~~~~~~~
+Fixes for 0compile support (reported by Thomas Leonard).
+
+04-Aug-2007
+~~~~~~~~~~~
+Ensure write permission when using 0compile.
+
 11-Jul-2007 (0.3.2)
 ~~~~~~~~~~~
 Allow use of 0compile.
