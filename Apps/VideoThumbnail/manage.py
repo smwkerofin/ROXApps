@@ -1,4 +1,4 @@
-# $Id$
+# $Id: manage.py,v 1.1 2007/11/24 17:28:19 stephen Exp $
 
 import os, sys
 import tempfile
@@ -9,6 +9,8 @@ import rox.mime_handler
 import rox.loading
 
 import vidthumb
+
+injector_uri='http://www.kerofin.demon.co.uk/2005/interfaces/VideoThumbnail'
 
 class NonLocalFile(EnvironmentError):
     def __str__(self):
@@ -82,10 +84,10 @@ class ManageType(rox.Dialog, rox.loading.XDSLoader):
             self.destroy()
 
         elif resp==rox.g.RESPONSE_OK:
-            print self.mime_type
+            print `self.mime_type`
             self.set_handler(self.mime_type)
 
     def set_handler(self, mtype):
-        pass
-    
-        
+        rox.mime_handler.install_thumbnailer((str(mtype),),
+                                             injint=injector_uri)
+

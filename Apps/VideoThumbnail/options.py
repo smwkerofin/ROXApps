@@ -1,6 +1,6 @@
 """Handle the options for the video thumbnailler"""
 
-# $Id: options.py,v 1.17 2006/12/30 11:59:03 stephen Exp $
+# $Id: options.py,v 1.18 2007/11/24 17:28:19 stephen Exp $
 
 import os
 
@@ -29,7 +29,7 @@ rox.app_options.notify()
 
 def install_button_handler(*args):
     try:
-        rox.mime_handler.install_from_appinfo(injint='http://www.kerofin.demon.co.uk/2005/interfaces/VideoThumbnail')
+        rox.mime_handler.install_from_appinfo(injint=manage.injector_uri)
                 
     except:
         rox.report_exception()

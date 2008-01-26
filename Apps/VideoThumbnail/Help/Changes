@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+26-Jan-2008
+~~~~~~~~~~~
+Finished code for setting the handler for a type.
+
 21-Nov-2007
 ~~~~~~~~~~~
 Adding interface to test and set handler for a type by dropping a sample file.
