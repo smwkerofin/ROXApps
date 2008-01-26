@@ -179,6 +179,7 @@ class DownloadManager(dbus.service.Object):
         #print 'Done', id, client
         ##print client, 'has finished'
         self.lose_client(id)
+        #print 'lost', id
 
     @dbus.service.method(new_interface_name)
     def DoneByID(self, id):
@@ -186,18 +187,22 @@ class DownloadManager(dbus.service.Object):
         #print 'Done', id, client
         ##print client, 'has finished'
         self.lose_client(id)
+        #print 'lost by id', id
 
     @dbus.service.method(interface_name)
     def Cancel(self, reason):
-        #print 'in cancel', self, method, reason
+        #print 'in cancel', self, reason
         id=self.current.get_sender()
+        #print id
         #client=self.clients[id]
+        #print client
+        #print 'about to call lose_client with', id
+        self.lose_client(id)
         #print client, 'has been cancelled', reason
-        self.lose_client(id=id)
 
     @dbus.service.method(new_interface_name)
     def CancelByID(self, reason):
-        #print 'in cancel', self, method, reason
+        #print 'in cancel by ID', self, reason
         #client=self.clients[id]
         #print client, 'has been cancelled', reason
         self.lose_client(id=id)
@@ -230,19 +235,25 @@ class DownloadManager(dbus.service.Object):
         return len(self.active)
     
     def lose_client(self, id=None, client=None):
+        #print 'in lose_client', id, client
         if not id and not client:
             return
         
         if not id:
             id=client.id
+
+        elif id not in self.clients:
+            return
             
+        print self.clients
         if id in self.active:
             self.active.remove(id)
         #print len(self.clients)
         del self.clients[id]
-        #print 'removed', id
-        #print len(self.clients), self.clients.keys()
+        #print 'removed client', id
+        print len(self.clients), self.clients.keys()
 
+        #print 'calling check_available'
         self.check_available()
         #print 'checked for available slot'
 
@@ -258,10 +269,11 @@ class DownloadManager(dbus.service.Object):
 
     @dbus.service.signal(interface_name)
     def slot_available(self):
+        #print 'raised slot available on', interface_name
         pass
 
     def check_available(self):
-        #print 'in check_available', len(self.active), allow_nclient.int_value
+        #print 'in check_available', len(self.active), options.allow_nclient.int_value
         if len(self.active)<options.allow_nclient.int_value:
             self.slot_available()
 

@@ -1,6 +1,10 @@
 DownloadManager
 ===============
 
+26-Jan-2008
+~~~~~~~~~~~
+Avoid KeyError when a client cancels before registering.
+
 18-Feb-2007
 ~~~~~~~~~~~
 Add version 2 of the protocol.
@@ -81,4 +85,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.20 2007/01/13 12:54:10 stephen Exp $
+$Id: Changes,v 1.21 2007/07/21 11:33:00 stephen Exp $
