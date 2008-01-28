@@ -3,7 +3,7 @@
   <Summary>Purge thumbnail files</Summary>
   <About>
     <Purpose>Purge thumbnail files</Purpose>
-    <Version>0.1.3 (25th August 2005)</Version>
+    <Version>0.1.4 (28th January 2008)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
@@ -11,7 +11,7 @@
   <Dependencies>
     <AppDir>
       <Name>ROX-Lib2</Name>
-      <NeedsVersion>2.0.0</NeedsVersion>
+      <NeedsVersion>2.0.4</NeedsVersion>
       <Link>http://rox.sourceforge.net</Link>
       <ZeroInstall>/uri/0install/rox.sourceforge.net/lib/</ZeroInstall>
     </AppDir>

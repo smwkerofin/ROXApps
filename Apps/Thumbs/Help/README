@@ -1,8 +1,53 @@
 Thumbs
 ======
 
-This is a simple program for purging unwanted thumbnail images from the
-thumbnail cache.
+This program has two main functions
+
+* Purging unwanted thumbnail images from the thumbnail cache.
+* Setting the application which creates thumbnails for a given type
+
+Purging the Cache
+~~~~~~~~~~~~~~~~~
+
+This is the main option and shown when running the program without any
+files.  It may spend some time scanning your thumbnail directory then it will
+list the available thumbnail catagories, normally 'normal' plus possibly
+'fail' or 'large' along with the number of entries in each catagory and the 
+size used on the disk.
+
+Once you select a catagory you have four options:
+
+1) Show.  This opens a filer window showing the files in that catagory
+
+2) Purge old.  Select an age in days then click on this button to delete all
+generated thumbnails in that catagory which are older than that age.
+
+3) Purge missing.  Click on this button to delete the thumbnails for files
+which are no longer present.
+
+4) Purge changed.  Click on this button to delete the thumbnails for files
+which have changed since the thumbnail was created.
+
+Right click for a menu to allow you to refresh the listing or manage the
+thumbnail helpers.
+
+Setting the Thumbnail Helper
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This window is available from the "Manage thumbnailers" menu option or when 
+running the program with a file as an argument.
+
+First drop a file in the upper part of the window.  This determines the type
+of file to manage.  If you ran the program with an argument and it was a file
+then that file is already set.
+
+The lower part of the window shows the currently set handler for that file 
+type, or a question mark if none is set.  Drag an application to set it for 
+the selected file type.
+
+The program will first attempt to create a thumbnail for the file from which 
+the type was derived and display it.  If it is acceptable click on Ok to
+set the handler.
 
 Author
 ------
