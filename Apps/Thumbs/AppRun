@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# $Id: main.py,v 1.5 2006/04/29 12:12:39 stephen Exp $
+# $Id: AppRun,v 1.3 2008/01/28 17:02:52 stephen Exp $
 
 import findrox; findrox.version(2, 0, 0)
 
@@ -310,7 +310,7 @@ class Win(rox.Window):
                     failed+=1
             frac=float(i)/n
             self.prog.set_fraction(frac)
-            yield
+            yield None
         self.scan_selected()
         if failed==0:
             self.stat.set_text(_('%d checked, %d purged') % (i, count))
