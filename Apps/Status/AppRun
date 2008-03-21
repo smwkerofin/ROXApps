@@ -35,6 +35,7 @@ class StatusIcon(rox.StatusIcon):
 
         self.last_display=0
         self.current_entries=[]
+        self.shown=set()
 
         self.load_time()
         self.do_update()
@@ -47,6 +48,7 @@ class StatusIcon(rox.StatusIcon):
             rox.report_exception()
             return True
         self.current_entries=stat.get_entries(self.last_display)
+        self.filter_entries()
 
         if len(self.current_entries)>0:
             self.set_visible(True)
@@ -57,12 +59,21 @@ class StatusIcon(rox.StatusIcon):
         #print self.last_update
         return True
 
+    def filter_entries(self):
+        ok=[]
+        for e in self.current_entries:
+            if e.get_message() not in self.shown:
+                ok.append(e)
+        self.current_entries=ok
+
     def do_activate(self, icon):
         #print 'do_activate', icon
         win=StatusWindow(self.current_entries)
         win.show()
         self.last_display=self.last_update
         self.set_visible(False)
+        for e in self.current_entries:
+            self.shown.add(e.get_message())
         self.current_entries=[]
         self.store_time()
 
