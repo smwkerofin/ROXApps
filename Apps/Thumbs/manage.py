@@ -112,15 +112,11 @@ class HandlerDropTarget(DropTarget):
 class SetWindow(rox.Dialog):
     def __init__(self, path=None):
         rox.Dialog.__init__(self, title=_('Define thumbnail helper'),
-                            buttons=(
-            rox.g.STOCK_HELP, rox.g.RESPONSE_HELP,
-            rox.g.STOCK_CLOSE, rox.g.RESPONSE_ACCEPT))
+                            buttons=(rox.g.STOCK_CLOSE, rox.g.RESPONSE_ACCEPT))
         
         self.ttips=rox.g.Tooltips()
 
         ebox=rox.g.EventBox()
-        #hbox=rox.g.HBox(False, 2)
-        #ebox.add(hbox)
         self.vbox.pack_start(ebox, False, False)
 
         self.type_drop=TypeDropTarget(self)
@@ -134,25 +130,36 @@ class SetWindow(rox.Dialog):
         self.vbox.pack_start(ebox, True, True)
 
         self.vbox.show_all()
+        but=rox.g.Button(stock=rox.g.STOCK_HELP)
+        but.connect('clicked', self.do_help)
+        self.action_area.pack_start(but, False, False)
+        self.action_area.reorder_child(but, 0)
+        but.show()
+        
         self.connect('response', self.get_response)
+        
         if path:
             self.set_file(path)
 
     def get_response(self, window, response):
-        if response==int(rox.g.RESPONSE_HELP):
-            helper.show_help(parent=self)
-        else:
-            self.hide()
-            self.destroy()
+        self.hide()
+        self.destroy()
+
+    def do_help(self, widget):
+        helper.show_help(parent=self)
 
     def file_dropped(self, target, path):
         if target==self.type_drop:
             self.set_file(path)
+            self.set_type(self.type_drop.get_type())
 
         elif target==self.handler_drop:
             self.handler_drop.set_from_file(path)
             if self.type_drop.get_type():
                 gobject.idle_add(self.start_test)
+
+    def set_type(self, mtype):
+        pass # for future expansion
 
     def set_file(self, path):
         self.type_drop.set_from_file(path)
