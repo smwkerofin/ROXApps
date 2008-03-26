@@ -5,7 +5,9 @@
 
 24-Mar-2008
 ~~~~~~~~~~~
+Support setting handler via a URL (using 0launch).
 Fix Help button on managment window.
+Additional information from AppInfo in helper window.
 
 28-Jan-2008
 ~~~~~~~~~~~

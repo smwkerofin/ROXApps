@@ -22,36 +22,45 @@ class ThumbnailError(Exception):
         return '<ThumbnailError "%s">' % self.why
 
 class DropTarget(rox.loading.XDSLoader, rox.g.Frame):
-	def __init__(self, parent, caption):
-		self.controller=parent
-		rox.g.Frame.__init__(self, caption)
-		rox.loading.XDSLoader.__init__(self, None)
+    def __init__(self, parent, caption):
+        self.controller=parent
+        rox.g.Frame.__init__(self, caption)
+        rox.loading.XDSLoader.__init__(self, ['text/x-moz-url'])
 
-		self.set_size_request(100, 100)
-		self.set_shadow_type(rox.g.SHADOW_IN)
-		self.set_border_width(4)
+        self.set_size_request(100, 100)
+        self.set_shadow_type(rox.g.SHADOW_IN)
+        self.set_border_width(4)
 
-		vbox=rox.g.VBox(False, 8)
-		self.add(vbox)
-		self.img=rox.g.Image()
-		vbox.pack_start(self.img, True, True)
-		self.msg=rox.g.Label()
-		align=rox.g.Alignment(0.5, 0.5, 1.0, 0.0)
-		vbox.pack_start(align, False, False)
-		align.add(self.msg)
+        vbox=rox.g.VBox(False, 8)
+        self.add(vbox)
+        self.img=rox.g.Image()
+        vbox.pack_start(self.img, True, True)
+        self.msg=rox.g.Label()
+        align=rox.g.Alignment(0.5, 0.5, 1.0, 0.0)
+        vbox.pack_start(align, False, False)
+        align.add(self.msg)
 
-        def set_message(self, msg):
-            self.msg.set_text(msg)
+    def set_message(self, msg):
+        self.msg.set_text(msg)
 
-        def set_image(self, pix):
-            self.img.set_from_pixbuf(pix)
+    def set_image(self, pix):
+        self.img.set_from_pixbuf(pix)
 
-	def clear_image(self):
-		self.img.set_from_stock(rox.g.STOCK_DIALOG_QUESTION,
-					rox.g.ICON_SIZE_DIALOG)
+    def clear_image(self):
+        self.img.set_from_stock(rox.g.STOCK_DIALOG_QUESTION,
+                                rox.g.ICON_SIZE_DIALOG)
 
-	def xds_load_from_file(self, path):
-		self.controller.file_dropped(self, path)
+    def xds_load_from_file(self, path):
+        self.controller.file_dropped(self, path)
+
+    def xds_load_from_stream(self, name, mimetype, stream):
+        #print name, mimetype, stream
+        if mimetype=='text/x-moz-url':
+            l=stream.readline()
+            self.controller.url_dropped(self, l.strip().decode('UTF-16'))
+        else:
+            rox.loading.XDSLoader.xds_load_from_stream(self, name,
+                                                       mimetype, stream)
 
 class TypeDropTarget(DropTarget):
     def __init__(self, parent):
@@ -61,6 +70,7 @@ class TypeDropTarget(DropTarget):
 
     def set_from_type(self, mtype):
         self.mime_type=mtype
+        #print mtype.get_icon()
         self.set_image(mtype.get_icon())
         txt=mtype.get_comment() or str(mtype)
         self.set_message(txt)
@@ -78,9 +88,11 @@ class HandlerDropTarget(DropTarget):
     def __init__(self, parent):
         DropTarget.__init__(self, parent, _('Handler'))
         self.handler=None
+        self.isurl=False
         
     def set_from_file(self, path):
         self.handler=path
+        self.isurl=False
         if rox.isappdir(path):
             try:
                 p=os.path.join(path, '.DirIcon')
@@ -106,8 +118,19 @@ class HandlerDropTarget(DropTarget):
             self.msg.set_text('')
 
     def get_handler(self):
-        return self.handler
-               
+        return self.handler, self.isurl
+
+    def set_from_url(self, url):
+        self.handler=url
+        self.isurl=True
+        self.msg.set_text(url)
+        mtype=rox.mime.lookup('text', 'x-uri')
+        icon=mtype.get_icon(img_size)
+        if icon:
+            self.img.set_from_pixbuf(icon)
+        else:
+            self.img.set_from_stock(rox.g.STOCK_DIALOG_QUESTION,
+                                    rox.g.ICON_SIZE_DIALOG)
 
 class SetWindow(rox.Dialog):
     def __init__(self, path=None):
@@ -158,6 +181,13 @@ class SetWindow(rox.Dialog):
             if self.type_drop.get_type():
                 gobject.idle_add(self.start_test)
 
+    def url_dropped(self, target, url):
+        #print url
+        if target==self.handler_drop:
+            self.handler_drop.set_from_url(url)
+            if self.type_drop.get_type():
+                gobject.idle_add(self.start_test)
+
     def set_type(self, mtype):
         pass # for future expansion
 
@@ -188,15 +218,23 @@ class SetWindow(rox.Dialog):
     def set_handler(self):
         mtype=self.type_drop.get_type()
         base='%s_%s' % (mtype.media, mtype.subtype)
-        handler=self.handler_drop.get_handler()
-        rox.alert('would set handler for %s to %s' % (mtype, handler))
+        handler, isurl=self.handler_drop.get_handler()
 
         try:
             cdir=rox.basedir.save_config_path('rox.sourceforge.net',
                                               'MIME-thumb')
             path=os.path.join(cdir, base)
             tmp=path+'.tmp%d' % os.getpid()
-            os.symlink(handler, tmp)
+
+            if isurl:
+                out=file(tmp, 'w')
+                out.write('#!/bin/sh\n')
+                out.write('exec 0launch %s "$@"\n' % handler)
+                out.close()
+                os.chmod(tmp, 0755)
+            else:
+                os.symlink(handler, tmp)
+                
             if os.access(path, os.F_OK):
                 os.remove(path)
             os.rename(tmp, path)
@@ -222,7 +260,7 @@ class TestWindow(rox.Dialog,):
 
         vbox=self.vbox
 
-        msg=rox.g.Label(_('Testing %s') % self.handler)
+        msg=rox.g.Label(_('Testing %s') % self.handler[0])
         msg.set_line_wrap(True)
         vbox.pack_start(msg, False, False, 2)
 
@@ -242,23 +280,20 @@ class TestWindow(rox.Dialog,):
         self.ok_button.set_sensitive(False)
 
     def on_show(self, widget):
-        ex=self.handler
-        if rox.isappdir(ex):
-            ex=os.path.join(ex, 'AppRun')
-        #print ex, os.path.basename(self.handler),
-        #print self.test_file,
-        #print self.output, 128
-        self.pid=os.spawnl(os.P_NOWAIT,
-                           ex, os.path.basename(self.handler),
+        ex, isurl=self.handler
+        if isurl:
+            self.pid=os.spawnlp(os.P_NOWAIT,
+                           '0launch', '0launch', ex, 
                            self.test_file,
                            self.output, '%d' % 128)
+        else:
+            if rox.isappdir(ex):
+                ex=os.path.join(ex, 'AppRun')
+            self.pid=os.spawnl(os.P_NOWAIT,
+                               ex, os.path.basename(self.handler[0]),
+                               self.test_file,
+                               self.output, '%d' % 128)
         gobject.timeout_add(1000, self.check_child)
-
-    def on_show_old(self, widget):
-        # USing rox.processes causes mplayer to enter STOP state!
-        self.thumb=Thumbnail(self, 128)
-        self.thumb.start()
-        gobject.timeout_add(60*1000, self.timed_out)
 
     def child_died(self, status):
         if status==0:
@@ -285,34 +320,6 @@ class TestWindow(rox.Dialog,):
             return False
         return True
     
-class Thumbnail(rox.processes.Process):
-    def __init__(self, parent, size):
-        self.parent=parent
-        self.size=size
-        rox.processes.Process.__init__(self)
-        
-    def child_run(self):
-        ex=self.parent.handler
-        if rox.isappdir(ex):
-            ex=os.path.join(ex, 'AppRun')
-        print ex, os.path.basename(self.parent.handler)
-        print self.parent.test_file
-        print self.parent.output, '%d' % self.size
-        os.execl(ex, os.path.basename(self.parent.handler),
-                 self.parent.test_file,
-                 self.parent.output, '%d' % self.size)
-        os._exit(99)
-
-    def child_died(self, status):
-        self.parent.child_died(status)
-
-    def got_error_output(self, data):
-        self.parent.got_error_output(data)
-
-    def parent_post_fork(self):
-        print 'in parent_post_fork'
-
-
 def find_handler(mtype):
     base='%s_%s' % (mtype.media, mtype.subtype)
     handler=rox.basedir.load_first_config('rox.sourceforge.net',
