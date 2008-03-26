@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: vidthumb.py,v 1.23 2007/06/30 09:44:23 stephen Exp $
+# $Id: vidthumb.py,v 1.24 2007/11/24 17:28:19 stephen Exp $
 
 """Generate thumbnails for video files.  This must be called as
       vidthumb.py source_file destination_thumbnail maximum_size
@@ -264,6 +264,7 @@ class VidThumbMPlayer(VidThumbNail):
         except:
             self.report_exception()
             return self.failed_image(rsize, _('Bad length'))
+        os.wait()
 
         self.total_time=vlen
         if debug: print vlen
