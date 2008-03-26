@@ -1,5 +1,5 @@
 import os, sys, time
-import dbus
+import dbus, dbus.glib
 
 # DBus setup
 service_name='uk.co.demon.kerofin.DownloadManager'
@@ -14,6 +14,9 @@ except:
 
 defdelay=5
 inc=5
+
+if hasattr(dbus, 'set_default_main_loop'):
+    dbus.set_default_main_loop(dbus.glib.DBusGMainLoop())
 
 class DMException(Exception):
     """Generic DownloadManager exception"""
