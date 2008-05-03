@@ -153,11 +153,20 @@ class SetWindow(rox.Dialog):
         self.vbox.pack_start(ebox, True, True)
 
         self.vbox.show_all()
+        
         but=rox.g.Button(stock=rox.g.STOCK_HELP)
         but.connect('clicked', self.do_help)
         self.action_area.pack_start(but, False, False)
         self.action_area.reorder_child(but, 0)
         but.show()
+        
+        but=rox.g.Button(stock=rox.g.STOCK_CLEAR)
+        but.connect('clicked', self.do_clear)
+        self.action_area.pack_start(but, False, False)
+        self.action_area.reorder_child(but, 1)
+        but.show()
+        but.set_sensitive(False)
+        self.clear_button=but
         
         self.connect('response', self.get_response)
         
@@ -170,6 +179,23 @@ class SetWindow(rox.Dialog):
 
     def do_help(self, widget):
         helper.show_help(parent=self)
+
+    def do_clear(self, widget):
+        mtype=self.type_drop.get_type()
+        handler=find_handler(mtype)
+        ok=can_clear(mtype)
+        #print handler, ok
+        if not ok:
+            rox.alert(_('No write permission to clear handler for %s') % mtype)
+            return
+        
+        try:
+            os.remove(handler)
+            self.set_file(self.type_drop.get_test())
+
+        except OSError, ex:
+            rox.alert(_('Failed to clear handler: %s') % ex)
+            self.clear_button.set_sensitive(False)
 
     def file_dropped(self, target, path):
         if target==self.type_drop:
@@ -200,6 +226,8 @@ class SetWindow(rox.Dialog):
             self.handler_drop.clear_image()
             self.handler_drop.set_message('')
 
+        self.clear_button.set_sensitive(can_clear(self.type_drop.get_type()))
+
     def start_test(self):
         tester=TestWindow(self.type_drop.get_test(),
                               self.handler_drop.get_handler())
@@ -213,6 +241,7 @@ class SetWindow(rox.Dialog):
         tester.destroy()
         if resp==rox.g.RESPONSE_ACCEPT:
             if self.set_handler():
+                self.clear_button.set_sensitive(True) # ??
                 self.response(rox.g.RESPONSE_ACCEPT)
 
     def set_handler(self):
@@ -328,6 +357,14 @@ def find_handler(mtype):
         handler=rox.basedir.load_first_config('rox.sourceforge.net',
                                           'MIME-thumb', mtype.media)
     return handler
+
+def can_clear(mtype):
+    handler=find_handler(mtype)
+    if not handler:
+        return False
+
+    return os.access(handler, os.W_OK) and os.access(os.path.dirname(handler),
+                                                     os.W_OK)
 
 def clean_up(dia, resp):
     dia.destroy()

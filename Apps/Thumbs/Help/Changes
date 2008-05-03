@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+30-Mar-2008
+~~~~~~~~~~~
+Added ability to clear a handler.
+
 24-Mar-2008
 ~~~~~~~~~~~
 Support setting handler via a URL (using 0launch).
