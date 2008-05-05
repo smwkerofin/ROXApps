@@ -1,6 +1,0 @@
-#!/bin/sh
-#
-# Run AppletRun without arguments
-
-APP_DIR=`dirname $0`
-exec "$APP_DIR/AppletRun"
