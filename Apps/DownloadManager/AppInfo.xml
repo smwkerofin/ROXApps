@@ -3,15 +3,11 @@
   <Summary>Manage downloads</Summary>
   <About>
     <Purpose>Manage downloads by limiting number of clients downloading</Purpose>
-    <Version>0.1.3 (13 January 2006)</Version>
+    <Version>0.1.4 (5 May 2008)</Version>
     <Authors>Stephen Watson</Authors>
     <License>GNU General Public License</License>
     <Homepage>http://www.kerofin.demon.co.uk/rox/</Homepage>
   </About>
-  <Dependencies>
-    <AppDir><Name>ROX-Lib2</Name><NeedsVersion>2.0.3</NeedsVersion></AppDir>
-    <Python><Name>dbus</Name><NeedsVersion>0.22</NeedsVersion></Python>
-  </Dependencies>
   <AppMenu>
     <Item option="-o">
       <Label>Options</Label>
