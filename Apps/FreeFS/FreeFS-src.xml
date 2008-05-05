@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <interface
   xmlns="http://zero-install.sourceforge.net/2004/injector/interface"
-  uri="http://www.kerofin.demon.co.uk/2007/interfaces/FreeFS"
+  uri="http://www.kerofin.demon.co.uk/2007/interfaces/FreeFS-src"
   main="FreeFS/AppRun">
   <name>FreeFS</name>
   <summary>Display usage of a file system.</summary>
