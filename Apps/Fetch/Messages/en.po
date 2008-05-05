@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Fetch 0.3.2\n"
-"POT-Creation-Date: 2006-04-29 11:21+BST\n"
+"POT-Creation-Date: 2008-05-05 10:51+BST\n"
 "PO-Revision-Date: 2006-04-29 11:19+BST\n"
 "Last-Translator: Stephen Watson <stephen@kerofin.demon.co.uk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -14,130 +14,146 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 
-#: AppRun:104
+#: AppRun:125
+msgid "Start"
+msgstr ""
+
+#: AppRun:135
 msgid "<b>Source</b>"
 msgstr ""
 
-#: AppRun:114
+#: AppRun:146
 msgid "<b>Size</b>"
 msgstr ""
 
-#: AppRun:124
+#: AppRun:156
 msgid "<b>Server Type</b>"
 msgstr ""
 
-#: AppRun:136
+#: AppRun:168
 msgid "<b>Local Type</b>"
 msgstr ""
 
-#: AppRun:157
+#: AppRun:190
 msgid "<b>Download to</b>"
 msgstr ""
 
-#: AppRun:170
+#: AppRun:203
 msgid "<b>Bytes fetched</b>"
 msgstr ""
 
-#: AppRun:180
+#: AppRun:213
 msgid "<b>Estimated time</b>"
 msgstr ""
 
-#: AppRun:190
+#: AppRun:223
 msgid "<b>Speed</b>"
 msgstr ""
 
-#: AppRun:216
+#: AppRun:254
 msgid "Cancelled"
 msgstr ""
 
-#: AppRun:221
+#: AppRun:261
 msgid "Fetch of %s cancelled"
 msgstr ""
 
-#: AppRun:223
+#: AppRun:263
 msgid ", %d bytes "
 msgstr ""
 
-#: AppRun:226
+#: AppRun:266
 msgid "in %s"
 msgstr ""
 
-#: AppRun:227
+#: AppRun:267
 msgid "."
 msgstr ""
 
-#: AppRun:238
+#: AppRun:279
+msgid "Force %s to be type %s (%s)?"
+msgstr ""
+
+#: AppRun:306
 msgid "Stalled? Last update %ds ago"
 msgstr ""
 
-#: AppRun:284 AppRun:514
+#: AppRun:346 AppRun:598
 msgid "Done"
 msgstr ""
 
-#: AppRun:312
+#: AppRun:377
 msgid "Window closed"
 msgstr ""
 
-#: AppRun:353 fetch.py:123
-msgid "Downloading"
-msgstr ""
-
-#: AppRun:391
+#: AppRun:440
 msgid "Helper process crashed: %s"
 msgstr ""
 
-#: AppRun:403
+#: AppRun:454 fetch.py:121
+msgid "Downloading"
+msgstr ""
+
+#: AppRun:475
 msgid "Connecting to DownloadManager"
 msgstr ""
 
-#: AppRun:406
+#: AppRun:478
 msgid "Could not connect to DownloadManager"
 msgstr ""
 
-#: AppRun:451
+#: AppRun:529
 msgid "Waiting, %d in queue"
 msgstr ""
 
-#: AppRun:507
+#: AppRun:589
 msgid "Rename failed, data left in temporary file %s"
 msgstr ""
 
-#: AppRun:517
+#: AppRun:601
+msgid "Failed"
+msgstr ""
+
+#: AppRun:605
 msgid "Done (server did not know type)"
 msgstr ""
 
-#: AppRun:519
+#: AppRun:607
 msgid "Server may have sent error"
 msgstr ""
 
-#: AppRun:522
+#: AppRun:610
 msgid "Done.  Warning: type mismatch"
 msgstr ""
 
-#: fetch.py:104
-msgid "Connecting"
+#: AppRun:622
+msgid "Set type"
 msgstr ""
 
-#: fetch.py:107
+#: fetch.py:102
+msgid "Connecting to server"
+msgstr ""
+
+#: fetch.py:105
 msgid "Connected"
 msgstr ""
 
-#: fetch.py:199
+#: fetch.py:204
 msgid "Password for %s"
 msgstr ""
 
-#: fetch.py:210
+#: fetch.py:215
 msgid "Enter username and password for %s at %s"
 msgstr ""
 
-#: fetch.py:217
+#: fetch.py:222
 msgid "<b>Username</b>"
 msgstr ""
 
-#: fetch.py:227
+#: fetch.py:232
 msgid "<b>Password</b>"
 msgstr ""
 
-#: fetch.py:238
+#: fetch.py:243
 msgid "Remember for next time"
 msgstr ""
