@@ -1,3 +1,0 @@
-#!/bin/sh
-appdir="`dirname $0`"
-exec "$appdir/AppletRun"
