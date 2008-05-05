@@ -23,7 +23,7 @@ view the program info, change the configuration or quit the program.
     <requires interface="http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib">
       <environment insert="AppRun" name="ROX_CLIB"/>
     </requires>
-    <implementation version="2.1.7" released="snapshot" stability='testing' id="."/>
+    <implementation version="2.1.8" released="snapshot" stability='testing' id="."/>
   </group>
 </interface>
 
