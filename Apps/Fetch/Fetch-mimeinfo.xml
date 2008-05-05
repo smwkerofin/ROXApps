@@ -4,5 +4,6 @@
   <mime-type type="application/x-incomplete">
     <comment>File which is being downloaded</comment>
     <glob pattern="*.fetching"/>
+    <glob pattern="*.part"/>
   </mime-type>
 </mime-info>

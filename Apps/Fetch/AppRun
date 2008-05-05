@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.35 2007/11/24 17:23:57 stephen Exp $
+# $Id: AppRun,v 1.36 2008/01/26 15:28:06 stephen Exp $
 
 import os, sys
 import time
@@ -38,7 +38,7 @@ rox.app_options.notify()
 
 #bsize=4096
 #stimeo=5*60
-tsuf='.fetching'
+tsuf='.part'
 delay=500
 
 unknown_type=rox.mime.lookup('text/plain')
