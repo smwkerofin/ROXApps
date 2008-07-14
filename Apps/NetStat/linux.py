@@ -1,4 +1,4 @@
-# $Id: linux.py,v 1.4 2005/05/07 11:34:19 stephen Exp $
+# $Id: linux.py,v 1.5 2006/04/29 11:18:19 stephen Exp $
 
 """netstat implementation for Linux"""
 
@@ -52,6 +52,13 @@ def stat():
     if len(res.keys())<1:
         return None
     return res
+
+def get_start_time():
+    """Return the time from which the data returned by stat() is valid.
+    This is most probably the boot time."""
+
+    s=os.stat('/proc/net/dev')
+    return s.st_mtime
 
 states={1: _('Established'), 2: _('SYN sent'), 3: _('SYN received'),
         4: _('FIN wait 1'), 5: _('FIN wait 2'), 6: _('Time wait'),

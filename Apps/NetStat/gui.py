@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.20 2005/11/21 18:29:20 stephen Exp $
+# $Id: gui.py,v 1.21 2006/04/29 11:18:19 stephen Exp $
 
 import os
 import sys
@@ -20,6 +20,7 @@ import rox.options
 import rox.InfoWin
 
 from sockwin import SocketsWindow
+import usage
 
 #import gc; gc.set_debug(gc.DEBUG_LEAK)
 
@@ -32,6 +33,7 @@ else:
 app_dir=os.path.dirname(sys.argv[0])
 
 stats=netstat.NetStat()
+#print stats
 
 # Defaults
 iface='ppp0'
@@ -46,46 +48,33 @@ DISPLAY_CHART='chart'
 
 pids=[]
 
-# Load old style config if there is no new one
-if rox.choices.load('NetStat', 'Options.xml') is None:
-    fname=rox.choices.load('NetStat', 'config')
-    try:
-        inf=open(fname, 'r')
-
-        lines=inf.readlines()
-        for line in lines:
-            line=string.strip(line)
-            if len(line)<1 or line[0]=='#':
-                continue
-            eq=string.find(line, '=')
-            if eq<1:
-                continue
-            if line[:eq]=='interface':
-                iface=line[eq+1:]
-            elif line[:eq]=='connect':
-                select_cmd=line[eq+1:]
-        inf.close()
-    
-    except:
-        pass
-
 # Load config
-rox.setup_app_options('NetStat')
+rox.setup_app_options('NetStat', site='kerofin.demon.co.uk')
+
 interface=rox.options.Option('interface', iface)
 connect=rox.options.Option('connect', select_cmd)
 disconnect=rox.options.Option('disconnect', adjust_cmd)
+
 medium_level=rox.options.Option('medium', levels[1])
 high_level=rox.options.Option('high', levels[0])
 medium_K=rox.options.Option('medium_K', levels2[1])
 high_K=rox.options.Option('high_K', levels2[0])
+
 win_size=rox.options.Option('wsize', wsize)
 display=rox.options.Option('display', DISPLAY_ARROWS)
 
+period=rox.options.Option('period', 30)
+rx_limit=rox.options.Option('rx_limit', 30)
+tx_limit=rox.options.Option('tx_limit', 30)
+total_limit=rox.options.Option('total_limit', 30)
+
 ifdisp=None
 win=None
+uwin=None
 
 def options_changed():
-    global iface, select_cmd
+    global iface, select_cmd, uwin
+    
     #print 'in options_changed()'
     if interface.has_changed:
         #print 'iface=%s' % interface.value
@@ -94,6 +83,9 @@ def options_changed():
             ifdisp.set_text(iface)
         if win:
             win.set_title(iface)
+        if uwin:
+            uwin.set_interface(iface)
+            
     if connect.has_changed:
         select_cmd=connect.value
     if disconnect.has_changed:
@@ -108,6 +100,14 @@ def options_changed():
         levels2[0]=high_K.int_value
     if win_size.has_changed and win:
         win.set_size_request(win_size.int_value, win_size.int_value)
+
+    if period.has_changed and uwin:
+        uwin.set_period(period.int_value)
+
+    if (rx_limit.has_changed or tx_limit.has_changed or
+        total_limit.has_changed) and uwin:
+        uwin.set_limits(rx_limit.int_value, tx_limit.int_value,
+                        total_limit.int_value)
 
 rox.app_options.add_notify(options_changed)
 
@@ -142,6 +142,7 @@ rox.Menu.set_save_name('NetStat')
 menu=rox.Menu.Menu('main', [
     rox.Menu.Action(_('Info'), 'show_info', stock=g.STOCK_DIALOG_INFO),
     rox.Menu.Separator(),
+    rox.Menu.Action(_('Usage...'), 'show_usage'),
     rox.Menu.SubMenu(_('Sockets'), [
       rox.Menu.Action(_('Show active...'), 'show_active'),
       rox.Menu.Action(_('Show all..'), 'show_all')
@@ -157,6 +158,9 @@ class MenuHelper:
         import rox.InfoWin
         rox.InfoWin.infowin('NetStat')
     def do_quit(unused):
+        if uwin:
+            uwin.hide()
+            #rox.toplevel_unref()
         rox.toplevel_unref()
     def edit_options(unused):
         rox.edit_options()
@@ -166,6 +170,9 @@ class MenuHelper:
     def show_all(unused):
         w=SocketsWindow(stats, 1)
         w.show()
+
+    def show_usage(unused):
+        uwin.show()
 
 menu_helper=MenuHelper()
 menu.attach(win, menu_helper)
@@ -424,8 +431,11 @@ def display_chart(widget, act):
     left=0
     right=width
     if pmax>0:
-        draw_chart(widget.window, gc, (top, bot, left, right),
-                   history, vind+1, l, pmax)
+        try:
+            draw_chart(widget.window, gc, (top, bot, left, right),
+                       history, vind+1, l, pmax)
+        except:
+            pass
     slayout.set_text('Tx')
     gc.foreground=black
     widget.window.draw_layout(gc, left, top, slayout)
@@ -436,8 +446,11 @@ def display_chart(widget, act):
     left=0
     right=width
     if pmax>0:
-        draw_chart(widget.window, gc, (top, bot, left, right),
-                   history, vind+0, l, pmax)
+        try:
+            draw_chart(widget.window, gc, (top, bot, left, right),
+                       history, vind+0, l, pmax)
+        except:
+            pass
     slayout.set_text('Rx')
     gc.foreground=black
     widget.window.draw_layout(gc, left, top, slayout)
@@ -512,14 +525,25 @@ can.connect('expose_event', expose)
 can.connect('configure_event', resize)
 
 def update():
+    #print stats
     stats.update()
     can.queue_draw()
-    return 1
+    return True
+
+#print rox._toplevel_windows
+uwin=usage.get_window(interface.value)
+uwin.set_period(period.int_value)
+uwin.set_limits(rx_limit.int_value, tx_limit.int_value, total_limit.int_value)
+#print rox._toplevel_windows
+if xid is None:
+    rox.toplevel_unref()
 
 tag=gobject.timeout_add(1000, update)
+gobject.timeout_add(60*1000, uwin.do_update)
 
 win.show_all()
 rox.mainloop()
+uwin.on_exit()
 
 for pid in pids:
     os.waitpid(pid, 0)

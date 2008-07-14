@@ -41,4 +41,11 @@ activity.
 <label>The display is in bytes per second on Linux, or packets per
 second for Solaris</label>
 </section>
+<section title="Usage limits">
+<label>If you have a limited bandwidth connection use this section to specify what those limits are.</label>
+<numentry name="period" label="Period (days)" min="1" max="90">Number of days over which to maintain a rolling count</numentry>
+<numentry name="rx_limit" label="Receive (GB)" min="0" max="1024">Maximum number of GB allowed in the period above (0 for unlimited)</numentry>
+<numentry name="tx_limit" label="Transmit (GB)" min="0" max="1024">Maximum number of GB allowed in the period above (0 for unlimited)</numentry>
+<numentry name="total_limit" label="Total (GB)" min="0" max="1024">Maximum number of GB allowed in the period above (0 for unlimited)</numentry>
+</section>
 </options>
