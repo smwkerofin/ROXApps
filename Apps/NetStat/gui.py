@@ -1,4 +1,4 @@
-# $Id: gui.py,v 1.21 2006/04/29 11:18:19 stephen Exp $
+# $Id: gui.py,v 1.22 2008/07/14 16:41:27 stephen Exp $
 
 import os
 import sys
@@ -542,8 +542,11 @@ tag=gobject.timeout_add(1000, update)
 gobject.timeout_add(60*1000, uwin.do_update)
 
 win.show_all()
-rox.mainloop()
-uwin.on_exit()
+try:
+    rox.mainloop()
+finally:
+    print 'saving on exit'
+    uwin.on_exit()
 
 for pid in pids:
     os.waitpid(pid, 0)

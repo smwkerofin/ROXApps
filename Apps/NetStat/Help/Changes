@@ -1,6 +1,10 @@
 NetStat
 =======
 
+26-Jul-2008
+~~~~~~~~~~~
+Handle usage in the case where the system has been re-booted.
+
 25-May-2008
 ~~~~~~~~~~~
 Track bandwidth usage.

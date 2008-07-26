@@ -43,6 +43,9 @@ class DailyUsage(object):
         date=time.strftime('%Y-%m-%d', time.localtime(self.timestamp))
         return (date, self.rx, self.tx)
 
+    def get_day(self):
+        return time.localtime(self.timestamp).tm_yday
+
 class UsageList(object):
     def __init__(self, ifname, maxd=45, reportd=30):
         self.name=ifname
@@ -52,10 +55,12 @@ class UsageList(object):
         self.rx=0
         self.rxh=0
         self.rx_tot=0
+        self.rx_base=0
         self.tx0=0
         self.tx=0
         self.txh=0
         self.tx_tot=0
+        self.tx_base=0
         self.previous=[]
         self.tstamp=None
 
@@ -105,11 +110,15 @@ class UsageList(object):
         self.tx=tx+self.txh*offset
 
         if tm.tm_yday!=self.day:
-            d=DailyUsage(self.tstamp, self.rx-self.rx0, self.tx-self.tx0)
+            d=DailyUsage(self.tstamp,
+                         self.rx-self.rx0+self.rx_base,
+                         self.tx-self.tx0+self.tx_base)
             self.rx_tot+=d.rx
             self.tx_tot+=d.tx
             self.rx0=self.rx
             self.tx0=self.tx
+            self.rx_base=0
+            self.tx_base=0
             self.day=tm.tm_yday
             self.previous.append(d)
             if len(self.previous)>self.max:
@@ -136,8 +145,8 @@ class UsageList(object):
     def get_summary(self, days=30):
         if len(self.previous)<days:
             days=len(self.previous)
-        rx=self.rx-self.rx0
-        tx=self.tx-self.tx0
+        rx=self.rx-self.rx0+self.rx_base
+        tx=self.tx-self.tx0+self.tx_base
         for i in range(days):
             p=-1-i
             d=self.previous[p]
@@ -148,7 +157,7 @@ class UsageList(object):
         return days, rx, tx
 
     def get_today(self):
-        return self.rx-self.rx0, self.tx-self.tx0
+        return self.rx-self.rx0+self.rx_base, self.tx-self.tx0+self.tx_base
 
     def as_csv(self):
         s='"Date","Received","Transmitted"\n'
@@ -156,13 +165,16 @@ class UsageList(object):
             date, rx, tx=r.for_csv()
             s+='"%s",%d,%d\n' % (date, rx, tx)
         date=time.strftime('%Y-%m-%d', time.localtime(time.time()))
-        s+='"%s",%d,%d\n' % (date, self.rx-self.rx0, self.tx-self.tx0)
+        s+='"%s",%d,%d\n' % (date, self.rx-self.rx0+self.rx_base,
+                             self.tx-self.tx0+self.tx_base)
         return s
 
     def write(self, fout):
         fout.write(self.name+'\n')
-        fout.write('%ld %ld %ld\n' % (self.rx0, self.rx, self.rxh))
-        fout.write('%ld %ld %ld\n' % (self.tx0, self.tx, self.txh))
+        fout.write('%ld %ld %ld\n' % (self.rx0, self.rx+self.rx_base,
+                                      self.rxh))
+        fout.write('%ld %ld %ld\n' % (self.tx0, self.tx+self.tx_base,
+                                      self.txh))
         fout.write('%f\n' % self.tstamp)
         for u in self.previous:
             fout.write('%f %ld %ld\n' % (u.timestamp, u.rx, u.tx))
@@ -202,18 +214,30 @@ class UsageList(object):
         l=fin.readline().strip()
         tx0, tx, txh=map(long, l.split())
 
+        lost=None
         tstamp=float(fin.readline().strip())
         #print start_time, tstamp
         if start_time>0 and tstamp<start_time:
             # System has restarted since the file was saved, running
             # total cannot be valid
             #print start_time, tstamp
-            rx0=0
-            rx=0
+            tm_loaded=time.localtime(tstamp)
+            tm_start=time.localtime(start_time)
+            if tm_loaded.tm_yday!=tm_start.tm_yday:
+                # new day, store what we had when we exited
+                lost=DailyUsage(tstamp, rx-rx0, tx-tx0)
+            else:
+                # Set offset for today
+                self.rx_base=rx-rx0
+                self.tx_base=tx-tx0
+            stats=netstat.stat()[name]
+            rx0=stats[2]
+            rx=stats[2]
             rxh=0
-            tx0=0
-            tx=0
+            tx0=stats[3]
+            tx=stats[3]
             txh=0
+            tstamp=time.time()
 
         rec=[]
         rxt=0
@@ -224,6 +248,7 @@ class UsageList(object):
             rec.append(u)
             rxt+=u.rx
             txt+=u.tx
+        fin.close()
 
         self.rx0=rx0
         self.rx=rx
@@ -238,6 +263,26 @@ class UsageList(object):
 
         now=time.time()
         tm=time.localtime(now)
+        tm_loaded=time.localtime(tstamp)
+        if tm.tm_yday!=tm_loaded.tm_yday:
+            if lost:
+                d=lost
+            else:
+                d=DailyUsage(self.tstamp, self.rx-self.rx0, self.tx-self.tx0)
+            self.rx_tot+=d.rx
+            self.tx_tot+=d.tx
+            self.rx0=self.rx
+            self.tx0=self.tx
+            self.day=tm.tm_yday
+            if d.get_day()!=self.previous[-1].get_day():
+                self.previous.append(d)
+            else:
+                self.previous[-1]=d
+            if len(self.previous)>self.max:
+                self.rx_tot-=self.previous[0].rx
+                self.tx_tot-=self.previous[0].tx
+                del self.previous[0]
+            self.save()            
 
         self.tstamp=now
         self.day=tm.tm_yday
