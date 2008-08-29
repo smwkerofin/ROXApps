@@ -100,15 +100,17 @@ class UsageList(object):
         tm=time.localtime(now)
         stats=netstat.stat()[self.name]
         rx, tx=stats[2:4]
+        
         self.rx=rx+self.rxh*offset
         while self.rx<self.rx0:
             self.rxh+=1
             self.rx=rx+self.rxh*offset
+            
+        self.tx=tx+self.txh*offset
         while self.tx<self.tx0:
             self.txh+=1
             self.tx=tx+self.txh*offset
-        self.tx=tx+self.txh*offset
-
+            
         if tm.tm_yday!=self.day:
             d=DailyUsage(self.tstamp,
                          self.rx-self.rx0+self.rx_base,
@@ -202,6 +204,8 @@ class UsageList(object):
             except AssertionError:
                 pass
 
+        if loaded:
+            self.update()
         return loaded
 
     def read_data(self, fin):
@@ -264,25 +268,29 @@ class UsageList(object):
         now=time.time()
         tm=time.localtime(now)
         tm_loaded=time.localtime(tstamp)
-        if tm.tm_yday!=tm_loaded.tm_yday:
+        #print tm.tm_yday, tm_loaded.tm_yday
+        if tm.tm_yday!=tm_loaded.tm_yday-1:
             if lost:
                 d=lost
             else:
+                #print self.rx, self.rx0
                 d=DailyUsage(self.tstamp, self.rx-self.rx0, self.tx-self.tx0)
             self.rx_tot+=d.rx
             self.tx_tot+=d.tx
             self.rx0=self.rx
             self.tx0=self.tx
             self.day=tm.tm_yday
+            #print d
+            #print d.get_day(), self.previous[-1].get_day()
             if d.get_day()!=self.previous[-1].get_day():
                 self.previous.append(d)
-            else:
-                self.previous[-1]=d
+
             if len(self.previous)>self.max:
                 self.rx_tot-=self.previous[0].rx
                 self.tx_tot-=self.previous[0].tx
                 del self.previous[0]
-            self.save()            
+            #print self.rx_tot, self.rx
+            self.save()
 
         self.tstamp=now
         self.day=tm.tm_yday
