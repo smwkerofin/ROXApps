@@ -9,13 +9,14 @@ This is a panel clock, with support for setting
 alarms.  It can also function in its own window.
 
   </description>
-  <icon type='image/png' href='http://www.kerofin.demon.co.uk/icons/Clock.png'/>
+  <icon type='image/png' href='http://www.kerofin.demon.co.uk/ricons/Clock.png'/>
 <group>
     <requires interface="http://www.kerofin.demon.co.uk/2005/interfaces/ROX-CLib">
       <environment insert="." name="LIBDIRPATH"/>
     </requires>
     <implementation id=".." released='Snapshot' 
-		stability="testing" version="2.1.9" platform="Linux-ix86"/>
+		stability="testing" version="2.1.8" platform="Linux-ix86"/>
   </group>
   <feed-for interface='http://www.kerofin.demon.co.uk/2005/interfaces/Clock'/>
+  <feed src="http://www.kerofin.demon.co.uk/2008/interfaces/Clock-src" arch="*-src"/>
 </interface>
