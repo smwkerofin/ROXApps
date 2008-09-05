@@ -1,5 +1,5 @@
 /*
- * $Id: tray.c,v 1.2 2006/08/24 21:20:10 stephen Exp $
+ * $Id: tray.c,v 1.3 2006/08/28 15:47:41 stephen Exp $
  *
  * SystemTray, a notification area applet for rox
  * Copyright (C) 2003, Andy Hanton
@@ -77,8 +77,7 @@ GtkWidget *tray_new(GtkWidget *top, ROXPanelLocation side)
   if (t->location == PANEL_UNKNOWN)
     t->location = PANEL_BOTTOM;
 
-  switch (t->location) 
-    {
+  switch (t->location) {
     case PANEL_TOP:
     case PANEL_BOTTOM:
       t->box = gtk_hbox_new(FALSE, 0);
@@ -89,7 +88,7 @@ GtkWidget *tray_new(GtkWidget *top, ROXPanelLocation side)
     case PANEL_LEFT:
       t->box = gtk_vbox_new(FALSE, 0);
       t->gliph = GTK_SEPARATOR(gtk_hseparator_new());
-      t->ishoriz=TRUE;
+      t->ishoriz=FALSE;
       break;
     }  
 
@@ -99,7 +98,7 @@ GtkWidget *tray_new(GtkWidget *top, ROXPanelLocation side)
   g_object_set_data(G_OBJECT(t->box), "tray", t);
   check_size(t);
 
-  gtk_main_iteration_do(FALSE);//FIME: do I need this?
+  gtk_main_iteration_do(FALSE); /* FIXME: do I need this? */
   manager_selection_acquire(t);
   gtk_widget_show_all(t->box);
 

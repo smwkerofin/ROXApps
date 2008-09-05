@@ -22,5 +22,5 @@ This is based on the SystemTray applet, but updated.
   </group>
   <feed-for interface='http://www.kerofin.demon.co.uk/2006/interfaces/SystemTrayN'/>
   <feed
-src="http://www.kerofin.demon.co.uk/2007/interfaces/SystemTrayN-src" arch="*-src">
+src="http://www.kerofin.demon.co.uk/2007/interfaces/SystemTrayN-src" arch="*-src"/>
 </interface>

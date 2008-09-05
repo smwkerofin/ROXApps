@@ -2,6 +2,10 @@
 			A notification area applet for ROX-Filer
 			by Andy Hanton and Stephen Watson
 
+26-Aug-2008
+~~~~~~~~~~~
+Fix detection of panel orientation (reported by Cyrille Mars).
+
 31-Dec-2007 (0.3.3)
 ~~~~~~~~~~~
 Fixes for 0compile support (reported by Thomas Leonard).
