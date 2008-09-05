@@ -2,8 +2,8 @@
 
 import os, sys
 
-import findrox; findrox.version(2, 0, 2)
-import rox, rox.applet, rox.Menu
+import findrox; findrox.version(2, 0, 4)
+import rox, rox.applet, rox.Menu, rox.uri_handler
 import gobject
 
 import stats
@@ -54,6 +54,9 @@ class Applet(rox.applet.Applet):
     def click(self, widget, event, data=None):
         if event.button==3:
             self.menu.popup(self, event, self.position_menu)
+            return True
+        elif event.button==1:
+            rox.uri_handler.launch('http://10.0.0.2/')
             return True
         return False
 
