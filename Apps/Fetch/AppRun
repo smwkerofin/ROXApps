@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: AppRun,v 1.36 2008/01/26 15:28:06 stephen Exp $
+# $Id: AppRun,v 1.37 2008/05/05 09:52:48 stephen Exp $
 
 import os, sys
 import time
@@ -107,6 +107,7 @@ class FetchWindow(rox.Dialog):
         self.count=None
         self.start_time=None
         self.last_time=None
+        self.past=[]
         self.size=0
         self.con=None
         self.bad_fetch=0 # 1=maybe, 2=yes
@@ -351,8 +352,18 @@ class FetchWindow(rox.Dialog):
             self.etime.set_text(tstr)
 
             if elapsed>0:
-                speed=size/elapsed/1024
-                self.speed.set_text('%2.1f KB/s' % speed)
+                avspeed=size/elapsed/1024
+                self.past.append((now, size))
+                t=self.past[0]
+                if t[0]!=now:
+                    elapsed=now-t[0]
+                    cspeed=(size-t[1])/elapsed/1024
+                    self.speed.set_text(_('%3.1f KB/s (average %3.1f KB/s)') %
+                                        (cspeed, avspeed))
+                else:
+                    self.speed.set_text('%3.1f KB/s' % avspeed)
+                if len(self.past)>5:
+                    del self.past[0]
             
     def active(self):
         self.prog.set_text('')
@@ -526,7 +537,10 @@ class FetchWindow(rox.Dialog):
 
         try:
             n=self.dl_man.getQueueSize()
-            self.message(_('Waiting, %d in queue') % n)
+            if n>1:
+                self.message(_('Waiting, %d in queue') % n)
+            else:
+                self.message(_('Waiting in queue'))
         except:
             self.real_start()
             return False

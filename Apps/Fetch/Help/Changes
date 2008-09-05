@@ -1,6 +1,14 @@
 Fetch
 =====
 
+15-May-2008
+~~~~~~~~~~~
+Better speed calculcation, now print both current and average speeds.
+
+03-May-2008 (0.3.3)
+~~~~~~~~~~~
+Change suffix from .fetching to .part (same as Firefox).
+
 26-Jan-2008
 ~~~~~~~~~~~
 Now using rox.tasks module.
@@ -196,4 +204,4 @@ Let the URL label wrap to avoid the window becoming too wide.
 Fixed update of progress bar.
 
 -- 
-$Id: Changes,v 1.44 2007/11/24 17:23:57 stephen Exp $
+$Id: Changes,v 1.45 2008/01/26 15:28:06 stephen Exp $
