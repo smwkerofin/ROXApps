@@ -111,6 +111,6 @@ if __name__=='__main__':
 # try and reap it.
 try:
     while True:
-        os.waitpid(0, os.WNOHANG)
+        os.waitpid(0, 0)
 except:
     pass

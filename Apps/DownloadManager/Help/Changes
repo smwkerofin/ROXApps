@@ -1,6 +1,10 @@
 DownloadManager
 ===============
 
+25-May-2008
+~~~~~~~~~~~
+More work on setting main loop.
+
 05-May-2008 (0.1.4)
 ~~~~~~~~~~~
 Update client to use dbus.set_default_main_loop.
@@ -89,4 +93,4 @@ Now a proper app.
 First version, command line program.
 
 -- 
-$Id: Changes,v 1.22 2008/01/26 15:26:30 stephen Exp $
+$Id: Changes,v 1.23 2008/05/05 09:46:43 stephen Exp $

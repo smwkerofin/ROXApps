@@ -1,6 +1,12 @@
 import sys, time, os
 
-import dbus, dbus.service , dbus.glib
+import dbus, dbus.service, dbus.glib
+try:
+    import dbus.mainloop.glib
+    if hasattr(dbus.mainloop.glib, 'DBusGMainLoop'):
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+except ImportError:
+    pass
 
 #import findrox; findrox.version(2, 0, 2)
 import rox, rox.options
