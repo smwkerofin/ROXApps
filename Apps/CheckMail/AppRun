@@ -73,10 +73,14 @@ class MailQueue:
             return True
 
         try:
-            self.scan=finger.Finger(host, long_output=True)
+            self.scan=finger.Finger(host, long_output=True, timeout=5.)
             rox.tasks.Task(self.update())
-        except:
+        except finger.timeout:
             pass
+        except finger.socket.gaierror, exc:
+            print exc
+        except:
+            rox.report_exception()
         return True
 
     def update(self):
@@ -88,7 +92,10 @@ class MailQueue:
             yield rox.tasks.InputBlocker(self.scan.fileno())
             try:
                 line=self.scan.readline()
+            except finger.timeout:
+                line=None
             except:
+                rox.report_exception()
                 line=None
             if not line:
                 break
