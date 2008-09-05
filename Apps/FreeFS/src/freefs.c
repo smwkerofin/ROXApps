@@ -5,7 +5,7 @@
  *
  * GPL applies.
  *
- * $Id: freefs.c,v 1.39 2007/04/28 10:06:51 stephen Exp $
+ * $Id: freefs.c,v 1.40 2008/01/19 11:58:50 stephen Exp $
  */
 #include "config.h"
 
@@ -914,6 +914,7 @@ static gboolean update_fs_values(FreeWindow *fwin)
 	tip=g_strdup_printf(_("%s: %s total, %s free (%d%%)"), mpt,
 			    ttotal, tavail, (int) fused);
 	gtk_tooltips_set_tip(ttips, fwin->win, tip, _(TIP_PRIVATE));
+	gtk_tooltips_set_tip(ttips, fwin->fs_per, tip, _(TIP_PRIVATE));
 	g_free(tip);
 	
       }
@@ -1449,6 +1450,10 @@ static gboolean handle_uris(GtkWidget *widget, GSList *uris,
 
 /*
  * $Log: freefs.c,v $
+ * Revision 1.40  2008/01/19 11:58:50  stephen
+ * Option for applet to show available size (Janek Kozicki).
+ * Tooltip for applet now shows a summary.
+ *
  * Revision 1.39  2007/04/28 10:06:51  stephen
  * Fix bug sorting the mount points.
  *
