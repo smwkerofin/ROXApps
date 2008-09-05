@@ -33,6 +33,7 @@ class StatusIcon(rox.StatusIcon):
 
         self.connect('activate', self.do_activate)
 
+        self.last_update=0
         self.last_display=0
         self.current_entries=[]
         self.shown=set()
@@ -44,6 +45,20 @@ class StatusIcon(rox.StatusIcon):
     def do_update(self):
         try:
             stat=status.Status()
+        except status.gaierror:
+            self.set_visible(True)
+            msg='Server not known.\nDNS servers not responding?'
+            if len(self.current_entries)>0:
+                msg+='%d status entries' % len(self.current_entries)
+            self.set_tooltip(msg)
+            return True
+        except status.timeout:
+            self.set_visible(True)
+            msg='Server not responding.'
+            if len(self.current_entries)>0:
+                msg+='%d status entries' % len(self.current_entries)
+            self.set_tooltip(msg)
+            return True
         except:
             rox.report_exception()
             return True
@@ -135,6 +150,9 @@ class StatusWindow(rox.Window):
         cell=rox.g.CellRendererText()
         col=rox.g.TreeViewColumn('Message', cell, text=MESG)
         self.view.append_column(col)
+
+        select=self.view.get_selection()
+        select.set_mode(rox.g.SELECTION_NONE)
 
         scrw.add(self.view)
 

@@ -3,6 +3,7 @@ import sys
 import time
 
 import finger
+from finger import timeout, gaierror
 
 class Entry(object):
     def __init__(self, operator, date, message):
@@ -127,7 +128,14 @@ class Status(object):
         return ans
 
 def _test():
-    stat=Status()
+    try:
+        stat=Status()
+    except timeout, ex:
+        print 'Server not responding:', ex
+        return
+    except gaierror, ex:
+        print 'Server not found:', ex
+        return
     print stat
     for e in stat.get_entries():
         print e, time.ctime(e.date)

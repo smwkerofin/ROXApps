@@ -1,6 +1,7 @@
 import os
 import sys
 import socket
+from socket import gaierror, timeout
 
 import gobject
 
@@ -29,9 +30,10 @@ def get_line(sock):
     return ans
 
 class Finger(socket.socket):
-    def __init__(self, target, port=PORT, long_output=False):
+    def __init__(self, target, port=PORT, long_output=False, timeout=None):
         self._port=port
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
+        self.settimeout(timeout)
         user, host=target.split('@')
         self._user=user
         self._host=host
