@@ -22,6 +22,7 @@ import rox, rox.mime, rox.thumbnail
 import pango
 
 import thumb
+import mpslave
 
 # Defaults
 import options
@@ -142,6 +143,8 @@ class VidThumbMPlayer(VidThumbNail):
         self.add_time=options.time_label.int_value
         self.right_align=options.right_align.int_value
 
+        self.slave=None
+
     def post_process_image(self, img, w, h):
         """Add the optional film strip effect"""
 
@@ -190,107 +193,34 @@ class VidThumbMPlayer(VidThumbNail):
 
 
     def get_image(self, inname, rsize):
-        """Generate the raw image from the file.  We run mplayer (twice)
+        """Generate the raw image from the file.  We run mplayer as a slave
         to do the hard work."""
-        #print self.work_dir
-        def get_length(fname):
-            """Get the length in seconds of the source. """
-            # -frames 0 might be needed on debian systems
-            unused, inf, junk=os.popen3(
-                'mplayer -frames 0 -vo null -vf-clr -ao null -identify "%s"' % fname,
-                'r')
 
-            for l in inf.readlines():
-                # print l[:10]
-                if l[:10]=='ID_LENGTH=':
-                    return float(l.strip()[10:])
-                
-            return 0.
-
-        def write_frame(fname, pos):
-            """Return filename of a single frame from the source, taken 
-            from pos seconds into the video"""
-
-            # Ask for 3 frames.  Seems to work better
-            cmd='mplayer -really-quiet -vo png -vf-clr -ss %f -frames 3 -nosound -noloop "%s"' % (pos, fname)
-            cmd+=' > /dev/null 2>&1'
-
-            # If we have 2 frames ignore the first and return the second, else
-            # if we have 1 return it.  Otherwise mplayer couldn't cope and we
-            # return None
-            def frame_ok(ofile):
-                if debug: print 'look for', ofile
-                try:
-                    os.stat(ofile)
-                except:
-                    if debug: print 'exception', sys.exc_info()[:2]
-                    if debug: os.system('pwd')
-                    if debug: os.system('ls -al')
-                    return False
-                return True
-
-            if debug: print cmd
-            os.system(cmd)
-
-            mtype=rox.mime.get_type(fname)
-            #print >>sys.stderr, mtype, first_by_types
-            try:
-                #print >>sys.stderr, str(mtype)
-                first=first_by_types[str(mtype)]
-            except:
-                #print >>sys.stderr, 'oops'
-                first=take_first
-            #print >>sys.stderr, first
+        if debug: print self.slave
+        if not self.slave:
+            self.slave=mpslave.MPlayer(inname)
+        else:
+            self.slave.load_file(inname)
             
-            if first:
-                id=1
-            else:
-                id=2
-            ofile='%08d.png' % id
-            if debug: print ofile
-            if not frame_ok(ofile):
-                if not first:
-                    id=1
-                    ofile='%08d.png' % id
-                    if not frame_ok(ofile):
-                        ofile=None
-                else:
-                    ofile=None
-                
-            return ofile
-
         try:
-            vlen=get_length(inname)
+            vlen=self.slave.length
         except:
             self.report_exception()
             return self.failed_image(rsize, _('Bad length'))
-        os.wait()
 
         self.total_time=vlen
         if debug: print vlen
-    
-        # Select a frame 5% of the way in, but not more than 60s  (Long files
-        # usually have a fade in).
-        pos=vlen*0.05
-        if pos>60:
-            pos=60
 
-        frfname=write_frame(inname, pos)
-        if debug: print inname, pos, frfname
-        if frfname is None:
-            frfname=write_frame(inname, 0)
-            if debug: print inname, pos, frfname
-        if frfname is None:
-            # Yuck
-            try:
-                raise _('Bad or missing frame file')
-            except:
-                self.report_exception()
-            return self.failed_image(rsize, _('Bad or missing frame file'))
-
-        # Now we load the raw image in
-
-        return rox.g.gdk.pixbuf_new_from_file(frfname)
+        try:
+            pbuf=self.slave.make_frame()
+        except:
+            if debug: print 'slave.make_frame failed'
+            pbuf=None
+        if debug: print 'pbuf', pbuf
+            
+        if not pbuf:
+            return self.failed_image(rsize, _('Could not get frame'))
+        return pbuf
 
 thumbnailers = {"mplayer": VidThumbMPlayer,
                 "totem" : VidThumbTotem }
