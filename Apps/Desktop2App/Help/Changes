@@ -1,6 +1,11 @@
 Desktop2App
 ===========
 
+18-Sep-2008
+~~~~~~~~~~~
+Handle missing comment.  More fixes for icon lookup.  Ignore %m and %k, fix 
+handling of %i.  Handle names with / in them.
+
 20-Sep-2007
 ~~~~~~~~~~~
 Better icon lookup.

@@ -33,6 +33,8 @@ class DesktopEntry:
         self.name=section.get('Name', locale)
         self.exc=section.get('Exec')
         self.comment=section.get('Comment', locale)
+        if not self.comment:
+            self.comment=self.name
         self.terminal=section.getBoolean('Terminal')
         self.icon=section.get('Icon')
         g_pixmap_dir='share/pixmaps'
@@ -47,10 +49,10 @@ class DesktopEntry:
                 for size in ('48x48', '64x64', '32x32', '22x22', '16x16'):
                     self.ipath.append(os.path.join(prefix, kde_pixmap_dir,
                                                    col, size, 'apps'))
-        for prefix in ('/usr/share/icons', '/usr/local/share/icons'):
+        for prefix in ('/usr', '/usr/local'):
             for size in ('48x48', '64x64', '32x32', '22x22', '16x16'):
-                self.ipath.append(os.path.join(prefix, 'icons', 'hicolor',
-                                               size, 'apps'))
+                self.ipath.append(os.path.join(prefix, 'share', 'icons',
+                                               'hicolor', size, 'apps'))
         self.ipath.append('/usr/local/share/pixmaps')
         self.ipath.append('/usr/share/pixmaps')
 
@@ -69,7 +71,7 @@ class DesktopEntry:
         self.no_display=val
 
     def findIconFile(self):
-        # print 'self.icon=%s' % self.icon
+        #print 'self.icon=%s' % self.icon
         base=self.icon
         if self.icon is None or len(self.icon)<1:
             return None
@@ -107,10 +109,10 @@ class DesktopEntry:
                 cmd=cmd[:per]+'`dirname '+arg+'`'+cmd[per+2:]
             elif cmd[per+1]=='n' or cmd[per+1]=='n':
                 cmd=cmd[:per]+'`basename '+arg+'`'+cmd[per+2:]
-            elif cmd[per+1]=='i' or cmd[per+1]=='m':
+            elif cmd[per+1]=='i':
                 ifile=self.findIconFile()
                 if ifile:
-                    cmd=cmd[:per]+ifile+cmd[per+2:]
+                    cmd=cmd[:per]+'--icon '+ifile+cmd[per+2:]
                 else:
                     cmd=cmd[:per]+cmd[per+2:]
             elif cmd[per+1]=='c':
@@ -121,12 +123,6 @@ class DesktopEntry:
             elif cmd[per+1]=='k':
                 if self.section.fname:
                     cmd=cmd[:per]+self.section.fname+cmd[per+2:]
-                else:
-                    cmd=cmd[:per]+cmd[per+2:]
-            elif cmd[per+1]=='k':
-                dev=self.sections.get('Device')
-                if dev:
-                    cmd=cmd[:per]+dev+cmd[per+2:]
                 else:
                     cmd=cmd[:per]+cmd[per+2:]
             else:
@@ -142,6 +138,8 @@ class DesktopEntry:
         out.write('#!/bin/sh\n')
         out.write(_('# AppRun for %s created by %s\n') % (self.name,
                                                           credit))
+        if self.section.fname:
+            out.write(_('# from %s\n') % self.section.fname)
         out.write('# %s\n\n' % self.comment)
 
         if self.path:
@@ -187,17 +185,21 @@ class DesktopEntry:
         else:
             tdir=parent
             tback='.'
-            
+
+        name=self.name
+        if '/' in name:
+            name=self.name.replace('/', '%')
+        
         main_cat=None
         for c in self.categories:
             if c not in self.not_show_in:
                 main_cat=c
                 break
         if main_cat:
-            wdir=os.path.join(tdir, main_cat, self.name)
+            wdir=os.path.join(tdir, main_cat, name)
             back='..'
         else:
-            wdir=os.path.join(tdir, self.name)
+            wdir=os.path.join(tdir, name)
             back='.'
         if os.access(wdir, os.F_OK)!=1:
             os.makedirs(wdir)
@@ -205,6 +207,7 @@ class DesktopEntry:
             raise _('Cannot write to %s') % wdir
         self.writeAppRun(os.path.join(wdir, 'AppRun'))
         self.writeAppInfo(os.path.join(wdir, 'AppInfo.xml'))
+        #print 'Looking for icon file'
         ifile=self.findIconFile()
         if ifile:
             #print 'Copy %s to .DirIcon' % ifile

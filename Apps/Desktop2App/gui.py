@@ -45,8 +45,9 @@ def do_object(path):
             do_dir(path)
         elif path[-8:]=='.desktop':
             do_file(path)
-    except:
-        return
+    except Exception, exc:
+        print exc
+        rox.report_exception()
 
 def do_dir(path):
     entries=os.listdir(path)
