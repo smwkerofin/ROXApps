@@ -3,6 +3,12 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+09-Oct-2008
+~~~~~~~~~~~
+Return None rather than failed_image to signal failure (requires support
+in ROX-Lib).  Use a task to read output from MPlayer.  Slightly more reliable 
+in slave mode.
+
 05-Sep-2008
 ~~~~~~~~~~~
 Drive MPlayer in slave mode, means we only have to run it once.  Not fully

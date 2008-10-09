@@ -202,14 +202,8 @@ class VidThumbMPlayer(VidThumbNail):
         else:
             self.slave.load_file(inname)
             
-        try:
-            vlen=self.slave.length
-        except:
-            self.report_exception()
-            return self.failed_image(rsize, _('Bad length'))
-
-        self.total_time=vlen
-        if debug: print vlen
+        self.total_time=self.slave.length
+        if debug: print self.total_time
 
         try:
             pbuf=self.slave.make_frame()
@@ -218,8 +212,8 @@ class VidThumbMPlayer(VidThumbNail):
             pbuf=None
         if debug: print 'pbuf', pbuf
             
-        if not pbuf:
-            return self.failed_image(rsize, _('Could not get frame'))
+        #if not pbuf:
+        #    return self.failed_image(rsize, _('Could not get frame'))
         return pbuf
 
 thumbnailers = {"mplayer": VidThumbMPlayer,

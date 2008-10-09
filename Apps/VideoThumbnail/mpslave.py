@@ -1,8 +1,10 @@
 import os, time, errno
 if __name__=='__main__':
     import findrox; findrox.version(2, 0, 4)
-import rox
+import rox, rox.tasks
 import gobject
+
+debug=os.environ.get('VIDTHUMB_DEBUG', 0)
 
 def wait_on_file(fname):
     l=0
@@ -22,6 +24,7 @@ def wait_on_file(fname):
 
 class MPlayer(object):
     def __init__(self, fname, *args):
+        self.debug=debug
         self.start_child(fname, *args)
             
     def start_child(self, fname, *args):
@@ -31,7 +34,7 @@ class MPlayer(object):
             cmd+=a
         cmd+=' "'+fname+'"'
 
-        #print cmd
+        if self.debug: print cmd
 
         self.length=None
         self.last_line=None
@@ -44,7 +47,7 @@ class MPlayer(object):
         self.load_file(None)
 
     def write_cmd(self, cmd):
-        #print 'sending command:', cmd
+        if self.debug: print 'sending command:', cmd
         self.child_out.write(cmd+'\n')
 
     def get_reply(self):
@@ -74,41 +77,38 @@ class MPlayer(object):
         self.get_time_length()
 
     def get_time_length(self):
-        self.write_cmd('get_time_length')
-        line=''
-        while not line.startswith('ANS_LENGTH='):
-            line=self.get_reply()
-            if line is None:
-                self.length=0
-                return
-            #print 'read', line
-        self.last_line=line
+        def match_length(s):
+            return s.startswith('ANS_LENGTH=')
+        
+        reply=self.execute_command('get_time_length', match_length)
+        if not reply:
+            return
 
-        assert self.last_line.startswith('ANS_LENGTH=')
-        l=self.last_line.strip()
-        ignore, ans=l.split('=')
+        assert reply.startswith('ANS_LENGTH=')
+        #l=self.last_line.strip()
+        ignore, ans=reply.split('=')
+        #print ignore, ans
         self.length=float(ans)
+        return self.length
 
     def get_time_pos(self):
-        self.write_cmd('get_time_pos')
-        line=''
-        while not line.startswith('ANS_TIME_POSITION='):
-            line=self.get_reply()
-            if line is None:
-                self.length=0
-                return
-            #print 'read', line
-        self.last_line=line
+        def match_pos(s):
+            return s.startswith('ANS_TIME_POSITION=')
+        
+        reply=self.execute_command('get_time_pos', match_pos)
+        if not reply:
+            if self.debug: print 'failed to get time position'
+            return
+        if self.debug:print reply
 
-        assert self.last_line.startswith('ANS_TIME_POSITION=')
-        l=self.last_line.strip()
-        ignore, ans=l.split('=')
+        assert reply.startswith('ANS_TIME_POSITION=')
+        #l=self.last_line.strip()
+        ignore, ans=reply.split('=')
         return float(ans)
 
 
     def quit(self):
-        self.write_cmd('quit')
-        self.read_all()
+        self.execute_command('quit', lambda s: s.startswith('Exit '))
         self.child_out=None
         self.child_in=None
 
@@ -117,18 +117,20 @@ class MPlayer(object):
         self.start_child(self.fname)
 
     def seek_to(self, sec):
-        self.write_cmd('seek %f 2' % sec)
+        self.execute_command('seek %f 2' % sec)
 
     def screenshot(self):
-        self.write_cmd('screenshot 0')
-        res=self.get_reply()
-        self.write_cmd('frame_step')
-        res=self.get_reply()
-        while not res.startswith('*** screenshot '):
-            print 'res=',res
-            res=self.get_reply()
-        print 'res now', res
-        if res.startswith('*** screenshot '):
+        def match_screenshot(s):
+            return s.startswith('sending VFCTRL_SCREENSHOT!')
+        #self.debug=True
+        res=self.execute_command('screenshot 0', match_screenshot)
+        #res=self.get_reply()
+
+        def match_taken(s):
+            return s.startswith('*** screenshot ')
+        res=self.execute_command('frame_step', match_taken)
+        if self.debug: print 'res now', res
+        if res and res.startswith('*** screenshot '):
             pre, fname, tail=res.split("'")
             #print fname
             fname=os.path.realpath(fname)
@@ -160,12 +162,40 @@ class MPlayer(object):
                 return
             raise
         pos=self.get_time_pos()
-        #print pos, p, abs(pos-p)
-        if abs(pos-p)>0.25:
+        fuzz=self.length*0.01
+        if self.debug: print pos, p, abs(pos-p), fuzz
+        if abs(pos-p)>fuzz:
             self.load_file(self.fname)
             self.seek_to(0)
                 
         return self.screenshot()
+
+    def execute_command(self, cmd, match_output=None):
+        self.write_cmd(cmd)
+
+        if match_output:
+            return self.wait_for(match_output)
+
+    def wait_for(self, match_fn):
+        self.last_line=None
+        if self.debug: print 'make task'
+        rox.tasks.Task(self.read_task(match_fn))
+        if self.debug: print 'call mainloop'
+        rox.mainloop()
+        if self.debug: print 'main loop done'
+        return self.last_line
+
+    def read_task(self, match_fn):
+        rox.toplevel_ref()
+        while True:
+            yield rox.tasks.InputBlocker(self.child_in.fileno())
+            self.last_line=self.get_reply()
+            #if self.debug: print self.last_line
+            if self.last_line is None:
+                break
+            if match_fn(self.last_line):
+                break
+        rox.toplevel_unref()
 
     def __del__(self):
         if self.child_out:
