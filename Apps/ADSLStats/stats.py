@@ -9,6 +9,8 @@ import HTMLParser
 import struct, fcntl, termios
 
 url='http://10.0.0.2/doc/adsl.htm'
+tcpurl='http://10.0.0.2/doc/tcp.htm'
+atmurl='http://10.0.0.2/doc/atm.htm'
 
 class ROXURLopener(urllib.FancyURLopener):
     def prompt_user_passwd(self, host, realm):
@@ -176,8 +178,6 @@ def bytes_ready(s):
 class MyParser(HTMLParser.HTMLParser):
     def __init__(self, con):
         HTMLParser.HTMLParser.__init__(self)
-        self.vars={}
-        self.in_script=False
         self.con=con
         #self.lines=[]
 
@@ -192,12 +192,16 @@ class MyParser(HTMLParser.HTMLParser):
             return False
         return True
 
+
+class JSVarParser(MyParser):
+    def __init__(self, con):
+        MyParser.__init__(self, con)
+        self.vars={}
+        self.in_script=False
+        
     def getVars(self):
         #print self.lines
         return self.vars
-
-    def getConSpeed(self):
-        return self.vars['st_up_data_rate'], self.vars['st_dw_data_rate'], 
 
     def handle_starttag(self, tag, attrs):
         try:
@@ -228,24 +232,120 @@ class MyParser(HTMLParser.HTMLParser):
                         val=val[1:-1]
                     self.vars[var]=val
 
-def get():
+class BandwidthParser(JSVarParser):
+    def __init__(self, con):
+        JSVarParser.__init__(self, con)
+        
+    def getConSpeed(self):
+        return (int(self.vars['st_up_data_rate']),
+                int(self.vars['st_dw_data_rate']))
+
+    def get_elapsed(self):
+        d=int(self.vars['st_elased_time_days'])
+        h=int(self.vars['st_elased_time_hours'])+d*24
+        m=int(self.vars['st_elased_time_minutes'])+h*60
+        s=int(self.vars['st_elased_time_seconds'])+m*60
+        return s
+
+class TCPParser(JSVarParser):
+    def __init__(self, con):
+        JSVarParser.__init__(self, con)
+
+    def get_bytes(self):
+        return int(self.vars['st_tcps_rcvbyte']), int(self.vars['st_tcps_sndbyte'])
+
+class TableVarParser(MyParser):
+    def __init__(self, con):
+        MyParser.__init__(self, con)
+        self.vars={}
+        self.in_td=False
+        self.vname=None
+        
+    def getVars(self):
+        #print self.lines
+        return self.vars
+
+    def handle_starttag(self, tag, attrs):
+        try:
+            if tag=='td':
+                self.in_td=True
+        except:
+            pass
+
+    def handle_endtag(self, tag):
+        if tag=='td':
+            self.in_td=False
+
+    def handle_data(self, data):
+        if self.in_td:
+            #self.lines.append(data)
+            line=data.strip()
+            if not self.vname:
+                self.vname=line
+            else:
+                self.vars[self.vname]=data
+                self.vname=None
+            if ';' in line:
+                statement, tail=line.split(';')
+
+def get(turl=url, Parser=BandwidthParser):
     opener=ROXURLopener()
-    con=opener.open(url)
+    con=opener.open(turl)
     #headers=con.info()
     #print headers
 
-    parser=MyParser(con)
+    parser=Parser(con)
     for line in con:
         parser.feed(line)
     parser.close()
 
-    return parser.getVars()
+    return parser
 
-def open():
+
+def _open(turl=url, Parser=BandwidthParser):
     opener=ROXURLopener()
-    con=opener.open(url)
-    return MyParser(con)
+    con=opener.open(turl)
+    return Parser(con)
+
+def open_adsl():
+    return _open()
+
+def open_tcp():
+    return _open(tcpurl, TCPParser)
+
+def open_atm():
+    return _open(atmurl, TableVarParser)
+
+def main():
+    import time
+    
+    rep=len(sys.argv)>1
+    if rep:
+        delay=float(sys.argv[1])
+    while True:
+        if rep:
+            print time.ctime(time.time())
+        stats=get()
+        #print stats.keys()
+        tx, rx=stats.getConSpeed()
+        print '%s/%s' % (rx, tx)
+        print '%.2f hours elapsed' % (stats.get_elapsed()/3600.)
+        parser=open(atmurl, TableVarParser)
+        time.sleep(0.1)
+        parser.update()
+        try:
+            v=parser.getVars()
+            tx=int(v['Tx Bytes'])
+            rx=int(v['Rx Bytes'])
+            print '%d/%d MB' % (rx>>20, tx>>20)
+        except KeyError:
+            print parser.getVars()
+        if rep:
+            time.sleep(delay)
+        else:
+            break
+        
 
 if __name__=='__main__':
-    stats=get()
-    print '%s/%s' % (stats['st_dw_data_rate'], stats['st_up_data_rate'])
+    main()
+    

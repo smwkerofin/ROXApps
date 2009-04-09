@@ -7,6 +7,7 @@ import rox, rox.applet, rox.Menu, rox.uri_handler
 import gobject
 
 import stats
+import usage
 
 class Applet(rox.applet.Applet):
     def __init__(self, xid=0):
@@ -43,6 +44,7 @@ class Applet(rox.applet.Applet):
 
         rox.Menu.set_save_name('ADSLStats', site='kerofin.demon.co.uk')
         self.menu=rox.Menu.Menu('main', [
+            rox.Menu.Action('Bandwidth usage', 'do_usage'),
             rox.Menu.Action('Quit', 'do_quit', stock=rox.g.STOCK_QUIT)
             ])
 
@@ -50,6 +52,11 @@ class Applet(rox.applet.Applet):
 
         gobject.timeout_add(30*1000, self.new_update)
         self.new_update()
+
+        self.warning=None
+        self.usage=usage.UsageList()
+        gobject.timeout_add(60*60*1000, self.usage_update)
+        self.usage_update()
 
     def click(self, widget, event, data=None):
         if event.button==3:
@@ -63,6 +70,9 @@ class Applet(rox.applet.Applet):
     def do_quit(self, *unused):
         rox.toplevel_unref()
 
+    def do_usage(self, *unused):
+        self.usage.open_window()
+
     def set_stats(self, ok, tx, rx):
         if ok:
             icon=rox.g.STOCK_YES
@@ -74,7 +84,7 @@ class Applet(rox.applet.Applet):
 
     def new_update(self, *unused):
         try:
-            self.parser=stats.open()
+            self.parser=stats.open_adsl()
             gobject.timeout_add(100, self.current)
         except:
             self.parser=None
@@ -101,6 +111,24 @@ class Applet(rox.applet.Applet):
         #print >> sys.stderr, 'again'
         return True
 
+    def show_warning(self, state=True):
+        if state and not self.warning:
+            self.warning=rox.StatusIcon(add_ref=False, show=True,
+                                        icon_stock=rox.g.STOCK_DIALOG_WARNING)
+        elif self.warning:
+            self.warning.set_visible(state)
+
+    def usage_update(self, *unused):
+        try:
+            self.usage.update()
+            days, rx, tx=self.usage.get_summary()
+            #print days, rx, tx
+            max_rx=60*(1<<30)
+            self.show_warning(rx>max_rx*0.9)
+        except:
+            self.show_warning(False)
+        return True
+    
 if len(sys.argv)>1:
     app=Applet(sys.argv[1])
 else:
