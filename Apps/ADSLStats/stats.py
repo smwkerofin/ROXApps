@@ -330,7 +330,7 @@ def main():
         tx, rx=stats.getConSpeed()
         print '%s/%s' % (rx, tx)
         print '%.2f hours elapsed' % (stats.get_elapsed()/3600.)
-        parser=open(atmurl, TableVarParser)
+        parser=open_atm()
         time.sleep(0.1)
         parser.update()
         try:

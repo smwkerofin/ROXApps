@@ -262,20 +262,15 @@ class UsageList(object):
         sv_elapsed=int(fin.readline().strip())
         #print start_time, tstamp
         if elapsed_time<sv_elapsed:
-            # Mode, has restarted since the file was saved, running
+            # Modem has restarted since the file was saved, running
             # total cannot be valid
-            #print start_time, tstamp
-            tm_loaded=time.localtime(tstamp)
-            tm_start=time.localtime(start_time)
-            if tm_loaded.tm_yday!=tm_start.tm_yday:
-                # new day, store what we had when we exited
-                lost=DailyUsage(tstamp, rx-rx0, tx-tx0, sv_elapsed)
-            else:
-                # Set offset for today
-                self.rx_base=rx-rx0
-                self.tx_base=tx-tx0
+            # Set offset for today
+            print rx, rx0
+            self.rx_base=rx-rx0
+            self.tx_base=tx-tx0
 
             rx, tx, elapsed_time=self.get_stats()
+            print rx, tx
             rx0=rx
             rxh=0
             tx0=tx
@@ -350,6 +345,7 @@ class UsageWindow(rox.Window):
 
         self.set_title('Bandwidth usage')
 
+        self.set_border_width(2)
         table=rox.g.Table(6, 4)
         self.add(table)
         table.set_row_spacings(2)
@@ -369,26 +365,35 @@ class UsageWindow(rox.Window):
 
         table.attach(rox.g.Label('Today'), 0, 1, 3, 4)
         self.rx_today=rox.g.Label('')
+        self.rx_today.set_alignment(1.0,0.5)
         table.attach(self.rx_today, 1, 2, 3, 4)
         self.tx_today=rox.g.Label('')
+        self.tx_today.set_alignment(1.0,0.5)
         table.attach(self.tx_today, 2, 3, 3, 4)
         self.tot_today=rox.g.Label('')
+        self.tot_today.set_alignment(1.0,0.5)
         table.attach(self.tot_today, 3, 4, 3, 4)
 
         table.attach(rox.g.Label('Total'), 0, 1, 4, 5)
         self.rx_total=rox.g.Label('')
+        self.rx_total.set_alignment(1.0,0.5)
         table.attach(self.rx_total, 1, 2, 4, 5)
         self.tx_total=rox.g.Label('')
+        self.tx_total.set_alignment(1.0,0.5)
         table.attach(self.tx_total, 2, 3, 4, 5)
         self.tot_total=rox.g.Label('')
+        self.tot_total.set_alignment(1.0,0.5)
         table.attach(self.tot_total, 3, 4, 4, 5)
 
         table.attach(rox.g.Label('Average'), 0, 1, 5, 6)
         self.rx_average=rox.g.Label('')
+        self.rx_average.set_alignment(1.0,0.5)
         table.attach(self.rx_average, 1, 2, 5, 6)
         self.tx_average=rox.g.Label('')
+        self.tx_average.set_alignment(1.0,0.5)
         table.attach(self.tx_average, 2, 3, 5, 6)
         self.tot_average=rox.g.Label('')
+        self.tot_average.set_alignment(1.0,0.5)
         table.attach(self.tot_average, 3, 4, 5, 6)
 
         table.show_all()
@@ -434,8 +439,14 @@ def main():
             time.sleep(delay)
         else:
             break
-        
+
+def test2():
+    use=UsageList()
+    use.update()
+    use.open_window()
+    rox.mainloop()
 
 if __name__=='__main__':
-    main()
+    #main()
+    test2()
     
