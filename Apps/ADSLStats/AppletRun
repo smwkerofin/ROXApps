@@ -5,9 +5,11 @@ import os, sys
 import findrox; findrox.version(2, 0, 4)
 import rox, rox.applet, rox.Menu, rox.uri_handler
 import gobject
+import socket
 
-import stats
-import usage
+#import stats
+#import usage
+import sitecom
 
 class Applet(rox.applet.Applet):
     def __init__(self, xid=0):
@@ -44,26 +46,33 @@ class Applet(rox.applet.Applet):
 
         rox.Menu.set_save_name('ADSLStats', site='kerofin.demon.co.uk')
         self.menu=rox.Menu.Menu('main', [
-            rox.Menu.Action('Bandwidth usage', 'do_usage'),
+            #rox.Menu.Action('Bandwidth usage', 'do_usage'),
             rox.Menu.Action('Quit', 'do_quit', stock=rox.g.STOCK_QUIT)
             ])
 
-        self.parser=None
+        try:
+            self.parser=sitecom.Modem()
+        except socket.error:
+            rox.report_exception()
+            self.parser=None
+        except:
+            rox.report_exception()
+            self.parser=None
 
         gobject.timeout_add(30*1000, self.new_update)
         self.new_update()
 
         self.warning=None
-        self.usage=usage.UsageList()
-        gobject.timeout_add(60*60*1000, self.usage_update)
-        self.usage_update()
+        #self.usage=usage.UsageList()
+        #gobject.timeout_add(60*60*1000, self.usage_update)
+        #self.usage_update()
 
     def click(self, widget, event, data=None):
         if event.button==3:
             self.menu.popup(self, event, self.position_menu)
             return True
         elif event.button==1:
-            rox.uri_handler.launch('http://10.0.0.2/')
+            rox.uri_handler.launch('http://10.0.0.1/')
             return True
         return False
 
@@ -83,12 +92,25 @@ class Applet(rox.applet.Applet):
         self.rx.set_text(str(rx))
 
     def new_update(self, *unused):
+        if not self.parser:
+            try:
+                self.parser=sitecom.Modem()
+            except socket.error:
+                return True
         try:
-            self.parser=stats.open_adsl()
-            gobject.timeout_add(100, self.current)
-        except:
-            self.parser=None
+            #self.parser=stats.open_adsl()
+            #gobject.timeout_add(100, self.current)
+            rx, tx=self.parser.get_chandata()
+            self.set_stats(True, tx, rx)
+        except Exception, ex:
+            print >> sys.stderr, ex
+            #self.parser=None
             self.set_stats(False, 'X', 'X')
+            try:
+                self.parser.connect()
+            except Exception, ex:
+                print >> sys.stderr, 'Reconnect:', ex
+                
         return True
 
     def current(self, *unused):
@@ -128,6 +150,9 @@ class Applet(rox.applet.Applet):
         except:
             self.show_warning(False)
         return True
+
+    def on_exit(self):
+        self.usage.on_exit()
     
 if len(sys.argv)>1:
     app=Applet(sys.argv[1])
