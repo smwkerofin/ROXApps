@@ -328,6 +328,7 @@ class UsageWindow(rox.templates.ProxyWindow):
         self.rx_limit=0
         self.tx_limit=0
         self.total_limit=0
+        self.last_list_update=0
 
         self.usage_if=widgets['usage_if']
         self.usage_list=widgets['usage_list']
@@ -379,6 +380,7 @@ class UsageWindow(rox.templates.ProxyWindow):
     def load_list(self):
         store=self.usage_list.get_model()
         store.clear()
+        self.last_list_update=0
         for u in self.usage_data.get_data():
             it=store.append()
             ts, rx, tx=u.for_csv()
@@ -386,7 +388,8 @@ class UsageWindow(rox.templates.ProxyWindow):
                       C_TX, fmt_size(tx), C_TOTAL, fmt_size(rx+tx),
                       C_DATA, u)
 
-        self.last_list_update=ts
+            self.last_list_update=ts
+        
 
     def update_list(self):
         store=self.usage_list.get_model()
@@ -398,7 +401,7 @@ class UsageWindow(rox.templates.ProxyWindow):
                           C_TX, fmt_size(tx), C_TOTAL, fmt_size(rx+tx),
                           C_DATA, u)
 
-        self.last_list_update=ts
+            self.last_list_update=ts
 
     def update_stats(self):
         rxt, txt=self.usage_data.get_today()
