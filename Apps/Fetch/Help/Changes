@@ -1,6 +1,11 @@
 Fetch
 =====
 
+20-May-2009
+~~~~~~~~~~~
+If download fails, display the error message.
+Fix bug with post-fetch state.
+
 15-May-2008
 ~~~~~~~~~~~
 Better speed calculcation, now print both current and average speeds.

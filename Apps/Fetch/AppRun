@@ -295,12 +295,13 @@ class FetchWindow(rox.Dialog):
 
     def idle_update(self, ms):
         sec=float(ms)/1000.
-        while self.cstate!=COMPLETED:
+        while self.cstate!=COMPLETED and self.cstate!=POST_FETCH:
             #print 'idle for', sec
             yield rox.tasks.TimeoutBlocker(sec)
             #print self.cstate
             if self.cstate==WAITING:
                 self.waiting()
+
             if self.last_time:
                 now=time.time()
                 if now-self.last_time>60:
@@ -448,8 +449,9 @@ class FetchWindow(rox.Dialog):
                 self.finished()
                 return False
             elif code=='x':
-                self.message(_('Helper process crashed: %s') % arg.strip())
-                self.finished()
+                #self.message(_('Helper process crashed: %s') % arg.strip())
+                self.finished(False,
+                              _('Helper process crashed: %s') % arg.strip())
                 return False
             
             return True
@@ -564,7 +566,7 @@ class FetchWindow(rox.Dialog):
             self.proc.start()
         except rox.processes.ChildError:
             rox.report_exception()
-            self.cstate(POST_FETCH)
+            self.cstate=POST_FETCH
             self.finished(False)
 
     def child_died(self, status):
@@ -588,7 +590,7 @@ class FetchWindow(rox.Dialog):
             except dclient.DMException:
                 pass
 
-    def finished(self, ok=True):
+    def finished(self, ok=True, errmess=None):
         if self.dl_man:
             try:
                 self.dl_man.done()
@@ -611,9 +613,13 @@ class FetchWindow(rox.Dialog):
         t=wait_for.int_value*1000
         mess=_('Done')
         wrong_type=False
+        if ok and self.size and self.count<self.size:
+            ok=False
+            errmess=_('Download incomplete (%s/%s)') % (
+                format_size(self.count), format_size(self.size))
         if not ok:
-            mess=_('Failed')
-            t*=5
+            mess=errmess or _('Failed')
+            t=0
         elif self.ltype!=self.stype:
             if self.stype in unknown_types:
                 mess=_('Done (server did not know type)')
