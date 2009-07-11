@@ -122,6 +122,9 @@ class FetchWindow(rox.Dialog):
         
         rox.Dialog.__init__(self)
         self.set_title(self.url)
+        #self.set_policy(False, True, True)
+        self.set_resizable(False)
+        
         self.add_button(rox.g.STOCK_CANCEL, rox.g.RESPONSE_CANCEL)
         self.start_button=self.add_button(_('Start'),
                                          rox.g.RESPONSE_ACCEPT)
@@ -132,47 +135,60 @@ class FetchWindow(rox.Dialog):
         table=rox.g.Table(9, 3)
         vbox.pack_start(table, padding=4)
 
+        self.hidable=[]
+        opt=rox.g.EXPAND | rox.g.FILL
+        hopt=opt | rox.g.SHRINK
+
         line=0
         l=rox.g.Label(_('<b>Source</b>'))
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
-        table.attach(l, 0, 1, line, line+1, xpadding=2)
+        table.attach(l, 0, 1, line, line+1, xpadding=2, yoptions=hopt)
+        self.hidable.append(l)
         l=rox.g.Label(self.url)
         l.set_line_wrap(True)
         l.set_alignment(0., 0.5)
         l.set_selectable(True)
-        table.attach(l, 2, 3, line, line+1, xpadding=2)
+        table.attach(l, 2, 3, line, line+1, xpadding=2, yoptions=hopt)
+        self.hidable.append(l)
 
         line+=1
         l=rox.g.Label(_('<b>Size</b>'))
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
+        self.hidable.append(l)
         l=rox.g.Label('')
         l.set_alignment(0., 0.5)
         table.attach(l, 2, 3, line, line+1, xpadding=2)
         self.size_l=l
+        self.hidable.append(self.size_l)
 
         line+=1
         l=rox.g.Label(_('<b>Server Type</b>'))
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
+        self.hidable.append(l)
         self.stype_icon=rox.g.Image()
         table.attach(self.stype_icon, 1, 2, line, line+1, xpadding=2)
+        self.hidable.append(self.stype_icon)
         l=rox.g.Label('')
         l.set_alignment(0., 0.5)
         table.attach(l, 2, 3, line, line+1, xpadding=2)
         self.type_l=l
+        self.hidable.append(self.type_l)
 
         line+=1
         l=rox.g.Label(_('<b>Local Type</b>'))
         l.set_use_markup(True)
         l.set_alignment(1., 0.5)
         table.attach(l, 0, 1, line, line+1, xpadding=2)
+        self.hidable.append(l)
         self.ltype_icon=rox.g.Image()
         ltype=rox.mime.get_type_by_name(self.real_target)
         self.ltype=ltype
+        self.hidable.append(self.ltype_icon)
         table.attach(self.ltype_icon, 1, 2, line, line+1, xpadding=2)
         l=rox.g.Label(str(ltype))
         l.set_alignment(0., 0.5)
@@ -186,6 +202,7 @@ class FetchWindow(rox.Dialog):
             if icon:
                 self.set_icon(icon)
             self.ltype_l.set_text('%s (%s)' % (ltype.get_comment(), ltype))
+        self.hidable.append(self.ltype_l)
 
         line+=1
         l=rox.g.Label(_('<b>Download to</b>'))
@@ -238,6 +255,11 @@ class FetchWindow(rox.Dialog):
         line+=1
         self.prog=rox.g.ProgressBar()
         table.attach(self.prog, 0, 3, line, line+1)
+
+        line+=1
+        self.mini=rox.g.CheckButton(label='Reduced size')
+        table.attach(self.mini, 2, 3, line, line+1)
+        self.mini.connect('toggled', self.mini_toggled)
 
         self.connect('delete_event', self.delete_event)
         rox.tasks.Task(self.idle_update(delay*5))
@@ -383,6 +405,14 @@ class FetchWindow(rox.Dialog):
                 pass
             self.dl_man=None
         self.unwait()
+
+    def mini_toggled(self, toggle):
+        active=toggle.get_active()
+        for widget in self.hidable:
+            if active:
+                widget.hide()
+            else:
+                widget.show()
 
     def close(self):
         #print 'close'
