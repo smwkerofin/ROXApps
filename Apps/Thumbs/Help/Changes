@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+04-Apr-2009
+~~~~~~~~~~~
+Better error trapping when purging thumbs.
+
 30-Mar-2008 (0.1.4)
 ~~~~~~~~~~~
 Added ability to clear a handler.

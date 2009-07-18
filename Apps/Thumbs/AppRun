@@ -298,6 +298,15 @@ class Win(rox.Window):
                         else:
                             failed+=1
                     continue
+                except TypeError:
+                    info=os.stat(p)
+                    if info.st_size==0:
+                        if self.do_delete(p, uri, mtime):
+                            count+=1
+                        else:
+                            failed+=1
+                    continue
+                    
             except:
                 #print i, p, sys.exc_info()[:2]
                 rox.report_exception()
