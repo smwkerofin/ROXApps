@@ -2,3 +2,291 @@
 
 import os
 import sys
+import tempfile
+import errno
+import re
+import shutil
+
+import findrox; findrox.version(2, 0, 5)
+import rox
+import rox.templates
+import rox.loading
+import rox.saving
+import rox.filer
+import rox.tasks
+
+
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
+
+import convert
+import create
+import iso_image
+
+lang_codes={'English': 'en'}
+
+class Window(rox.templates.ProxyWindow, rox.loading.XDSLoader,
+             rox.saving.Saveable):
+    def __init__(self, window, widgets):
+        rox.templates.ProxyWindow.__init__(self, window, widgets)
+
+        self.widgets=widgets
+        self.setup_widgets()
+
+        rox.loading.XDSLoader.__init__(self, None)
+        self.xds_proxy_for(self.src_view)
+
+        self.set_initial()
+
+        self.wpath=None
+        self.out_path=None
+
+        self.show_all()
+        
+    def setup_widgets(self):
+        self.title_entry=self.widgets['title']
+        self.lang_sel=self.widgets['lang_sel']
+        self.wide_ratio=self.widgets['wide']
+        self.pal_standard=self.widgets['pal']
+
+        self.phase_notebook=self.widgets['phase_note']
+
+        self.convert_prog=self.widgets['convert_prog']
+        self.dvd_prog=self.widgets['dvd_prog']
+        self.iso_prog=self.widgets['iso_prog']
+        self.overall_prog=self.widgets['overall_prog']
+
+        self.src_view=self.widgets['src_list']
+        self.src_list=rox.g.ListStore(str, str)
+        self.src_view.set_model(self.src_list)
+        #buttons=(rox.g.gdk.BUTTON1_MASK|rox.g.gdk.BUTTON2_MASK)
+        #targets=(('verity_row', rox.g.TARGET_SAME_WIDGET, 0),)
+        #actions=rox.g.gdk.ACTION_MOVE
+        #self.src_view.enable_model_drag_source(buttons, targets, actions)
+        #self.src_view.enable_model_drag_dest(targets, actions)
+        sel=self.src_view.get_selection()
+        sel.set_mode(rox.g.SELECTION_SINGLE)
+        sel.connect('changed', self.selection_changed)
+
+        
+        cell=rox.g.CellRendererText()
+        cell.set_property('editable', True)
+        cell.connect('edited', self.track_title_edited)
+        column=rox.g.TreeViewColumn(_('Title'), cell, text=0)
+        self.src_view.append_column(column)
+
+        cell=rox.g.CellRendererText()
+        column=rox.g.TreeViewColumn(_('Path'), cell, text=1)
+        self.src_view.append_column(column)
+
+        self.up_button=self.widgets['up_button']
+        self.down_button=self.widgets['down_button']
+
+        self.go_button=self.widgets['go']
+
+        self.selection_changed(sel)
+
+    def set_initial(self):
+        self.lang_sel.set_active(0)
+        self.title_entry.set_text(_('Title'))
+        self.title_entry.select_region(0, -1)
+
+    def start_work(self, button, *args):
+        print 'go'
+        self.out_path=self.get_output_path(self.title_entry.get_text())
+        print self.out_path
+        if not self.out_path:
+            return
+        self.wpath=tempfile.mkdtemp()
+        rox.filer.open_dir(self.wpath)
+        self.go_button.set_sensitive(False)
+        i=1
+        cmds=[]
+        is_pal=self.pal_standard.get_active()
+        is_ws=self.wide_ratio.get_active()
+        titles=[]
+        for row in self.src_list:
+            titles.append(row[0])
+            path=row[1]
+            ofile=os.path.join(self.wpath, 'Title%02d.mpeg2' % i)
+            cmds.append((convert.cmd_line(path, ofile, is_pal, is_ws),
+                         path, i))
+            i+=1
+        self.cmd_count=len(cmds)
+        lname=self.lang_sel.get_active_text()
+        crcmd=create.cmd_line(self.wpath, self.title_entry.get_text(),
+                              titles, lang_codes[lname], is_pal, is_ws)
+        #print crcmd
+        isocmd=iso_image.cmd_line(os.path.join(self.wpath, 'dvd'),
+                                  self.out_path)
+        print isocmd
+        #sys.exit(0)
+        self.phase_notebook.set_current_page(1)
+        self.task=rox.tasks.Task(self.run_commands(cmds, crcmd, isocmd))
+
+    def run_commands(self, cmds, crcmd, isocmd):
+        def set_overall(phase, frac):
+            b=phase/3.
+            f=b+frac/3.
+            if f>1.:
+                f=1.
+            self.overall_prog.set_fraction(f)
+
+        rexp=re.compile('\( ?([0-9]+)%\)')
+        for cmd, path, index in cmds:
+            print cmd
+            stdin, stdout_and_err=os.popen4(cmd, 't', 0)
+            stdin.close()
+            fr=(index-1)/float(self.cmd_count)/2
+
+            self.overall_prog.set_fraction(fr)
+            self.convert_prog.set_text(os.path.basename(path))
+
+            while True:
+                yield rox.tasks.InputBlocker(stdout_and_err.fileno())
+                line=stdout_and_err.readline()
+                if not line:
+                    break
+                if '%' in line:
+                    match=rexp.search(line)
+                    if not match:
+                        continue
+                    try:
+                        per=float(match.group(1))
+                        #print line.strip()
+                        #print match.group(0), match.group(1), per
+                        #print per, fr, fr+per/100./float(self.cmd_count)/2
+                        self.convert_prog.set_fraction(per/100.)
+                        set_overall(0, per/100.)
+                    except IndexError:
+                        pass
+        print crcmd
+        odir=os.getcwd()
+        os.chdir(self.wpath)
+        stdin, stdout_and_err=os.popen4(crcmd, 't', 0)
+        stdin.close()
+        os.chdir(odir)
+        rexp=re.compile('#([1-9][0-9]*)')
+        fin=False
+        while True:
+            yield rox.tasks.InputBlocker(stdout_and_err.fileno())
+            line=stdout_and_err.readline()
+            if not line:
+                break
+            if line.startswith('Finished Titleset #'):
+                match=rexp.search(line)
+                if not match:
+                    continue
+                fin=True
+                try:
+                    tset=int(match.group(1))
+                    print line.strip(), match.group(0), match.group(1), tset
+                    self.dvd_prog.set_fraction(tset/float(self.cmd_count))
+                    set_overall(1, tset/float(self.cmd_count))
+                except IndexError:
+                    pass
+            else:
+                if not fin:
+                    self.dvd_prog.pulse()
+                
+        stdin, stdout_and_err=os.popen4(isocmd, 't', 0)
+        stdin.close()
+        while True:
+            yield rox.tasks.InputBlocker(stdout_and_err.fileno())
+            line=stdout_and_err.readline()
+            if not line:
+                break
+            print line.strip()
+
+        try:
+            shutil.rmtree(self.wpath)
+        except OSError:
+            rox.report_exception()
+
+        self.phase_notebook.set_current_page(0)
+
+    def track_title_edited(self, cell, path, new_text):
+        #print cell
+        #print path
+        #print new_text
+        it=self.src_list.get_iter(path)
+        #print it
+        self.src_list[it][0]=new_text
+
+    def selection_changed(self, sel):
+        model, it=sel.get_selected()
+        if it is None:
+            self.up_button.set_sensitive(False)
+            self.down_button.set_sensitive(False)
+        else:
+            self.down_button.set_sensitive(model.iter_next(it) is not None)
+            path=model.get_path(it)
+            #print path
+            self.up_button.set_sensitive(path[0]>0)
+            
+    def up_clicked(self, button):
+        #print 'up'
+        sel=self.src_view.get_selection()
+        #print sel
+        store, it=sel.get_selected()
+        path=store.get_path(it)
+        npath=(path[0]-1,)
+        #print npath
+        above=store.get_iter(npath)
+        #print above
+        store.move_before(it, above)
+        self.selection_changed(sel)
+
+    def down_clicked(self, button):
+        #print 'down'
+        sel=self.src_view.get_selection()
+        #print sel
+        store, it=sel.get_selected()
+        below=store.iter_next(it)
+        #print below
+        store.move_after(it, below)
+        self.selection_changed(sel)
+
+    def xds_load_from_file(self, path):
+        print 'add', path
+        self.add_file(path)
+
+    def add_file(self, path):
+        it=self.src_list.append()
+        p, base=os.path.split(path)
+        name, ext=os.path.splitext(base)
+        self.src_list[it][0]=name
+        self.src_list[it][1]=path
+
+    def xds_load_from_stream(self, name, mimetype, stream):
+        rox.alert(_('Unable to load from stream, must use a file'))
+
+    def get_output_path(self, dname='DVD'):
+        path=os.path.abspath(dname)+'.iso'
+        print path
+        if hasattr(self, 'save_to'):
+            del self.save_to
+        save=rox.saving.SaveBox(self, path, 'application/x-cd-image',
+                                parent=self._window)
+        action=save.run()
+        try:
+            path=self.save_to
+        except AttributeError:
+            return
+        print path
+        return path
+
+    def save_to_file(self, path):
+        print 'save to', path
+        self.save_to=path
+        try:
+            os.makedirs(os.path.dirname(path))
+        except OSError, exc:
+            if exc.errno!=errno.EEXIST:
+                raise
+        file(path, 'w').close()
+        
+widgets=rox.templates.load('mainwin')
+win=widgets.get_window('mainwin', Window)
+for p in sys.argv[1:]:
+    win.add_file(p)
+rox.mainloop()
