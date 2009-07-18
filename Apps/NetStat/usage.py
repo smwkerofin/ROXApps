@@ -112,9 +112,21 @@ class UsageList(object):
             self.tx=tx+self.txh*offset
             
         if tm.tm_yday!=self.day:
-            d=DailyUsage(self.tstamp,
-                         self.rx-self.rx0+self.rx_base,
-                         self.tx-self.tx0+self.tx_base)
+            if len(self.previous)>0:
+                tmp=time.localtime(self.previous[-1].timestamp)
+            else:
+                tmp=None
+            if tmp and tmp.tm_yday==self.day:
+                # Combine with what we have
+                d=self.previous[-1]
+                d.timestamp=self.tstamp
+                d.rx+=self.rx-self.rx0+self.rx_base
+                d.tx+=self.tx-self.tx0+self.tx_base
+            else:
+                d=DailyUsage(self.tstamp,
+                             self.rx-self.rx0+self.rx_base,
+                             self.tx-self.tx0+self.tx_base)
+                self.previous.append(d)
             self.rx_tot+=d.rx
             self.tx_tot+=d.tx
             self.rx0=self.rx
@@ -122,7 +134,6 @@ class UsageList(object):
             self.rx_base=0
             self.tx_base=0
             self.day=tm.tm_yday
-            self.previous.append(d)
             if len(self.previous)>self.max:
                 self.rx_tot-=self.previous[0].rx
                 self.tx_tot-=self.previous[0].tx
@@ -401,7 +412,7 @@ class UsageWindow(rox.templates.ProxyWindow):
                           C_TX, fmt_size(tx), C_TOTAL, fmt_size(rx+tx),
                           C_DATA, u)
 
-            self.last_list_update=ts
+                self.last_list_update=ts
 
     def update_stats(self):
         rxt, txt=self.usage_data.get_today()
