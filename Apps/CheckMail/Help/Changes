@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+18-Jul-2009
+~~~~~~~~~~~
+Use just the local name part of the To address when the domain matches.
+
 13-Jan-2008
 ~~~~~~~~~~~
 Use StatusIcon from ROX-Lib.

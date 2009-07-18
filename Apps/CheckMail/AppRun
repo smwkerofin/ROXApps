@@ -28,6 +28,10 @@ mail_icon=rox.g.gdk.pixbuf_new_from_file(os.path.join(rox.app_dir,
                                                       'mail.png'))
 rox.Menu.set_save_name('CheckMail', site='kerofin.demon.co.uk')
 
+account, post_fq=host.split('@')
+post, domain=post_fq.split('.', 1)
+domain=account+'.'+domain
+
 class MailEntry:
     def __init__(self, idno, from_addr, to_addr, size):
         self.idno=int(idno)
@@ -42,8 +46,15 @@ class MailEntry:
                                                      self.size)
 
     def insert(self, store, it):
+        #print self.to_addr
+        uname, dom=self.to_addr.split('@')
+        #print uname, dom, domain
+        if dom==domain:
+            to_addr=uname
+        else:
+            to_addr=self.to_addr
         store.set(it, ID, self.idno, FROM, self.from_addr,
-                  TO, self.to_addr, SIZE, self.size, DATA, self)
+                  TO, to_addr, SIZE, self.size, DATA, self)
 
     def maybe_insert(self, store, it):
         other=store[it][DATA]
@@ -155,7 +166,7 @@ class Window(rox.Window, MailQueueClient):
         self.add(vbox)
 
         scrw=rox.g.ScrolledWindow()
-        scrw.set_size_request(256+128, 64)
+        scrw.set_size_request(256, 64)
         scrw.set_policy(rox.g.POLICY_NEVER, rox.g.POLICY_AUTOMATIC)
         vbox.pack_start(scrw, True, True, 2)
         
