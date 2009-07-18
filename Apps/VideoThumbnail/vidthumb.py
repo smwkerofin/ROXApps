@@ -203,12 +203,12 @@ class VidThumbMPlayer(VidThumbNail):
             self.slave.load_file(inname)
             
         self.total_time=self.slave.length
-        if debug: print self.total_time
+        if debug: print 'slave says length=',self.total_time
 
         try:
             pbuf=self.slave.make_frame()
-        except:
-            if debug: print 'slave.make_frame failed'
+        except Exception, exc:
+            if debug: print 'slave.make_frame failed', exc
             pbuf=None
         if debug: print 'pbuf', pbuf
             

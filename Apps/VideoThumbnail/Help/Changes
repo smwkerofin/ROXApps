@@ -3,6 +3,11 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+18-Jul-2009
+~~~~~~~~~~~
+Use a combined input and timeout blocker to communicate with MPlayer, to 
+avoid blocking on a non-responsive slave process.
+
 09-Oct-2008
 ~~~~~~~~~~~
 Return None rather than failed_image to signal failure (requires support

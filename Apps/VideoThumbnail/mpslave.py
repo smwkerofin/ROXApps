@@ -20,11 +20,33 @@ def wait_on_file(fname):
         if s.st_size>0 and s.st_size==l:
             break
         l=s.st_size
-        
+
+class InputTOBlocker(rox.tasks.InputBlocker, rox.tasks.TimeoutBlocker):
+    def __init__(self, stream, timeout):
+        self.timed_out=False
+
+        rox.tasks.InputBlocker.__init__(self, stream)
+        rox.tasks.TimeoutBlocker.__init__(self, timeout)
+        rox.toplevel_unref() # lose the ref from TimeoutBlocker
+
+    def _timeout(self):
+        #print self, 'timed out'
+        #print rox._toplevel_windows
+        #print rox._in_mainloops
+        self.timed_out=True
+        self.trigger()
+        rox.g.main_quit()
+
+class TimedOut(Exception):
+    def __init__(self, waiting_for):
+        self.what=waiting_for
+    def __str__(self):
+        return 'Timed out waiting for %s' % self.what
 
 class MPlayer(object):
     def __init__(self, fname, *args):
         self.debug=debug
+        self.timed_out=False
         self.start_child(fname, *args)
             
     def start_child(self, fname, *args):
@@ -50,17 +72,25 @@ class MPlayer(object):
         if self.debug: print 'sending command:', cmd
         self.child_out.write(cmd+'\n')
 
-    def get_reply(self):
+    def get_reply(self, tout=15):
+        def any_line(s):
+            if self.debug: print 'check', s
+            return True
+        self.wait_for(any_line, tout, False)
+        return self.last_line
+
+    def _get_reply(self):
         raw=self.child_in.readline()
-        if raw=='':
+        if not raw or raw=='':
             return None
         return raw.strip()
 
-    def read_all(self):
-        line=self.get_reply()
+    def read_all(self, tout=15):
+        if self.debug: print 'read_all'
+        line=self.get_reply(tout)
         while line is not None:
-            #print 'read', line
-            line=self.get_reply()
+            if self.debug: print 'read', line
+            line=self.get_reply(tout)
 
     def load_file(self, fname):
         if not self.child_in or not self.child_out:
@@ -77,12 +107,14 @@ class MPlayer(object):
         self.get_time_length()
 
     def get_time_length(self):
+        if self.debug: print 'get_time_length', rox._toplevel_windows
         def match_length(s):
             return s.startswith('ANS_LENGTH=')
         
         reply=self.execute_command('get_time_length', match_length)
         if not reply:
             return
+        if self.debug: print 'reply is', reply
 
         assert reply.startswith('ANS_LENGTH=')
         #l=self.last_line.strip()
@@ -92,6 +124,7 @@ class MPlayer(object):
         return self.length
 
     def get_time_pos(self):
+        if self.debug: print 'get_time_pos', rox._toplevel_windows
         def match_pos(s):
             return s.startswith('ANS_TIME_POSITION=')
         
@@ -127,6 +160,7 @@ class MPlayer(object):
         #res=self.get_reply()
 
         def match_taken(s):
+            if self.debug: print s, '*** screenshot '
             return s.startswith('*** screenshot ')
         res=self.execute_command('frame_step', match_taken)
         if self.debug: print 'res now', res
@@ -140,13 +174,17 @@ class MPlayer(object):
             #os.remove(fname)
             return pbuf
         else:
-            print res
+            if self.debug: print res
             for i in range(8):
-                print self.get_reply()
+                l=self.get_reply(1)
+                if self.debug: print l
+                if l is None:
+                    break
         #self.write_cmd('screenshot 1')
         #print self.get_reply()
 
     def make_frame(self):
+        if self.debug: print 'in make_frame'
         p=self.length*0.05
         #p=0
         if p>5*60:
@@ -154,7 +192,7 @@ class MPlayer(object):
         try:
             self.seek_to(p)
         except IOError, exc:
-            #print exc
+            if self.debug: print exc
             if exc.errno==errno.EPIPE:
                 self.read_all()
                 self.child_in=None
@@ -173,33 +211,58 @@ class MPlayer(object):
     def execute_command(self, cmd, match_output=None):
         self.write_cmd(cmd)
 
+        if self.debug: print rox._toplevel_windows
         if match_output:
+            if self.debug: print 'sent', cmd, 'match', match_output
             return self.wait_for(match_output)
 
-    def wait_for(self, match_fn):
+    def wait_for(self, match_fn, tout=15, raise_on_timed_out=True):
+        if self.debug: print rox._toplevel_windows
+        self.timed_out=False
         self.last_line=None
         if self.debug: print 'make task'
-        rox.tasks.Task(self.read_task(match_fn))
-        if self.debug: print 'call mainloop'
+        t=rox.tasks.Task(self.read_task(match_fn, tout, raise_on_timed_out))
+        if self.debug: print 'call mainloop', t
         rox.mainloop()
+        if self.debug: print rox._toplevel_windows
+        if self.debug: print rox._in_mainloops
         if self.debug: print 'main loop done'
+        if self.timed_out:
+            return None
         return self.last_line
 
-    def read_task(self, match_fn):
+    def read_task(self, match_fn, tout, raise_on_timed_out):
+        if self.debug: print 'read_task', match_fn
+        #if self.debug: print rox._toplevel_windows
+        #if self.debug: print rox._in_mainloops
         rox.toplevel_ref()
         while True:
-            yield rox.tasks.InputBlocker(self.child_in.fileno())
-            self.last_line=self.get_reply()
-            #if self.debug: print self.last_line
+            block=InputTOBlocker(self.child_in.fileno(), tout)
+            yield block
+            if self.debug: print 'yielded', block
+            if block.timed_out:
+                if self.debug: print block, 'timed out'
+                self.timed_out=True
+                if self.debug and raise_on_timed_out:
+                    rox.toplevel_unref()
+                    raise TimedOut('reply to command')
+                break
+            self.last_line=self._get_reply()
+            if self.debug: print self.last_line
             if self.last_line is None:
                 break
             if match_fn(self.last_line):
+                if self.debug: print 'match'
                 break
+            if self.debug: print 'no match'
         rox.toplevel_unref()
 
     def __del__(self):
         if self.child_out:
-            self.child_out.write('quit\n')
+            try:
+                self.child_out.write('quit\n')
+            except IOError:
+                pass
 
 def test():
     tdir='/home/stephen/tmp/vid'
