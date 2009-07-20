@@ -24,6 +24,7 @@ rox.setup_app_options('XPlanet', site='kerofin.demon.co.uk')
 
 program_name=rox.options.Option('program_name', 'xplanet')
 start_mode=rox.options.Option('start_mode', 0)
+niceness=rox.options.Option('niceness', 5)
 
 backdrop_delay=rox.options.Option('backdrop_delay', 10)
 backdrop_body=rox.options.Option('backdrop_body', 0)
@@ -170,7 +171,8 @@ def backdrop():
     try:
         width=rox.g.gdk.screen_width()
         height=rox.g.gdk.screen_height()
-        cmd=program_name.value+' -geometry %dx%d+0+0' % (width, height)
+        cmd='nice -n %d ' % niceness.int_value
+        cmd+=program_name.value+' -geometry %dx%d+0+0' % (width, height)
         cmd+=' -projection mercator'
         if backdrop_body.int_value:
             cmd+=' -body %s' % get_body(backdrop_body)

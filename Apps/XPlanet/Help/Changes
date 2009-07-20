@@ -1,6 +1,10 @@
 XPlanet
 =======
 
+18-Jul-2009
+~~~~~~~~~~~
+Add an option to set the niceness of the backend process.
+
 19-Dec-2006 (0.0.2)
 ~~~~~~~~~~~
 Bug fixes.

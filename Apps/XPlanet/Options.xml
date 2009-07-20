@@ -20,6 +20,8 @@ Which astronomical body to show.  Not all bodies available have full graphics.
 </body-selector>
 <numentry name="backdrop_delay" label="Minutes between update" min='1'
 max='60'>How long to wait before refreshing the backdrop</numentry>
+<numentry name="niceness" label="Niceness" min='0'
+max='15'>Higher values mean use less CPU, but take longer</numentry>
 </frame>
 
 </section>
