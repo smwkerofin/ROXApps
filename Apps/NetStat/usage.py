@@ -16,8 +16,10 @@ import rox.templates
 import gobject
 
 import netstat
+import usage_daemon
 
 offset=(sys.maxint+1L)*2
+daemon=usage_daemon.client()
 
 def fmt_size(x):
     if x>(4<<30):
@@ -27,6 +29,9 @@ def fmt_size(x):
     elif x>(4<<10):
         return '%d KB' % (x>>10)
     return '%d B' % x
+
+def get_day(timestamp):
+    return time.localtime(timestamp).tm_yday
 
 class DailyUsage(object):
     def __init__(self, timestamp, rx, tx):
@@ -44,106 +49,44 @@ class DailyUsage(object):
         return (date, self.rx, self.tx)
 
     def get_day(self):
-        return time.localtime(self.timestamp).tm_yday
+        return get_day(self.timestamp)
 
 class UsageList(object):
     def __init__(self, ifname, maxd=45, reportd=30):
         self.name=ifname
         self.max=maxd
         self.days=reportd
-        self.rx0=0
-        self.rx=0
-        self.rxh=0
+
         self.rx_tot=0
-        self.rx_base=0
-        self.tx0=0
-        self.tx=0
-        self.txh=0
         self.tx_tot=0
-        self.tx_base=0
+
         self.previous=[]
         self.tstamp=None
+        self.daemon=daemon
 
-        loaded=self.load()
+        self.update()
 
-        if not loaded:
-            for d in rox.basedir.load_data_paths('kerofin.demon.co.uk',
-                                                 'NetStat', 'usage'):
-                try:
-                    self.read_data(file(d))
-                    loaded=True
-                    break
-                except OSError:
-                    pass
-        
-        if not loaded:
-            self.first_run()
-        #gobject.timeout_add(60*60*1000, self.update)
-
-    def first_run(self):
-        now=time.time()
-        tm=time.localtime(now)
-
-        self.tstamp=now
-        self.day=tm.tm_yday
-
-        stats=netstat.stat()[self.name]
-        #print stats
-        self.rx0=stats[2]
-        self.tx0=stats[3]
-        self.rx=self.rx0
-        self.tx=self.tx0
-        self.previous=[]
 
     def update(self):
+        self.previous=[]
+        self.rx_tot=0
+        self.tx_tot=0
         now=time.time()
-        tm=time.localtime(now)
-        stats=netstat.stat()[self.name]
-        rx, tx=stats[2:4]
-        
-        self.rx=rx+self.rxh*offset
-        while self.rx<self.rx0:
-            self.rxh+=1
-            self.rx=rx+self.rxh*offset
-            
-        self.tx=tx+self.txh*offset
-        while self.tx<self.tx0:
-            self.txh+=1
-            self.tx=tx+self.txh*offset
-            
-        if tm.tm_yday!=self.day:
-            if len(self.previous)>0:
-                tmp=time.localtime(self.previous[-1].timestamp)
-            else:
-                tmp=None
-            if tmp and tmp.tm_yday==self.day:
-                # Combine with what we have
-                d=self.previous[-1]
-                d.timestamp=self.tstamp
-                d.rx+=self.rx-self.rx0+self.rx_base
-                d.tx+=self.tx-self.tx0+self.tx_base
-            else:
-                d=DailyUsage(self.tstamp,
-                             self.rx-self.rx0+self.rx_base,
-                             self.tx-self.tx0+self.tx_base)
-                self.previous.append(d)
-            self.rx_tot+=d.rx
-            self.tx_tot+=d.tx
-            self.rx0=self.rx
-            self.tx0=self.tx
-            self.rx_base=0
-            self.tx_base=0
-            self.day=tm.tm_yday
-            if len(self.previous)>self.max:
-                self.rx_tot-=self.previous[0].rx
-                self.tx_tot-=self.previous[0].tx
-                self.previous=self.previous[1:]
-            self.save()
+        today=get_day(now)
+        for dat in self.daemon.GetInterfaceHistory(self.name):
+            tstamp=float(dat[0])
+            rx=long(dat[1])
+            tx=long(dat[2])
 
-            #self.report_day()
+            day=get_day(tstamp)
+            if today-day<=self.days:
+                self.rx_tot+=rx
+                self.tx_tot+=tx
+                self.previous.append(DailyUsage(tstamp, rx, tx))
 
         self.tstamp=now
-        
+        self.day=today
+                
         return True
 
     def report_day(self):
@@ -158,8 +101,8 @@ class UsageList(object):
     def get_summary(self, days=30):
         if len(self.previous)<days:
             days=len(self.previous)
-        rx=self.rx-self.rx0+self.rx_base
-        tx=self.tx-self.tx0+self.tx_base
+        rx=0
+        tx=0
         for i in range(days):
             p=-1-i
             d=self.previous[p]
@@ -170,141 +113,14 @@ class UsageList(object):
         return days, rx, tx
 
     def get_today(self):
-        return self.rx-self.rx0+self.rx_base, self.tx-self.tx0+self.tx_base
+        return self.previous[-1].rx, self.previous[-1].tx
 
     def as_csv(self):
         s='"Date","Received","Transmitted"\n'
         for r in self.previous:
             date, rx, tx=r.for_csv()
             s+='"%s",%d,%d\n' % (date, rx, tx)
-        date=time.strftime('%Y-%m-%d', time.localtime(time.time()))
-        s+='"%s",%d,%d\n' % (date, self.rx-self.rx0+self.rx_base,
-                             self.tx-self.tx0+self.tx_base)
         return s
-
-    def write(self, fout):
-        fout.write(self.name+'\n')
-        fout.write('%ld %ld %ld\n' % (self.rx0, self.rx+self.rx_base,
-                                      self.rxh))
-        fout.write('%ld %ld %ld\n' % (self.tx0, self.tx+self.tx_base,
-                                      self.txh))
-        fout.write('%f\n' % self.tstamp)
-        for u in self.previous:
-            fout.write('%f %ld %ld\n' % (u.timestamp, u.rx, u.tx))
-
-    def on_exit(self):
-        self.save()
-        
-    def save(self):
-        d=rox.basedir.save_data_path('kerofin.demon.co.uk', 'NetStat')
-        fname=os.path.join(d, 'usage:'+self.name)
-        #print fname
-        self.write(file(fname, 'w'))
-
-    def load(self):
-        loaded=False
-        for d in rox.basedir.load_data_paths('kerofin.demon.co.uk',
-                                             'NetStat', 'usage:'+self.name):
-            #print d
-            try:
-                self.read_data(file(d))
-                loaded=True
-                break
-            except OSError:
-                pass
-            except AssertionError:
-                pass
-
-        if loaded:
-            self.update()
-        return loaded
-
-    def read_data(self, fin):
-        start_time=netstat.get_start_time()
-        name=fin.readline().strip()
-        assert name==self.name
-
-        l=fin.readline().strip()
-        rx0, rx, rxh=map(long, l.split())
-        l=fin.readline().strip()
-        tx0, tx, txh=map(long, l.split())
-
-        lost=None
-        tstamp=float(fin.readline().strip())
-        #print start_time, tstamp
-        if start_time>0 and tstamp<start_time:
-            # System has restarted since the file was saved, running
-            # total cannot be valid
-            #print start_time, tstamp
-            tm_loaded=time.localtime(tstamp)
-            tm_start=time.localtime(start_time)
-            if tm_loaded.tm_yday!=tm_start.tm_yday:
-                # new day, store what we had when we exited
-                lost=DailyUsage(tstamp, rx-rx0, tx-tx0)
-            else:
-                # Set offset for today
-                self.rx_base=rx-rx0
-                self.tx_base=tx-tx0
-            stats=netstat.stat()[name]
-            rx0=stats[2]
-            rx=stats[2]
-            rxh=0
-            tx0=stats[3]
-            tx=stats[3]
-            txh=0
-            tstamp=time.time()
-
-        rec=[]
-        rxt=0
-        txt=0
-        for l in fin.readlines():
-            tok=l.strip().split()
-            u=DailyUsage(float(tok[0]), long(tok[1]), long(tok[2]))
-            rec.append(u)
-            rxt+=u.rx
-            txt+=u.tx
-        fin.close()
-
-        self.rx0=rx0
-        self.rx=rx
-        self.rxh=rxh
-        self.rx_tot=rxt
-        self.tx0=tx0
-        self.tx=tx
-        self.txh=txh
-        self.tx_tot=txt
-        self.tstamp=tstamp
-        self.previous=rec
-
-        now=time.time()
-        tm=time.localtime(now)
-        tm_loaded=time.localtime(tstamp)
-        #print tm.tm_yday, tm_loaded.tm_yday
-        if tm.tm_yday!=tm_loaded.tm_yday-1:
-            if lost:
-                d=lost
-            else:
-                #print self.rx, self.rx0
-                d=DailyUsage(self.tstamp, self.rx-self.rx0, self.tx-self.tx0)
-            self.rx_tot+=d.rx
-            self.tx_tot+=d.tx
-            self.rx0=self.rx
-            self.tx0=self.tx
-            self.day=tm.tm_yday
-            #print d
-            #print d.get_day(), self.previous[-1].get_day()
-            if d.get_day()!=self.previous[-1].get_day():
-                self.previous.append(d)
-
-            if len(self.previous)>self.max:
-                self.rx_tot-=self.previous[0].rx
-                self.tx_tot-=self.previous[0].tx
-                del self.previous[0]
-            #print self.rx_tot, self.rx
-            self.save()
-
-        self.tstamp=now
-        self.day=tm.tm_yday
 
     def get_data(self):
         return iter(self.previous)
@@ -313,10 +129,7 @@ class UsageList(object):
         if ifname!=self.name:
             oname=self.name
             try:
-                self.save()
                 self.name=ifname
-                if not self.load():
-                    self.first_run()
                 self.update()
             except KeyError:
                 self.name=oname
@@ -325,6 +138,7 @@ class UsageList(object):
         self.days=ndays
         self.update()
 
+C_DATE=0
 C_RX=1
 C_TX=2
 C_TOTAL=3
@@ -392,20 +206,25 @@ class UsageWindow(rox.templates.ProxyWindow):
         store=self.usage_list.get_model()
         store.clear()
         self.last_list_update=0
+        today=get_day(time.time())
         for u in self.usage_data.get_data():
-            it=store.append()
-            ts, rx, tx=u.for_csv()
-            store.set(it, C_DATE, ts, C_RX, fmt_size(rx),
-                      C_TX, fmt_size(tx), C_TOTAL, fmt_size(rx+tx),
-                      C_DATA, u)
+            day=u.get_day()
+            if day!=today and today-day<=self.days:
+                it=store.append()
+                ts, rx, tx=u.for_csv()
+                store.set(it, C_DATE, ts, C_RX, fmt_size(rx),
+                          C_TX, fmt_size(tx), C_TOTAL, fmt_size(rx+tx),
+                          C_DATA, u)
 
-            self.last_list_update=ts
+                self.last_list_update=ts
         
 
     def update_list(self):
+        #print 'update_list'
         store=self.usage_list.get_model()
         for u in self.usage_data.get_data():
             ts, rx, tx=u.for_csv()
+            print ts, rx, tx
             if ts>self.last_list_update:
                 it=store.append()
                 store.set(it, C_DATE, ts, C_RX, fmt_size(rx),
@@ -413,6 +232,20 @@ class UsageWindow(rox.templates.ProxyWindow):
                           C_DATA, u)
 
                 self.last_list_update=ts
+
+        today=get_day(time.time())
+        cont=True
+        while cont:
+            it=store.get_iter_first()
+            if it:
+                u=store[it][C_DATA]
+                day=u.get_day()
+                #print today, day, u
+                if today-day>=self.days:
+                    store.remove(it)
+                else:
+                    cont=False
+                
 
     def update_stats(self):
         rxt, txt=self.usage_data.get_today()
@@ -468,9 +301,6 @@ class UsageWindow(rox.templates.ProxyWindow):
         
         return True
 
-    def on_exit(self):
-        self.usage_data.on_exit()
-
     def set_interface(self, ifname):
         if ifname!=self.ifname:
             self.usage_data.set_interface(ifname)
@@ -480,9 +310,12 @@ class UsageWindow(rox.templates.ProxyWindow):
             self.do_update()
 
     def set_period(self, ndays):
+        trim=ndays<self.days
         self.days=ndays
         self.usage_data.set_period(self.days)
         self.do_update()
+        if trim:
+            self.update_list()
 
     def set_limits(self, rx, tx, total):
         self.rx_limit=rx
@@ -494,7 +327,10 @@ class UsageWindow(rox.templates.ProxyWindow):
         self.hide()
         return True
 
-C_DATE=0
+    def on_exit(self):
+        # No longer needed
+        pass
+
 widgets=rox.templates.load('usagewin')
 
 def get_window(ifname):
@@ -513,12 +349,12 @@ def test_no_gui():
 
 def test_gui():
     win=get_window('eth0')
+    #win.set_period(3)
     try:
         win.show()
         rox.mainloop()
     except:
         pass
-    win.on_exit()
 
 if __name__=='__main__':
     test_gui()

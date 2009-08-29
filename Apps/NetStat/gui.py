@@ -525,15 +525,19 @@ can.connect('expose_event', expose)
 can.connect('configure_event', resize)
 
 def update():
+    global stats, can
     #print stats
-    stats.update()
-    can.queue_draw()
+    if stats:
+        stats.update()
+    if can:
+        can.queue_draw()
     return True
 
 #print rox._toplevel_windows
 uwin=usage.get_window(interface.value)
 uwin.set_period(period.int_value)
 uwin.set_limits(rx_limit.int_value, tx_limit.int_value, total_limit.int_value)
+uwin.do_update()
 #print rox._toplevel_windows
 if xid is None:
     rox.toplevel_unref()

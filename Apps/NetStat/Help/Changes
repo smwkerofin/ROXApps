@@ -1,6 +1,10 @@
 NetStat
 =======
 
+29-Aug-2009
+~~~~~~~~~~~
+Now using a daemon to track usage, communicating via DBus.
+
 04-May-2009
 ~~~~~~~~~~~
 More work trying to track usage.
