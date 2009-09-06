@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+import os
+import findrox; findrox.version(2, 0, 4)
+import rox
+
+__builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
+
+import sys
+import comic_thumb
+
+# Are we to generate a thumb?
+if len(sys.argv)>1:
+    try:
+        comic_thumb.main(sys.argv[1:])
+    except Exception, ex:
+        print >> sys.stderr, '%s: %s' % (sys.argv[0], ex)
+        sys.exit(1)
+    sys.exit(0)
+
+# We are being run in configure mode
+comic_thumb.configure()
