@@ -199,19 +199,20 @@ class Win(rox.Window):
         yield None
         self.stat.set_text(_('Scanning directories'))
         self.store.clear()
-        items=os.listdir(thumbdir)
-        items.sort()
         self.dirs=[]
-        for item in items:
-            #print item
-            path=os.path.join(thumbdir, item) 
-            try:
-                s=os.lstat(path)
-                if stat.S_ISDIR(s.st_mode):
-                    self.dirs.append(path)
-            except:
-                pass
-        yield None
+        if os.path.isdir(thumbdir):
+            items=os.listdir(thumbdir)
+            items.sort()
+            for item in items:
+                #print item
+                path=os.path.join(thumbdir, item) 
+                try:
+                    s=os.lstat(path)
+                    if stat.S_ISDIR(s.st_mode):
+                        self.dirs.append(path)
+                except:
+                    pass
+            yield None
         
         for tdir in self.dirs:
             #print tdir

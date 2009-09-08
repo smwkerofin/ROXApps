@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+08-Sep-2009
+~~~~~~~~~~~
+Handle case when no thumbnail directory exists.
+
 04-Apr-2009
 ~~~~~~~~~~~
 Better error trapping when purging thumbs.
