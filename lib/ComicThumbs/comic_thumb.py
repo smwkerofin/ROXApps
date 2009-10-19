@@ -4,6 +4,8 @@ import rox, rox.mime, rox.thumbnail
 import pango
 
 import zipfile
+import tarfile
+import subprocess
 
 debug=os.environ.get('COMICTHUMB_DEBUG', 0)
 
@@ -33,11 +35,14 @@ class ComicThumb(rox.thumbnail.Thumbnailer):
         if s=='application/zip':
             return Zip(debug)
 
+        if s=='application/x-rar':
+            return RAR(debug)
+
     #def read_jpg(self, inname, rsize, inf):
     #    loader=rox.g.gdk.PixbufLoader
 
     def find_preview(self, files):
-        fname=None
+        #fname=None
         for name in self.pvname:
             for ext in self.pvext:
                 tname=name+ext
@@ -50,13 +55,32 @@ class ComicThumb(rox.thumbnail.Thumbnailer):
             for ext in self.pvext:
                 if name.endswith(ext):
                     if self.debug: print name
-                    return tname
+                    return name
 
         for name in files:
             ptype=rox.mime.get_type_by_name(name)
-            if ptype.media=='image':
+            if ptype and ptype.media=='image':
                 if self.debug: print name
                 return name
+
+    def post_process_image_type(self, img, w, h, mtype):
+        zip_icon=mtype.get_icon(rox.mime.ICON_SIZE_LARGE)
+        iw=zip_icon.get_width()
+        ih=zip_icon.get_height()
+
+        x=w-iw-2
+        y=h-ih-2
+        if x<0: x=0
+        if y<0: y=0
+
+        pixmap, mask=img.render_pixmap_and_mask()
+        cmap=pixmap.get_colormap()
+        gtk=rox.g
+        gc=pixmap.new_gc()
+
+        pixmap.draw_pixbuf(gc, zip_icon, 0, 0, x, y)
+            
+        return img.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
 
 
 class Zip(ComicThumb):
@@ -90,23 +114,82 @@ class Zip(ComicThumb):
 
     def post_process_image(self, img, w, h):
         mtype=rox.mime.lookup('application/zip')
-        zip_icon=mtype.get_icon(rox.mime.ICON_SIZE_LARGE)
-        iw=zip_icon.get_width()
-        ih=zip_icon.get_height()
+        return self.post_process_image_type(img, w, h, mtype)
 
-        x=w-iw-2
-        y=h-ih-2
-        if x<0: x=0
-        if y<0: y=0
+class Tar(ComicThumb):
+    def __init__(self, debug=False):
+        ComicThumb.__init__(self, False, debug)
+        
+    def get_image(self, inname, rsize):
+        tfile=tarfile.open(inname, 'r')
 
-        pixmap, mask=img.render_pixmap_and_mask()
-        cmap=pixmap.get_colormap()
-        gtk=rox.g
-        gc=pixmap.new_gc()
+        names=tfile.getnames()
+        fname=self.find_preview(names)
+        if not fname:
+            return
 
-        pixmap.draw_pixbuf(gc, zip_icon, 0, 0, x, y)
-            
-        return img.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
+        ptype=rox.mime.get_type_by_name(fname)
+        f=tfile.extractfile(fname)
+        data=f.read()
+
+        loader=rox.g.gdk.pixbuf_loader_new_with_mime_type(str(ptype))
+        loader.write(data)
+        pbuf=loader.get_pixbuf()
+        loader.close()
+
+        return pbuf
+
+    def post_process_image(self, img, w, h):
+        mtype=rox.mime.lookup('application/tar')
+        return self.post_process_image_type(img, w, h, mtype)
+
+class ExtCmd(ComicThumb):
+    def __init__(self, debug=False):
+        ComicThumb.__init__(self, True, debug)
+        
+    def get_image(self, inname, rsize):
+        names=self.get_file_names(inname)
+        if self.debug: print names
+
+        fname=self.find_preview(names)
+        if self.debug: print fname
+        if not fname:
+            return
+
+        fname=self.extract(inname, fname)
+        if self.debug: print fname
+        if not fname:
+            return
+        
+        return rox.g.gdk.pixbuf_new_from_file_at_size(fname, rsize, rsize)
+
+    def run_cmd(self, args):
+        if self.debug: print args
+        pipe=subprocess.Popen(args, shell=True, stdout=subprocess.PIPE).stdout
+        if self.debug: print pipe
+        return pipe.read()
+
+class RAR(ExtCmd):
+    def get_file_names(self, fname):
+        #xt=self.run_cmd(('unrar', 'lb', fname))
+        txt=self.run_cmd('unrar lb "%s"' % fname)
+        names=filter(lambda s: s, txt.split('\n'))
+        names.sort()
+        return names
+
+    def extract(self, inname, fname):
+        self.run_cmd('unrar e "%s" "%s"' % (inname, fname))
+        base=os.path.basename(fname)
+        if os.access(base, os.R_OK):
+            return base
+        
+        self.run_cmd('unrar e "%s"' % inname)
+        #os.system('pwd; ls')
+        return base
+        
+    def post_process_image(self, img, w, h):
+        mtype=rox.mime.lookup('application/x-rar')
+        return self.post_process_image_type(img, w, h, mtype)
 
 outname=None
 rsize=128
