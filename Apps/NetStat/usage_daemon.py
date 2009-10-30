@@ -165,20 +165,26 @@ class NetInterface(object):
 
         f.close()
 
+    def check_day(self, timestamp=None):
+        if timestamp is None:
+            timestamp=time.time()
+            
+        if get_day(timestamp)!=get_day(self.last_update):
+            yesterday=DailyUsage(self.last_update,
+                                 self.rx-self.rx_start,
+                                 self.tx-self.tx_start)
+            self.days.append(yesterday)
+            self.rx_start=self.rx
+            self.tx_start=self.tx
+
     def update_values(self, rx, tx, timestamp):
         while rx<self.rx:
             rx+=high_val
         while tx<self.tx:
             tx+=high_val
 
-        if get_day(timestamp)!=get_day(self.last_update):
-            yesterday=DailyUsage(self.last_update,
-                                 self.rx-self.rx_start,
-                                 self.tx-self.tx_start)
-            self.days.append(yesterday)
-            self.rx_start=rx
-            self.tx_start=tx
-
+        self.check_day(timestamp)
+        
         self.rx=rx
         self.tx=tx
         self.last_update=timestamp
@@ -201,12 +207,14 @@ class NetInterface(object):
         return len(self.days)+1
 
     def get_history(self):
+        #self.check_day()
         hist=[]
         for day in self.days:
             hist.append((day.timestamp, day.rx, day.tx))
 
-        hist.append((time.time(), self.rx-self.rx_start,
+        hist.append((self.last_update, self.rx-self.rx_start,
                      self.tx-self.tx_start))
+        #print hist[-1]
 
         return hist
 
@@ -252,6 +260,7 @@ class UsageMonitor(dbus.service.Object):
             tx=vals[8]
 
             self.interfaces[name]=NetInterface(name, rx, tx, now)
+            #print name, rx, tx, now
 
     def update_interfaces(self):
         now=time.time()
@@ -306,11 +315,13 @@ class UsageMonitor(dbus.service.Object):
     def GetInterfaceHistory(self, name):
         assert name in self.interfaces
 
+        #print 'GetInterfaceHistory', name
         hist=self.interfaces[name].get_history()
         #v=[]
         #for rx, tx in hist:
         #    v.append(rx)
         #    v.append(tx)
+        #print hist[-1]
 
         return hist
 

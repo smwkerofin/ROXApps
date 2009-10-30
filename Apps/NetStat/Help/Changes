@@ -1,6 +1,10 @@
 NetStat
 =======
 
+30-Oct-2009
+~~~~~~~~~~~
+Better date change handling in the usage monitor.
+
 29-Aug-2009
 ~~~~~~~~~~~
 Now using a daemon to track usage, communicating via DBus.

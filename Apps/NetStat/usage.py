@@ -30,8 +30,23 @@ def fmt_size(x):
         return '%d KB' % (x>>10)
     return '%d B' % x
 
+def fmt_date(t):
+    return time.strftime('%Y-%m-%d', time.localtime(t))
+
 def get_day(timestamp):
-    return time.localtime(timestamp).tm_yday
+    t=time.localtime(timestamp)
+    return (t.tm_year, t.tm_yday)
+
+def day_diff(t1, t0):
+    tt1=time.localtime(t1)
+    tt0=time.localtime(t0)
+
+    if tt1[:3]==tt0[:3]:
+        return 0
+
+    diff=t1-t0
+    return diff/(24*60*60)
+    
 
 class DailyUsage(object):
     def __init__(self, timestamp, rx, tx):
@@ -45,8 +60,10 @@ class DailyUsage(object):
                                             fmt_size(self.tx))
 
     def for_csv(self):
-        date=time.strftime('%Y-%m-%d', time.localtime(self.timestamp))
-        return (date, self.rx, self.tx)
+        return (fmt_date(self.timestamp), self.rx, self.tx)
+
+    def get_data(self):
+        return (self.timestamp, self.rx, self.tx)
 
     def get_day(self):
         return get_day(self.timestamp)
@@ -73,19 +90,23 @@ class UsageList(object):
         self.tx_tot=0
         now=time.time()
         today=get_day(now)
-        for dat in self.daemon.GetInterfaceHistory(self.name):
-            tstamp=float(dat[0])
-            rx=long(dat[1])
-            tx=long(dat[2])
+        try:
+            for dat in self.daemon.GetInterfaceHistory(self.name):
+                tstamp=float(dat[0])
+                rx=long(dat[1])
+                tx=long(dat[2])
 
-            day=get_day(tstamp)
-            if today-day<=self.days:
-                self.rx_tot+=rx
-                self.tx_tot+=tx
-                self.previous.append(DailyUsage(tstamp, rx, tx))
+                #day=get_day(tstamp)
+                if day_diff(now, tstamp)<=self.days:
+                    self.rx_tot+=rx
+                    self.tx_tot+=tx
+                    self.previous.append(DailyUsage(tstamp, rx, tx))
 
-        self.tstamp=now
-        self.day=today
+            self.tstamp=now
+            self.day=today
+
+        except dbus.DBusException, ex:
+            print >>sys.stderr, ex
                 
         return True
 
@@ -114,6 +135,9 @@ class UsageList(object):
 
     def get_today(self):
         return self.previous[-1].rx, self.previous[-1].tx
+
+    def last_day(self):
+        return self.previous[-1].get_day()
 
     def as_csv(self):
         s='"Date","Received","Transmitted"\n'
@@ -206,13 +230,14 @@ class UsageWindow(rox.templates.ProxyWindow):
         store=self.usage_list.get_model()
         store.clear()
         self.last_list_update=0
-        today=get_day(time.time())
+        now=time.time()
+        today=get_day(now)
         for u in self.usage_data.get_data():
             day=u.get_day()
-            if day!=today and today-day<=self.days:
+            ts, rx, tx=u.get_data()
+            if day!=today and day_diff(now, ts)<=self.days:
                 it=store.append()
-                ts, rx, tx=u.for_csv()
-                store.set(it, C_DATE, ts, C_RX, fmt_size(rx),
+                store.set(it, C_DATE, fmt_date(ts), C_RX, fmt_size(rx),
                           C_TX, fmt_size(tx), C_TOTAL, fmt_size(rx+tx),
                           C_DATA, u)
 
@@ -220,28 +245,30 @@ class UsageWindow(rox.templates.ProxyWindow):
         
 
     def update_list(self):
-        #print 'update_list'
+        print 'update_list'
+        now=time.time()
+        today=get_day(now)
         store=self.usage_list.get_model()
         for u in self.usage_data.get_data():
-            ts, rx, tx=u.for_csv()
-            print ts, rx, tx
-            if ts>self.last_list_update:
+            ts, rx, tx=u.get_data()
+            day=get_day(ts)
+            print day, today
+            if ts>self.last_list_update and day!=today:
                 it=store.append()
-                store.set(it, C_DATE, ts, C_RX, fmt_size(rx),
+                store.set(it, C_DATE, fmt_date(ts), C_RX, fmt_size(rx),
                           C_TX, fmt_size(tx), C_TOTAL, fmt_size(rx+tx),
                           C_DATA, u)
 
                 self.last_list_update=ts
 
-        today=get_day(time.time())
         cont=True
         while cont:
             it=store.get_iter_first()
             if it:
                 u=store[it][C_DATA]
-                day=u.get_day()
+                #day=u.get_day()
                 #print today, day, u
-                if today-day>=self.days:
+                if day_diff(now, u.timestamp)>=self.days:
                     store.remove(it)
                 else:
                     cont=False
@@ -296,7 +323,7 @@ class UsageWindow(rox.templates.ProxyWindow):
         day=self.usage_data.day
         self.usage_data.update()
         self.update_stats()
-        if day!=self.usage_data.day:
+        if day!=self.usage_data.last_day():
             self.update_list()
         
         return True
@@ -351,6 +378,7 @@ def test_gui():
     win=get_window('eth0')
     #win.set_period(3)
     try:
+        gobject.timeout_add(20*1000, win.do_update)
         win.show()
         rox.mainloop()
     except:
