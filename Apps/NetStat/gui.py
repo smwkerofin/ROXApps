@@ -21,6 +21,7 @@ import rox.InfoWin
 
 from sockwin import SocketsWindow
 import usage
+import check
 
 #import gc; gc.set_debug(gc.DEBUG_LEAK)
 
@@ -68,6 +69,7 @@ rx_limit=rox.options.Option('rx_limit', 30)
 tx_limit=rox.options.Option('tx_limit', 30)
 total_limit=rox.options.Option('total_limit', 30)
 
+
 ifdisp=None
 win=None
 uwin=None
@@ -110,6 +112,7 @@ def options_changed():
                         total_limit.int_value)
 
 rox.app_options.add_notify(options_changed)
+check.init_options()
 
 rox.app_options.notify()
 
@@ -147,6 +150,7 @@ menu=rox.Menu.Menu('main', [
       rox.Menu.Action(_('Show active...'), 'show_active'),
       rox.Menu.Action(_('Show all..'), 'show_all')
     ]),
+    rox.Menu.Action(_('Connectivity...'), 'check_conn'),
     rox.Menu.Action(_('Options...'), 'edit_options',
                     stock=g.STOCK_PREFERENCES),
     rox.Menu.Separator(),
@@ -173,6 +177,9 @@ class MenuHelper:
 
     def show_usage(unused):
         uwin.show()
+
+    def check_conn(self):
+        check.open()
 
 menu_helper=MenuHelper()
 menu.attach(win, menu_helper)

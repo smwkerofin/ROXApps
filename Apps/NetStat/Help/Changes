@@ -1,6 +1,11 @@
 NetStat
 =======
 
+11-Nov-2009
+~~~~~~~~~~~
+New feature: the connectivity window can ping nominated hosts to check the
+connection.
+
 30-Oct-2009
 ~~~~~~~~~~~
 Better date change handling in the usage monitor.

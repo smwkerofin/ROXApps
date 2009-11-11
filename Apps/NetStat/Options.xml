@@ -9,6 +9,14 @@ this named interface.</entry>
 initiate a connection.</entry>
 <entry name='disconnect' label='Disconnection command'>Command to execute to
 terminate a connection.</entry>
+<extlist name="check_hosts" label="Hosts to check" edit="yes"
+selection="single">List of hosts to ping to check
+connectivity</extlist>
+<toggle name="check_dns" label="Check DNS servers">Select to ping DNS
+servers when checking connectivity</toggle>
+<numentry name="check_update" label="Update rate (s)" min="10" max="3600">
+How often to ping the nominated hosts
+</numentry>
 </section>
 <section title='Display'>
 <numentry name='wsize' label='Window size' min='8' max='128'>

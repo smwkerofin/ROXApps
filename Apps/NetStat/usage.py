@@ -321,10 +321,13 @@ class UsageWindow(rox.templates.ProxyWindow):
 
     def do_update(self):
         day=self.usage_data.day
-        self.usage_data.update()
-        self.update_stats()
-        if day!=self.usage_data.last_day():
-            self.update_list()
+        try:
+            self.usage_data.update()
+            self.update_stats()
+            if day!=self.usage_data.last_day():
+                self.update_list()
+        except:
+            rox.report_exception()
         
         return True
 
