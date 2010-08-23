@@ -1,0 +1,513 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+import findrox
+findrox.version(2, 0, 5)
+import rox
+import rox.applet
+import rox.filer
+import rox.options
+#import rox.OptionsBox
+import rox.Menu
+
+import disk_manager
+
+app_name=os.path.basename(rox.app_dir)
+
+rox.setup_app_options(app_name, site='kerofin.demon.co.uk')
+rox.Menu.set_save_name(app_name)
+
+wsize=rox.options.Option('widget_size', 48)
+media_dir=rox.options.Option('media_dir', '/media')
+show_fixed=rox.options.Option('show_fixed', True)
+
+icons=None
+inames=('rmdisk', 'no-rmdisk', 'pcmem', 'no-pcmem')
+
+themed={'default': 'inode-directory',
+        'disk': 'drive-harddisk',
+        'rmdisk': 'drive-removable-media',
+        'usbstick': 'drive-removable-media-usb-pendrive',
+        'cdrom': 'medial-optical'
+        }
+
+itheme=rox.g.icon_theme_get_default()
+
+def get_icon_from_theme(name, mounted=True, size=48):
+    global itheme, themed
+    
+    try:
+        iname=themed[name]
+    except:
+        return
+    #print 'look up', iname, 'in', itheme
+
+    try:
+        icon=itheme.load_icon(iname, size, rox.g.ICON_LOOKUP_USE_BUILTIN)
+    except:
+        #rox.report_exception()
+        return
+    #print iname, icon
+
+    if icon:
+        if not mounted:
+            tmp=icon.copy()
+            icon.saturate_and_pixelate(tmp, 1.0, True)
+            icon=tmp
+
+        else:
+            mnt_img=itheme.load_icon(rox.g.STOCK_YES, 12,
+                                     rox.g.ICON_LOOKUP_USE_BUILTIN)
+            print mnt_img
+            w=mnt_img.get_width()
+            h=mnt_img.get_height()
+            x=icon.get_width()-w-2
+            y=2
+            print x, y, w, h
+            mnt_img.copy_area(0, 0, w, h, icon, x, y)
+    #print mounted, icon
+
+    return icon
+
+def get_icon_from_pixmaps(name, mounted):
+    global icons
+    
+    #print name, mounted
+    if mounted:
+        n=name
+    else:
+        n='no-'+name
+
+    if not icons:
+        return None
+
+    try:
+        icon=icons[n]
+    except:
+        icon=None
+
+    return icon
+
+def get_icon(name, mounted=True):
+    #print name, mounted
+    
+    icon=get_icon_from_theme(name, mounted, wsize.int_value)
+    #print icon
+    if icon:
+        return icon
+    
+    icon=get_icon_from_pixmaps(name, mounted)
+    #print icon
+    if icon:
+        return icon
+
+    if not icon:
+        icon=get_icon_from_theme('default', mounted, wsize.int_value)
+
+    if not icon:
+        get_icon_from_pixmaps('rmdisk', mounted)
+
+    #print icon
+    return icon
+
+placeholder_image=None
+def load_icons(size):
+    global icons, placeholder_image
+
+    icons={}
+
+    for name in inames:
+        try:
+            pbuf=rox.g.gdk.pixbuf_new_from_file_at_size(
+                os.path.join(rox.app_dir, 'images', name+'.png'), size, size)
+            icons[name]=pbuf
+        except:
+            pass
+
+    placeholder_image=get_icon('disk', False)
+
+class MyIcon(rox.g.EventBox):
+    def __init__(self, controller, show_names, base_image):
+        self.controller=controller
+        self.show_names=show_names
+        
+        rox.g.EventBox.__init__(self)
+
+        box=rox.g.VBox()
+        self.add(box)
+        img=rox.g.image_new_from_pixbuf(base_image)
+        box.pack_start(img)
+        img.show()
+        self.drive_img=img
+        l=rox.g.Label(app_name)
+        box.pack_start(l)
+        self.drive_label=l
+        if self.show_names:
+            self.drive_label.show()
+
+        self.add_events(rox.g.gdk.BUTTON_PRESS_MASK)
+        self.connect('button-press-event', self.button_press)
+        box.show()
+        self.visible=None
+
+    def show(self):
+        rox.g.EventBox.show(self)
+        if self.show_names:
+            self.drive_label.show()
+        else:
+            self.drive_label.hide()
+        self.visible=True
+
+    def hide(self):
+        rox.g.EventBox.hide(self)
+        self.visible=False
+
+    def is_visible(self):
+        return self.visible
+        
+    def set_show_names(self, show_names=True):
+        self.show_names=show_names
+        if self.show_names:
+            self.drive_label.show()
+        else:
+            self.drive_label.hide()
+
+    def button_press(self, widget, event):
+        return self.controller.icon_button_press(self, None, event)
+
+    def reload_icons(self):
+        pass
+
+    def set_image(self, image):
+        self.drive_img.set_from_pixbuf(image)
+
+class DriveIcon(MyIcon):
+    icon_name='rmdisk'
+    
+    def __init__(self, controller, disk, show_names):
+        self.images=(get_icon(disk.get_type(), True),
+                    get_icon(disk.get_type(), False))
+        self.disk=disk
+
+        MyIcon.__init__(self, controller, show_names,
+                        self.images[0] if disk.get_mount_path()
+                        else self.images[1])
+        self.controller=controller
+        self.show_names=show_names
+        
+        rox.g.EventBox.__init__(self)
+
+        if disk.mount_path:
+            name=os.path.basename(disk.mount_path)
+            if not name:
+                name=disk.mount_path
+            ttip='%s\n%s' % (disk.device, disk.mount_path)
+        else:
+            name=os.path.basename(disk.device)
+            ttip=disk.device
+        self.drive_label.set_text(name)
+
+        self.set_tooltip_text(ttip)
+
+    def button_press(self, widget, event):
+        return self.controller.icon_button_press(self, self.disk, event)
+
+    def set_mount_path(self, mount_path):
+        self.drive_label.set_text(
+            os.path.basename(mount_path) if mount_path else '')
+        if mount_path:
+            ttip='%s\n%s' % (self.disk.device, mount_path)
+        elif self.disk.old_mount_path:
+            ttip='%s\n%s' % (self.disk.device, self.disk.mount_path)
+        else:
+            ttip=self.disk.device
+        self.set_tooltip_text(ttip)
+
+    def set_mounted(self, mount_path):
+        self.drive_label.set_text(os.path.basename(mount_path))
+        self.drive_img.set_from_pixbuf(self.images[0])
+        ttip='%s\n%s' % (self.disk.device, mount_path)
+        self.set_tooltip_text(ttip)
+
+    def set_unmounted(self):
+        print 'in set_unmounted'
+        self.drive_label.set_text(os.path.basename(self.disk.device))
+        self.drive_img.set_from_pixbuf(self.images[1])
+        if self.disk.old_mount_path:
+            ttip='%s\n%s' % (self.disk.device, self.disk.mount_path)
+        else:
+            ttip=self.disk.device
+        self.set_tooltip_text(ttip)
+        
+    def reload_icons(self):
+        self.images=(get_icon(self.disk.get_type(), True),
+                    get_icon(self.disk.get_type(), False))
+        self.set_image(self.images[0] if self.disk.get_mount_path()
+                        else self.images[1])
+
+class MenuIcon(MyIcon):
+    def __init__(self, controller, show_names):
+        MyIcon.__init__(self, controller, show_names, placeholder_image)
+
+    def reload_icons(self):
+        self.set_image(placeholder_image)
+        
+class IconWindow:
+    menu_def=rox.Menu.Menu('main', [
+        ('/Info', 'show_info', '<StockItem>', '',
+         rox.g.STOCK_DIALOG_INFO),
+        ('/sep', '', '<Separator>'),
+        ('/Options', 'do_options', '<StockItem>', '',
+         rox.g.STOCK_PREFERENCES),
+        ('/sep', '', '<Separator>'),
+        ('/View', 'do_view', ''),
+        ('/Mount', 'do_mount', ''),
+        ('/Unmount', 'do_unmount', ''),
+        ('/Eject', 'do_eject', ''),
+        ('/sep', '', '<Separator>'),
+        ('/Quit', 'do_quit', '<StockItem>', '', rox.g.STOCK_QUIT)
+        ])
+
+    def __init__(self, manager, ishoriz=True):
+        if ishoriz:
+            box=rox.g.HBox()
+        else:
+            box=rox.g.VBox()
+
+        self.icon_box=box
+        self.add(box)
+
+        self.icons={}
+        self.menu_disk=None
+        self.show_names=True
+        self.ndrives=0
+
+        self.placeholder=MenuIcon(self, self.show_names)
+        self.icon_box.pack_start(self.placeholder)
+        box.show_all()
+
+        self.set_manager(manager)
+
+    def incr_drives(self):
+        print self.ndrives
+        self.ndrives+=1
+        if self.ndrives==1:
+            print 'hide placeholder', self.placeholder
+            self.placeholder.hide()
+
+    def decr_drives(self):
+        assert self.ndrives>1
+        self.ndrives-=1
+        if self.ndrives==0:
+            self.placeholder.show()
+
+    def add_disk(self, disk):
+        if disk.device in self.icons and (disk.get_is_mountable() or
+                                          disk.get_mount_path()):
+            if disk.get_is_removable() or show_fixed.int_value:
+                self.icons[disk.device].show()
+                self.incr_drives()
+            return
+
+        icon=DriveIcon(self, disk, self.show_names)
+        self.icon_box.pack_start(icon)
+        if disk.get_is_mountable() or disk.get_mount_path():
+            if disk.get_is_removable() or show_fixed.int_value:
+                icon.show()
+                self.incr_drives()
+        self.icons[disk.device]=icon
+
+    def update_disks(self):
+        print 'update_disks', len(self.icons), self.ndrives
+        for disk in self.manager.get_disks():
+            self.remove_disk(disk)
+        self.icons={}
+        for disk in self.manager.get_disks():
+            self.add_disk(disk)
+
+    def disk_mounted(self, disk, mpoint):
+        #print 'in disk_mounted'
+        if disk.device in self.icons and mpoint:
+            self.icons[disk.device].set_mounted(mpoint)
+            self.icons[disk.device].show()
+
+    def disk_unmounted(self, disk):
+        #print 'in disk_unmounted'
+        old=disk.get_last_mount_path()
+        if old:
+            #os.system('rox -D "%s"' % old)
+            rox.filer.spawn_rox(('-D', old))
+        print old, disk.device, self.icons.keys()
+        if disk.device in self.icons:
+            self.icons[disk.device].set_unmounted()
+
+    def disk_added(self, disk):
+        print 'disk added', disk
+        self.add_disk(disk)
+    
+    def remove_disk(self, disk):
+        print disk.device, self.icons
+        if disk.device in self.icons:
+            icon=self.icons[disk.device]
+            if icon.is_visible():
+                self.decr_drives()
+                icon.hide()
+            self.icon_box.remove(icon)
+
+    def disk_removed(self, disk):
+        self.remove_disk(disk)
+
+    def set_manager(self, manager):
+        self.manager=manager
+        self.manager.add_client(self)
+
+        for disk in self.manager.get_disks():
+            self.add_disk(disk)
+
+    def icon_button_press(self, icon, disk, event):
+        print 'icon button press', disk.device if disk else None
+        print event.button, event.state
+
+        if event.button==1 and disk:
+            path=disk.get_mount_path()
+            if path:
+                rox.filer.open_dir(path)
+            else:
+                mname=disk.get_suggested_mount_name()
+                mount=os.path.join(media_dir.value, mname)
+                print 'try to mount %s on %s' % (disk.get_device_name(),
+                                                 mount)
+                disk.mount_disk(mount)
+                
+            return True
+
+        elif event.button==3:
+            if disk:
+                mounted=disk.get_mount_path() is not None
+                mountable=disk.get_is_mountable()
+                removable=disk.get_is_removable()
+            else:
+                mounted=False
+                mountable=False
+                removable=False
+
+            self.set_menu_item_active('/View', mounted) 
+            self.set_menu_item_active('/Mount', not mounted and mountable) 
+            self.set_menu_item_active('/Unmount', mounted and mountable) 
+            self.set_menu_item_active('/Eject', removable) 
+            
+            self.show_menu(icon, disk, event)
+            return True
+
+        return False
+
+    def set_menu_item_active(self, path, active):
+        item=self.menu_def.factory.get_item(path)
+        if item:
+            item.set_sensitive(active)
+
+    def show_info(self):
+        import rox.InfoWin
+        rox.InfoWin.infowin(app_name)
+        self.menu_disk=None
+        
+    def do_quit(self):
+        self.menu_disk=None
+        rox.toplevel_unref()
+        
+    def do_mount(self):
+        if self.menu_disk:
+            mname=self.menu_disk.get_suggested_mount_name()
+            mount=os.path.join(media_dir.value, mname)
+            self.menu_disk.mount_disk(mount)
+            self.menu_disk=None
+        
+    def do_unmount(self):
+        if self.menu_disk:
+            self.menu_disk.unmount_disk()
+            self.menu_disk=None
+        
+    def do_eject(self):
+        if self.menu_disk:
+            self.menu_disk.eject_disk()
+            self.menu_disk=None
+        
+    def do_view(self):
+        self.menu_disk=None
+        
+    def do_options(self):
+        self.menu_disk=None
+        rox.edit_options()
+
+    def resize_icons(self):
+        load_icons(wsize.int_value)
+        
+        for icon in self.icons.itervalues():
+            icon.reload_icons()
+
+    def options_changed(self):
+        print 'options_changed', self
+
+        if show_fixed.has_changed:
+            self.update_disks()
+
+        if wsize.has_changed:
+            self.resize_icons()
+
+class Window(IconWindow, rox.Window):
+    def __init__(self, manager):
+        rox.Window.__init__(self)
+        IconWindow.__init__(self, manager)
+
+    def show_menu(self, icon, disk, event):
+        self.menu_disk=disk
+
+        self.menu_def.popup(self, event)
+
+class Applet(IconWindow, rox.applet.Applet):
+    def __init__(self, manager, xid):
+        rox.applet.Applet.__init__(self, xid)
+        IconWindow.__init__(self, manager, not self.is_vertical_panel())
+
+    def show_menu(self, icon, disk, event):
+        self.menu_disk=disk
+
+        self.menu_def.popup(self, event, self.position_menu)
+
+def test():
+    w=Window(disk_manager.get_manager())
+    #d=Disk('/dev/dummy', '/media/dummy')
+    w.show()
+    rox.mainloop()
+
+active_window=None
+def get_active_window():
+    return active_window
+
+def options_changed():
+    win=get_active_window()
+    if win:
+        win.options_changed()
+
+rox.app_options.add_notify(options_changed)
+rox.app_options.notify()
+
+def main():
+    global active_window
+    
+    mgr=disk_manager.get_manager()
+    if len(sys.argv)>1:
+        xid=long(sys.argv[1])
+        w=Applet(mgr, xid)
+    else:
+        w=Window(mgr)
+    active_window=w
+    w.show()
+    rox.mainloop()
+
+load_icons(wsize.int_value)
+
+if __name__=='__main__':
+    main()

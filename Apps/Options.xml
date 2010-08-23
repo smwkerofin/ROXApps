@@ -1,0 +1,12 @@
+<?xml version='1.0'?>
+<options>
+<section title='Main'>
+<toggle name="show_fixed" label="Include fixed disks">Whether or not
+to include fixed disks in the display</toggle>
+<entry name="media_dir" label="Default mount directory">Directory
+where the OS mounts removable media</entry>
+<numentry name="widget_size" label="Icon size" min="8" max="128">
+Size of the drive icons.
+</numentry>
+</section>
+</options>
