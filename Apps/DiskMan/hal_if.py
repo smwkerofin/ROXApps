@@ -105,8 +105,10 @@ class HalDisk(disks.Disk):
 
     def mount_disk(self, mount_path):
         try:
-            print self, mount_path, self.fstype
-            self.vol_iface.Mount(mount_path, self.fstype, [])
+            opts=['uid=%d' % os.getuid()]
+            print self, mount_path, self.fstype, opts
+            self.vol_iface.Mount(os.path.basename(mount_path), self.fstype,
+                                 opts)
         except Exception:
             rox.report_exception()
             return False

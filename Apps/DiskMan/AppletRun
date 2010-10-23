@@ -298,7 +298,7 @@ class IconWindow:
             self.placeholder.hide()
 
     def decr_drives(self):
-        assert self.ndrives>1
+        #assert self.ndrives>1
         self.ndrives-=1
         if self.ndrives==0:
             self.placeholder.show()
