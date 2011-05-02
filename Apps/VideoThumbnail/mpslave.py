@@ -35,7 +35,12 @@ class InputTOBlocker(rox.tasks.InputBlocker, rox.tasks.TimeoutBlocker):
         #print rox._in_mainloops
         self.timed_out=True
         self.trigger()
-        rox.g.main_quit()
+        try:
+            rox.g.main_quit()
+        except RuntimeError, err:
+            # Can happen if we have already left the main loop because
+            # we are reporting an exception elsewhere.
+            print err
 
 class TimedOut(Exception):
     def __init__(self, waiting_for):
