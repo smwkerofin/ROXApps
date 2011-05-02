@@ -3,6 +3,10 @@
 	by Stephen Watson
 	http://www.kerofin.demon.co.uk/rox/
 
+22-Aug-2009
+~~~~~~~~~~~
+Extra error trapping (overdue commit).
+
 18-Jul-2009
 ~~~~~~~~~~~
 Use a combined input and timeout blocker to communicate with MPlayer, to 
