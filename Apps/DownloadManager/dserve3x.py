@@ -118,7 +118,7 @@ class DownloadManager(dbus.service.Object):
         #print 'been pinged'
         return True
 
-    @dbus.service.method(new_interface_name)
+    @dbus.service.method(new_interface_name, in_signature='s')
     def RequestID(self, agent):
         return str(self.current.get_sender())
 
@@ -148,14 +148,14 @@ class DownloadManager(dbus.service.Object):
         #print 'Rejected, %d in queue' % (len(self.clients)-len(self.active))
         return False
 
-    @dbus.service.method(interface_name)
+    @dbus.service.method(interface_name, in_signature='ss')
     def CanIStart(self, server, fname):
         #print 'CanIStart', server, fname
         #print dir(self.current)
         id=self.current.get_sender()
         return self.can_start(id, server, fname)
 
-    @dbus.service.method(new_interface_name)
+    @dbus.service.method(new_interface_name, in_signature='sss')
     def CanIStartByID(self, id, server, fname):
         return self.can_start(id, server, fname)    
 
@@ -165,37 +165,50 @@ class DownloadManager(dbus.service.Object):
         nact=len(self.active)
         return ntot-nact
         
-    @dbus.service.method(interface_name)
+    @dbus.service.method(interface_name, in_signature='xx')
     def Update(self, size, total):
         id=self.current.get_sender()
-        client=self.clients[id]
-        #print 'Update', id, client
-        client.update(size, total)
+        try:
+            client=self.clients[id]
+            client.update(size, total)
+        except KeyError, ex:
+            print >>sys.stderr, ex
 
-    @dbus.service.method(new_interface_name)
+    @dbus.service.method(new_interface_name, in_signature='sxx')
     def UpdateByID(self, id, size, total):
-        client=self.clients[id]
-        #print 'Update', id, client
-        client.update(size, total)
+        try:
+            client=self.clients[id]
+            #print 'Update', id, client
+            client.update(size, total)
+        except KeyError, ex:
+            print >>sys.stderr, ex
 
     @dbus.service.method(interface_name)
     def Done(self):
         id=self.current.get_sender()
-        client=self.clients[id]
+        try:
+            client=self.clients[id]
+        except KeyError, ex:
+            print >>sys.stderr, ex
+            return
         #print 'Done', id, client
         ##print client, 'has finished'
         self.lose_client(id)
         #print 'lost', id
 
-    @dbus.service.method(new_interface_name)
+    @dbus.service.method(new_interface_name, in_signature='s')
     def DoneByID(self, id):
-        client=self.clients[id]
+        try:
+            client=self.clients[id]
+        except KeyError, ex:
+            print >>sys.stderr, ex
+            return
         #print 'Done', id, client
         ##print client, 'has finished'
         self.lose_client(id)
         #print 'lost by id', id
 
-    @dbus.service.method(interface_name)
+    @dbus.service.method(interface_name, in_signature='s')
     def Cancel(self, reason):
         #print 'in cancel', self, reason
         id=self.current.get_sender()
@@ -206,7 +219,7 @@ class DownloadManager(dbus.service.Object):
         self.lose_client(id)
         #print client, 'has been cancelled', reason
 
-    @dbus.service.method(new_interface_name)
+    @dbus.service.method(new_interface_name, in_signature='s')
     def CancelByID(self, reason):
         #print 'in cancel by ID', self, reason
         #client=self.clients[id]
@@ -218,7 +231,7 @@ class DownloadManager(dbus.service.Object):
         self.opt_clicked()
 
     @dbus.service.method(interface_name)
-    def GetStats(sel):
+    def GetStats(self):
         act=[]
         for a in self.active:
             client=self.clients[a]
@@ -227,7 +240,7 @@ class DownloadManager(dbus.service.Object):
         #print 'returning', act
         return act
 
-    @dbus.service.method(interface_name)
+    @dbus.service.method(interface_name, in_signature='b')
     def ShowWindow(self, show):
         self.user_show=show
         self.maybe_show()
