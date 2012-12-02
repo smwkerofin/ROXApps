@@ -11,6 +11,8 @@ import rox
 import disks
 import manager
 
+linfs=('ext2', 'ext3', 'ext4')
+
 class HalDisk(disks.Disk):
     dev_interface_name='org.freedesktop.Hal.Device'
     vol_interface_name='org.freedesktop.Hal.Device.Volume'
@@ -105,9 +107,21 @@ class HalDisk(disks.Disk):
 
     def mount_disk(self, mount_path):
         try:
-            opts=['uid=%d' % os.getuid()]
-            print self, mount_path, self.fstype, opts
-            self.vol_iface.Mount(os.path.basename(mount_path), self.fstype,
+            #if self.fstype in linfs:
+            #    opts=['uid=%d' % os.getuid()]
+            #else:
+            #    opts=[]
+            try:
+                opts=['uid=%d' % os.getuid()]
+                print self, mount_path, self.fstype, opts
+                self.vol_iface.Mount(os.path.basename(mount_path),
+                                      self.fstype,
+                                      opts)
+            except Exception, ex:
+                print >> sys.stderr, ex
+                opts=[]
+                print self, mount_path, self.fstype, opts
+                self.vol_iface.Mount(os.path.basename(mount_path), self.fstype,
                                  opts)
         except Exception:
             rox.report_exception()

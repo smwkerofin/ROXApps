@@ -356,6 +356,8 @@ class IconWindow:
                 icon.hide()
             self.icon_box.remove(icon)
 
+            del self.icons[disk.device]
+
     def disk_removed(self, disk):
         self.remove_disk(disk)
 
