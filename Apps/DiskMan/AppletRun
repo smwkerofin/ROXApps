@@ -42,14 +42,14 @@ def get_icon_from_theme(name, mounted=True, size=48):
         iname=themed[name]
     except:
         return
-    #print 'look up', iname, 'in', itheme
+    print 'look up', iname, 'in', itheme
 
     try:
         icon=itheme.load_icon(iname, size, rox.g.ICON_LOOKUP_USE_BUILTIN)
     except:
         #rox.report_exception()
         return
-    #print iname, icon
+    print iname, icon
 
     if icon:
         if not mounted:
@@ -65,8 +65,10 @@ def get_icon_from_theme(name, mounted=True, size=48):
             h=mnt_img.get_height()
             x=icon.get_width()-w-2
             y=2
+            print mnt_img, icon
             print x, y, w, h
-            mnt_img.copy_area(0, 0, w, h, icon, x, y)
+            #mnt_img.copy_area(0, 0, w, h, icon, x, y)
+            #print 'copy_area done'
     #print mounted, icon
 
     return icon
@@ -91,15 +93,16 @@ def get_icon_from_pixmaps(name, mounted):
     return icon
 
 def get_icon(name, mounted=True):
+    print 'get_icon', name, mounted
     #print name, mounted
     
     icon=get_icon_from_theme(name, mounted, wsize.int_value)
-    #print icon
+    print icon
     if icon:
         return icon
     
     icon=get_icon_from_pixmaps(name, mounted)
-    #print icon
+    print icon
     if icon:
         return icon
 
@@ -109,7 +112,7 @@ def get_icon(name, mounted=True):
     if not icon:
         get_icon_from_pixmaps('rmdisk', mounted)
 
-    #print icon
+    print icon
     return icon
 
 placeholder_image=None
@@ -120,6 +123,7 @@ def load_icons(size):
 
     for name in inames:
         try:
+            print 'loading', name
             pbuf=rox.g.gdk.pixbuf_new_from_file_at_size(
                 os.path.join(rox.app_dir, 'images', name+'.png'), size, size)
             icons[name]=pbuf
@@ -130,6 +134,7 @@ def load_icons(size):
 
 class MyIcon(rox.g.EventBox):
     def __init__(self, controller, show_names, base_image):
+        print 'in MyIcon.__init__'
         self.controller=controller
         self.show_names=show_names
         
@@ -137,6 +142,7 @@ class MyIcon(rox.g.EventBox):
 
         box=rox.g.VBox()
         self.add(box)
+        print 'making new image'
         img=rox.g.image_new_from_pixbuf(base_image)
         box.pack_start(img)
         img.show()
@@ -151,6 +157,7 @@ class MyIcon(rox.g.EventBox):
         self.connect('button-press-event', self.button_press)
         box.show()
         self.visible=None
+        print 'MyIcon init done'
 
     def show(self):
         rox.g.EventBox.show(self)
@@ -187,10 +194,13 @@ class DriveIcon(MyIcon):
     icon_name='rmdisk'
     
     def __init__(self, controller, disk, show_names):
+        print 'in DriveIcon.__init__'
         self.images=(get_icon(disk.get_type(), True),
                     get_icon(disk.get_type(), False))
         self.disk=disk
 
+        print self.images
+        print 'calling MyIcon.__init__'
         MyIcon.__init__(self, controller, show_names,
                         self.images[0] if disk.get_mount_path()
                         else self.images[1])
@@ -286,9 +296,13 @@ class IconWindow:
 
         self.placeholder=MenuIcon(self, self.show_names)
         self.icon_box.pack_start(self.placeholder)
+        print 'calling show_all'
         box.show_all()
 
+        print 'calling set_manager'
         self.set_manager(manager)
+
+        print 'done init'
 
     def incr_drives(self):
         print self.ndrives
@@ -304,6 +318,7 @@ class IconWindow:
             self.placeholder.show()
 
     def add_disk(self, disk):
+        print disk.device, self.icons
         if disk.device in self.icons and (disk.get_is_mountable() or
                                           disk.get_mount_path()):
             if disk.get_is_removable() or show_fixed.int_value:
@@ -311,13 +326,17 @@ class IconWindow:
                 self.incr_drives()
             return
 
+        print self.show_names
         icon=DriveIcon(self, disk, self.show_names)
+        print 'made drive icon'
         self.icon_box.pack_start(icon)
         if disk.get_is_mountable() or disk.get_mount_path():
+            print 'mountable or has mount path'
             if disk.get_is_removable() or show_fixed.int_value:
                 icon.show()
                 self.incr_drives()
         self.icons[disk.device]=icon
+        print 'added', disk
 
     def update_disks(self):
         print 'update_disks', len(self.icons), self.ndrives
@@ -366,6 +385,7 @@ class IconWindow:
         self.manager.add_client(self)
 
         for disk in self.manager.get_disks():
+            print 'adding', disk
             self.add_disk(disk)
 
     def icon_button_press(self, icon, disk, event):
@@ -460,8 +480,11 @@ class IconWindow:
 
 class Window(IconWindow, rox.Window):
     def __init__(self, manager):
+        print 'rox.Window'
         rox.Window.__init__(self)
+        print 'IconWindow'
         IconWindow.__init__(self, manager)
+        print 'done'
 
     def show_menu(self, icon, disk, event):
         self.menu_disk=disk
@@ -505,6 +528,7 @@ def main():
         w=Applet(mgr, xid)
     else:
         w=Window(mgr)
+    print 'made', w
     active_window=w
     w.show()
     rox.mainloop()
