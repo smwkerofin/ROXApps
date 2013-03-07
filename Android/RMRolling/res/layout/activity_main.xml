@@ -7,9 +7,7 @@
     <TableLayout
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="180dp" >
+        android:layout_centerHorizontal="true" >
 
         <TableRow
             android:id="@+id/tableRow1"
@@ -98,6 +96,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:inputType="number|numberSigned"
+                android:nextFocusDown="@id/rollText"
+                android:nextFocusForward="@id/rollText"
                 android:text="0"
                 android:textSize="24sp" />
 
