@@ -18,7 +18,7 @@
                 android:id="@+id/textView1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Roll"
+                android:text="@string/roll_label"
                 android:textAppearance="?android:attr/textAppearanceMedium" />
 
             <EditText
@@ -27,7 +27,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="number|numberSigned"
                 android:nextFocusDown="@+id/obText"
-                android:text="100"
+                android:text="@string/hundred"
                 android:textSize="30sp" >
 
                 <requestFocus />
@@ -44,7 +44,7 @@
                 android:id="@+id/textView2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="OB"
+                android:text="@string/ob_label"
                 android:textAppearance="?android:attr/textAppearanceMedium" />
 
             <EditText
@@ -53,7 +53,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="number"
                 android:nextFocusDown="@+id/dbText"
-                android:text="0"
+                android:text="@string/zero"
                 android:textAlignment="textEnd"
                 android:textSize="30sp" />
 
@@ -68,7 +68,7 @@
                 android:id="@+id/textView3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="DB"
+                android:text="@string/db_label"
                 android:textAppearance="?android:attr/textAppearanceMedium" />
 
             <EditText
@@ -77,7 +77,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="number"
                 android:nextFocusDown="@+id/modText"
-                android:text="0"
+                android:text="@string/zero"
                 android:textSize="30sp" />
 
         </TableRow>
@@ -91,7 +91,7 @@
                 android:id="@+id/textView4"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Mod"
+                android:text="@string/mod_label"
                 android:textAppearance="?android:attr/textAppearanceMedium" />
 
             <EditText
@@ -101,7 +101,7 @@
                 android:inputType="number|numberSigned"
                 android:nextFocusDown="@id/rollText"
                 android:nextFocusForward="@id/rollText"
-                android:text="0"
+                android:text="@string/zero"
                 android:textSize="30sp" />
 
         </TableRow>
@@ -115,7 +115,7 @@
                 android:id="@+id/textView5"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Result"
+                android:text="@string/result_label"
                 android:textAppearance="?android:attr/textAppearanceMedium" />
 
             <EditText

@@ -4,5 +4,12 @@
     <string name="app_name">RMRolling</string>
     <string name="hello_world">Hello world!</string>
     <string name="menu_settings">Settings</string>
+    <string name="roll_label">Roll</string>
+    <string name="ob_label">OB</string>
+    <string name="db_label">DB</string>
+    <string name="mod_label">Mod</string>
+    <string name="result_label">Result</string>
+    <string name="zero">0</string>
+    <string name="hundred">100</string>
 
 </resources>
