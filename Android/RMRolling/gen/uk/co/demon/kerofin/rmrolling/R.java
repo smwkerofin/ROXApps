@@ -39,6 +39,7 @@ public final class R {
     }
     public static final class string {
         public static final int app_name=0x7f040000;
+        public static final int blank=0x7f04000a;
         public static final int db_label=0x7f040005;
         public static final int hello_world=0x7f040001;
         public static final int hundred=0x7f040009;

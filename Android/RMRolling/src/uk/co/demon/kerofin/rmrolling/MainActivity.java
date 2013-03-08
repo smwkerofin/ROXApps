@@ -8,10 +8,11 @@ import android.view.View.OnClickListener;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.widget.EditText;
+import android.widget.TextView;
 
 public class MainActivity extends Activity implements TextWatcher, OnClickListener {
 	private EditText rollText, obText, dbText, modText;
-	private EditText resultText;
+	private TextView resultText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,7 +24,7 @@ public class MainActivity extends Activity implements TextWatcher, OnClickListen
         dbText=initEntry(R.id.dbText);
         modText=initEntry(R.id.modText);
         
-        resultText=(EditText) findViewById(R.id.resultText);
+        resultText=(TextView) findViewById(R.id.resultText);
         
         //rollText.selectAll();
                                
@@ -49,7 +50,7 @@ public class MainActivity extends Activity implements TextWatcher, OnClickListen
     	return Integer.parseInt(s);
     }
     
-    private void setValue(EditText widget, int value) {
+    private void setValue(TextView widget, int value) {
     	widget.setText(""+value);
     }
     
