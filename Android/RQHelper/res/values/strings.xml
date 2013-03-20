@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">RQHelper</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="menu_settings">Settings</string>
+    <string name="rq3_skills">RQ3 Skills</string>
+    <string name="rq6_skills">RQ6 Skills</string>
+
+</resources>
