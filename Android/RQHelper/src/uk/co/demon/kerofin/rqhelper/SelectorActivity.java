@@ -2,6 +2,7 @@ package uk.co.demon.kerofin.rqhelper;
 
 import android.os.Bundle;
 import android.app.Activity;
+import android.content.Intent;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -66,6 +67,7 @@ public class SelectorActivity extends Activity {
     
     public void switchToRQ3() {
     	Log.d(TAG, "switch to RQ3");
+    	startActivity(new Intent(this, RQ3Activity.class));
     }
     
     public void switchToRQ6() {
