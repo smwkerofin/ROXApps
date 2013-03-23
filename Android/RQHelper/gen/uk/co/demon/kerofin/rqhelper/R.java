@@ -14,19 +14,27 @@ public final class R {
         public static final int ic_launcher=0x7f020000;
     }
     public static final class id {
-        public static final int menu_settings=0x7f07000c;
-        public static final int rq3_button=0x7f07000b;
+        public static final int menu_settings=0x7f070014;
+        public static final int rq3_button=0x7f070013;
         public static final int rq3_crit=0x7f070007;
+        public static final int rq3_failure=0x7f07000f;
+        public static final int rq3_fumble=0x7f070011;
         public static final int rq3_skill_per=0x7f070004;
         public static final int rq3_spec=0x7f070009;
-        public static final int rq6_button=0x7f07000a;
+        public static final int rq3_success=0x7f07000c;
+        public static final int rq6_button=0x7f070012;
         public static final int tableRow1=0x7f070000;
         public static final int tableRow2=0x7f070002;
         public static final int tableRow3=0x7f070005;
+        public static final int tableRow4=0x7f07000a;
+        public static final int tableRow5=0x7f07000d;
         public static final int textView1=0x7f070001;
         public static final int textView2=0x7f070003;
         public static final int textView3=0x7f070006;
         public static final int textView4=0x7f070008;
+        public static final int textView5=0x7f07000b;
+        public static final int textView6=0x7f07000e;
+        public static final int textView7=0x7f070010;
     }
     public static final class layout {
         public static final int activity_rq3=0x7f030000;
@@ -38,6 +46,8 @@ public final class R {
     public static final class string {
         public static final int app_name=0x7f040000;
         public static final int critical=0x7f040007;
+        public static final int failure=0x7f04000b;
+        public static final int fumble=0x7f04000c;
         public static final int hello_world=0x7f040001;
         public static final int menu_settings=0x7f040002;
         public static final int rq3_skills=0x7f040003;
@@ -45,6 +55,7 @@ public final class R {
         public static final int rq6_skills=0x7f040004;
         public static final int skill_per=0x7f040006;
         public static final int special=0x7f040008;
+        public static final int success=0x7f04000a;
         public static final int unset_range=0x7f040009;
     }
     public static final class style {

@@ -11,5 +11,8 @@
     <string name="critical">Critical</string>
     <string name="special">Special</string>
     <string name="unset_range">"  -  "</string>
+    <string name="success">Success</string>
+    <string name="failure">Failure</string>
+    <string name="fumble">Fumble</string>
 
 </resources>
