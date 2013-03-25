@@ -14,5 +14,20 @@
     <string name="success">Success</string>
     <string name="failure">Failure</string>
     <string name="fumble">Fumble</string>
+    <string name="rq6_title">RQ6 Skill Levels</string>
+    <string name="new_skill">Modified</string>
+    <string name="blank">" "</string>
+    <string name="difficulty">Difficulty level</string>
+    <string-array name="rq6_difficulties">
+        <item >Automatic</item>
+        <item >Very Easu</item>
+        <item >Very Easy</item>
+        <item >Easy</item>
+        <item >Standard</item>
+        <item >Hard</item>
+        <item >Formidable</item>
+        <item >Herculean</item>
+        <item >Hopeless</item>
+    </string-array>
 
 </resources>

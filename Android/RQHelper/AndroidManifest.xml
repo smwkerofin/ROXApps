@@ -23,6 +23,7 @@
             </intent-filter>
         </activity>
         <activity android:name="uk.co.demon.kerofin.rqhelper.RQ3Activity"></activity>
+        <activity android:name="uk.co.demon.kerofin.rqhelper.RQ6Activity"></activity>
     </application>
 
 </manifest>

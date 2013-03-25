@@ -72,6 +72,7 @@ public class SelectorActivity extends Activity {
     
     public void switchToRQ6() {
     	Log.d(TAG, "switch to RQ6");
+    	startActivity(new Intent(this, RQ6Activity.class));
     	
     }
 }
