@@ -39,7 +39,8 @@ public class RQ6Activity extends Activity
         modskill=(TextView) findViewById(R.id.rq6_modskill);
         
         difficulty=(Spinner) findViewById(R.id.rq6_difficulty);
-        difficulty.setSelection(RQ6Difficulty.convertFrom(RQ6Difficulty.Level.STANDARD));
+        difficulty.setSelection(
+        		RQ6Difficulty.convertFrom(RQ6Difficulty.Level.STANDARD)+1);
         difficulty.setOnItemSelectedListener(this);
         
         range=new RQ6SkillRanges(value);
@@ -56,6 +57,8 @@ public class RQ6Activity extends Activity
     		
     		
     		Log.d(TAG, "skill="+skill);
+        	range.set(skill);
+        	
     	} catch(NumberFormatException e) {
     		Log.e(TAG, "failed to parse "+s, e);
     		return;
@@ -93,9 +96,10 @@ public class RQ6Activity extends Activity
 	@Override
 	public void onItemSelected(AdapterView<?> arg0, View arg1, int arg2,
 			long arg3) {
-		// TODO Auto-generated method stub
-		RQ6Difficulty diff=
-				RQ6Difficulty.fromInteger(difficulty.getSelectedItemPosition());
+		Log.d(TAG, "item selected "+arg2+" "+arg3);
+		int pos=difficulty.getSelectedItemPosition()-1;
+		Log.d(TAG, "position "+pos);
+		RQ6Difficulty diff=RQ6Difficulty.fromInteger(pos);
 		range.set(diff);
 		recalculate();
 	}
