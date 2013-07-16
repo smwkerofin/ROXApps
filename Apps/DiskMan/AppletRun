@@ -276,6 +276,7 @@ class IconWindow:
         ('/Mount', 'do_mount', ''),
         ('/Unmount', 'do_unmount', ''),
         ('/Eject', 'do_eject', ''),
+        ('/Free space', 'do_free_space', ''),
         ('/sep', '', '<Separator>'),
         ('/Quit', 'do_quit', '<StockItem>', '', rox.g.STOCK_QUIT)
         ])
@@ -419,6 +420,7 @@ class IconWindow:
             self.set_menu_item_active('/Mount', not mounted and mountable) 
             self.set_menu_item_active('/Unmount', mounted and mountable) 
             self.set_menu_item_active('/Eject', removable) 
+            self.set_menu_item_active('/Free space', mounted) 
             
             self.show_menu(icon, disk, event)
             return True
@@ -448,6 +450,8 @@ class IconWindow:
         
     def do_unmount(self):
         if self.menu_disk:
+            rox.filer.spawn_rox(
+                ('--close=%s' % self.menu_disk.get_mount_path(),))
             self.menu_disk.unmount_disk()
             self.menu_disk=None
         
@@ -455,6 +459,21 @@ class IconWindow:
         if self.menu_disk:
             self.menu_disk.eject_disk()
             self.menu_disk=None
+
+    def do_free_space(self):
+        appname='FreeFS'
+        path=os.getenv('APPDIRPATH', ':'.join((os.path.expanduser('~/Apps'),
+                                               '/usr/local/apps',
+                                               '/usr/apps')))
+        print path
+        for pdir in path.split(':'):
+            full=os.path.join(pdir, appname)
+            print full, os.access(full, os.F_OK), rox.isappdir(full)
+            if rox.isappdir(full):
+                exe=os.path.join(full, 'AppRun')
+                pid=os.spawnl(os.P_NOWAIT, exe, full, self.menu_disk.get_mount_path())
+                print pid
+                break
         
     def do_view(self):
         self.menu_disk=None
