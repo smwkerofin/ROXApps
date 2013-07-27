@@ -10,14 +10,14 @@ import android.text.TextWatcher;
 import android.widget.EditText;
 import android.widget.TextView;
 
-public class MainActivity extends Activity implements TextWatcher, OnClickListener {
+public class RollingActivity extends Activity implements TextWatcher, OnClickListener {
 	private EditText rollText, obText, dbText, modText;
 	private TextView resultText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_rolling);
         
         rollText=initEntry(R.id.rollText);
         obText=initEntry(R.id.obText);

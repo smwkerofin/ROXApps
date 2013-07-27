@@ -13,15 +13,19 @@
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
-        <activity
-            android:name="uk.co.demon.kerofin.rmrolling.MainActivity"
-            android:label="@string/app_name" >
-            <intent-filter>
+        <activity android:name="SelectorActivity">
+                        <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            
+        </activity><activity
+            android:name="uk.co.demon.kerofin.rmrolling.RollingActivity"
+            android:label="@string/app_name" >
         </activity>
+        
+        <activity android:name="StatBonusActivity"></activity>
     </application>
 
 </manifest>

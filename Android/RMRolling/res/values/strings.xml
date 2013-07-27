@@ -12,5 +12,15 @@
     <string name="zero">0</string>
     <string name="hundred">100</string>
     <string name="blank"/>
+    <string name="skill_rolling">Skill rolling</string>
+    <string name="stat_potentials">Statistics potentials</string>
+    <string name="stat_bonus">Statistics bonuses</string>
+    <string name="new_stats">New statistics</string>
+    <string name="current">Current value</string>
+    <string name="impr_roll">Improvement roll</string>
+    <string name="new_value">New value</string>
+    <string name="bonus">Bonus</string>
+    <string name="dev_points">Dev. points</string>
+    <string name="power_points">Power points</string>
 
 </resources>
