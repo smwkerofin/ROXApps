@@ -12,6 +12,10 @@ public class BonusSet {
 	private static BonusSet bonus_set=null;
 	
 	public static class InvalidFile extends Exception {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 4051748318471024067L;
 		private String reason;
 		
 		public InvalidFile(String Reason)
@@ -25,7 +29,9 @@ public class BonusSet {
 	}
 	
 	private class Bonus {
-		public int value, bonus;
+		@SuppressWarnings("unused")
+		public int value;
+		public int bonus;
 		public double devp, pp;
 		
 		public Bonus(int Value, int Bonus, double DevP, double PP) {

@@ -22,5 +22,6 @@
     <string name="bonus">Bonus</string>
     <string name="dev_points">Dev. points</string>
     <string name="power_points">Power points</string>
+    <string name="potential">Potential</string>
 
 </resources>

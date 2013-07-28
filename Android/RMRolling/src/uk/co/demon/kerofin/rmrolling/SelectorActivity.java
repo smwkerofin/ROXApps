@@ -81,6 +81,12 @@ public class SelectorActivity extends Activity {
         	Log.e(TAG, "cannot load bonus set: "+ex);
         	stat_bonus_button.setEnabled(false);
         }
+        try {
+        	StatGain.load(getApplication().getAssets());
+        } catch(StatGain.InvalidFile ex) {
+        	Log.e(TAG, "cannot load bonus set: "+ex);
+        	stat_bonus_button.setEnabled(false);
+        }
     }
 
     

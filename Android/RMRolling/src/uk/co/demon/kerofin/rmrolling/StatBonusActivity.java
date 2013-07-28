@@ -12,10 +12,11 @@ import android.widget.TextView;
 public class StatBonusActivity extends Activity implements TextWatcher {
 	private static final String TAG="StatBonusActivity";
 	
-	private EditText current_value, imprv_roll;
+	private EditText current_value, potential, imprv_roll;
 	private TextView new_value, bonus, devp, pp;
 	
 	private BonusSet bonus_set;
+	private StatGain stat_gain;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,6 +25,8 @@ public class StatBonusActivity extends Activity implements TextWatcher {
         
         current_value=(EditText) findViewById(R.id.bonus_current);
         current_value.addTextChangedListener(this);
+        potential=(EditText) findViewById(R.id.bonus_pot);
+        potential.addTextChangedListener(this);
         imprv_roll=(EditText) findViewById(R.id.bonus_impr_roll);
         imprv_roll.addTextChangedListener(this);
         
@@ -38,6 +41,12 @@ public class StatBonusActivity extends Activity implements TextWatcher {
         	Log.e(TAG, "no bonus set: "+ex);
         }
         
+        try {
+        	stat_gain=StatGain.get();
+        } catch(StatGain.InvalidFile ex) {
+        	Log.e(TAG, "no stat gains: "+ex);
+        }
+        
         setValue(current_value, 50);
                                
         recalculate();
@@ -49,10 +58,17 @@ public class StatBonusActivity extends Activity implements TextWatcher {
     	if(!imprv_roll.getText().toString().equals("")) {
     		update=true;
     	}
+    	int pot=getValue(potential);
     	
 		int updated=current;
-		if(update) {
-   		
+		if(update && pot>0) {
+			int imprv=getValue(imprv_roll);
+			
+			if(stat_gain!=null) {
+				int gain=stat_gain.getGain(pot-current, imprv);
+				updated+=gain;
+			}
+			
     	}
 		setValue(new_value, updated);
 		
