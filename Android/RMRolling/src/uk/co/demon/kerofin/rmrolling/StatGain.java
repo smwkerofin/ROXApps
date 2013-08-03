@@ -90,33 +90,37 @@ public class StatGain {
 			
 			if(child.getNodeType()==Node.ELEMENT_NODE) {
 				Element el=(Element) child;
-				if(el.getTagName().equals("Difference")) {
-					int diff=Integer.parseInt(el.getAttribute("Value"));
-					if(diff<0 || diff>=MAX_DIFF) {
-						continue;
-					}
+				if(el.getTagName().equals("Roll")) {
+					int roll_low=Integer.parseInt(el.getAttribute("Low"));
+					int roll_high=Integer.parseInt(el.getAttribute("High"));
 					
 					NodeList child2=el.getChildNodes();
 					for(int j=0; j<child2.getLength(); j++) {
 						Node sub=child2.item(j);
 						if(sub.getNodeType()==Node.ELEMENT_NODE) {
 							Element subel=(Element) sub;
-							if(subel.getTagName().equals("Gain")) {
-								if(subel.getAttribute("Roll").equals("")) {
-									Log.e(TAG, subel.getAttribute("Roll")+" "+
-												diff+" "+el);
+							if(subel.getTagName().equals("Difference")) {
+									
+								int diff_low=Integer.parseInt(subel.getAttribute("Low"));
+								int diff_high=Integer.parseInt(subel.getAttribute("High"));
+								String sgain=subel.getAttribute("Gain");
+								
+								for(int diff=diff_low; 
+										diff<=diff_high && diff<MAX_DIFF; 
+										diff++) {
+									for(int roll=roll_low; roll<=roll_high; roll++) {
+										int gain;
+										if(sgain.equals("*")) {
+											gain=-2*roll;
+										} else {
+											gain=Integer.parseInt(sgain);
+										}
+										
+										diffs[diff].setGain(roll, gain);
+										
+									}
 								}
 									
-								int roll=Integer.parseInt(subel.getAttribute("Roll"));
-								String sgain=subel.getAttribute("Gain");
-								int gain;
-								if(sgain.equals("*")) {
-									gain=-2*roll;
-								} else {
-									gain=Integer.parseInt(sgain);
-								}
-								
-								diffs[diff].setGain(roll, gain);
 							}
 						}
 					}
