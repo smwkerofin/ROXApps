@@ -23,5 +23,8 @@
     <string name="dev_points">Dev. points</string>
     <string name="power_points">Power points</string>
     <string name="potential">Potential</string>
+    <string name="init_value">Initial value</string>
+    <string name="pot_roll">Potential roll</string>
+    <string name="potential_value">Potential value</string>
 
 </resources>

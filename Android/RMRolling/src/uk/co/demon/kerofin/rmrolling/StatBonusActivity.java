@@ -54,22 +54,22 @@ public class StatBonusActivity extends Activity implements TextWatcher {
     
     private void recalculate() {
     	int current=getValue(current_value);
-    	Log.d(TAG, "current "+current);
+    	//Log.d(TAG, "current "+current);
     	boolean update=false;
     	if(!imprv_roll.getText().toString().equals("")) {
     		update=true;
     	}
     	int pot=getValue(potential);
-    	Log.d(TAG, "potential "+pot+" update "+update);
+    	//Log.d(TAG, "potential "+pot+" update "+update);
     	
 		int updated=current;
 		if(update && pot>0) {
 			int imprv=getValue(imprv_roll);
-			Log.d(TAG, "improvement roll "+imprv);
+			//Log.d(TAG, "improvement roll "+imprv);
 			
 			if(stat_gain!=null) {
 				int gain=stat_gain.getGain(pot-current, imprv);
-				Log.d(TAG, "gain "+gain);
+				//Log.d(TAG, "gain "+gain);
 				updated+=gain;
 			}
 			

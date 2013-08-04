@@ -72,9 +72,7 @@ public class SelectorActivity extends Activity {
         new_stat_helper=new NewStatButtonHelper(this, new_stat_button);
         stat_bonus_button=(Button) findViewById(R.id.stat_bonus);
         stat_bonus_helper=new StatBonusButtonHelper(this, stat_bonus_button);
-        
-        new_stat_button.setEnabled(false);
-        
+               
         try {
         	BonusSet.load(getApplication().getAssets());
         } catch(BonusSet.InvalidFile ex) {
@@ -87,7 +85,13 @@ public class SelectorActivity extends Activity {
         	Log.e(TAG, "cannot load bonus set: "+ex);
         	stat_bonus_button.setEnabled(false);
         }
-    }
+        try {
+        	StatPotential.load(getApplication().getAssets());
+        } catch(StatPotential.InvalidFile ex) {
+        	Log.e(TAG, "cannot load potentials: "+ex);
+        	new_stat_button.setEnabled(false);
+        }
+   }
 
     
     public void switchToRolling() {
@@ -97,7 +101,7 @@ public class SelectorActivity extends Activity {
     
     public void switchToNewStats() {
     	Log.d(TAG, "switch to new stats");
-    	//startActivity(new Intent(this, RQ6Activity.class));
+    	startActivity(new Intent(this, NewStatActivity.class));
     	
     }
     

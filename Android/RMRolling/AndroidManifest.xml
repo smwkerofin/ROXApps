@@ -26,6 +26,7 @@
         </activity>
         
         <activity android:name="StatBonusActivity"></activity>
+        <activity android:name="NewStatActivity"></activity>
     </application>
 
 </manifest>
