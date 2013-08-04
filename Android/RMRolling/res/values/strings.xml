@@ -26,5 +26,6 @@
     <string name="init_value">Initial value</string>
     <string name="pot_roll">Potential roll</string>
     <string name="potential_value">Potential value</string>
+    <string name="app_description">Help for RoleMaster</string>
 
 </resources>

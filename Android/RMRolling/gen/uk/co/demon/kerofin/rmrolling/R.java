@@ -58,6 +58,7 @@ public final class R {
         public static final int activity_main=0x7f060000;
     }
     public static final class string {
+        public static final int app_description=0x7f040019;
         public static final int app_name=0x7f040000;
         public static final int blank=0x7f04000a;
         public static final int bonus=0x7f040012;
