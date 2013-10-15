@@ -364,6 +364,7 @@ void rox_xattr_init(void)
 
 int rox_xattr_supported(const char *path)
 {
+  return FALSE;
 }
 
 int rox_xattr_have(const char *path)
