@@ -8,144 +8,18 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ROX-CLib 2.1.8\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-10-13 16:40+0100\n"
+"POT-Creation-Date: 2013-10-18 06:04+0100\n"
 "PO-Revision-Date:2005-12-11 11:42+0000\n"
 "Last-Translator: Stephen Watson <stephen@kerofin.demon.co.uk>\n"
 "Language-Team: English <LL@li.org>\n"
+"Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=ISO-8859-1\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: pkg.c:46
-msgid "Flags to pass to C compiler"
-msgstr ""
-
-#: pkg.c:47
-msgid "Flags to pass to linker"
-msgstr ""
-
-#: pkg.c:48
-msgid "Directories to search for shared libs"
-msgstr ""
-
-#: pkg.c:50
-msgid "echo environment settings to use for run-time linking (sh syntax)"
-msgstr ""
-
-#: pkg.c:52
-msgid "Execute pkg-config with the trailing arguments"
-msgstr ""
-
-#: pkg.c:54
-msgid "Print help message"
-msgstr ""
-
-#: pkg.c:55
-msgid "Print short version information"
-msgstr ""
-
-#: pkg.c:72
-#, c-format
-msgid "%s: APP_DIR not set!  Are you running AppRun?\n"
-msgstr ""
-
-#: pkg.c:77
-#, c-format
-msgid "%s: PLATFORM not set!  Are you running AppRun?\n"
-msgstr ""
-
-#: pkg.c:96
-#, c-format
-msgid "%s: option %s not recognised\n"
-msgstr ""
-
-#: pkg.c:112
-#, c-format
-msgid "%s: option -%c not recognised\n"
-msgstr ""
-
-#: pkg.c:160
-#, c-format
-msgid "%s %s by %s\n"
-msgstr ""
-
-#: pkg.c:161
-#, c-format
-msgid "Usage: %s/AppRun [OPTIONS]\n"
-msgstr ""
-
-#: pkg.c:162
-#, c-format
-msgid "Options are:\n"
-msgstr ""
-
-#: pkg.c:166
-msgid "Build the library"
-msgstr ""
-
-#: pkg.c:168
-msgid "Build the library, first executing an xterm window to show the output"
-msgstr ""
-
-#: pkg.c:170
-msgid "Print the location of ROX-CLib"
-msgstr ""
-
-#: pkg.c:208
-#, c-format
-msgid "%s: failed to execute pkg-config: %s"
-msgstr ""
-
 #: error.c:58
 #, c-format
 msgid "Error from %s"
-msgstr ""
-
-#: infowin.c:137
-msgid "Program"
-msgstr ""
-
-#: infowin.c:150
-msgid "Purpose"
-msgstr ""
-
-#: infowin.c:163
-msgid "Version"
-msgstr ""
-
-#: infowin.c:176
-msgid "Author"
-msgstr ""
-
-#: infowin.c:189
-msgid "Web site"
-msgstr ""
-
-#: infowin.c:271
-#, c-format
-msgid "Information on %s"
-msgstr ""
-
-#: rox_dnd.c:221
-msgid ""
-"uri_list_to_gslist: Incorrect or missing line break in text/uri-list data"
-msgstr ""
-
-#: rox_dnd.c:313
-msgid "No URIs in the text/uri-list (nothing to do!)"
-msgstr ""
-
-#: rox_dnd.c:393
-msgid "Drag & drop error: sender can't provide data"
-msgstr ""
-
-#: rox_dnd.c:413
-#, c-format
-msgid "XDS protocol error, '%c' should be S, F or E"
-msgstr ""
-
-#: rox_dnd.c:454
-msgid "drag_data_received: unknown target"
 msgstr ""
 
 #: gtksavebox.c:249
@@ -180,172 +54,29 @@ msgid ""
 "(or enter a full pathname)"
 msgstr ""
 
-#: rox_soap.c:125
+#: infowin.c:137
+msgid "Program"
+msgstr ""
+
+#: infowin.c:150
+msgid "Purpose"
+msgstr ""
+
+#: infowin.c:163
+msgid "Version"
+msgstr ""
+
+#: infowin.c:176
+msgid "Author"
+msgstr ""
+
+#: infowin.c:189
+msgid "Web site"
+msgstr ""
+
+#: infowin.c:271
 #, c-format
-msgid "assertion '%s' failed)"
-msgstr ""
-
-#: rox_soap.c:134
-#, c-format
-msgid "assertion '%s' failed"
-msgstr ""
-
-#: rox_soap.c:390
-msgid "XML document creation failed"
-msgstr ""
-
-#: rox_soap.c:558
-msgid "SOAP timed out"
-msgstr ""
-
-#: rox_soap.c:618
-#, c-format
-msgid "No %s to target"
-msgstr ""
-
-#: rox_soap.c:630
-msgid "Failed to dump XML doc to memory"
-msgstr ""
-
-#: rox_soap.c:737
-#, c-format
-msgid "problem reading data from %d,%d: %s"
-msgstr ""
-
-#: rox_soap.c:773
-#, c-format
-msgid "%s has no defined command"
-msgstr ""
-
-#: rox_soap.c:790
-#, c-format
-msgid "failed to fork! %s"
-msgstr ""
-
-#: rox_soap.c:851 rox_filer_action.c:616
-msgid "No error"
-msgstr ""
-
-#: rox_filer_action.c:172
-#, c-format
-msgid "Illegal panel side: %d"
-msgstr ""
-
-#: rox_filer_action.c:489
-#, c-format
-msgid "Unknown namespace %s for %s"
-msgstr ""
-
-#: rox_filer_action.c:508
-#, c-format
-msgid "No valid %s result node found"
-msgstr ""
-
-#: rox_filer_action.c:515
-msgid "No Body element found in SOAP reply"
-msgstr ""
-
-#: rox_filer_action.c:518
-#, c-format
-msgid "Root element has wrong namespace (%s)"
-msgstr ""
-
-#: rox_filer_action.c:525
-#, c-format
-msgid "No reply from filer: %s"
-msgstr ""
-
-#: rox.c:398
-#, c-format
-msgid "%s is deprecated, use %s instead"
-msgstr ""
-
-#: rox_soap_server.c:242
-#, c-format
-msgid "Attempt to invoke unknown SOAP method '%s'"
-msgstr ""
-
-#: rox_soap_server.c:261
-#, c-format
-msgid "Missing required argument '%s' in call to method '%s'"
-msgstr ""
-
-#: rox_soap_server.c:322
-#, c-format
-msgid "Unknown namespace %s (expected %s)"
-msgstr ""
-
-#: rox_soap_server.c:344
-msgid "Bad SOAP message received!"
-msgstr ""
-
-#: rox_soap_server.c:410
-#, c-format
-msgid "SOAP server is confused (obtaining atom for %lx)"
-msgstr ""
-
-#: rox_soap_server.c:418
-msgid "SOAP server is confused (obtaining property)"
-msgstr ""
-
-#: options.c:674 options.c:1406
-msgid "(use default)"
-msgstr ""
-
-#: options.c:861
-#, c-format
-msgid "No Option for '%s'!\n"
-msgstr ""
-
-#: options.c:877
-msgid "Widget for option already exists!"
-msgstr ""
-
-#: options.c:889
-#, c-format
-msgid "Unknown option type '%s'\n"
-msgstr ""
-
-#: options.c:951
-#, c-format
-msgid "Internal error: %s unreadable"
-msgstr ""
-
-#: options.c:1063
-msgid "Options"
-msgstr ""
-
-#: options.c:1108
-msgid "_Revert"
-msgstr ""
-
-#: options.c:1114
-msgid "Restore all choices to how they were when the Options box was opened."
-msgstr ""
-
-#: options.c:1129
-#, c-format
-msgid ""
-"Choices will be saved as:\n"
-"%s"
-msgstr ""
-
-#: options.c:1137
-msgid "(saving disabled)"
-msgstr ""
-
-#: options.c:1167
-#, c-format
-msgid "Can't find radio button with value %s\n"
-msgstr ""
-
-#: options.c:1312
-#, c-format
-msgid "Error saving %s: %s"
-msgstr ""
-
-#: options.c:1954
-msgid "Duplicate option found!"
+msgid "Information on %s"
 msgstr ""
 
 #: mime.c:683
@@ -434,4 +165,274 @@ msgstr ""
 msgid ""
 "The application can handle files of these types.  Click on OK to add it to "
 "the SendTo menu for the type of file, and also the customized File menu."
+msgstr ""
+
+#: options.c:674 options.c:1406
+msgid "(use default)"
+msgstr ""
+
+#: options.c:861
+#, c-format
+msgid "No Option for '%s'!\n"
+msgstr ""
+
+#: options.c:877
+msgid "Widget for option already exists!"
+msgstr ""
+
+#: options.c:889
+#, c-format
+msgid "Unknown option type '%s'\n"
+msgstr ""
+
+#: options.c:951
+#, c-format
+msgid "Internal error: %s unreadable"
+msgstr ""
+
+#: options.c:1063
+msgid "Options"
+msgstr ""
+
+#: options.c:1108
+msgid "_Revert"
+msgstr ""
+
+#: options.c:1114
+msgid "Restore all choices to how they were when the Options box was opened."
+msgstr ""
+
+#: options.c:1129
+#, c-format
+msgid ""
+"Choices will be saved as:\n"
+"%s"
+msgstr ""
+
+#: options.c:1137
+msgid "(saving disabled)"
+msgstr ""
+
+#: options.c:1167
+#, c-format
+msgid "Can't find radio button with value %s\n"
+msgstr ""
+
+#: options.c:1312
+#, c-format
+msgid "Error saving %s: %s"
+msgstr ""
+
+#: options.c:1954
+msgid "Duplicate option found!"
+msgstr ""
+
+#: pkg.c:46
+msgid "Flags to pass to C compiler"
+msgstr ""
+
+#: pkg.c:47
+msgid "Flags to pass to linker"
+msgstr ""
+
+#: pkg.c:48
+msgid "Directories to search for shared libs"
+msgstr ""
+
+#: pkg.c:50
+msgid "echo environment settings to use for run-time linking (sh syntax)"
+msgstr ""
+
+#: pkg.c:52
+msgid "Execute pkg-config with the trailing arguments"
+msgstr ""
+
+#: pkg.c:54
+msgid "Print help message"
+msgstr ""
+
+#: pkg.c:55
+msgid "Print short version information"
+msgstr ""
+
+#: pkg.c:72
+#, c-format
+msgid "%s: APP_DIR not set!  Are you running AppRun?\n"
+msgstr ""
+
+#: pkg.c:77
+#, c-format
+msgid "%s: PLATFORM not set!  Are you running AppRun?\n"
+msgstr ""
+
+#: pkg.c:96
+#, c-format
+msgid "%s: option %s not recognised\n"
+msgstr ""
+
+#: pkg.c:112
+#, c-format
+msgid "%s: option -%c not recognised\n"
+msgstr ""
+
+#: pkg.c:160
+#, c-format
+msgid "%s %s by %s\n"
+msgstr ""
+
+#: pkg.c:161
+#, c-format
+msgid "Usage: %s/AppRun [OPTIONS]\n"
+msgstr ""
+
+#: pkg.c:162
+#, c-format
+msgid "Options are:\n"
+msgstr ""
+
+#: pkg.c:166
+msgid "Build the library"
+msgstr ""
+
+#: pkg.c:168
+msgid "Build the library, first executing an xterm window to show the output"
+msgstr ""
+
+#: pkg.c:170
+msgid "Print the location of ROX-CLib"
+msgstr ""
+
+#: pkg.c:208
+#, c-format
+msgid "%s: failed to execute pkg-config: %s"
+msgstr ""
+
+#: rox.c:398
+#, c-format
+msgid "%s is deprecated, use %s instead"
+msgstr ""
+
+#: rox_dnd.c:221
+msgid ""
+"uri_list_to_gslist: Incorrect or missing line break in text/uri-list data"
+msgstr ""
+
+#: rox_dnd.c:313
+msgid "No URIs in the text/uri-list (nothing to do!)"
+msgstr ""
+
+#: rox_dnd.c:393
+msgid "Drag & drop error: sender can't provide data"
+msgstr ""
+
+#: rox_dnd.c:413
+#, c-format
+msgid "XDS protocol error, '%c' should be S, F or E"
+msgstr ""
+
+#: rox_dnd.c:454
+msgid "drag_data_received: unknown target"
+msgstr ""
+
+#: rox_filer_action.c:172
+#, c-format
+msgid "Illegal panel side: %d"
+msgstr ""
+
+#: rox_filer_action.c:489
+#, c-format
+msgid "Unknown namespace %s for %s"
+msgstr ""
+
+#: rox_filer_action.c:508
+#, c-format
+msgid "No valid %s result node found"
+msgstr ""
+
+#: rox_filer_action.c:515
+msgid "No Body element found in SOAP reply"
+msgstr ""
+
+#: rox_filer_action.c:518
+#, c-format
+msgid "Root element has wrong namespace (%s)"
+msgstr ""
+
+#: rox_filer_action.c:525
+#, c-format
+msgid "No reply from filer: %s"
+msgstr ""
+
+#: rox_filer_action.c:616 rox_soap.c:851
+msgid "No error"
+msgstr ""
+
+#: rox_soap.c:125
+#, c-format
+msgid "assertion '%s' failed)"
+msgstr ""
+
+#: rox_soap.c:134
+#, c-format
+msgid "assertion '%s' failed"
+msgstr ""
+
+#: rox_soap.c:390
+msgid "XML document creation failed"
+msgstr ""
+
+#: rox_soap.c:558
+msgid "SOAP timed out"
+msgstr ""
+
+#: rox_soap.c:618
+#, c-format
+msgid "No %s to target"
+msgstr ""
+
+#: rox_soap.c:630
+msgid "Failed to dump XML doc to memory"
+msgstr ""
+
+#: rox_soap.c:737
+#, c-format
+msgid "problem reading data from %d,%d: %s"
+msgstr ""
+
+#: rox_soap.c:773
+#, c-format
+msgid "%s has no defined command"
+msgstr ""
+
+#: rox_soap.c:790
+#, c-format
+msgid "failed to fork! %s"
+msgstr ""
+
+#: rox_soap_server.c:242
+#, c-format
+msgid "Attempt to invoke unknown SOAP method '%s'"
+msgstr ""
+
+#: rox_soap_server.c:261
+#, c-format
+msgid "Missing required argument '%s' in call to method '%s'"
+msgstr ""
+
+#: rox_soap_server.c:322
+#, c-format
+msgid "Unknown namespace %s (expected %s)"
+msgstr ""
+
+#: rox_soap_server.c:344
+msgid "Bad SOAP message received!"
+msgstr ""
+
+#: rox_soap_server.c:410
+#, c-format
+msgid "SOAP server is confused (obtaining atom for %lx)"
+msgstr ""
+
+#: rox_soap_server.c:418
+msgid "SOAP server is confused (obtaining property)"
 msgstr ""
