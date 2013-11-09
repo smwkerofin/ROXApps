@@ -20,6 +20,7 @@
 #include "rox-clib.h"
 #include "rox_debug.h"
 #include "rox_filer_action.h"
+#include "rox_soap.h"
 
 static void usage(const char *argv0)
 {

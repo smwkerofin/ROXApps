@@ -23,6 +23,8 @@
 #ifndef _rox_soap_h
 #define _rox_soap_h
 
+#include <libxml/parser.h>
+
 /** XML name space used by SOAP */
 #define ENV_NAMESPACE_URL "http://www.w3.org/2001/12/soap-envelope"
 
