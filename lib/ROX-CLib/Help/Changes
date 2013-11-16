@@ -4,6 +4,18 @@
 	parts derived from code by Thomas Leonard,
 	contributions by the ROX community.
 
+16-Nov-2013
+~~~~~~~~~~~
+Attempt to fix BSD build problem.  Reported by: nemysis <nemysis@FreeBSD.org> 
+
+09-Nov-2013
+~~~~~~~~~~~
+Fix compilation warning
+
+15-Oct-2013
+~~~~~~~~~~~
+Fix return from rox_xattr_supported() for non-Linux, non-Solaris systems.
+
 16-Oct-2007
 ~~~~~~~~~~~
 Check for libintl needed on Solaris.

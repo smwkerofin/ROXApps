@@ -137,4 +137,7 @@ AC_MSG_RESULT(version $ROXCLIB_VERSION)
 LIBNAME=rox-clib
 AC_SUBST(LIBNAME)
 
+dnl Absolute directory name, for install target
+AC_SUBST(APP_DIR)
+
 AC_OUTPUT(Makefile)
