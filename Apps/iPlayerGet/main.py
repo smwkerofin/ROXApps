@@ -7,7 +7,7 @@ import findrox
 findrox.version(2, 0, 5)
 import rox
 import rox.processes
-import rox.filer
+#import rox.filer
 import rox.tasks
 import rox.choices
 
@@ -80,18 +80,15 @@ class Fetch(rox.processes.Process):
     def __init__(self, window, progid):
         rox.processes.Process.__init__(self)
         self.window=window
-        self.command='get_iplayer --type radio --get %s' % progid
+        self.progid=progid
 
     def child_died(self, status):
         self.window.fetch_finished(status)
 
     def child_run(self):
         global outdir
-        os.chdir(outdir)
-        os.execvp('gnome-terminal', ('gnome-terminal',
-                                     '--disable-factory',
-                                     '-e',
-                                     'sh -c \'%s; read line\'' % self.command))
+        os.execvp(os.path.join(rox.app_dir, 'helper.py'),
+                  ('helper.py', outdir, str(self.progid)))
         os._exit(1)
 
 class Window(rox.Window):
@@ -160,7 +157,7 @@ class Window(rox.Window):
     def fetch_finished(self, status):
         global outdir
         self.status('Fetch finished')
-        rox.filer.open_dir(outdir)
+        #rox.filer.open_dir(outdir)
 
     def do_fetch(self, button):
         #print 'fetch'
@@ -300,7 +297,7 @@ class FilterWindow(rox.Window):
 
     def text_edited(self, cell, path, new_text):
         it=self.model.get_iter_from_string(path)
-        self.model.set(iter, 0, new_text)
+        self.model.set(it, 0, new_text)
         
 
 def run():
