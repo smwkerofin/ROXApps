@@ -9,8 +9,9 @@ class Modem(object):
     timeout=5
     prompt='home.gateway>'
     
-    def __init__(self, host='10.0.0.1'):
+    def __init__(self, host='10.0.0.1', admin_port=8080):
         self.host=host
+        self.admin_port=admin_port
         self.connect(self.host)
 
     def connect(self, host=None):
@@ -58,6 +59,8 @@ class Modem(object):
         for line in reply:
             if line.startswith('near-end interleaved channel bit rate:'):
                 rx=get_kbps(line)
+            elif line.startswith('far-end interleaved channel bit rate:'):
+                tx=get_kbps(line)
             elif line.startswith('far-end fast channel bit rate:'):
                 tx=get_kbps(line)
         return rx, tx
@@ -67,6 +70,9 @@ class Modem(object):
         data=self.tn.read_until(self.prompt, self.timeout)
         lines=map(lambda s: s.replace('\r',''), data.split('\n'))
         return lines[1:-1]
+
+    def get_status_url(self):
+        return 'http://%s:%d/' % (self.host, self.admin_port)
 
 if __name__=='__main__':
     m=Modem()

@@ -72,7 +72,8 @@ class Applet(rox.applet.Applet):
             self.menu.popup(self, event, self.position_menu)
             return True
         elif event.button==1:
-            rox.uri_handler.launch('http://10.0.0.1/')
+            pid=rox.uri_handler.launch(self.parser.get_status_url())
+            gobject.timeout_add(10*1000, self.launched, pid)
             return True
         return False
 
@@ -81,6 +82,11 @@ class Applet(rox.applet.Applet):
 
     def do_usage(self, *unused):
         self.usage.open_window()
+
+    def launched(self, pid):
+        # Reap a child
+        p, status=os.waitpid(pid, os.WNOHANG)
+        return p!=pid
 
     def set_stats(self, ok, tx, rx):
         if ok:
