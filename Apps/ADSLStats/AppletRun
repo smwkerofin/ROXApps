@@ -11,9 +11,11 @@ import socket
 #import usage
 import sitecom
 
-class Applet(rox.applet.Applet):
-    def __init__(self, xid=0):
-        rox.applet.Applet.__init__(self, xid)
+class BaseWindow(object):
+    def __init__(self):
+        self.create_widgets()
+
+    def create_widgets(self):
 
         ebox=rox.g.EventBox()
         self.add(ebox)
@@ -89,15 +91,18 @@ class Applet(rox.applet.Applet):
         return p!=pid
 
     def set_stats(self, ok, tx, rx):
+        #print 'set_stats', ok, tx, rx
         if ok:
             icon=rox.g.STOCK_YES
         else:
             icon=rox.g.STOCK_NO
+        #print icon, self.tx, self.rx
         self.sicon.set_from_stock(icon, rox.g.ICON_SIZE_MENU)
         self.tx.set_text(str(tx))
         self.rx.set_text(str(rx))
 
     def new_update(self, *unused):
+        #print 'new_update', self.parser, unused
         if not self.parser:
             try:
                 self.parser=sitecom.Modem()
@@ -107,6 +112,7 @@ class Applet(rox.applet.Applet):
             #self.parser=stats.open_adsl()
             #gobject.timeout_add(100, self.current)
             rx, tx=self.parser.get_chandata()
+            #print 'chandata', rx, tx
             self.set_stats(True, tx, rx)
         except Exception, ex:
             print >> sys.stderr, ex
@@ -160,9 +166,19 @@ class Applet(rox.applet.Applet):
     def on_exit(self):
         self.usage.on_exit()
     
+class Applet(rox.applet.Applet, BaseWindow):
+    def __init__(self, xid=0):
+        rox.applet.Applet.__init__(self, xid)
+        BaseWindow.__init__(self)
+
+class Window(rox.Window, BaseWindow):
+    def __init__(self):
+        rox.Window.__init__(self)
+        BaseWindow.__init__(self)
+
 if len(sys.argv)>1:
     app=Applet(sys.argv[1])
 else:
-    app=Applet()
+    app=Window()
 
 rox.mainloop()

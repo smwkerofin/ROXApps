@@ -44,7 +44,7 @@ class Modem(object):
         s=int(el[6])
         s+=int(el[4])*60
         s+=int(el[2])*60*60
-        s+=int(el[2])*60*40*24
+        s+=int(el[0])*60*60*24
         return s
 
     def get_chandata(self):
