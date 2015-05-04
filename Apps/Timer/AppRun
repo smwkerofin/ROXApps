@@ -1,0 +1,108 @@
+#!/usr/bin/env python
+
+import os, sys
+import time
+
+import findrox
+findrox.version(2, 0, 0)
+
+import rox
+import gobject
+
+class Window(rox.Window):
+    def __init__(self):
+        rox.Window.__init__(self)
+        self.set_title('Timer')
+
+        self.counting=False
+        self.start_time=None
+        self.duration=None
+        self.indicator=None
+
+        vbox=rox.g.VBox()
+        self.add(vbox)
+
+        hbox=rox.g.HBox()
+        vbox.pack_start(hbox, expand=False, fill=False, padding=2)
+        
+        adj=rox.g.Adjustment(20, 0, 120, 1, 5)
+        self.mins=rox.g.SpinButton(adj)
+        hbox.pack_start(self.mins, expand=False, fill=False, padding=1)
+        self.mins.connect('value-changed', self.update_time)
+
+        adj=rox.g.Adjustment(0, 0, 45, 15, 15,)
+        self.secs=rox.g.SpinButton(adj)
+        hbox.pack_start(self.secs, expand=False, fill=False, padding=1)
+        self.secs.connect('value-changed', self.update_time)
+
+        #self.readout=rox.g.Label('<span size="xx-large">00:00</span>')
+        #self.readout.set_use_markup(True)
+
+        self.button=rox.g.Button('<span size="xx-large">00:00</span>')
+        self.readout=self.button.get_child()
+        self.readout.set_use_markup(True)
+        #self.button.set_label(self.readout)
+        self.button.connect('clicked', self.start_stop)
+        vbox.pack_start(self.button, expand=True, fill=True, padding=2)
+
+        vbox.show_all()
+
+        self.mins.set_value(20)
+        self.secs.set_value(0)
+        self.update_time(None)
+
+        self.timer=gobject.timeout_add(500, self.update)
+
+    def update_time(self, widget):
+        mins=self.mins.get_value()
+        secs=self.secs.get_value()
+        #print mins, secs
+        if not self.counting:
+            self.show_time(mins, secs)
+
+    def show_time(self, mins, secs):
+        s='<span size="xx-large">%02d:%02d</span>' % (mins, secs)
+        self.readout.set_markup(s)
+
+    def start_stop(self, button):
+        if self.indicator is not None:
+            self.indicator.remove_icon()
+            self.indicator=None
+            
+        if self.counting:
+            self.counting=False
+            self.update_time(None)
+        else:
+            self.start_time=time.time()
+            self.duration=self.secs.get_value()+60*self.mins.get_value()
+            print self.duration
+            self.counting=True
+
+    def update(self):
+        if self.counting:
+            elapsed=int(time.time()-self.start_time)
+            #print elapsed
+            remaining=self.duration-elapsed
+            if remaining<0:
+                remaining=0
+            if remaining==0 and self.indicator is None:
+                self.indicator=rox.StatusIcon(add_ref=False,
+                                              icon_stock=rox.g.STOCK_YES)
+                rox.g.gdk.beep()
+            mins=remaining/60
+            secs=remaining%60
+            if remaining>0 and secs==0 and mins%5==0:
+                rox.g.gdk.beep()
+                
+            #print mins, secs
+            self.show_time(mins, secs)
+
+        return True
+
+def main():
+    w=Window()
+    w.show()
+    rox.mainloop()
+
+if __name__=='__main__':
+    main()

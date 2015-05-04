@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<AppInfo>
+  <Summary>Desktop timer</Summary>
+  <About>
+    <Purpose>Desktop countdown timer</Purpose>
+    <Version>0.1.0 (4th May 2015)</Version>
+    <Authors>Stephen Watson</Authors>
+    <License>GNU General Public License</License>
+    <!--<Homepage>http://www.kerofin.demon.co.uk/rox/thumbs.html</Homepage>-->
+  </About>
+</AppInfo>
