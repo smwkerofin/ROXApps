@@ -14,15 +14,19 @@ import rox.Menu
 
 import disk_manager
 
+# Store our name
 app_name=os.path.basename(rox.app_dir)
 
+# Set up where to save menu shortcuts
 rox.setup_app_options(app_name, site='kerofin.demon.co.uk')
 rox.Menu.set_save_name(app_name)
 
+# And set up options
 wsize=rox.options.Option('widget_size', 48)
 media_dir=rox.options.Option('media_dir', '/media')
 show_fixed=rox.options.Option('show_fixed', True)
 
+# Icons from themes
 icons=None
 inames=('rmdisk', 'no-rmdisk', 'pcmem', 'no-pcmem')
 
@@ -36,44 +40,43 @@ themed={'default': 'inode-directory',
 itheme=rox.g.icon_theme_get_default()
 
 def get_icon_from_theme(name, mounted=True, size=48):
-    global itheme, themed
+    """Get the icon for a type of mount
+    name - name of the type
+    mounted - mounted or unmounted flag
+    size - pixel size
+    Returns the icon, or None if not found"""
     
+    global itheme, themed
+
+    # Map name to the icon theme names
     try:
         iname=themed[name]
     except:
         return
-    print 'look up', iname, 'in', itheme
 
+    # Try the lookup
     try:
         icon=itheme.load_icon(iname, size, rox.g.ICON_LOOKUP_USE_BUILTIN)
     except:
         #rox.report_exception()
         return
-    print iname, icon
 
     if icon:
+        # We have an icon for the mounted state
         if not mounted:
+            # Modify it for the unmounted state
             tmp=icon.copy()
             icon.saturate_and_pixelate(tmp, 1.0, True)
             icon=tmp
 
-        else:
-            mnt_img=itheme.load_icon(rox.g.STOCK_YES, 12,
-                                     rox.g.ICON_LOOKUP_USE_BUILTIN)
-            print mnt_img
-            w=mnt_img.get_width()
-            h=mnt_img.get_height()
-            x=icon.get_width()-w-2
-            y=2
-            print mnt_img, icon
-            print x, y, w, h
-            #mnt_img.copy_area(0, 0, w, h, icon, x, y)
-            #print 'copy_area done'
-    #print mounted, icon
-
     return icon
 
 def get_icon_from_pixmaps(name, mounted):
+    """Get an icon from the cached pixmaps
+    name - name of mount type
+    mounted - mounted or unmounted icon
+    Returns cached pixmap or None if not cached"""
+    
     global icons
     
     #print name, mounted
@@ -93,56 +96,85 @@ def get_icon_from_pixmaps(name, mounted):
     return icon
 
 def get_icon(name, mounted=True):
-    print 'get_icon', name, mounted
+    """Get the icon for a mount point type, from the theme or from the pixmaps
+    name - name of mount type
+    mounted - mounted or unmounted icon
+    Returns pixmap of icon"""
+    
+    #print 'get_icon', name, mounted
     #print name, mounted
-    
+
+    # Try theme first
     icon=get_icon_from_theme(name, mounted, wsize.int_value)
-    print icon
-    if icon:
-        return icon
-    
-    icon=get_icon_from_pixmaps(name, mounted)
-    print icon
+    #print icon
     if icon:
         return icon
 
+    # Not in theme, try cached pixmaps
+    icon=get_icon_from_pixmaps(name, mounted)
+    #print icon
+    if icon:
+        return icon
+
+    # Not found, use the default from the theme instead
     if not icon:
         icon=get_icon_from_theme('default', mounted, wsize.int_value)
 
+    # Last chance, one we are pretty sure is cached...
     if not icon:
         get_icon_from_pixmaps('rmdisk', mounted)
 
-    print icon
+    #print icon
     return icon
 
+# This is the icon to use when no removable disks found
 placeholder_image=None
+
 def load_icons(size):
+    """Load the cached pixmap icons and the placeholder image.
+    size - prefered icon size in pixels"""
+    
     global icons, placeholder_image
 
     icons={}
 
+    # For each icon name to cache
     for name in inames:
         try:
-            print 'loading', name
+            # Try loading from our images sub-directory, if possible
             pbuf=rox.g.gdk.pixbuf_new_from_file_at_size(
                 os.path.join(rox.app_dir, 'images', name+'.png'), size, size)
             icons[name]=pbuf
         except:
+            # Assume this icon not found
             pass
 
+    # default icon is a plain unmounted disk
     placeholder_image=get_icon('disk', False)
 
 class MyIcon(rox.g.EventBox):
+    """Custom widget for showing an icon disk.  It includes the
+    icon and an optional image.  Button press events are passed up
+    to a controller object"""
+    
     def __init__(self, controller, show_names, base_image):
-        print 'in MyIcon.__init__'
+        """Constructor.  The icon is made visisble.  The default label
+        is the application name.
+        controller - object to notify of button clicks, via
+        controller.icon_button_press(icon_widget, None, event)
+        show_names - True if the label should be shown
+        base_image - pixbuf to use for image."""
+        
+        #print 'in MyIcon.__init__'
         self.controller=controller
         self.show_names=show_names
         
         rox.g.EventBox.__init__(self)
 
+        # Create image and lable in vertical box
         box=rox.g.VBox()
         self.add(box)
-        print 'making new image'
+        #print 'making new image'
         img=rox.g.image_new_from_pixbuf(base_image)
         box.pack_start(img)
         img.show()
@@ -153,13 +185,19 @@ class MyIcon(rox.g.EventBox):
         if self.show_names:
             self.drive_label.show()
 
+        # Receive button presses
         self.add_events(rox.g.gdk.BUTTON_PRESS_MASK)
         self.connect('button-press-event', self.button_press)
+
+        # Show icon
         box.show()
+
+        # Are we currently shown, None=unknown
         self.visible=None
-        print 'MyIcon init done'
+        #print 'MyIcon init done'
 
     def show(self):
+        """Show the icon box and if enabled also show the label"""
         rox.g.EventBox.show(self)
         if self.show_names:
             self.drive_label.show()
@@ -168,13 +206,17 @@ class MyIcon(rox.g.EventBox):
         self.visible=True
 
     def hide(self):
+        """Hide the icon box and label"""
         rox.g.EventBox.hide(self)
         self.visible=False
 
     def is_visible(self):
+        """Return if the icon is visible, True, False or None. None means
+        unknown because we haven't been fully set up yet."""
         return self.visible
         
     def set_show_names(self, show_names=True):
+        """Change whether or not the label is shown"""
         self.show_names=show_names
         if self.show_names:
             self.drive_label.show()
@@ -182,15 +224,22 @@ class MyIcon(rox.g.EventBox):
             self.drive_label.hide()
 
     def button_press(self, widget, event):
+        """Button pressed, pass up to the controller object."""
         return self.controller.icon_button_press(self, None, event)
 
     def reload_icons(self):
+        """Reload internal icons and update the icon shown"""
         pass
 
     def set_image(self, image):
+        """Use a new pixbuf for the icon
+        image - pixbuf to use"""
         self.drive_img.set_from_pixbuf(image)
 
 class DriveIcon(MyIcon):
+    """Specialization of MyIcon that shows a drive icon in the mounted or
+    unmounted state."""
+    
     icon_name='rmdisk'
     
     def __init__(self, controller, disk, show_names):
