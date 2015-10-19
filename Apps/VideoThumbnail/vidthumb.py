@@ -21,7 +21,7 @@ import md5
 import rox, rox.mime, rox.thumbnail
 import pango
 
-import thumb
+#import thumb
 import mpslave
 
 # Defaults
@@ -61,7 +61,7 @@ def execute_return_err(cmd):
 debug=os.environ.get('VIDTHUMB_DEBUG', 0)
 
 class VidThumbNail(rox.thumbnail.Thumbnailer):
-    """Generate thumbnail for video files understood by totem"""
+    """Generate thumbnail for video files"""
     def __init__(self, debug=False):
         """Initialize Video thumbnailer"""
         rox.thumbnail.Thumbnailer.__init__(self, 'VideoThumbnail', 'vidthumb',
@@ -210,7 +210,8 @@ class VidThumbMPlayer(VidThumbNail):
         except Exception, exc:
             if debug: print 'slave.make_frame failed', exc
             pbuf=None
-        if debug: print 'pbuf', pbuf
+        if debug:
+            print 'pbuf', pbuf, pbuf.get_width(), pbuf.get_height()
             
         #if not pbuf:
         #    return self.failed_image(rsize, _('Could not get frame'))

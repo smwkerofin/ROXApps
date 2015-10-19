@@ -48,10 +48,19 @@ class TimedOut(Exception):
     def __str__(self):
         return 'Timed out waiting for %s' % self.what
 
+class MatchProperty(object):
+    def __init__(self, propname):
+        self.propname=propname
+
+    def __call__(self, s):
+        return s.startswith('ANS_'+self.propname)
+
 class MPlayer(object):
     def __init__(self, fname, *args):
         self.debug=debug
         self.timed_out=False
+        self.frame_width=None
+        self.frame_height=None
         self.start_child(fname, *args)
             
     def start_child(self, fname, *args):
@@ -109,7 +118,33 @@ class MPlayer(object):
         self.write_cmd('loop -1')
         #self.write_cmd('get_property filename')
         #self.write_cmd('get_property video_codec')
+        #self.write_cmd('get_property width')
+        #self.write_cmd('get_property height')
+        self.get_frame_size()
         self.get_time_length()
+
+    def get_property(self, propname):
+        ans=self.execute_command('get_property '+propname,
+                                    MatchProperty(propname))
+        if not ans:
+            return
+
+        if '=' in ans:
+            return ans.split('=', 1)[1]
+
+    def get_frame_size(self):
+        v=self.get_property('width')
+        if v:
+            try:
+                self.frame_width=int(v)
+            except ValueError:
+                pass
+        v=self.get_property('height')
+        if v:
+            try:
+                self.frame_height=int(v)
+            except ValueError:
+                pass
 
     def get_time_length(self):
         if self.debug: print 'get_time_length', rox._toplevel_windows
@@ -171,11 +206,17 @@ class MPlayer(object):
         if self.debug: print 'res now', res
         if res and res.startswith('*** screenshot '):
             pre, fname, tail=res.split("'")
-            #print fname
             fname=os.path.realpath(fname)
+            if debug: print fname
             wait_on_file(fname)
             pbuf=rox.g.gdk.pixbuf_new_from_file(fname)
-            #print pbuf
+            if debug: print pbuf
+
+            if pbuf and pbuf.get_height()>pbuf.get_width():
+                if debug: print 'rescale'
+                pbuf=pbuf.scale_simple(pbuf.get_width()*2,
+                                       pbuf.get_height(),
+                                       rox.g.gdk.INTERP_NEAREST)
             #os.remove(fname)
             return pbuf
         else:
@@ -210,6 +251,12 @@ class MPlayer(object):
         if abs(pos-p)>fuzz:
             self.load_file(self.fname)
             self.seek_to(0)
+
+        good_ratio=True
+        if not self.frame_width or not self.frame_height or self.frame_width<self.frame_height:
+            good_ratio=False
+        if not good_ratio:
+            self.write_cmd('switch_ratio 1.333333')
                 
         return self.screenshot()
 
@@ -277,7 +324,9 @@ def test():
     mp=MPlayer(files[0])
     for f in files:
         mp.load_file(f)
-        #print mp.fname, mp.length
+        print mp.fname, mp.length
+        pbuf=mp.make_frame()
+        print pbuf.get_width(), pbuf.get_height()
         #print mp.make_frame()
     mp.quit()
 
