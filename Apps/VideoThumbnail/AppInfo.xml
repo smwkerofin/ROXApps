@@ -21,4 +21,12 @@
     <MimeType type="video/x-matroska"/>
     <MimeType type="application/x-flash-video"/>
   </CanThumbnail>
+  <AppMenu>
+    <Item option="-o">
+      <Label>Options</Label>
+    </Item>
+    <Item option="-i">
+      <Label>Interactive</Label>
+    </Item>
+  </AppMenu>
 </AppInfo>

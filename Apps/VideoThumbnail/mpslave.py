@@ -83,7 +83,7 @@ class MPlayer(object):
         self.load_file(None)
 
     def write_cmd(self, cmd):
-        if self.debug: print 'sending command:', cmd
+        if self.debug: print 'SENDING COMMAND:', cmd
         self.child_out.write(cmd+'\n')
 
     def get_reply(self, tout=15):
@@ -155,8 +155,9 @@ class MPlayer(object):
         if not reply:
             return
         if self.debug: print 'reply is', reply
+        if not reply.startswith('ANS_LENGTH='):
+            return
 
-        assert reply.startswith('ANS_LENGTH=')
         #l=self.last_line.strip()
         ignore, ans=reply.split('=')
         #print ignore, ans
@@ -229,12 +230,16 @@ class MPlayer(object):
         #self.write_cmd('screenshot 1')
         #print self.get_reply()
 
-    def make_frame(self):
+    def make_frame(self, frac_length=None):
         if self.debug: print 'in make_frame'
-        p=self.length*0.05
-        #p=0
-        if p>5*60:
-            p=5*60
+        if frac_length is None:
+            p=self.length*0.05
+            #p=0
+            if p>5*60:
+                p=5*60
+        else:
+            p=self.length*frac_length
+                
         try:
             self.seek_to(p)
         except IOError, exc:
@@ -246,7 +251,8 @@ class MPlayer(object):
                 return
             raise
         pos=self.get_time_pos()
-        fuzz=self.length*0.01
+        
+        fuzz=self.length*0.05
         if self.debug: print pos, p, abs(pos-p), fuzz
         if abs(pos-p)>fuzz:
             self.load_file(self.fname)
@@ -274,8 +280,10 @@ class MPlayer(object):
         self.last_line=None
         if self.debug: print 'make task'
         t=rox.tasks.Task(self.read_task(match_fn, tout, raise_on_timed_out))
+        if self.debug: print rox._toplevel_windows
+        if self.debug: print rox._in_mainloops
         if self.debug: print 'call mainloop', t
-        rox.mainloop()
+        rox.g.main()
         if self.debug: print rox._toplevel_windows
         if self.debug: print rox._in_mainloops
         if self.debug: print 'main loop done'
@@ -308,6 +316,10 @@ class MPlayer(object):
                 break
             if self.debug: print 'no match'
         rox.toplevel_unref()
+        # TODO check this
+        if self.debug:  print rox._toplevel_windows
+        if self.debug:  print rox._in_mainloops
+        rox.g.main_quit()
 
     def __del__(self):
         if self.child_out:

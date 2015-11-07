@@ -5,6 +5,8 @@
 """Manage the video thumbnail program"""
 
 import os
+import optparse
+
 import findrox; findrox.version(2, 0, 4)
 import rox
 
@@ -12,16 +14,27 @@ __builtins__._ = rox.i18n.translation(os.path.join(rox.app_dir, 'Messages'))
 
 import sys
 import vidthumb
+import interactive
+
+parser=optparse.OptionParser()
+parser.add_option('-o', '--options', action='store_true')
+parser.add_option('-i', '--interactive', action='store_true')
+opts, args=parser.parse_args()
 
 # Are we to generate a thumb?
-if len(sys.argv)>1:
+if len(args)>0:
     try:
-        vidthumb.main(sys.argv[1:])
+        vidthumb.main(args)
     except:
         t, m=sys.exc_info()[:2]
         print >> sys.stderr, '%s: %s %s' % (sys.argv[0], t, m)
         sys.exit(1)
     sys.exit(0)
 
-# We are being run in configure mode
-vidthumb.configure()
+if opts.options:
+    # We are being run in configure mode
+    vidthumb.configure()
+elif opts.interactive:
+    interactive.main(None)
+
+

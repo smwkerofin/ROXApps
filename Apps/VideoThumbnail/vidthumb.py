@@ -145,7 +145,7 @@ class VidThumbMPlayer(VidThumbNail):
 
         self.slave=None
 
-    def post_process_image(self, img, w, h):
+    def post_process_image(self, img, w, h, time_to_add=None):
         """Add the optional film strip effect"""
 
         if not options.sprocket.int_value and not self.add_time:
@@ -166,8 +166,11 @@ class VidThumbMPlayer(VidThumbNail):
                 pixmap.draw_rectangle(gc, True, 2, y, 4, 4)
                 pixmap.draw_rectangle(gc, True, w-8+2, y, 4, 4)
 
-        if self.add_time and self.total_time:
-            secs=self.total_time
+        if time_to_add is None:
+            time_to_add=self.total_time
+
+        if self.add_time and time_to_add:
+            secs=time_to_add
             hours=int(secs/3600)
             if hours>0:
                 secs-=hours*3600
@@ -192,7 +195,7 @@ class VidThumbMPlayer(VidThumbNail):
         return img.get_from_drawable(pixmap, cmap, 0, 0, 0, 0, -1, -1)
 
 
-    def get_image(self, inname, rsize):
+    def get_image(self, inname, rsize, frac_length=None):
         """Generate the raw image from the file.  We run mplayer as a slave
         to do the hard work."""
 
@@ -206,7 +209,7 @@ class VidThumbMPlayer(VidThumbNail):
         if debug: print 'slave says length=',self.total_time
 
         try:
-            pbuf=self.slave.make_frame()
+            pbuf=self.slave.make_frame(frac_length)
         except Exception, exc:
             if debug: print 'slave.make_frame failed', exc
             pbuf=None
