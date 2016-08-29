@@ -1,4 +1,5 @@
 import os, time, errno
+import subprocess
 if __name__=='__main__':
     import findrox; findrox.version(2, 0, 4)
 import rox, rox.tasks
@@ -30,7 +31,7 @@ class InputTOBlocker(rox.tasks.InputBlocker, rox.tasks.TimeoutBlocker):
         rox.toplevel_unref() # lose the ref from TimeoutBlocker
 
     def _timeout(self):
-        #print self, 'timed out'
+        print self, 'timed out'
         #print rox._toplevel_windows
         #print rox._in_mainloops
         self.timed_out=True
@@ -62,6 +63,8 @@ class MPlayer(object):
         self.frame_width=None
         self.frame_height=None
         self.start_child(fname, *args)
+
+        if self.debug: print self, 'debug enebled'
             
     def start_child(self, fname, *args):
         cmd='mplayer -vo null -vf-clr -ao null -slave -quiet -vf screenshot '
@@ -76,9 +79,18 @@ class MPlayer(object):
         self.last_line=None
         self.fname=fname
 
-        stdin, stdout_and_err=os.popen4(cmd, 't', 0)
-        self.child_out=stdin
-        self.child_in=stdout_and_err
+        #stdin, stdout_and_err=os.popen4(cmd, 't', 0)
+        #self.child_out=stdin
+        #self.child_in=stdout_and_err
+
+        self.child=subprocess.Popen(cmd, shell=True,
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    close_fds=True)
+        self.child_out=self.child.stdin
+        self.child_in=self.child.stdout
+        self.child_error=self.child.stderr
 
         self.load_file(None)
 
@@ -185,22 +197,44 @@ class MPlayer(object):
         self.execute_command('quit', lambda s: s.startswith('Exit '))
         self.child_out=None
         self.child_in=None
+        self.child.wait()
 
     def restart_child(self):
         self.read_all()
         self.start_child(self.fname)
+
+    def check_child(self, restart=True):
+        self.child.poll()
+        if self.debug: print 'child returncode', self.child.returncode
+        died=self.child.returncode is not None
+        if died:
+            self.child.wait()
+        if died and self.debug:
+            for line in self.child_error.readlines():
+                print 'CHILD STDERR:', line.strip()
+        if self.child.returncode<0:
+            signum=-self.child.returncode
+            if signum==signal.SIGSEGV:
+                rox.croak('mplayer killed by segmentation violation')
+            elif self.debug:
+                print 'mplayer killed by signal', signum
+        if died and restart:
+            self.restart_child()
+        return not died
 
     def seek_to(self, sec):
         self.execute_command('seek %f 2' % sec)
 
     def screenshot(self):
         def match_screenshot(s):
+            print 'match_screenshot', repr(s)
             return s.startswith('sending VFCTRL_SCREENSHOT!')
         #self.debug=True
         res=self.execute_command('screenshot 0', match_screenshot)
         #res=self.get_reply()
 
         def match_taken(s):
+            print 'match_taken', repr(s)
             if self.debug: print s, '*** screenshot '
             return s.startswith('*** screenshot ')
         res=self.execute_command('frame_step', match_taken)
@@ -232,6 +266,7 @@ class MPlayer(object):
 
     def make_frame(self, frac_length=None):
         if self.debug: print 'in make_frame'
+        self.check_child()
         if frac_length is None:
             p=self.length*0.05
             #p=0
@@ -308,8 +343,10 @@ class MPlayer(object):
                     raise TimedOut('reply to command')
                 break
             self.last_line=self._get_reply()
-            if self.debug: print self.last_line
+            if self.debug: print 'last line', self.last_line
             if self.last_line is None:
+                if self.debug: print 'EOF from child?'
+                self.check_child(False)
                 break
             if match_fn(self.last_line):
                 if self.debug: print 'match'

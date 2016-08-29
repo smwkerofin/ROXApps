@@ -119,7 +119,7 @@ class VidThumbTotem(VidThumbNail):
         VidThumbNail.__init__(self, debug)
 
 
-    def get_image(self, inname, rsize):
+    def get_image(self, inname, rsize, frac_length=None):
         outfile = os.path.join(self.work_dir, "out.png")
         if options.scale.int_value:
             cmd = 'totem-video-thumbnailer -s %i \"%s\" %s' % (rsize, inname, outfile)
@@ -200,10 +200,14 @@ class VidThumbMPlayer(VidThumbNail):
         to do the hard work."""
 
         if debug: print self.slave
-        if not self.slave:
-            self.slave=mpslave.MPlayer(inname)
-        else:
-            self.slave.load_file(inname)
+        try:
+            if not self.slave:
+                self.slave=mpslave.MPlayer(inname)
+            else:
+                self.slave.load_file(inname)
+        except Exception, exc:
+            if debug: print 'slave process failed', exc
+            return None
             
         self.total_time=self.slave.length
         if debug: print 'slave says length=',self.total_time
@@ -214,7 +218,10 @@ class VidThumbMPlayer(VidThumbNail):
             if debug: print 'slave.make_frame failed', exc
             pbuf=None
         if debug:
-            print 'pbuf', pbuf, pbuf.get_width(), pbuf.get_height()
+            if pbuf is not None:
+                print 'pbuf', pbuf, pbuf.get_width(), pbuf.get_height()
+            else:
+                print 'pbuf', pbuf
             
         #if not pbuf:
         #    return self.failed_image(rsize, _('Could not get frame'))
@@ -260,6 +267,9 @@ def main(argv):
     
     #print argv
     inname=argv[0]
+    if inname.endswith('.dtapart'):
+        # Still being downloaded, don't bother
+        return
     try:
         outname=argv[1]
     except:
@@ -290,8 +300,11 @@ def main(argv):
     if debug: print 'save to', outname
     #print inname, outname, rsize
 
-    thumb=get_generator()
-    thumb.run(inname, outname, rsize)
+    try:
+        thumb=get_generator()
+        thumb.run(inname, outname, rsize)
+    except IOError, exc:
+        sys.stderr.write(str(exc))
 
         
 def configure():
