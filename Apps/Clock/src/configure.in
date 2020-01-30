@@ -35,6 +35,10 @@ if test $ac_cv_func_getopt_long = no; then
   AC_CHECK_LIB(gnugetopt, getopt_long)
   AC_CHECK_FUNCS(getopt_long)
 fi
+AC_CHECK_FUNCS(cos)
+if test $ac_cv_func_cos = no; then
+  AC_CHECK_LIB(m, cos)
+fi
 
 dnl Check for ROX-CLib and version
 dnl Assume that if we have the right ROX-CLib we also have GTK+ and libxml
