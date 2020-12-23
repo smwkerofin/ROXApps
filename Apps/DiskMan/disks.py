@@ -1,6 +1,8 @@
 import os
 import sys
 
+import rox.filer
+
 class Disk(object):
     """Abstract base class to manage a disk."""
     
@@ -20,10 +22,16 @@ class Disk(object):
 
         self.old_mount_path=self.mount_path
 
+        self.open_on_mount=False
+
     def set_mounted(self, mount_path):
+        print 'Disk.set_mounted', self, mount_path
         if mount_path:
             self.mount_path=mount_path
             self.old_mount_path=self.mount_path
+            if self.open_on_mount:
+                rox.filer.open_dir(self.mount_path)
+                self.open_on_mount=False
         else:
             self.mount_path=None
 
@@ -50,6 +58,9 @@ class Disk(object):
 
     def get_type(self):
         return self.media_type
+
+    def open_when_mounted(self):
+        self.open_on_mount=True
 
     def mount_disk(self, mount_path):
         raise Exception, 'mount of %s not implemented' % self

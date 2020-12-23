@@ -14,6 +14,10 @@ import manager
 
 introspection='org.freedesktop.DBus.Introspectable'
 
+class NoDriveObject(Exception):
+    def __init__(self, path):
+        Exception.__init__(self, 'no drive object for path %s' % path)
+
 class Disk(disks.Disk):
     props_interface_name='org.freedesktop.DBus.Properties'
     #drv_interface_name='org.freedesktop.UDisks2.Drive'
@@ -59,9 +63,13 @@ class Disk(disks.Disk):
                                            self.props_modified)
 
         self.icon_name=self.prop_get_str(self.dev_interface_name, 'HintIconName')
+        if not self.icon_name:
+            pass
         self.drive_type=self.icon_name
-        self.drive_object=Drive(self.prop_get_str(self.dev_interface_name,
-                                                  'Drive'), self.manager.bus)
+        drive_object=self.prop_get_str(self.dev_interface_name, 'Drive')
+        if drive_object=='/':
+            raise NoDriveObject(self.object_path)
+        self.drive_object=Drive(drive_object, self.manager.bus)
         self.removable=self.drive_object.is_removable()
         print 'icon', self.icon_name, 'removable', self.removable
 
@@ -193,6 +201,8 @@ class Drive(object):
     drv_interface_name='org.freedesktop.UDisks2.Drive'
     
     def __init__(self, path, bus):
+        self.path=path
+        
         self.obj=bus.get_object('org.freedesktop.UDisks2', path)
         self.drv_iface=dbus.Interface(self.obj,
                                     self.drv_interface_name)
@@ -248,7 +258,10 @@ class Manager(manager.Manager):
             obj=self.bus.get_object(self.bus_name, path)
             if Disk.is_filesystem(obj):
                 print path
-                self.volumes[str(path)]=Disk(obj, path, self)
+                try:
+                    self.volumes[str(path)]=Disk(obj, path, self)
+                except NoDriveObject:
+                    continue
 
     def get_disks(self):
         return self.volumes.itervalues()
