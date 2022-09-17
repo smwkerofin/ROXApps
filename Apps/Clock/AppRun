@@ -32,6 +32,14 @@ export LD_LIBRARY_PATH
 
 DEBUGGER=""
 
+build_failed()
+{
+	echo Build failed >&2
+	echo Press Return... >&2
+	read WAIT
+	exit 1
+}
+
 case $1 in
     --debug) shift ; DEBUGGER=gdb ;;
     --compile)
@@ -40,19 +48,17 @@ case $1 in
 	    echo "Cannot compile - source code is missing!" >&2
 	    exit 1
 	fi
-	echo "Compiling $APP_DIR... please wait..." >&2
-	if [ ! -x "$APP_DIR/src/configure" ]; then
-	    echo "No 'configure' script! Trying to run autoconf..."
-	    (cd "$APP_DIR/src"; autoconf)
-	fi
-	rm -f "$APP_DIR/src/config.cache"
-	cd "$APP_DIR/src" && ./configure --with-platform=$PLATFORM \
-			&& $MAKE clean && $MAKE \
-			&& echo Done >&2 && exit 0
-	echo Compile failed >&2
-	echo Press Return... >&2
-	read WAIT
-	exit 1
+	echo "Configuring $APP_DIR... please wait..." >&2
+	mkdir -p "$APP_DIR/$PLATFORM"
+	mkdir -p "$APP_DIR/$PLATFORM-build"
+	cmake --trace \
+	    -DCMAKE_INSTALL_PREFIX:PATH="$APP_DIR/$PLATFORM" \
+	    -S "$APP_DIR/src" \
+	    -B "$APP_DIR/$PLATFORM-build" || build_failed
+	cd "$APP_DIR/$PLATFORM-build"
+	make || build_failed
+	exit 0
+
 esac
 
 BIN="$APP_DIR/$PLATFORM/$PROG"
