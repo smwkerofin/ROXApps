@@ -51,17 +51,17 @@ case $1 in
 	echo "Configuring $APP_DIR... please wait..." >&2
 	mkdir -p "$APP_DIR/$PLATFORM"
 	mkdir -p "$APP_DIR/$PLATFORM-build"
-	cmake --trace \
+	cmake \
 	    -DCMAKE_INSTALL_PREFIX:PATH="$APP_DIR/$PLATFORM" \
 	    -S "$APP_DIR/src" \
 	    -B "$APP_DIR/$PLATFORM-build" || build_failed
 	cd "$APP_DIR/$PLATFORM-build"
-	make || build_failed
+	make install || build_failed
 	exit 0
 
 esac
 
-BIN="$APP_DIR/$PLATFORM/$PROG"
+BIN="$APP_DIR/$PLATFORM/bin/$PROG"
 
 if [ -x "$BIN" ] ; then
     exec $DEBUGGER "$BIN" "$@"

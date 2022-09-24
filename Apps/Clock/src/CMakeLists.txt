@@ -3,7 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.17.0)
 PROJECT(Clock)
 
 # Checks for packages
-find_package(GTK2 2.24 REQUIRED gtk)
+FIND_PACKAGE(GTK2 2.24 REQUIRED gtk)
 
 # Checks for library functions.
 
@@ -15,17 +15,17 @@ EXECUTE_PROCESS(COMMAND ${LIBDIR} --version 2.1.10 ROX-CLib
 			OUTPUT_VARIABLE ROXCLib_DIR
 			OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-#message(STATUS "ROXCLib_DIR=${ROXCLib_DIR}")
 SET(ROXCLib_DIR "${ROXCLib_DIR}/${PLATFORM}")
-#message(STATUS "ROXCLib_DIR=${ROXCLib_DIR}")
 SET(ROXCLib_INCLUDE_DIRS "${ROXCLib_DIR}/include")
-#message(STATUS "ROXCLib_INCLUDE_DIRS=${ROXCLib_INCLUDE_DIRS}")
-FIND_LIBRARY(ROXCLib_LIBRARIES NAMES librox-clib rox-clib
-    PATHS "{ROXCLib_DIR}/${PLATFORM}/lib"
+FIND_LIBRARY(ROXCLib_LIBRARIES
+    NAMES librox-clib rox-clib
+    PATHS "${ROXCLib_DIR}/${PLATFORM}/lib" "${ROXCLib_DIR}/lib"
 )
-message(STATUS "ROXCLib_LIBRARIES=${ROXCLib_LIBRARIES}")
 
 # Is altzone defined in <time.h> ?
+
+# Additional libraries
+FIND_PACKAGE(LibXml2 REQUIRED)
 
 # Generated config.h
 CONFIGURE_FILE(config.h.in config.h)
@@ -51,9 +51,15 @@ TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME}
     PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
     ${ROXCLib_INCLUDE_DIRS}
     ${GTK2_INCLUDE_DIRS}
+    LibXml2::LibXml2
 )
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}
-    ${EOXCLib_LIBRARIES}
+    ${ROXCLib_LIBRARIES}
     ${GTK2_LIBRARIES}
+    LibXml2::LibXml2
+    m
+)
+
+INSTALL(TARGETS ${PROJECT_NAME}
 )
